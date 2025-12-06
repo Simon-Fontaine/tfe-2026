@@ -3,6 +3,12 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "fix": "biome check --write ."
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

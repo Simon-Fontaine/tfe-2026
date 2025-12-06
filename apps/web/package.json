@@ -1,9 +1,17 @@
 {
   "name": "@workspaces/web",
   "version": "0.1.0",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build ./src/index.ts --outdir ./dist",
+    "start": "bun run dist/index.js",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "fix": "biome check --write ."
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^lint"],
+      "outputs": []
+    },
+    "check": {
+      "dependsOn": ["^check"],
+      "outputs": []
+    },
+    "fix": {
+      "dependsOn": ["^fix"],
+      "outputs": []
+    },
+    "db:generate": {
+      "cache": false,
+      "outputs": ["drizzle/**"]
+    },
+    "db:migrate": {
+      "cache": false
+    }
+  }
+}

@@ -5,8 +5,12 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "fix": "biome check --write ."
   },
   "devDependencies": {
     "@types/bun": "latest",
