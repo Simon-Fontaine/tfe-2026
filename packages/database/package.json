@@ -8,6 +8,7 @@
     "build": "bun build ./src/index.ts --outdir ./dist",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "lint": "biome lint .",
     "check": "biome check .",
     "fix": "biome check --write ."
