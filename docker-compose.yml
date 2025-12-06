@@ -1,0 +1,88 @@
+services:
+  # --- Database (PostgreSQL) ---
+  db:
+    image: postgres:16-alpine
+    container_name: tfe_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-database}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - tfe_network
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-database}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Cache & Queue (Redis) ---
+  cache:
+    image: redis:7-alpine
+    container_name: tfe_cache
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password} --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - cache_data:/data
+    networks:
+      - tfe_network
+
+  # --- Object Storage S3 (MinIO) ---
+  storage:
+    image: minio/minio:latest
+    container_name: tfe_storage
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minio_user}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minio_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001" # Web Console
+    volumes:
+      - storage_data:/data
+    networks:
+      - tfe_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- MinIO Initialization (Create Bucket) ---
+  # This ephemeral service automatically creates the bucket for screenshots
+  storage-init:
+    image: minio/mc
+    container_name: tfe_storage_init
+    depends_on:
+      storage:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set tfe http://storage:9000 ${MINIO_USER:-minio_user} ${MINIO_PASSWORD:-minio_password};
+      /usr/bin/mc mb tfe/screenshots;
+      /usr/bin/mc anonymous set public tfe/screenshots;
+      exit 0;
+      "
+    networks:
+      - tfe_network
+
+volumes:
+  db_data:
+    name: tfe_db_data
+  cache_data:
+    name: tfe_cache_data
+  storage_data:
+    name: tfe_storage_data
+
+networks:
+  tfe_network:
+    name: tfe_network
+    driver: bridge
