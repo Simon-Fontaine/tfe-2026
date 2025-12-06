@@ -29,10 +29,10 @@
     // Path aliases for monorepo
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["packages/shared/*"],
-      "@api/*": ["packages/api/*"],
-      "@database/*": ["packages/database/*"],
-      "@web/*": ["packages/web/*"]
+      "@shared/*": ["packages/shared/src/*"],
+      "@database/*": ["packages/database/src/*"],
+      "@api/*": ["apps/api/src/*"],
+      "@web/*": ["apps/web/src/*"]
     }
   }
 }
