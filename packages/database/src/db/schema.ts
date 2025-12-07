@@ -1019,7 +1019,12 @@ export const teamsRelations = relations(teamsTable, ({ one, many }) => ({
   playerAvailabilities: many(playerAvailabilitiesTable),
   playerAvailabilityExceptions: many(playerAvailabilityExceptionsTable),
   blackouts: many(teamBlackoutsTable),
-  scrimPreferences: many(teamScrimPreferencesTable),
+  scrimPreferences: many(teamScrimPreferencesTable, {
+    relationName: "scrimPreferenceOwner",
+  }),
+  incomingScrimPreferences: many(teamScrimPreferencesTable, {
+    relationName: "scrimPreferenceTarget",
+  }),
   invites: many(teamInvitesTable),
   rosterLocks: many(teamRosterLocksTable),
   roleLimits: many(teamRoleLimitsTable),
@@ -1227,6 +1232,7 @@ export const teamScrimPreferencesRelations = relations(
     team: one(teamsTable, {
       fields: [teamScrimPreferencesTable.teamId],
       references: [teamsTable.id],
+      relationName: "scrimPreferenceOwner",
     }),
     targetOrganization: one(organizationsTable, {
       fields: [teamScrimPreferencesTable.targetOrganizationId],
@@ -1235,6 +1241,7 @@ export const teamScrimPreferencesRelations = relations(
     targetTeam: one(teamsTable, {
       fields: [teamScrimPreferencesTable.targetTeamId],
       references: [teamsTable.id],
+      relationName: "scrimPreferenceTarget",
     }),
   }),
 );
