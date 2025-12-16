@@ -7,7 +7,7 @@
       "outputs": ["dist/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^typecheck"],
       "outputs": []
     },
     "dev": {
@@ -31,6 +31,12 @@
       "outputs": ["drizzle/**"]
     },
     "db:migrate": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false
+    },
+    "db:seed": {
       "cache": false
     }
   }

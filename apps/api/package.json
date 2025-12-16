@@ -13,6 +13,9 @@
     "fix": "biome check --write .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@workspaces/shared": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

@@ -28,6 +28,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .turbo
 *.tsbuildinfo
 
+# lefthook may generate husky-compatible shims here
+.husky/_
+
 # IntelliJ based IDEs
 .idea
 

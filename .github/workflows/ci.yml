@@ -1,32 +1,29 @@
-name: CI (Quality & Build)
+name: CI
 
 on:
-  push:
-    branches: ["main"]
   pull_request:
-    types: [opened, synchronize]
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  quality:
-    name: 🛡️ Quality Check
+  ci:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.3
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint & Format (Biome)
-        run: bun run lint:ci
-
-      - name: Type Check
-        run: bun run typecheck
-
-      - name: Build Check
-        run: bun run build
+      - name: Run CI
+        run: bun run ci

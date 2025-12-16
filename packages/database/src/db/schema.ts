@@ -1,3 +1,23 @@
+import {
+  AVAILABILITY_STATUSES,
+  DAYS_OF_WEEK,
+  ELO_REASONS,
+  FLAG_SEVERITIES,
+  GLOBAL_ROLES,
+  INVITE_STATUSES,
+  OCR_STATUSES,
+  ORG_ROLES,
+  PROVIDER_TYPES,
+  REQUEST_STATUSES,
+  REQUEST_TYPES,
+  SCRIM_FORMATS,
+  SCRIM_PREFERENCE_TYPES,
+  SCRIM_STATUSES,
+  TEAM_ROLES,
+  TEAM_ROSTER_STATUSES,
+  VERIFICATION_STATUSES,
+  VERIFICATION_TYPES,
+} from "@workspaces/shared";
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
@@ -45,130 +65,55 @@ export type UserNotificationPreferences = {
 // 2. Enums
 // ----------------------------------------------------------------------
 
-export const globalRoleEnum = pgEnum("global_role", ["admin", "staff", "user"]);
-export const providerEnum = pgEnum("provider_type", [
-  "steam",
-  "discord",
-  "riot",
-  "twitch",
-  "battle_net",
-]);
+export const globalRoleEnum = pgEnum("global_role", GLOBAL_ROLES);
+export const providerEnum = pgEnum("provider_type", PROVIDER_TYPES);
 
-export const orgRoleEnum = pgEnum("org_role", [
-  "owner",
-  "admin",
-  "manager",
-  "member",
-]);
+export const orgRoleEnum = pgEnum("org_role", ORG_ROLES);
 
-export const teamRoleEnum = pgEnum("team_role", [
-  "owner",
-  "captain",
-  "player",
-  "coach",
-  "analyst",
-  "manager",
-]);
+export const teamRoleEnum = pgEnum("team_role", TEAM_ROLES);
 
-export const teamRosterStatusEnum = pgEnum("team_roster_status", [
-  "STARTER",
-  "SUBSTITUTE",
-  "INACTIVE",
-]);
+export const teamRosterStatusEnum = pgEnum(
+  "team_roster_status",
+  TEAM_ROSTER_STATUSES,
+);
 
-export const scrimStatusEnum = pgEnum("scrim_status", [
-  "DRAFT",
-  "PENDING",
-  "CONFIRMED",
-  "LIVE",
-  "PROCESSING",
-  "COMPLETED",
-  "DISPUTED",
-  "CANCELLED",
-]);
+export const scrimStatusEnum = pgEnum("scrim_status", SCRIM_STATUSES);
 
-export const scrimFormatEnum = pgEnum("scrim_format", [
-  "BO1",
-  "BO2",
-  "BO3",
-  "BO5",
-  "BO7",
-]);
+export const scrimFormatEnum = pgEnum("scrim_format", SCRIM_FORMATS);
 
-export const eloReasonEnum = pgEnum("elo_reason", [
-  "match",
-  "penalty",
-  "decay",
-  "rollback",
-  "calibration",
-]);
+export const eloReasonEnum = pgEnum("elo_reason", ELO_REASONS);
 
-export const requestTypeEnum = pgEnum("request_type", ["SEARCH", "OFFER"]);
+export const requestTypeEnum = pgEnum("request_type", REQUEST_TYPES);
 
-export const dayOfWeekEnum = pgEnum("day_of_week", [
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-  "SUNDAY",
-]);
+export const dayOfWeekEnum = pgEnum("day_of_week", DAYS_OF_WEEK);
 
-export const availabilityStatusEnum = pgEnum("availability_status", [
-  "AVAILABLE",
-  "UNAVAILABLE",
-  "TENTATIVE",
-]);
+export const availabilityStatusEnum = pgEnum(
+  "availability_status",
+  AVAILABILITY_STATUSES,
+);
 
-export const verificationTypeEnum = pgEnum("verification_type", [
-  "EMAIL_VERIFICATION",
-  "PASSWORD_RESET",
-  "ACCOUNT_DELETION",
-  "EMAIL_CHANGE",
-]);
+export const verificationTypeEnum = pgEnum(
+  "verification_type",
+  VERIFICATION_TYPES,
+);
 
-export const scrimPreferenceTypeEnum = pgEnum("scrim_preference_type", [
-  "AVOID",
-  "PREFER",
-]);
+export const scrimPreferenceTypeEnum = pgEnum(
+  "scrim_preference_type",
+  SCRIM_PREFERENCE_TYPES,
+);
 
-export const inviteStatusEnum = pgEnum("invite_status", [
-  "PENDING",
-  "ACCEPTED",
-  "DECLINED",
-  "EXPIRED",
-  "CANCELLED",
-]);
+export const inviteStatusEnum = pgEnum("invite_status", INVITE_STATUSES);
 
-export const requestStatusEnum = pgEnum("request_status", [
-  "ACTIVE",
-  "PAUSED",
-  "FULFILLED",
-  "EXPIRED",
-  "CANCELLED",
-]);
+export const requestStatusEnum = pgEnum("request_status", REQUEST_STATUSES);
 
-export const ocrStatusEnum = pgEnum("ocr_status", [
-  "PENDING",
-  "PROCESSING",
-  "SUCCESS",
-  "FAILED",
-  "MANUAL_REVIEW",
-]);
+export const ocrStatusEnum = pgEnum("ocr_status", OCR_STATUSES);
 
-export const verificationStatusEnum = pgEnum("verification_status", [
-  "PENDING",
-  "APPROVED",
-  "REJECTED",
-]);
+export const verificationStatusEnum = pgEnum(
+  "verification_status",
+  VERIFICATION_STATUSES,
+);
 
-export const flagSeverityEnum = pgEnum("flag_severity", [
-  "LOW",
-  "MEDIUM",
-  "HIGH",
-  "CRITICAL",
-]);
+export const flagSeverityEnum = pgEnum("flag_severity", FLAG_SEVERITIES);
 
 // ----------------------------------------------------------------------
 // 3. Identity
