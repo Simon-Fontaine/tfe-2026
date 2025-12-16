@@ -10,14 +10,18 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "lint:ci": "biome ci .",
     "check": "turbo run check",
+    "typecheck": "turbo run typecheck",
     "fix": "turbo run fix",
     "format": "biome format --write .",
     "db:generate": "turbo run db:generate",
-    "db:migrate": "turbo run db:migrate"
+    "db:migrate": "turbo run db:migrate",
+    "postinstall": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",
+    "lefthook": "^2.0.12",
     "turbo": "^2.6.3"
   }
 }

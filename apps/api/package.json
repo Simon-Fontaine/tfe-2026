@@ -10,7 +10,8 @@
     "start": "bun run dist/index.js",
     "lint": "biome lint .",
     "check": "biome check .",
-    "fix": "biome check --write ."
+    "fix": "biome check --write .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest"

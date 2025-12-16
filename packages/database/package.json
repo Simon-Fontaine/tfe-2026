@@ -12,7 +12,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "lint": "biome lint .",
     "check": "biome check .",
-    "fix": "biome check --write ."
+    "fix": "biome check --write .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest",
