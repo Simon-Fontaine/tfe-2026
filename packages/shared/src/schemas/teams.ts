@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { TEAM_ROLES } from "../constants";
 import { emailSchema, idSchema, trimmedString } from "./common";
-import { TEAM_ROLES } from "./constants";
 
 export const createTeamSchema = z.object({
   organizationId: idSchema,

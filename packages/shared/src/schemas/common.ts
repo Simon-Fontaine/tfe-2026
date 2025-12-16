@@ -19,7 +19,7 @@ import {
   TEAM_ROSTER_STATUSES,
   VERIFICATION_STATUSES,
   VERIFICATION_TYPES,
-} from "./constants";
+} from "../constants";
 
 type StringEnumValues = readonly [string, ...string[]];
 
