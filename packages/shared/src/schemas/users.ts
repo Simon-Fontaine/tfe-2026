@@ -1,8 +1,10 @@
 import { z } from "zod";
 import {
   emailSchema,
+  idSchema,
   optionalTrimmedString,
   optionalUrlSchema,
+  ProviderEnum,
   trimmedString,
 } from "./common";
 
@@ -52,6 +54,35 @@ export const deleteAccountSchema = z.object({
   token: trimmedString(6, 255, "Token is required"),
 });
 
+export const confirmEmailChangeSchema = z.object({
+  token: trimmedString(6, 255, "Token is required"),
+});
+
+export const linkProviderAccountSchema = z.object({
+  provider: ProviderEnum,
+  providerAccountId: trimmedString(1, 255, "Provider account id is required"),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const unlinkProviderAccountSchema = z.object({
+  provider: ProviderEnum,
+  providerAccountId: trimmedString(1, 255, "Provider account id is required"),
+});
+
+export const updateNotificationPreferencesSchema = z.object({
+  email_match_found: z.boolean().optional(),
+  email_scrim_reminder: z.boolean().optional(),
+  push_new_message: z.boolean().optional(),
+});
+
+export const markNotificationReadSchema = z.object({
+  notificationId: idSchema,
+});
+
+export const markAllNotificationsReadSchema = z.object({
+  upTo: z.coerce.date().optional(),
+});
+
 export type UserNotificationPreferencesInput = z.infer<
   typeof userNotificationPreferencesSchema
 >;
@@ -59,3 +90,19 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;
+export type LinkProviderAccountInput = z.infer<
+  typeof linkProviderAccountSchema
+>;
+export type UnlinkProviderAccountInput = z.infer<
+  typeof unlinkProviderAccountSchema
+>;
+export type UpdateNotificationPreferencesInput = z.infer<
+  typeof updateNotificationPreferencesSchema
+>;
+export type MarkNotificationReadInput = z.infer<
+  typeof markNotificationReadSchema
+>;
+export type MarkAllNotificationsReadInput = z.infer<
+  typeof markAllNotificationsReadSchema
+>;

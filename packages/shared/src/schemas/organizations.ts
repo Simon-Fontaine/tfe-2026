@@ -1,5 +1,7 @@
 import { z } from "zod";
 import {
+  idSchema,
+  OrgRoleEnum,
   optionalTrimmedString,
   optionalUrlSchema,
   slugSchema,
@@ -28,5 +30,35 @@ export const updateOrganizationSchema = z
     message: "Provide at least one field to update",
   });
 
+export const addOrganizationMemberSchema = z.object({
+  organizationId: idSchema,
+  userId: idSchema,
+  role: OrgRoleEnum.default("member"),
+});
+
+export const updateOrganizationMemberSchema = z
+  .object({
+    organizationId: idSchema,
+    memberId: idSchema,
+    role: OrgRoleEnum.optional(),
+  })
+  .refine((data) => data.role !== undefined, {
+    message: "Provide at least one field to update",
+  });
+
+export const removeOrganizationMemberSchema = z.object({
+  organizationId: idSchema,
+  memberId: idSchema,
+});
+
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>;
+export type AddOrganizationMemberInput = z.infer<
+  typeof addOrganizationMemberSchema
+>;
+export type UpdateOrganizationMemberInput = z.infer<
+  typeof updateOrganizationMemberSchema
+>;
+export type RemoveOrganizationMemberInput = z.infer<
+  typeof removeOrganizationMemberSchema
+>;
