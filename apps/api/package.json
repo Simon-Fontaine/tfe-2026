@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@workspaces/shared": "workspace:*"
+    "@hono/zod-validator": "^0.7.6",
+    "@workspaces/shared": "workspace:*",
+    "hono": "^4.11.1"
   },
   "devDependencies": {
     "@types/bun": "latest"
