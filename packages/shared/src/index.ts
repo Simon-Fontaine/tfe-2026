@@ -4,5 +4,6 @@ export * from "./schemas/common";
 export * from "./schemas/games";
 export * from "./schemas/organizations";
 export * from "./schemas/scrims";
+export * from "./schemas/sessions";
 export * from "./schemas/teams";
 export * from "./schemas/users";

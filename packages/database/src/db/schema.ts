@@ -1,3 +1,4 @@
+import type { SessionLocationInput } from "@workspaces/shared";
 import {
   AVAILABILITY_STATUSES,
   DAYS_OF_WEEK,
@@ -203,6 +204,31 @@ export const connectedAccountsTable = pgTable(
   (t) => [
     uniqueIndex("provider_acc_unique").on(t.provider, t.providerAccountId),
     index("connected_acc_user_idx").on(t.userId),
+  ],
+);
+
+export const sessionsTable = pgTable(
+  "sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => usersTable.id, { onDelete: "cascade" })
+      .notNull(),
+    sessionToken: varchar("session_token", { length: 255 }).notNull(),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    location: jsonb("location").$type<SessionLocationInput>(),
+    device: varchar("device", { length: 255 }),
+    userAgent: text("user_agent"),
+    lastActiveAt: timestamp("last_active_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("session_token_unique").on(t.sessionToken),
+    index("session_user_idx").on(t.userId),
   ],
 );
 
@@ -888,6 +914,7 @@ export const auditLogsTable = pgTable("audit_logs", {
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   connectedAccounts: many(connectedAccountsTable),
+  sessions: many(sessionsTable),
   orgMemberships: many(organizationMembersTable),
   teamMemberships: many(teamMembersTable),
   notifications: many(notificationsTable),
@@ -920,6 +947,13 @@ export const connectedAccountsRelations = relations(
     }),
   }),
 );
+
+export const sessionsRelations = relations(sessionsTable, ({ one }) => ({
+  user: one(usersTable, {
+    fields: [sessionsTable.userId],
+    references: [usersTable.id],
+  }),
+}));
 
 export const organizationsRelations = relations(
   organizationsTable,
