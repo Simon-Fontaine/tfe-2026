@@ -1,42 +1,94 @@
 import { env } from "@workspaces/shared";
 import { Resend } from "resend";
+import SecurityAlertEmail from "./emails/SecurityAlertEmail";
+import VerificationEmail from "./emails/VerificationEmail";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
+export type EmailVerificationType =
+  | "EMAIL_VERIFICATION"
+  | "PASSWORD_RESET"
+  | "EMAIL_CHANGE";
+
 export const emailService = {
-  async sendVerificationCode(email: string, code: string) {
-    if (env.NODE_ENV === "development") {
-      console.log(`[DEV] Verification Code for ${email}: ${code}`);
-      return;
+  async sendVerificationCode(
+    email: string,
+    code: string,
+    type: EmailVerificationType = "EMAIL_VERIFICATION",
+  ) {
+    let subject = "Verify your email for Scrimflow";
+    let title = "Verify your email address";
+    let message =
+      "Use the code below to verify your email address and finish setting up your account.";
+    let actionText = "enter the following code";
+
+    switch (type) {
+      case "PASSWORD_RESET":
+        subject = "Reset your Scrimflow password";
+        title = "Reset your password";
+        message =
+          "We received a request to reset your password. If you didn't ask for this, you can safely ignore this email.";
+        actionText = "use this code to reset your password";
+        break;
+      case "EMAIL_CHANGE":
+        subject = "Confirm your new email address";
+        title = "Confirm email update";
+        message =
+          "You requested to change the email address associated with your Scrimflow account.";
+        actionText = "enter this code to verify your new address";
+        break;
     }
 
-    await resend.emails.send({
-      from: "Scrimflow <onboarding@mail.scrimflow.com>",
-      to: email,
-      subject: "Votre code de vérification",
-      html: `
-        <div>
-          <h1>Bienvenue !</h1>
-          <p>Votre code de vérification est : <strong>${code}</strong></p>
-          <p>Ce code expire dans 15 minutes.</p>
-        </div>
-      `,
-    });
+    if (env.NODE_ENV === "development") {
+      console.log(`\n📨 [EMAIL DEV] To: ${email} | Subject: ${subject}`);
+      console.log(`   Code: ${code} | Type: ${type}`);
+    }
+
+    try {
+      await resend.emails.send({
+        from: "Scrimflow <onboarding@mail.scrimflow.com>",
+        to: email,
+        subject: subject,
+        react: VerificationEmail({ code, title, message, actionText }),
+      });
+    } catch (error) {
+      console.error(
+        "❌ [EMAIL ERROR] Failed to send verification code:",
+        error,
+      );
+    }
   },
 
   async sendNewIpNotification(email: string, ip: string, location?: string) {
-    await resend.emails.send({
-      from: "Scrimflow <security@mail.scrimflow.com>",
-      to: email,
-      subject: "Nouvelle connexion détectée",
-      html: `
-        <div>
-          <h1>Alerte de sécurité</h1>
-          <p>Une connexion à votre compte a été détectée depuis une nouvelle adresse IP : <strong>${ip}</strong></p>
-          ${location ? `<p>Localisation approximative : ${location}</p>` : ""}
-          <p>Si ce n'était pas vous, veuillez changer votre mot de passe immédiatement.</p>
-        </div>
-      `,
-    });
+    const now = new Date();
+    const datePart = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(now);
+    const timePart = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZoneName: "short",
+    }).format(now);
+    const date = `${datePart} at ${timePart}`;
+
+    if (env.NODE_ENV === "development") {
+      console.log(`\n🚨 [SECURITY DEV] To: ${email} | New IP: ${ip}`);
+    }
+
+    try {
+      await resend.emails.send({
+        from: "Scrimflow Security <security@mail.scrimflow.com>",
+        to: email,
+        subject: "New login to Scrimflow detected",
+        react: SecurityAlertEmail({ ip, location, date }),
+      });
+    } catch (error) {
+      console.error("❌ [EMAIL ERROR] Failed to send security alert:", error);
+    }
   },
 };

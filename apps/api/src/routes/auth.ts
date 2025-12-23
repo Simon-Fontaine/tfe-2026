@@ -1,10 +1,4 @@
 import { zValidator } from "@hono/zod-validator";
-import db from "@workspaces/database";
-import {
-  sessionsTable,
-  usersTable,
-  verificationsTable,
-} from "@workspaces/database/schema";
 import {
   env,
   loginSchema,
@@ -12,260 +6,122 @@ import {
   resendVerificationSchema,
   verifyCodeSchema,
 } from "@workspaces/shared";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
-import type { Context } from "hono";
-import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
-import { emailService } from "../lib/email";
+import { type Context, Hono } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { AuthService } from "../services/auth.service";
 
 const auth = new Hono();
 
-function generateCode(): string {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  const n = buf.at(0) ?? 0;
-  return (n % 1_000_000).toString().padStart(6, "0");
-}
-
-function getClientIp(c: Context): string {
+const getClientIp = (c: Context) => {
   const xff = c.req.header("x-forwarded-for");
-  if (!xff) return "unknown";
-
-  const first = xff.split(",")[0];
-  if (!first) return "unknown";
-
-  const ip = first.trim();
-  return ip || "unknown";
-}
+  return xff ? (xff.split(",")[0]?.trim() ?? "unknown") : "unknown";
+};
 
 auth.post("/register", zValidator("json", registerSchema), async (c) => {
-  const { username, email, password } = c.req.valid("json");
-
-  const existingUser = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(or(eq(usersTable.email, email), eq(usersTable.username, username)))
-    .limit(1);
-
-  if (existingUser.length > 0) {
-    return c.json({ error: "Email or Username already taken" }, 409);
+  try {
+    const result = await AuthService.register(c.req.valid("json"));
+    return c.json(
+      { message: "Account created, check emails", userId: result.userId },
+      201,
+    );
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "EMAIL_OR_USERNAME_TAKEN")
+      return c.json({ error: "Email or Username already taken" }, 409);
+    return c.json({ error: "Internal Error" }, 500);
   }
-
-  const passwordHash = await Bun.password.hash(password);
-
-  const insertedUsers = await db
-    .insert(usersTable)
-    .values({
-      email,
-      username,
-      passwordHash,
-      emailVerified: false,
-    })
-    .returning({ id: usersTable.id });
-
-  const newUser = insertedUsers[0];
-  if (!newUser) {
-    return c.json({ error: "Failed to create user" }, 500);
-  }
-
-  const code = generateCode();
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-  await db.insert(verificationsTable).values({
-    userId: newUser.id,
-    token: code,
-    type: "EMAIL_VERIFICATION",
-    expiresAt,
-  });
-
-  await emailService.sendVerificationCode(email, code);
-
-  return c.json(
-    {
-      message:
-        "Account created. Please check your emails for the verification code.",
-      userId: newUser.id,
-    },
-    201,
-  );
 });
 
 auth.post("/verify-email", zValidator("json", verifyCodeSchema), async (c) => {
-  const { token } = c.req.valid("json");
-
-  const rows = await db
-    .select({
-      verificationId: verificationsTable.id,
-      userId: verificationsTable.userId,
-      userEmail: usersTable.email,
-    })
-    .from(verificationsTable)
-    .innerJoin(usersTable, eq(verificationsTable.userId, usersTable.id))
-    .where(
-      and(
-        eq(verificationsTable.token, token),
-        eq(verificationsTable.type, "EMAIL_VERIFICATION"),
-        gt(verificationsTable.expiresAt, new Date()),
-        isNull(verificationsTable.usedAt),
-      ),
-    )
-    .limit(1);
-
-  const verification = rows[0];
-  if (!verification) {
+  try {
+    const { token } = c.req.valid("json");
+    await AuthService.verifyCode(token, "EMAIL_VERIFICATION");
+    return c.json({ message: "Email verified successfully" });
+  } catch (_error: unknown) {
     return c.json({ error: "Invalid or expired code" }, 400);
   }
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(usersTable)
-      .set({ emailVerified: true })
-      .where(eq(usersTable.id, verification.userId));
-
-    await tx
-      .update(verificationsTable)
-      .set({ usedAt: new Date() })
-      .where(eq(verificationsTable.id, verification.verificationId));
-  });
-
-  return c.json({ message: "Email verified successfully" });
 });
 
 auth.post(
   "/resend-verification",
   zValidator("json", resendVerificationSchema),
   async (c) => {
-    const { email } = c.req.valid("json");
-
-    const users = await db
-      .select({
-        id: usersTable.id,
-        emailVerified: usersTable.emailVerified,
-        email: usersTable.email,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
-      .limit(1);
-
-    const user = users[0];
-
-    if (!user || user.emailVerified) {
+    try {
+      await AuthService.resendVerificationCode(c.req.valid("json"));
       return c.json({
-        message: "If account exists and is unverified, code sent.",
+        message:
+          "If an account exists for this email, a verification code has been sent.",
       });
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        error.message === "UNSUPPORTED_VERIFICATION_TYPE"
+      ) {
+        return c.json({ error: "Unsupported verification type" }, 400);
+      }
+
+      return c.json({ error: "Internal Error" }, 500);
     }
-
-    const code = generateCode();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(verificationsTable)
-        .set({ usedAt: new Date() })
-        .where(
-          and(
-            eq(verificationsTable.userId, user.id),
-            eq(verificationsTable.type, "EMAIL_VERIFICATION"),
-            isNull(verificationsTable.usedAt),
-          ),
-        );
-
-      await tx.insert(verificationsTable).values({
-        userId: user.id,
-        token: code,
-        type: "EMAIL_VERIFICATION",
-        expiresAt,
-      });
-    });
-
-    await emailService.sendVerificationCode(email, code);
-
-    return c.json({ message: "Code sent" });
   },
 );
 
 auth.post("/login", zValidator("json", loginSchema), async (c) => {
-  const { email, password } = c.req.valid("json");
-  const ipAddress = getClientIp(c);
+  try {
+    const { email, password } = c.req.valid("json");
+    const ip = getClientIp(c);
+    const userAgent = c.req.header("user-agent");
 
-  const users = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      username: usersTable.username,
-      globalRole: usersTable.globalRole,
-      emailVerified: usersTable.emailVerified,
-      passwordHash: usersTable.passwordHash,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.email, email))
-    .limit(1);
-
-  const user = users[0];
-
-  if (!user || !user.passwordHash) {
-    return c.json({ error: "Invalid credentials" }, 401);
-  }
-
-  const validPassword = await Bun.password.verify(password, user.passwordHash);
-  if (!validPassword) {
-    return c.json({ error: "Invalid credentials" }, 401);
-  }
-
-  if (!user.emailVerified) {
-    return c.json(
-      { error: "Please verify your email first", code: "EMAIL_NOT_VERIFIED" },
-      403,
+    const { session, user } = await AuthService.login(
+      { email, password },
+      ip,
+      userAgent,
     );
+
+    setCookie(c, "session_token", session.sessionToken, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "Lax",
+      expires: session.expiresAt,
+      path: "/",
+    });
+
+    return c.json({ message: "Logged in", user });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "EMAIL_NOT_VERIFIED")
+      return c.json(
+        { error: "Verify email first", code: "EMAIL_NOT_VERIFIED" },
+        403,
+      );
+    return c.json({ error: "Invalid credentials" }, 401);
   }
+});
 
-  const knownIpSession = await db
-    .select({ id: sessionsTable.id })
-    .from(sessionsTable)
-    .where(
-      and(
-        eq(sessionsTable.userId, user.id),
-        eq(sessionsTable.ipAddress, ipAddress),
-      ),
-    )
-    .limit(1);
-
-  if (knownIpSession.length === 0) {
-    const hasAnyHistory = await db
-      .select({ id: sessionsTable.id })
-      .from(sessionsTable)
-      .where(eq(sessionsTable.userId, user.id))
-      .limit(1);
-
-    if (hasAnyHistory.length > 0) {
-      emailService
-        .sendNewIpNotification(user.email, ipAddress)
-        .catch(console.error);
-    }
+auth.post("/logout", async (c) => {
+  const token = getCookie(c, "session_token");
+  if (token) {
+    await AuthService.logout(token);
+    deleteCookie(c, "session_token");
   }
+  return c.json({ message: "Logged out" });
+});
 
-  const sessionToken = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+auth.get("/me", async (c) => {
+  const token = getCookie(c, "session_token");
+  if (!token) return c.json({ user: null }, 401);
 
-  await db.insert(sessionsTable).values({
-    userId: user.id,
-    sessionToken,
-    expiresAt,
-    ipAddress,
-    userAgent: c.req.header("user-agent"),
-  });
-
-  setCookie(c, "session_token", sessionToken, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "Lax",
-    expires: expiresAt,
-    path: "/",
-  });
+  const data = await AuthService.getSessionUser(token);
+  if (!data) {
+    deleteCookie(c, "session_token");
+    return c.json({ user: null }, 401);
+  }
 
   return c.json({
-    message: "Logged in successfully",
-    user: { id: user.id, username: user.username, role: user.globalRole },
+    user: {
+      id: data.user.id,
+      username: data.user.username,
+      email: data.user.email,
+      globalRole: data.user.globalRole,
+      avatarUrl: data.user.avatarUrl,
+    },
   });
 });
 

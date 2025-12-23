@@ -14,14 +14,19 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
+    "@react-email/components": "^1.0.2",
+    "@react-email/tailwind": "^2.0.2",
     "@workspaces/database": "workspace:*",
     "@workspaces/shared": "workspace:*",
     "drizzle-orm": "^0.45.0",
     "hono": "^4.11.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "resend": "^6.6.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/react": "^19.2.7"
   },
   "peerDependencies": {
     "typescript": "^5"
