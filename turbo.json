@@ -1,6 +1,8 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["NODE_ENV"],
+  "globalDependencies": [".env", ".env.local"],
+  "globalEnv": ["DATABASE_URL", "RESEND_API_KEY", "NODE_ENV"],
+  "globalPassThroughEnv": ["DATABASE_URL", "RESEND_API_KEY", "NODE_ENV"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

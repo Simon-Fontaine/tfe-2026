@@ -5,7 +5,6 @@ import {
   type StatSchema,
 } from "../src/db/schema";
 import db from "../src/index";
-import "dotenv/config";
 
 async function main() {
   console.log("🌱 Starting Seed...");

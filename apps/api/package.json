@@ -5,8 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "build": "bun build ./src/index.ts --outdir ./dist",
+    "dev": "cd ../../ && bun --watch apps/api/src/index.ts",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
     "start": "bun run dist/index.js",
     "check": "biome check .",
     "fix": "biome check --write .",
@@ -14,8 +14,11 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
+    "@workspaces/database": "workspace:*",
     "@workspaces/shared": "workspace:*",
-    "hono": "^4.11.1"
+    "drizzle-orm": "^0.45.0",
+    "hono": "^4.11.1",
+    "resend": "^6.6.0"
   },
   "devDependencies": {
     "@types/bun": "latest"

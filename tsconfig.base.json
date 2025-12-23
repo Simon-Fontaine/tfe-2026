@@ -31,6 +31,7 @@
     "paths": {
       "@workspaces/shared": ["packages/shared/src/index.ts"],
       "@workspaces/database": ["packages/database/src/index.ts"],
+      "@workspaces/database/schema": ["packages/database/src/db/schema.ts"],
       "@workspaces/api": ["apps/api/src/index.ts"],
       "@workspaces/web": ["apps/web/src/index.ts"]
     }

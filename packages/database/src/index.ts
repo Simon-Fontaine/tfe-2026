@@ -1,10 +1,6 @@
-import "dotenv/config";
+import { env } from "@workspaces/shared";
 import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "./db/schema";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL is not defined in environment variables");
-}
-
-const db = drizzle(DATABASE_URL);
+const db = drizzle(env.DATABASE_URL, { schema });
 export default db;

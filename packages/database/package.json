@@ -1,9 +1,13 @@
 {
   "name": "@workspaces/database",
   "version": "0.1.0",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/db/schema.ts"
+  },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node",
     "db:generate": "drizzle-kit generate",
@@ -24,7 +28,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
+    "@workspaces/shared": "workspace:*",
     "drizzle-orm": "^0.45.0",
     "pg": "^8.16.3"
   }

@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
+    "dev": "cd ../../ && bun --watch apps/web/src/index.ts",
     "build": "bun build ./src/index.ts --outdir ./dist",
     "start": "bun run dist/index.js",
     "check": "biome check .",
