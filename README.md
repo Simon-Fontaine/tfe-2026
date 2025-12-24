@@ -1,6 +1,6 @@
 # tfe-2026
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Simon-Fontaine/tfe-2026/ci.yml?label=CI) ![GitHub last commit](https://img.shields.io/github/last-commit/Simon-Fontaine/tfe-2026) ![GitHub Repo stars](https://img.shields.io/github/stars/Simon-Fontaine/tfe-2026)
+[![CI](https://github.com/Simon-Fontaine/tfe-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/Simon-Fontaine/tfe-2026/actions/workflows/ci.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Simon-Fontaine/tfe-2026) ![GitHub Repo stars](https://img.shields.io/github/stars/Simon-Fontaine/tfe-2026)
 
 ## Prerequisites
 
