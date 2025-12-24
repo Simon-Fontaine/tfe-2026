@@ -57,6 +57,7 @@ export const requestPasswordResetSchema = z.object({
 export const resetPasswordSchema = z
   .object({
     token: verificationTokenSchema,
+    email: emailSchema,
     newPassword: passwordSchema,
     confirmNewPassword: passwordSchema,
   })
@@ -69,6 +70,25 @@ export const requestEmailVerificationSchema = z.object({
   email: emailSchema,
 });
 
+export const requestEmailChangeSchema = z.object({
+  newEmail: emailSchema,
+  password: passwordSchema,
+});
+
+export const confirmEmailChangeSchema = z.object({
+  token: verificationTokenSchema,
+  email: emailSchema,
+});
+
+export const requestAccountDeletionSchema = z.object({
+  password: passwordSchema,
+});
+
+export const confirmDeleteAccountSchema = z.object({
+  token: verificationTokenSchema,
+  email: emailSchema,
+});
+
 export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
 export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 export type RequestPasswordResetInput = z.infer<
@@ -77,6 +97,14 @@ export type RequestPasswordResetInput = z.infer<
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type RequestEmailVerificationInput = z.infer<
   typeof requestEmailVerificationSchema
+>;
+export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeSchema>;
+export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;
+export type RequestAccountDeletionInput = z.infer<
+  typeof requestAccountDeletionSchema
+>;
+export type ConfirmDeleteAccountInput = z.infer<
+  typeof confirmDeleteAccountSchema
 >;
 
 export type LoginInput = z.infer<typeof loginSchema>;

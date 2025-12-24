@@ -3,7 +3,10 @@ import { usersTable } from "@workspaces/database/schema";
 import type {
   LoginInput,
   RegisterInput,
+  RequestEmailChangeInput,
+  RequestPasswordResetInput,
   ResendVerificationInput,
+  ResetPasswordInput,
   SessionMetadataInput,
 } from "@workspaces/shared";
 import { eq, or } from "drizzle-orm";
@@ -63,7 +66,8 @@ export namespace AuthService {
     metadata: SessionMetadataInput,
   ) {
     const user = await db.query.usersTable.findFirst({
-      where: eq(usersTable.email, data.email),
+      where: (table, { and, eq, isNull }) =>
+        and(eq(table.email, data.email), isNull(table.deletedAt)),
     });
 
     if (!user || !user.passwordHash) {
@@ -87,30 +91,25 @@ export namespace AuthService {
     };
   }
 
-  export async function verifyCode(
-    token: string,
-    email: string,
-    type: "EMAIL_VERIFICATION" | "PASSWORD_RESET" | "EMAIL_CHANGE",
-  ) {
-    const userId = await VerificationService.verifyCode(token, email, type);
+  export async function verifyEmail(token: string, email: string) {
+    const userId = await VerificationService.verifyCode(
+      token,
+      email,
+      "EMAIL_VERIFICATION",
+    );
 
-    if (type === "EMAIL_VERIFICATION") {
-      await db
-        .update(usersTable)
-        .set({ emailVerified: true })
-        .where(eq(usersTable.id, userId));
-    }
+    await db
+      .update(usersTable)
+      .set({ emailVerified: true })
+      .where(eq(usersTable.id, userId));
 
     return userId;
   }
 
   export async function resendVerificationCode(data: ResendVerificationInput) {
-    if (data.type === "ACCOUNT_DELETION") {
-      throw new Error("UNSUPPORTED_VERIFICATION_TYPE");
-    }
-
     const user = await db.query.usersTable.findFirst({
-      where: eq(usersTable.email, data.email),
+      where: (table, { and, eq, isNull }) =>
+        and(eq(table.email, data.email), isNull(table.deletedAt)),
     });
 
     if (!user) return;
@@ -124,7 +123,123 @@ export namespace AuthService {
       return;
     }
 
+    if (data.type === "ACCOUNT_DELETION") {
+      await VerificationService.sendCode(
+        user.id,
+        user.email,
+        "ACCOUNT_DELETION",
+      );
+      return;
+    }
+
     await VerificationService.sendCode(user.id, user.email, data.type);
+  }
+
+  export async function requestPasswordReset(data: RequestPasswordResetInput) {
+    const user = await db.query.usersTable.findFirst({
+      where: (table, { and, eq, isNull }) =>
+        and(eq(table.email, data.email), isNull(table.deletedAt)),
+    });
+
+    if (!user) return;
+
+    await VerificationService.sendCode(user.id, user.email, "PASSWORD_RESET");
+  }
+
+  export async function resetPassword(data: ResetPasswordInput) {
+    const userId = await VerificationService.verifyCode(
+      data.token,
+      data.email,
+      "PASSWORD_RESET",
+    );
+
+    const passwordHash = await hashPassword(data.newPassword);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(usersTable)
+        .set({ passwordHash })
+        .where(eq(usersTable.id, userId));
+
+      await SessionService.revokeAllUserSessions(userId);
+    });
+  }
+
+  export async function requestEmailChange(
+    userId: string,
+    data: RequestEmailChangeInput,
+  ) {
+    const user = await db.query.usersTable.findFirst({
+      where: eq(usersTable.id, userId),
+    });
+
+    if (!user || !user.passwordHash) throw new Error("USER_NOT_FOUND");
+
+    const isValid = await verifyPassword(data.password, user.passwordHash);
+    if (!isValid) throw new Error("INVALID_PASSWORD");
+
+    const existing = await db.query.usersTable.findFirst({
+      where: eq(usersTable.email, data.newEmail),
+    });
+
+    if (existing) throw new Error("EMAIL_TAKEN");
+
+    await db
+      .update(usersTable)
+      .set({ pendingEmail: data.newEmail })
+      .where(eq(usersTable.id, userId));
+
+    await VerificationService.sendCode(userId, data.newEmail, "EMAIL_CHANGE");
+  }
+
+  export async function confirmEmailChange(token: string, newEmail: string) {
+    const userId = await VerificationService.verifyCode(
+      token,
+      newEmail,
+      "EMAIL_CHANGE",
+    );
+
+    await db
+      .update(usersTable)
+      .set({
+        email: newEmail,
+        pendingEmail: null,
+        emailVerified: true,
+      })
+      .where(eq(usersTable.id, userId));
+  }
+
+  export async function requestAccountDeletion(
+    userId: string,
+    password: string,
+  ) {
+    const user = await db.query.usersTable.findFirst({
+      where: eq(usersTable.id, userId),
+    });
+
+    if (!user || !user.passwordHash) throw new Error("USER_NOT_FOUND");
+
+    const isValid = await verifyPassword(password, user.passwordHash);
+    if (!isValid) throw new Error("INVALID_PASSWORD");
+
+    await VerificationService.sendCode(user.id, user.email, "ACCOUNT_DELETION");
+  }
+
+  export async function confirmAccountDeletion(token: string, email: string) {
+    const userId = await VerificationService.verifyCode(
+      token,
+      email,
+      "ACCOUNT_DELETION",
+    );
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(usersTable)
+        .set({ deletedAt: new Date() })
+        .where(eq(usersTable.id, userId));
+
+      await SessionService.revokeAllUserSessions(userId);
+    });
   }
 
   export async function logout(sessionToken: string) {

@@ -8,7 +8,8 @@ const resend = new Resend(env.RESEND_API_KEY);
 export type EmailVerificationType =
   | "EMAIL_VERIFICATION"
   | "PASSWORD_RESET"
-  | "EMAIL_CHANGE";
+  | "EMAIL_CHANGE"
+  | "ACCOUNT_DELETION";
 
 export const emailService = {
   async sendVerificationCode(
@@ -36,6 +37,13 @@ export const emailService = {
         message =
           "You requested to change the email address associated with your Scrimflow account.";
         actionText = "enter this code to verify your new address";
+        break;
+      case "ACCOUNT_DELETION":
+        subject = "Confirm account deletion request";
+        title = "Confirm account deletion";
+        message =
+          "You requested to delete your Scrimflow account. This action is permanent and cannot be undone.";
+        actionText = "enter this code to confirm deletion";
         break;
     }
 

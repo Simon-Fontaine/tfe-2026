@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { usernameSchema } from "./auth";
 import {
-  emailSchema,
   idSchema,
   optionalTrimmedString,
   optionalUrlSchema,
@@ -27,15 +26,6 @@ export const updateProfileSchema = z.object({
   timezone: optionalTrimmedString(50),
 });
 
-export const changeEmailSchema = z.object({
-  email: emailSchema,
-  password: trimmedString(
-    8,
-    255,
-    "Password must be at least 8 characters long",
-  ),
-});
-
 export const changePasswordSchema = z
   .object({
     currentPassword: trimmedString(8, 255, "Current password is required"),
@@ -51,11 +41,7 @@ export const changePasswordSchema = z
     path: ["confirmNewPassword"],
   });
 
-export const deleteAccountSchema = z.object({
-  token: trimmedString(6, 255, "Token is required"),
-});
-
-export const confirmEmailChangeSchema = z.object({
+export const confirmEmailChangeTokenSchema = z.object({
   token: trimmedString(6, 255, "Token is required"),
 });
 
@@ -88,10 +74,10 @@ export type UserNotificationPreferencesInput = z.infer<
   typeof userNotificationPreferencesSchema
 >;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
-export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
-export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;
+export type ConfirmEmailChangeTokenInput = z.infer<
+  typeof confirmEmailChangeTokenSchema
+>;
 export type LinkProviderAccountInput = z.infer<
   typeof linkProviderAccountSchema
 >;

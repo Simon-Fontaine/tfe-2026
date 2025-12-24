@@ -8,7 +8,11 @@ export namespace VerificationService {
   export async function sendCode(
     userId: string,
     email: string,
-    type: "EMAIL_VERIFICATION" | "PASSWORD_RESET" | "EMAIL_CHANGE",
+    type:
+      | "EMAIL_VERIFICATION"
+      | "PASSWORD_RESET"
+      | "EMAIL_CHANGE"
+      | "ACCOUNT_DELETION",
   ) {
     const code = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
@@ -37,7 +41,11 @@ export namespace VerificationService {
   export async function verifyCode(
     token: string,
     email: string,
-    type: "EMAIL_VERIFICATION" | "PASSWORD_RESET" | "EMAIL_CHANGE",
+    type:
+      | "EMAIL_VERIFICATION"
+      | "PASSWORD_RESET"
+      | "EMAIL_CHANGE"
+      | "ACCOUNT_DELETION",
   ): Promise<string> {
     return await db.transaction(async (tx) => {
       const verification = await tx.query.verificationsTable.findFirst({
@@ -55,10 +63,12 @@ export namespace VerificationService {
 
       const user = await tx.query.usersTable.findFirst({
         where: eq(usersTable.id, verification.userId),
-        columns: { email: true },
+        columns: { email: true, pendingEmail: true },
       });
 
-      if (!user || user.email !== email) {
+      const expectedEmail =
+        type === "EMAIL_CHANGE" ? user?.pendingEmail : user?.email;
+      if (!user || expectedEmail !== email) {
         throw new Error("INVALID_CODE_FOR_EMAIL");
       }
 
