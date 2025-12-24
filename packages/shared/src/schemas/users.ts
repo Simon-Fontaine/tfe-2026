@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { usernameSchema } from "./auth";
 import {
   emailSchema,
   idSchema,
@@ -15,7 +16,7 @@ export const userNotificationPreferencesSchema = z.object({
 });
 
 export const updateProfileSchema = z.object({
-  username: optionalTrimmedString(30),
+  username: usernameSchema.optional(),
   avatarUrl: optionalUrlSchema,
   country: z
     .string()

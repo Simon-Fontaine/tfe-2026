@@ -6,6 +6,8 @@ export const sessionLocationSchema = z
     city: optionalTrimmedString(255),
     region: optionalTrimmedString(255),
     country: optionalTrimmedString(255),
+    countryCode: optionalTrimmedString(2),
+    timezone: optionalTrimmedString(255),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
   })

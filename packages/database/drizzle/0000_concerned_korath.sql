@@ -271,6 +271,20 @@ CREATE TABLE "scrims" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
+CREATE TABLE "sessions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"session_token" varchar(255) NOT NULL,
+	"ip_address" varchar(45),
+	"location" jsonb,
+	"device" varchar(255),
+	"user_agent" text,
+	"last_active_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"revoked_at" timestamp with time zone,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "team_availabilities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"team_id" uuid NOT NULL,
@@ -363,6 +377,7 @@ CREATE TABLE "users" (
 	"avatar_url" text,
 	"country" varchar(2),
 	"timezone" varchar(50) DEFAULT 'UTC' NOT NULL,
+	"locale" varchar(5) DEFAULT 'en-US' NOT NULL,
 	"elo" integer DEFAULT 1200 NOT NULL,
 	"is_verified" boolean DEFAULT false NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
@@ -429,6 +444,7 @@ ALTER TABLE "scrim_result_verifications" ADD CONSTRAINT "scrim_result_verificati
 ALTER TABLE "scrims" ADD CONSTRAINT "scrims_game_id_games_id_fk" FOREIGN KEY ("game_id") REFERENCES "public"."games"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "scrims" ADD CONSTRAINT "scrims_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "scrims" ADD CONSTRAINT "scrims_opponent_organization_id_organizations_id_fk" FOREIGN KEY ("opponent_organization_id") REFERENCES "public"."organizations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "team_availabilities" ADD CONSTRAINT "team_availabilities_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "team_blackouts" ADD CONSTRAINT "team_blackouts_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "team_invites" ADD CONSTRAINT "team_invites_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -470,6 +486,8 @@ CREATE INDEX "scrim_req_search_idx" ON "scrim_requests" USING btree ("status","g
 CREATE INDEX "scrim_result_verify_idx" ON "scrim_result_verifications" USING btree ("scrim_id","status");--> statement-breakpoint
 CREATE INDEX "scrim_calendar_idx" ON "scrims" USING btree ("scheduled_start","status");--> statement-breakpoint
 CREATE INDEX "scrim_host_org_idx" ON "scrims" USING btree ("organization_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "session_token_unique" ON "sessions" USING btree ("session_token");--> statement-breakpoint
+CREATE INDEX "session_user_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "availability_idx" ON "team_availabilities" USING btree ("team_id","day_of_week");--> statement-breakpoint
 CREATE INDEX "team_blackout_range_idx" ON "team_blackouts" USING btree ("team_id","start_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "team_invite_token_unique" ON "team_invites" USING btree ("token");--> statement-breakpoint

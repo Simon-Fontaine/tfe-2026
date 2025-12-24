@@ -132,6 +132,7 @@ export const usersTable = pgTable(
     avatarUrl: text("avatar_url"),
     country: varchar("country", { length: 2 }),
     timezone: varchar("timezone", { length: 50 }).default("UTC").notNull(),
+    locale: varchar("locale", { length: 5 }).default("en-US").notNull(),
 
     elo: integer("elo").default(1200).notNull(),
 

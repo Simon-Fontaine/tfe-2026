@@ -6,20 +6,45 @@ import {
   resendVerificationSchema,
   verifyCodeSchema,
 } from "@workspaces/shared";
-import { type Context, Hono } from "hono";
+import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { AuthService } from "../services/auth.service";
 
 const auth = new Hono();
 
-const getClientIp = (c: Context) => {
-  const xff = c.req.header("x-forwarded-for");
-  return xff ? (xff.split(",")[0]?.trim() ?? "unknown") : "unknown";
-};
+import type { SessionMetadataInput } from "@workspaces/shared";
+import { UAParser } from "ua-parser-js";
+import { extractClientInfo } from "../lib/geo";
+import { lookupGeo } from "../services/geo.service";
 
 auth.post("/register", zValidator("json", registerSchema), async (c) => {
   try {
-    const result = await AuthService.register(c.req.valid("json"));
+    const { ip, userAgent } = extractClientInfo(c);
+    const geoData = await lookupGeo(ip);
+    const { ua, device } = UAParser(userAgent);
+
+    let location: SessionMetadataInput["location"];
+
+    if (geoData?.status === "success") {
+      location = {
+        country: geoData.country,
+        countryCode: geoData.countryCode,
+        region: geoData.regionName,
+        city: geoData.city,
+        latitude: geoData.lat,
+        longitude: geoData.lon,
+        timezone: geoData.timezone,
+      };
+    }
+
+    const metadata: SessionMetadataInput = {
+      ipAddress: ip,
+      userAgent: ua,
+      device: device.model || device.type || device.vendor || "Unknown",
+      location,
+    };
+
+    const result = await AuthService.register(c.req.valid("json"), metadata);
     return c.json(
       { message: "Account created, check emails", userId: result.userId },
       201,
@@ -33,8 +58,8 @@ auth.post("/register", zValidator("json", registerSchema), async (c) => {
 
 auth.post("/verify-email", zValidator("json", verifyCodeSchema), async (c) => {
   try {
-    const { token } = c.req.valid("json");
-    await AuthService.verifyCode(token, "EMAIL_VERIFICATION");
+    const { token, email } = c.req.valid("json");
+    await AuthService.verifyCode(token, email, "EMAIL_VERIFICATION");
     return c.json({ message: "Email verified successfully" });
   } catch (_error: unknown) {
     return c.json({ error: "Invalid or expired code" }, 400);
@@ -67,13 +92,34 @@ auth.post(
 auth.post("/login", zValidator("json", loginSchema), async (c) => {
   try {
     const { email, password } = c.req.valid("json");
-    const ip = getClientIp(c);
-    const userAgent = c.req.header("user-agent");
+    const { ip, userAgent } = extractClientInfo(c);
+    const geoData = await lookupGeo(ip);
+    const { ua, device } = UAParser(userAgent);
+
+    let location: SessionMetadataInput["location"];
+
+    if (geoData?.status === "success") {
+      location = {
+        country: geoData.country,
+        countryCode: geoData.countryCode,
+        region: geoData.regionName,
+        city: geoData.city,
+        latitude: geoData.lat,
+        longitude: geoData.lon,
+        timezone: geoData.timezone,
+      };
+    }
+
+    const metadata: SessionMetadataInput = {
+      ipAddress: ip,
+      userAgent: ua,
+      device: device.model || device.type || device.vendor || "Unknown",
+      location,
+    };
 
     const { session, user } = await AuthService.login(
       { email, password },
-      ip,
-      userAgent,
+      metadata,
     );
 
     setCookie(c, "session_token", session.sessionToken, {

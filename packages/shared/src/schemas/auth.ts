@@ -41,6 +41,7 @@ export const registerSchema = z
 
 export const verifyCodeSchema = z.object({
   token: verificationTokenSchema,
+  email: emailSchema,
   type: VerificationTypeEnum.default("EMAIL_VERIFICATION"),
 });
 

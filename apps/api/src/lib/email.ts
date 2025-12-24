@@ -1,4 +1,4 @@
-import { env } from "@workspaces/shared";
+import { env, type SessionMetadataInput } from "@workspaces/shared";
 import { Resend } from "resend";
 import SecurityAlertEmail from "./emails/SecurityAlertEmail";
 import VerificationEmail from "./emails/VerificationEmail";
@@ -59,16 +59,22 @@ export const emailService = {
     }
   },
 
-  async sendNewIpNotification(email: string, ip: string, location?: string) {
+  async sendNewIpNotification(
+    email: string,
+    metadata: SessionMetadataInput,
+    timezone: string = "UTC",
+  ) {
+    const ip = metadata.ipAddress ?? "unknown";
+    const location = formatLocation(metadata.location);
     const now = new Date();
     const datePart = new Intl.DateTimeFormat("en-US", {
-      timeZone: "UTC",
+      timeZone: timezone,
       month: "long",
       day: "numeric",
       year: "numeric",
     }).format(now);
     const timePart = new Intl.DateTimeFormat("en-US", {
-      timeZone: "UTC",
+      timeZone: timezone,
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -92,3 +98,15 @@ export const emailService = {
     }
   },
 };
+
+function formatLocation(
+  location?: SessionMetadataInput["location"],
+): string | undefined {
+  if (!location) return undefined;
+
+  const parts = [location.city, location.region, location.country].filter(
+    Boolean,
+  );
+
+  return parts.length ? parts.join(", ") : undefined;
+}
