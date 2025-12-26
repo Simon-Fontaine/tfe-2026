@@ -1,21 +1,25 @@
 {
   "name": "@workspaces/web",
   "version": "0.1.0",
-  "module": "src/index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "cd ../../ && bun --watch apps/web/src/index.ts",
-    "build": "bun build ./src/index.ts --outdir ./dist",
-    "start": "bun run dist/index.js",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
     "check": "biome check .",
     "fix": "biome check --write .",
     "typecheck": "tsc --noEmit"
   },
-  "devDependencies": {
-    "@types/bun": "latest"
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "devDependencies": {
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
   }
 }
