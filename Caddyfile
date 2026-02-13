@@ -1,0 +1,18 @@
+{$DOMAIN:localhost} {
+    encode gzip zstd
+    reverse_proxy app:3000
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    log {
+        output file /data/access.log
+        format json
+    }
+}

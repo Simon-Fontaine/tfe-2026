@@ -1,0 +1,24 @@
+# Development Dockerfile for Next.js App
+FROM node:20-alpine AS dev
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+
+# Install dependencies
+RUN pnpm install
+
+# Expose the port
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Start the development server
+CMD ["pnpm", "dev"]
