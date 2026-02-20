@@ -20,6 +20,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Database Migrations ---
+  db-migrate:
+    build:
+      context: ./next-app
+      dockerfile: ../Dockerfile.dev
+      target: dev
+    container_name: scrimflow_db_migrate_dev
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+    command: sh -c "pnpm db:migrate"
+    networks:
+      - scrimflow_network
+    depends_on:
+      db:
+        condition: service_healthy
+
   # --- Cache & Queue (Redis) ---
   cache:
     image: redis:7-alpine
@@ -101,6 +117,10 @@ services:
       S3_BUCKET_SCREENSHOTS: screenshots
       S3_BUCKET_BANNERS: banners
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9000}
+      # SMTP (Mailpit)
+      SMTP_HOST: mail
+      SMTP_PORT: 1025
+      SMTP_FROM: noreply@scrimflow.local
     ports:
       - "3000:3000"
     volumes:
@@ -112,10 +132,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       cache:
         condition: service_healthy
       storage:
         condition: service_healthy
+      mail:
+        condition: service_started
 
   # --- Python OCR Worker (Development) ---
   # TODO: Uncomment when worker is ready
@@ -145,6 +169,17 @@ services:
   #       condition: service_healthy
   #     storage:
   #       condition: service_healthy
+
+  # --- Email (Mailpit - catches all outgoing mail in dev) ---
+  mail:
+    image: axllent/mailpit:latest
+    container_name: scrimflow_mail_dev
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - scrimflow_network
 
   # --- Redis Commander (Development Tool - Redis Web UI) ---
   redis-commander:

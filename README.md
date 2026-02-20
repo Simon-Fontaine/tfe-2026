@@ -34,10 +34,22 @@ docker compose -f docker-compose.dev.yml up db cache storage storage-init -d
 cd next-app
 pnpm install
 pnpm dev
+```
 
-# Pre-commit hooks
-# This project uses Lefthook to run Biome checks before committing.
-# Hooks are installed automatically after pnpm install.
+## Database
+
+```bash
+# Generate migrations from schema changes
+pnpm db:generate
+
+# Run migrations (auto-runs in Docker)
+pnpm db:migrate
+
+# Push schema directly (dev only)
+pnpm db:push
+
+# Open Drizzle Studio
+pnpm db:studio
 ```
 
 ## Stack

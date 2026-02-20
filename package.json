@@ -1,5 +1,8 @@
 {
 	"scripts": {
+		"dev": "cd next-app && pnpm dev",
+		"start": "cd next-app && pnpm start",
+		"build": "cd next-app && pnpm build",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"lint": "biome lint .",

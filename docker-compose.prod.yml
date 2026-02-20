@@ -20,6 +20,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Database Migrations ---
+  db-migrate:
+    build:
+      context: ./next-app
+      dockerfile: ../Dockerfile
+      target: runner
+    container_name: scrimflow_db_migrate
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+    command: sh -c "pnpm db:migrate"
+    networks:
+      - scrimflow_network
+    depends_on:
+      db:
+        condition: service_healthy
+
   # --- Cache & Queue (Redis) ---
   cache:
     image: redis:7-alpine
@@ -106,6 +122,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       cache:
         condition: service_healthy
       storage:
