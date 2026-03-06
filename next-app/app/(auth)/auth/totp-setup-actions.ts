@@ -170,6 +170,7 @@ export async function verifyAndEnableTotpAction(
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_enabled",
+		twoFactorMethod: "totp",
 	});
 
 	writeAuditLog(
@@ -220,6 +221,7 @@ export async function disableTotpAction(): Promise<TotpSetupResult> {
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_disabled",
+		twoFactorMethod: "totp",
 	});
 
 	writeAuditLog(

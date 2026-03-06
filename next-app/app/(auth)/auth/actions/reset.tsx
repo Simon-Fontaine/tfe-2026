@@ -9,6 +9,7 @@ import { passwordResetSessionTable, userTable } from "@/db/schema";
 import { PasswordResetEmail } from "@/emails/PasswordResetEmail";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { extractClientContext } from "@/lib/auth/device";
+import { sendSecurityAlertEmail } from "@/lib/auth/email-security";
 import { hashPassword, verifyPasswordStrength } from "@/lib/auth/password";
 import { invalidateUserSessions } from "@/lib/auth/session";
 import { rateLimits } from "@/lib/config/rate-limits";
@@ -134,6 +135,15 @@ export async function resetPasswordAction(
 	await invalidateUserSessions(resetSession.userId, "password_change");
 
 	const geo = await fetchGeoData(client.ip);
+
+	await sendSecurityAlertEmail({
+		to: resetSession.email,
+		ip: client.ip,
+		device: client.deviceName,
+		geo,
+		alertType: "password_changed",
+	});
+
 	writeAuditLog(
 		resetSession.userId,
 		"password_reset_complete",

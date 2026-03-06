@@ -26,33 +26,55 @@ interface SecurityAlertEmailProps {
 	location: string;
 	date: string;
 	alertType: SecurityAlertType;
+	twoFactorMethod?: "totp" | "passkey" | "security_key";
 }
 
-const ALERT_COPY: Record<SecurityAlertType, { subject: string; body: string }> = {
-	new_device: {
+const TWO_FACTOR_METHOD_LABELS: Record<"totp" | "passkey" | "security_key", string> = {
+	totp: "Authenticator app (TOTP)",
+	passkey: "Passkey",
+	security_key: "Security key",
+};
+
+function getTwoFactorBody(
+	action: "enabled" | "disabled",
+	method?: "totp" | "passkey" | "security_key"
+): string {
+	const methodLabel = method ? TWO_FACTOR_METHOD_LABELS[method] : null;
+	const methodStr = methodLabel ? ` using ${methodLabel}` : "";
+	if (action === "enabled") {
+		return `Two-factor authentication (2FA)${methodStr} was recently enabled on your Scrimflow account.`;
+	}
+	return `Two-factor authentication (2FA)${methodStr} was recently disabled on your Scrimflow account. Your account may be less secure.`;
+}
+
+const ALERT_COPY: Record<
+	SecurityAlertType,
+	(method?: "totp" | "passkey" | "security_key") => { subject: string; body: string }
+> = {
+	new_device: () => ({
 		subject: "New device sign-in",
 		body: "A sign-in to your Scrimflow account was detected from a new device.",
-	},
-	new_location: {
+	}),
+	new_location: () => ({
 		subject: "New location sign-in",
 		body: "A sign-in to your Scrimflow account was detected from a new location.",
-	},
-	suspicious: {
+	}),
+	suspicious: () => ({
 		subject: "Suspicious sign-in attempt",
 		body: "A suspicious sign-in attempt was detected on your Scrimflow account.",
-	},
-	password_changed: {
+	}),
+	password_changed: () => ({
 		subject: "Password changed",
 		body: "The password for your Scrimflow account was recently changed.",
-	},
-	two_factor_enabled: {
+	}),
+	two_factor_enabled: (method) => ({
 		subject: "Two-factor authentication enabled",
-		body: "Two-factor authentication (2FA) was recently enabled on your Scrimflow account.",
-	},
-	two_factor_disabled: {
+		body: getTwoFactorBody("enabled", method),
+	}),
+	two_factor_disabled: (method) => ({
 		subject: "Two-factor authentication disabled",
-		body: "Two-factor authentication (2FA) was recently disabled on your Scrimflow account. Your account may be less secure.",
-	},
+		body: getTwoFactorBody("disabled", method),
+	}),
 };
 
 export const SecurityAlertEmail = ({
@@ -61,8 +83,9 @@ export const SecurityAlertEmail = ({
 	location,
 	date,
 	alertType,
+	twoFactorMethod,
 }: SecurityAlertEmailProps) => {
-	const copy = ALERT_COPY[alertType];
+	const copy = ALERT_COPY[alertType](twoFactorMethod);
 
 	return (
 		<Html>

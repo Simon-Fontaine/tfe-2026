@@ -9,12 +9,14 @@ export async function sendSecurityAlertEmail({
 	device,
 	geo,
 	alertType,
+	twoFactorMethod,
 }: {
 	to: string;
 	ip: string | null;
 	device: string | null;
 	geo?: GeoData;
 	alertType: SecurityAlertType;
+	twoFactorMethod?: "totp" | "passkey" | "security_key";
 }) {
 	const subjectMap: Record<SecurityAlertType, string> = {
 		new_device: "New device sign-in on Scrimflow",
@@ -36,6 +38,7 @@ export async function sendSecurityAlertEmail({
 					location={geo ? formatLocation(geo) : "Unknown Location"}
 					date={new Date().toUTCString()}
 					alertType={alertType}
+					twoFactorMethod={twoFactorMethod}
 				/>
 			),
 		});

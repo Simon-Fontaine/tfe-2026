@@ -300,6 +300,7 @@ export async function registerPasskeyAction(
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_enabled",
+		twoFactorMethod: "passkey",
 	});
 
 	writeAuditLog(
@@ -364,6 +365,7 @@ export async function registerSecurityKeyAction(
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_enabled",
+		twoFactorMethod: "security_key",
 	});
 
 	writeAuditLog(
@@ -414,6 +416,7 @@ export async function deletePasskeyAction(credentialId: string): Promise<SetupRe
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_disabled",
+		twoFactorMethod: "passkey",
 	});
 
 	writeAuditLog(
@@ -462,6 +465,7 @@ export async function deleteSecurityKeyAction(credentialId: string): Promise<Set
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_disabled",
+		twoFactorMethod: "security_key",
 	});
 
 	writeAuditLog(
