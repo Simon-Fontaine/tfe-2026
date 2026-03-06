@@ -28,7 +28,7 @@ docker compose -f docker-compose.dev.yml down
 
 ```bash
 # Infrastructure only
-docker compose -f docker-compose.dev.yml up db cache storage storage-init -d
+docker compose -f docker-compose.dev.yml up db cache storage storage-init mail redis-commander -d
 
 # Run app
 cd next-app

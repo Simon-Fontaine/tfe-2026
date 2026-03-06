@@ -15,6 +15,20 @@
 			"when": 1771588821775,
 			"tag": "0001_misty_magneto",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1771684696411,
+			"tag": "0002_closed_colossus",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1771851466762,
+			"tag": "0003_daffy_leo",
+			"breakpoints": true
 		}
 	]
 }
