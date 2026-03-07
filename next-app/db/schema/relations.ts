@@ -7,12 +7,16 @@ import {
 	chatChannelTable,
 	chatMessageTable,
 	emailChangeVerificationTable,
+	heroTable,
 	lfgApplicationTable,
 	lfgPostTable,
+	mapTable,
 	notificationTable,
 	ocrJobTable,
 	organizationMemberTable,
 	organizationTable,
+	playerHeroTable,
+	playerMapTable,
 	playerProfileTable,
 	scrimConfirmationTable,
 	scrimMapTable,
@@ -48,6 +52,8 @@ export const userRelations = relations(userTable, ({ one, many }) => ({
 	emailChangeVerifications: many(emailChangeVerificationTable),
 	accountDeletionRequests: many(accountDeletionRequestTable),
 	sensitiveActionVerifications: many(sensitiveActionVerificationTable),
+	heroPool: many(playerHeroTable),
+	preferredMaps: many(playerMapTable),
 }));
 
 export const sessionRelations = relations(sessionTable, ({ one }) => ({
@@ -316,6 +322,38 @@ export const sensitiveActionVerificationRelations = relations(
 		}),
 	})
 );
+
+// ---- Hero / Map registry relations ----
+
+export const heroRelations = relations(heroTable, ({ many }) => ({
+	players: many(playerHeroTable),
+}));
+
+export const mapRelations = relations(mapTable, ({ many }) => ({
+	players: many(playerMapTable),
+}));
+
+export const playerHeroRelations = relations(playerHeroTable, ({ one }) => ({
+	user: one(userTable, {
+		fields: [playerHeroTable.userId],
+		references: [userTable.id],
+	}),
+	hero: one(heroTable, {
+		fields: [playerHeroTable.heroId],
+		references: [heroTable.id],
+	}),
+}));
+
+export const playerMapRelations = relations(playerMapTable, ({ one }) => ({
+	user: one(userTable, {
+		fields: [playerMapTable.userId],
+		references: [userTable.id],
+	}),
+	map: one(mapTable, {
+		fields: [playerMapTable.mapId],
+		references: [mapTable.id],
+	}),
+}));
 
 // ---- Device & audit relations ----
 

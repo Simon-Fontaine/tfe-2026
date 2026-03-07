@@ -4,6 +4,7 @@ import {
 	integer,
 	jsonb,
 	pgTable,
+	primaryKey,
 	smallint,
 	text,
 	timestamp,
@@ -37,7 +38,7 @@ import {
 /**
  * OW2-specific profile data, one-to-one with `userTable`. Separated from auth
  * to keep the auth layer game-agnostic. `battletag` is optional until linked.
- * `heroPool` uses JSONB with a GIN index for LFG hero-pool matching.
+ * Hero pool is stored relationally in `playerHeroTable`.
  */
 export const playerProfileTable = pgTable(
 	"player_profile",
@@ -72,9 +73,6 @@ export const playerProfileTable = pgTable(
 		/** Glicko-2 rating deviation. */
 		srDeviation: integer("sr_deviation").notNull().default(350),
 
-		/** Preferred heroes array, GIN-indexed for LFG queries. */
-		heroPool: jsonb("hero_pool").$type<string[]>().notNull().default([]),
-
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()
@@ -88,6 +86,116 @@ export const playerProfileTable = pgTable(
 		index("player_profile_lfg_idx").on(table.primaryRole, table.rank, table.internalSr),
 		// Matchmaking: fast SR-range lookups
 		index("player_profile_sr_idx").on(table.internalSr),
+	]
+);
+
+// ============================================================================
+// HERO REGISTRY — Overwatch 2 hero catalogue
+// ============================================================================
+
+/**
+ * Authoritative list of OW2 heroes. The `id` is a stable kebab-case slug
+ * (e.g. "dva", "soldier-76") that is stored in `playerProfileTable.heroPool`.
+ * Never change `id` values — they are persisted in player data.
+ * `isActive` toggles hero availability without touching existing profiles.
+ */
+export const heroTable = pgTable(
+	"hero",
+	{
+		id: text("id").primaryKey(),
+		displayName: text("display_name").notNull(),
+		role: ow2RoleEnum("role").notNull(),
+		/** URL to hero portrait stored in object storage. */
+		imageUrl: text("image_url"),
+		/** Short one-line description shown in UI tooltips. */
+		description: text("description"),
+		/** False hides hero from pickers (e.g. temporarily removed from competitive). */
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [index("hero_role_idx").on(table.role), index("hero_active_idx").on(table.isActive)]
+);
+
+// ============================================================================
+// MAP REGISTRY — Overwatch 2 map catalogue
+// ============================================================================
+
+/**
+ * Authoritative list of OW2 maps. `id` is a stable kebab-case slug stored in
+ * scrim records. `isActive` controls which maps appear in scrim map-pool pickers.
+ * Legacy assault (2CP) maps are seeded with `isActive: false`.
+ */
+export const mapTable = pgTable(
+	"map",
+	{
+		id: text("id").primaryKey(),
+		displayName: text("display_name").notNull(),
+		mapType: mapTypeEnum("map_type").notNull(),
+		/** URL to map preview image stored in object storage. */
+		imageUrl: text("image_url"),
+		/** False removes map from scrim scheduling UI without deleting history. */
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [index("map_type_idx").on(table.mapType), index("map_active_idx").on(table.isActive)]
+);
+
+// ============================================================================
+// PLAYER HERO POOL — Junction between players and their preferred heroes
+// ============================================================================
+
+/**
+ * Relational hero pool: one row per hero a player has selected.
+ * Replaces the former JSONB `heroPool` column on `playerProfileTable`.
+ */
+export const playerHeroTable = pgTable(
+	"player_hero",
+	{
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		heroId: text("hero_id")
+			.notNull()
+			.references(() => heroTable.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.heroId] }),
+		index("player_hero_user_idx").on(table.userId),
+		index("player_hero_hero_idx").on(table.heroId),
+	]
+);
+
+// ============================================================================
+// PLAYER MAP POOL — Junction between players and their preferred maps
+// ============================================================================
+
+/**
+ * Relational map pool: one row per map a player has selected as preferred.
+ */
+export const playerMapTable = pgTable(
+	"player_map",
+	{
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		mapId: text("map_id")
+			.notNull()
+			.references(() => mapTable.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.mapId] }),
+		index("player_map_user_idx").on(table.userId),
+		index("player_map_map_idx").on(table.mapId),
 	]
 );
 
@@ -376,6 +484,9 @@ export const availabilityTable = pgTable(
 
 		/** IANA timezone string. */
 		timezone: text("timezone").notNull().default("UTC"),
+
+		/** Optional user-defined label for this availability window. */
+		label: text("label"),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })

@@ -6,7 +6,12 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
 	const { user } = await getCurrentSession();
 
 	const headerUser = user
-		? { email: user.email, displayName: user.displayName, username: user.username }
+		? {
+				email: user.email,
+				displayName: user.displayName,
+				username: user.username,
+				avatarUrl: user.avatarUrl,
+			}
 		: null;
 
 	return (

@@ -16,4 +16,5 @@ export type ActionResult = {
 	next?: string;
 	twoFactorMethods?: TwoFactorMethods;
 	newRecoveryCode?: string;
+	redirect?: string;
 };

@@ -2,7 +2,6 @@
 
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import * as v from "valibot";
 
 import { db } from "@/db";
@@ -66,7 +65,7 @@ export async function twoFactorAction(
 		method: "totp",
 	});
 
-	redirect(safeRedirectUrl(formData.get("next")));
+	return { redirect: safeRedirectUrl(formData.get("next")) };
 }
 
 export async function recoveryCodeAction(

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/config/site";
 
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-sans" });
@@ -42,8 +43,10 @@ export default function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
-					{children}
-					<Toaster aria-label="Notifications" />
+					<TooltipProvider>
+						{children}
+						<Toaster aria-label="Notifications" />
+					</TooltipProvider>
 				</ThemeProvider>
 			</body>
 		</html>

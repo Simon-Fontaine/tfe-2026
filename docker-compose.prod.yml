@@ -92,6 +92,10 @@ services:
       /usr/bin/mc anonymous set public scrimflow/screenshots;
       /usr/bin/mc mb scrimflow/banners --ignore-existing;
       /usr/bin/mc anonymous set public scrimflow/banners;
+      /usr/bin/mc mb scrimflow/heroes --ignore-existing;
+      /usr/bin/mc anonymous set public scrimflow/heroes;
+      /usr/bin/mc mb scrimflow/maps --ignore-existing;
+      /usr/bin/mc anonymous set public scrimflow/maps;
       exit 0;
       "
     networks:
@@ -116,6 +120,8 @@ services:
       S3_BUCKET_AVATARS: avatars
       S3_BUCKET_SCREENSHOTS: screenshots
       S3_BUCKET_BANNERS: banners
+      S3_BUCKET_HEROES: heroes
+      S3_BUCKET_MAPS: maps
       S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     networks:
       - scrimflow_network

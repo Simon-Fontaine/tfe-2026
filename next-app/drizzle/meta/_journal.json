@@ -29,6 +29,20 @@
 			"when": 1771851466762,
 			"tag": "0003_daffy_leo",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1772880678922,
+			"tag": "0004_fair_warbound",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1772884683076,
+			"tag": "0005_soft_lightspeed",
+			"breakpoints": true
 		}
 	]
 }

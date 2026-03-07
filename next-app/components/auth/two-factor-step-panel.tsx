@@ -31,6 +31,7 @@ export function TwoFactorStepPanel() {
 	const { twoFactorMethods, next, transitionTo } = useAuthFlow();
 	const { submit, isPending } = useAuthAction(twoFactorAction, {
 		loadingMessage: "Verifying…",
+		successMessage: "Signed in",
 	});
 	const [webauthnLoading, setWebauthnLoading] = useState(false);
 
@@ -61,7 +62,17 @@ export function TwoFactorStepPanel() {
 			const action = type === "passkey" ? verifyPasskey2faAction : verifySecurityKey2faAction;
 			const result = await action(encoded, next);
 			if (result?.error) toast.error(result.error);
-		} catch {
+		} catch (error) {
+			if (
+				typeof error === "object" &&
+				error !== null &&
+				"digest" in error &&
+				typeof (error as { digest: unknown }).digest === "string" &&
+				(error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+			) {
+				toast.success("Signed in");
+				return;
+			}
 			toast.error("Authentication cancelled or failed.");
 		} finally {
 			setWebauthnLoading(false);

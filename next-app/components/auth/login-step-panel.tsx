@@ -24,6 +24,7 @@ export function LoginStepPanel({ next }: { next?: string }) {
 	const { goToRegister, goToForgotPassword } = useAuthFlow();
 	const { submit, isPending } = useAuthAction(loginAction, {
 		loadingMessage: "Signing in…",
+		successMessage: "Signed in",
 	});
 	const [passkeyLoading, setPasskeyLoading] = useState(false);
 
@@ -46,7 +47,17 @@ export function LoginStepPanel({ next }: { next?: string }) {
 			const encoded = await authenticateDiscoverable();
 			const result = await loginWithPasskeyAction(encoded, next);
 			if (result?.error) toast.error(result.error);
-		} catch {
+		} catch (error) {
+			if (
+				typeof error === "object" &&
+				error !== null &&
+				"digest" in error &&
+				typeof (error as { digest: unknown }).digest === "string" &&
+				(error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+			) {
+				toast.success("Signed in");
+				return;
+			}
 			toast.error("Passkey authentication cancelled or failed.");
 		} finally {
 			setPasskeyLoading(false);

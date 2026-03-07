@@ -1,6 +1,5 @@
 import { encodeBase64 } from "@oslojs/encoding";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import type * as v from "valibot";
 
 import { getUserTwoFactorStatus } from "@/lib/auth/2fa";
@@ -141,5 +140,5 @@ export async function resolveAndCreateSession(
 		geo.city,
 		auditMetadata
 	);
-	redirect(next);
+	return { redirect: next };
 }

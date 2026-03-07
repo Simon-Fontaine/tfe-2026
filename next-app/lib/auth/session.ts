@@ -45,6 +45,7 @@ export interface SessionUser {
 	email: string;
 	username: string;
 	displayName: string;
+	avatarUrl: string | null;
 	emailVerified: boolean;
 	isBanned: boolean;
 	registeredTOTP: boolean;
@@ -153,6 +154,7 @@ export async function validateSessionToken(token: string): Promise<SessionValida
 			email: u.email,
 			username: u.username,
 			displayName: u.displayName,
+			avatarUrl: u.avatarUrl,
 			emailVerified: u.emailVerified,
 			isBanned: u.isBanned,
 			...twoFactor,

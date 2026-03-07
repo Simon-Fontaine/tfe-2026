@@ -2,7 +2,6 @@
 
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import * as v from "valibot";
 
 import { db } from "@/db";
@@ -204,5 +203,5 @@ export async function loginAction(
 
 	await createUserSession({ ...sessionCtx, twoFactorVerified: true });
 	writeAuditLog(user.id, "login_success", client.ip, client.userAgent, geo.country, geo.city);
-	redirect(next);
+	return { redirect: next };
 }

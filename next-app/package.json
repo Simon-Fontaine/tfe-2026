@@ -10,9 +10,11 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
-		"db:drop": "drizzle-kit drop"
+		"db:drop": "drizzle-kit drop",
+		"db:seed": "tsx db/seeds/index.ts"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1004.0",
 		"@hookform/resolvers": "^5.2.2",
 		"@hugeicons/core-free-icons": "^4.0.0",
 		"@hugeicons/react": "^1.1.5",
