@@ -68,7 +68,7 @@ export function BasicInfoSection({ displayName, bio, socialLinks }: BasicInfoSec
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<CardTitle className="text-sm">Basic info</CardTitle>
+				<CardTitle>Basic info</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

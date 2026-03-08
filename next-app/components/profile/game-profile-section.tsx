@@ -8,7 +8,7 @@ import { updateGameProfileAction } from "@/app/dashboard/profile/actions/update-
 import { HeroPoolPicker } from "@/components/shared/hero-pool-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldError } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
@@ -83,16 +83,16 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<CardTitle className="text-sm">Game profile</CardTitle>
+				<CardTitle>Game profile</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 					{/* BattleTag */}
 					<Field>
-						<p className="text-xs font-medium text-muted-foreground">
+						<FieldLabel htmlFor="battletag">
 							BattleTag <span className="font-normal text-muted-foreground/70">(optional)</span>
-						</p>
-						<Input placeholder="Soldier76#1234" {...form.register("battletag")} />
+						</FieldLabel>
+						<Input id="battletag" placeholder="Soldier76#1234" {...form.register("battletag")} />
 						<FieldError errors={[form.formState.errors.battletag]} />
 					</Field>
 
@@ -120,6 +120,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 												}}
 												className={cn(
 													"flex flex-col items-center gap-0.5 border px-3 py-3 text-xs transition-colors",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 													role.buttonClass
 												)}
 											>
@@ -158,6 +159,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 													className={cn(
 														"flex-1 border px-3 py-2 text-xs transition-colors",
 														"disabled:cursor-not-allowed disabled:opacity-40",
+														"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 														role.buttonClass
 													)}
 												>
@@ -170,6 +172,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 												onClick={() => field.onChange(null)}
 												className={cn(
 													"flex-1 border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 													"data-[selected=true]:bg-muted"
 												)}
 											>
@@ -206,6 +209,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 												}}
 												className={cn(
 													"border px-2 py-2 text-xs font-medium transition-colors hover:bg-muted",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 													rank.buttonClass
 												)}
 											>
@@ -221,6 +225,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 											}}
 											className={cn(
 												"border border-border px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted",
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 												"data-[selected=true]:bg-muted"
 											)}
 										>
@@ -253,6 +258,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 													onClick={() => field.onChange(div)}
 													className={cn(
 														"flex-1 border border-border py-2 text-xs font-semibold transition-colors hover:bg-muted",
+														"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 														"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
 													)}
 												>

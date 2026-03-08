@@ -33,7 +33,11 @@ export function useAuthAction(
 					toast.dismiss(toastId);
 				}
 				router.push(result.redirect);
+				return;
 			}
+
+			// Success with no step transition or redirect (e.g. newRecoveryCode)
+			toast.dismiss(toastId);
 		},
 	});
 }

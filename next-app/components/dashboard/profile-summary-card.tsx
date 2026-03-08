@@ -8,7 +8,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PlayerProfileFull } from "@/lib/data/player";
 import { type OW2Rank, RANK_META, ROLE_META } from "@/lib/ow2";
@@ -30,15 +30,15 @@ export function ProfileSummaryCard({ profile }: ProfileSummaryCardProps) {
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-sm">Player profile</CardTitle>
+				<CardTitle>Player profile</CardTitle>
+				<CardAction>
 					<Button asChild variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs">
 						<Link href="/dashboard/profile">
 							<HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-3" />
 							Edit
 						</Link>
 					</Button>
-				</div>
+				</CardAction>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* BattleTag */}

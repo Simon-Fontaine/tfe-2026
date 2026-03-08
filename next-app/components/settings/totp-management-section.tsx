@@ -9,31 +9,51 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import {
-	disableTotpAction,
 	generateTotpSecretAction,
 	verifyAndEnableTotpAction,
 } from "@/app/(auth)/auth/totp-setup-actions";
+import {
+	cancelTwoFactorDisableAction,
+	confirmTwoFactorDisableAction,
+	requestTwoFactorDisableAction,
+} from "@/app/dashboard/settings/actions/two-factor-disable";
 import { CodeDisplay } from "@/components/shared/code-display";
 import { RecoveryCodeDialog } from "@/components/shared/recovery-code-dialog";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Spinner } from "@/components/ui/spinner";
 import { type VerifyCodeInput, VerifyCodeSchema } from "@/lib/validations/auth";
 import { useSecurityStatus } from "@/stores/security-status";
 
 type State =
 	| { step: "idle" }
 	| { step: "setup"; secret: string; uri: string }
-	| { step: "verify"; secret: string; uri: string };
+	| { step: "verify"; secret: string; uri: string }
+	| { step: "disable-confirm" };
 
-export function TotpManagementSection() {
+interface TotpManagementSectionProps {
+	initialDisableConfirm?: boolean;
+}
+
+export function TotpManagementSection({
+	initialDisableConfirm = false,
+}: TotpManagementSectionProps) {
 	const { hasTOTP, setHasTOTP } = useSecurityStatus();
-	const [state, setState] = useState<State>({ step: "idle" });
+	const [state, setState] = useState<State>(
+		initialDisableConfirm ? { step: "disable-confirm" } : { step: "idle" }
+	);
 	const [loading, setLoading] = useState(false);
 	const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
 
-	const form = useForm<VerifyCodeInput>({
+	const setupForm = useForm<VerifyCodeInput>({
+		resolver: valibotResolver(VerifyCodeSchema),
+		defaultValues: { code: "" },
+	});
+
+	const disableForm = useForm<VerifyCodeInput>({
 		resolver: valibotResolver(VerifyCodeSchema),
 		defaultValues: { code: "" },
 	});
@@ -63,27 +83,50 @@ export function TotpManagementSection() {
 			}
 			setHasTOTP(true);
 			setState({ step: "idle" });
-			form.reset();
+			setupForm.reset();
 			toast.success("Authenticator app enabled.");
 			if (result.recoveryCode) {
 				setRecoveryCode(result.recoveryCode);
 			}
 		},
-		[state, form, setHasTOTP]
+		[state, setupForm, setHasTOTP]
 	);
 
-	const handleDisable = useCallback(async () => {
+	const handleRequestDisable = useCallback(async () => {
 		setLoading(true);
-		const result = await disableTotpAction();
+		const result = await requestTwoFactorDisableAction();
 		setLoading(false);
 		if (result.error) {
 			toast.error(result.error);
 			return;
 		}
-		setHasTOTP(false);
-		setRecoveryCode(null);
-		toast.success("Authenticator app disabled.");
-	}, [setHasTOTP]);
+		setState({ step: "disable-confirm" });
+		toast.success("Verification code sent to your email.");
+	}, []);
+
+	const handleConfirmDisable = useCallback(
+		async (data: VerifyCodeInput) => {
+			setLoading(true);
+			const result = await confirmTwoFactorDisableAction(data.code);
+			setLoading(false);
+			if (result.error) {
+				toast.error(result.error);
+				return;
+			}
+			setHasTOTP(false);
+			setRecoveryCode(null);
+			setState({ step: "idle" });
+			disableForm.reset();
+			toast.success("Authenticator app disabled.");
+		},
+		[disableForm, setHasTOTP]
+	);
+
+	const handleCancelDisable = useCallback(async () => {
+		await cancelTwoFactorDisableAction();
+		setState({ step: "idle" });
+		disableForm.reset();
+	}, [disableForm]);
 
 	return (
 		<SettingsSectionCard
@@ -101,10 +144,10 @@ export function TotpManagementSection() {
 							variant="outline"
 							size="sm"
 							className="text-destructive"
-							onClick={handleDisable}
+							onClick={handleRequestDisable}
 							disabled={loading}
 						>
-							{loading ? "Disabling…" : "Disable TOTP"}
+							{loading ? "Sending…" : "Disable TOTP"}
 						</Button>
 					) : (
 						<Button onClick={handleSetup} disabled={loading}>
@@ -122,7 +165,7 @@ export function TotpManagementSection() {
 					<div
 						className="flex justify-center"
 						role="img"
-						aria-label="QR code for authenticator app setup. Use the manual entry option below if you cannot scan."
+						aria-label="QR code for authenticator app setup. Use the manual entry option if you cannot scan."
 					>
 						<QRCodeSVG
 							value={state.uri}
@@ -134,17 +177,17 @@ export function TotpManagementSection() {
 						/>
 					</div>
 					<details className="text-xs">
-						<summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-							Can&apos;t scan? Enter manually
+						<summary className="cursor-pointer text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+							{"Can't scan? Enter manually"}
 						</summary>
 						<div className="mt-2">
 							<CodeDisplay value={state.secret} />
 						</div>
 					</details>
-					<form onSubmit={form.handleSubmit(handleVerify)} className="space-y-3">
+					<form onSubmit={setupForm.handleSubmit(handleVerify)} className="space-y-3">
 						<Controller
 							name="code"
-							control={form.control}
+							control={setupForm.control}
 							render={({ field, fieldState }) => (
 								<Field data-invalid={fieldState.invalid || undefined}>
 									<FieldLabel htmlFor="totp-code">Verification code</FieldLabel>
@@ -175,9 +218,50 @@ export function TotpManagementSection() {
 								variant="ghost"
 								onClick={() => {
 									setState({ step: "idle" });
-									form.reset();
+									setupForm.reset();
 								}}
 							>
+								Cancel
+							</Button>
+						</div>
+					</form>
+				</div>
+			)}
+
+			{state.step === "disable-confirm" && (
+				<div className="space-y-4">
+					<p className="text-sm text-muted-foreground">
+						A 6-digit code was sent to your email address. Enter it to confirm disabling your
+						authenticator app.
+					</p>
+
+					<form onSubmit={disableForm.handleSubmit(handleConfirmDisable)} className="space-y-3">
+						<Controller
+							name="code"
+							control={disableForm.control}
+							render={({ field, fieldState }) => (
+								<Field data-invalid={fieldState.invalid || undefined}>
+									<FieldLabel htmlFor="totp-disable-code">Verification code</FieldLabel>
+									<Input
+										{...field}
+										id="totp-disable-code"
+										placeholder="000000"
+										maxLength={6}
+										inputMode="numeric"
+										autoComplete="one-time-code"
+										aria-invalid={fieldState.invalid}
+										className="font-mono tracking-widest"
+									/>
+									{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+								</Field>
+							)}
+						/>
+						<div className="flex gap-2">
+							<Button type="submit" variant="destructive" size="sm" disabled={loading}>
+								{loading && <Spinner className="mr-2" />}
+								{loading ? "Disabling…" : "Confirm disable"}
+							</Button>
+							<Button type="button" variant="ghost" onClick={handleCancelDisable}>
 								Cancel
 							</Button>
 						</div>

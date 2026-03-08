@@ -1,71 +1,28 @@
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import {
-	listPasskeysAction,
-	listSecurityKeysAction,
-} from "@/app/(auth)/auth/webauthn-setup-actions";
-import { ActiveSessionsSection } from "@/components/settings/active-sessions-section";
-import { ChangePasswordSection } from "@/components/settings/change-password-section";
-import { PasskeyManagementSection } from "@/components/settings/passkey-management-section";
-import { SecurityAccountSummaryCard } from "@/components/settings/security-account-summary-card";
-import { SecurityKeyManagementSection } from "@/components/settings/security-key-management-section";
+import { getPendingVerificationsAction } from "@/app/dashboard/settings/actions/pending-verifications";
+import { ChangeEmailSection } from "@/components/settings/change-email-section";
+import { ChangeUsernameSection } from "@/components/settings/change-username-section";
+import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
-import { TotpManagementSection } from "@/components/settings/totp-management-section";
-import { TwoFactorMethodsSection } from "@/components/settings/two-factor-methods-section";
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
 import { getCurrentSession } from "@/lib/auth/session";
-import { SecurityStatusProvider } from "@/stores/security-status";
 
-export default async function SettingsPage() {
+export default async function AccountSettingsPage() {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 
-	// Fetch additional fields not on SessionUser
-	const [userRow, passkeys, securityKeys] = await Promise.all([
-		db
-			.select({ passwordHash: userTable.passwordHash })
-			.from(userTable)
-			.where(eq(userTable.id, user.id))
-			.limit(1)
-			.then((rows) => rows[0] ?? null),
-		listPasskeysAction(),
-		listSecurityKeysAction(),
-	]);
-
-	const hasPassword = !!userRow?.passwordHash;
+	const pending = await getPendingVerificationsAction();
 
 	return (
-		<SecurityStatusProvider
-			initialHasTOTP={user.registeredTOTP}
-			initialPasskeyCount={passkeys.length}
-			initialSecurityKeyCount={securityKeys.length}
-		>
-			<SecuritySettingsPageShell>
-				<SecurityAccountSummaryCard email={user.email} hasPassword={hasPassword} />
+		<SecuritySettingsPageShell>
+			<ChangeUsernameSection currentUsername={user.username} />
 
-				<div className="space-y-6">
-					<ChangePasswordSection />
+			<ChangeEmailSection
+				currentEmail={user.email}
+				initialStep={pending.emailChange ? "code-sent" : "idle"}
+				initialPendingEmail={pending.emailChange?.pendingEmail}
+			/>
 
-					<TwoFactorMethodsSection />
-
-					<TotpManagementSection />
-
-					<PasskeyManagementSection
-						userId={user.id}
-						userName={user.username}
-						userDisplayName={user.displayName}
-					/>
-
-					<SecurityKeyManagementSection
-						userId={user.id}
-						userName={user.username}
-						userDisplayName={user.displayName}
-					/>
-
-					<ActiveSessionsSection />
-				</div>
-			</SecuritySettingsPageShell>
-		</SecurityStatusProvider>
+			<DeleteAccountSection />
+		</SecuritySettingsPageShell>
 	);
 }

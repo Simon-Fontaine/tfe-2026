@@ -17,6 +17,7 @@ export type SecurityAlertType =
 	| "new_location"
 	| "suspicious"
 	| "password_changed"
+	| "email_changed"
 	| "two_factor_enabled"
 	| "two_factor_disabled";
 
@@ -66,6 +67,10 @@ const ALERT_COPY: Record<
 	password_changed: () => ({
 		subject: "Password changed",
 		body: "The password for your Scrimflow account was recently changed.",
+	}),
+	email_changed: () => ({
+		subject: "Email address changed",
+		body: "The email address on your Scrimflow account was recently changed. If this wasn't you, please secure your account immediately.",
 	}),
 	two_factor_enabled: (method) => ({
 		subject: "Two-factor authentication enabled",

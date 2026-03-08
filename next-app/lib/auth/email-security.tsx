@@ -23,6 +23,7 @@ export async function sendSecurityAlertEmail({
 		new_location: "New location sign-in on Scrimflow",
 		suspicious: "Suspicious sign-in attempt on Scrimflow",
 		password_changed: "Your Scrimflow password was changed",
+		email_changed: "Your Scrimflow email address was changed",
 		two_factor_enabled: "Two-factor authentication enabled on Scrimflow",
 		two_factor_disabled: "Two-factor authentication disabled on Scrimflow",
 	};

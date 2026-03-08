@@ -89,7 +89,7 @@ export function AvatarUploadSection({ avatarUrl: initialAvatarUrl }: AvatarUploa
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<CardTitle className="text-sm">Avatar</CardTitle>
+				<CardTitle>Avatar</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">

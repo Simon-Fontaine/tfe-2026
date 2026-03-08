@@ -32,7 +32,7 @@ export function CredentialListItem({
 	disabled,
 }: CredentialListItemProps) {
 	return (
-		<div className="flex items-center justify-between gap-2 border px-3 py-2">
+		<div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
 			<div className="flex items-center gap-2 min-w-0">
 				<HugeiconsIcon
 					icon={icon}

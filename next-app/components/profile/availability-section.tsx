@@ -11,7 +11,7 @@ import {
 	deleteAvailabilityAction,
 } from "@/app/dashboard/profile/actions/availability";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -183,7 +183,7 @@ function AddAvailabilityForm({ onClose }: { onClose: () => void }) {
 	}
 
 	return (
-		<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-lg border p-4">
+		<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 border p-4">
 			{/* Type toggle */}
 			<div className="space-y-1.5">
 				<p className="text-xs font-medium">Type</p>
@@ -199,7 +199,8 @@ function AddAvailabilityForm({ onClose }: { onClose: () => void }) {
 									data-selected={field.value === t}
 									onClick={() => field.onChange(t)}
 									className={cn(
-										"flex-1 rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+										"flex-1 border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 										"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
 									)}
 								>
@@ -228,7 +229,8 @@ function AddAvailabilityForm({ onClose }: { onClose: () => void }) {
 											data-selected={field.value === day.value}
 											onClick={() => field.onChange(field.value === day.value ? null : day.value)}
 											className={cn(
-												"flex-1 rounded-md border border-border py-1.5 text-[10px] font-medium transition-colors hover:bg-muted",
+												"flex-1 border border-border py-1.5 text-[10px] font-medium transition-colors hover:bg-muted",
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 												"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
 											)}
 										>
@@ -327,9 +329,9 @@ export function AvailabilitySection({ availability }: AvailabilitySectionProps) 
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-sm">Availability</CardTitle>
-					{!showForm && (
+				<CardTitle>Availability</CardTitle>
+				{!showForm && (
+					<CardAction>
 						<Button
 							variant="outline"
 							size="sm"
@@ -339,18 +341,15 @@ export function AvailabilitySection({ availability }: AvailabilitySectionProps) 
 							<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3" />
 							Add window
 						</Button>
-					)}
-				</div>
+					</CardAction>
+				)}
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Existing windows */}
 				{availability.length > 0 ? (
 					<div className="space-y-2">
 						{availability.map((row) => (
-							<div
-								key={row.id}
-								className="flex items-center justify-between rounded-lg border px-3 py-2"
-							>
+							<div key={row.id} className="flex items-center justify-between border px-3 py-2">
 								<div className="min-w-0 flex-1">
 									<p className="text-xs font-medium">
 										{formatWindowTitle(row)}

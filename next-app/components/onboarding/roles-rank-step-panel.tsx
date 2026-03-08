@@ -13,8 +13,6 @@ import { cn } from "@/lib/utils";
 import { type RolesAndRankInput, RolesAndRankSchema } from "@/lib/validations/onboarding";
 import { useOnboardingFlow } from "@/stores/onboarding-flow";
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function RolesAndRankStepPanel() {
 	const { transitionTo, data } = useOnboardingFlow();
 
@@ -49,7 +47,7 @@ export function RolesAndRankStepPanel() {
 			/>
 
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-				{/* ── Primary role ──────────────────────────────────────────────── */}
+				{/* Primary role */}
 				<div className="space-y-1.5">
 					<p className="text-xs font-medium">
 						Primary role <span className="text-destructive">*</span>
@@ -73,6 +71,7 @@ export function RolesAndRankStepPanel() {
 											}}
 											className={cn(
 												"flex flex-col items-center gap-0.5 border px-3 py-3 text-xs transition-colors",
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 												role.buttonClass
 											)}
 										>
@@ -87,7 +86,7 @@ export function RolesAndRankStepPanel() {
 					/>
 				</div>
 
-				{/* ── Secondary role (optional) ─────────────────────────────────── */}
+				{/* Secondary role (optional) */}
 				<div className="space-y-1.5">
 					<p className="text-xs font-medium text-muted-foreground">
 						Secondary role <span className="font-normal text-muted-foreground/70">(optional)</span>
@@ -110,6 +109,7 @@ export function RolesAndRankStepPanel() {
 												className={cn(
 													"flex-1 border px-3 py-2 text-xs transition-colors",
 													"disabled:cursor-not-allowed disabled:opacity-40",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 													role.buttonClass
 												)}
 											>
@@ -122,6 +122,7 @@ export function RolesAndRankStepPanel() {
 											onClick={() => field.onChange(null)}
 											className={cn(
 												"flex-1 border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted",
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 												"data-[selected=true]:bg-muted"
 											)}
 										>
@@ -135,7 +136,7 @@ export function RolesAndRankStepPanel() {
 					/>
 				</div>
 
-				{/* ── Rank ─────────────────────────────────────────────────────── */}
+				{/* Rank */}
 				<div className="space-y-1.5">
 					<p className="text-xs font-medium text-muted-foreground">Competitive rank</p>
 					<Controller
@@ -158,6 +159,7 @@ export function RolesAndRankStepPanel() {
 											}}
 											className={cn(
 												"border px-2 py-2 text-xs font-medium transition-colors hover:bg-muted",
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 												rank.buttonClass
 											)}
 										>
@@ -173,6 +175,7 @@ export function RolesAndRankStepPanel() {
 										}}
 										className={cn(
 											"border border-border px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 											"data-[selected=true]:bg-muted"
 										)}
 									>
@@ -185,7 +188,7 @@ export function RolesAndRankStepPanel() {
 					/>
 				</div>
 
-				{/* ── Division (conditional) ────────────────────────────────────── */}
+				{/* Division (conditional) */}
 				{showDivision && (
 					<div className="space-y-1.5">
 						<p className="text-xs font-medium text-muted-foreground">
@@ -205,6 +208,7 @@ export function RolesAndRankStepPanel() {
 												onClick={() => field.onChange(div)}
 												className={cn(
 													"flex-1 border border-border py-2 text-xs font-semibold transition-colors hover:bg-muted",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 													"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
 												)}
 											>
@@ -219,7 +223,7 @@ export function RolesAndRankStepPanel() {
 					</div>
 				)}
 
-				{/* ── Actions ───────────────────────────────────────────────────── */}
+				{/* Actions */}
 				<div className="flex gap-2">
 					<Button
 						type="button"

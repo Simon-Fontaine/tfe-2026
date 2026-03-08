@@ -1,39 +1,33 @@
 "use server";
 
-import { and, eq, isNull, ne } from "drizzle-orm";
 import { headers } from "next/headers";
-
-import { db } from "@/db";
-import { sessionTable, userTable } from "@/db/schema";
 import { VerificationEmail } from "@/emails/VerificationEmail";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { extractClientContext } from "@/lib/auth/device";
 import { sendSecurityAlertEmail } from "@/lib/auth/email-security";
-import { hashPassword, verifyPasswordHash } from "@/lib/auth/password";
 import {
 	createSensitiveActionVerification,
 	deleteSensitiveActionVerification,
 	validateAndConsumeSensitiveAction,
 } from "@/lib/auth/sensitive-action";
 import { getCurrentSession } from "@/lib/auth/session";
+import { deleteUserTotpKey, getUserTotpKey } from "@/lib/auth/totp";
 import { rateLimits } from "@/lib/config/rate-limits";
 import { fetchGeoData } from "@/lib/geo";
 import { sendMail } from "@/lib/mailer";
 import { checkRateLimit, formatRetryAfter } from "@/lib/rate-limit";
+import type { ActionResult } from "./password";
 
-export interface ActionResult {
-	error?: string;
-	success?: boolean;
-}
+// ─── Step 1: request confirmation code ───────────────────────────────────────
 
-export async function requestPasswordChangeAction(currentPassword: string): Promise<ActionResult> {
+export async function requestTwoFactorDisableAction(): Promise<ActionResult> {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) return { error: "Session expired. Please sign in again." };
 
 	const { allowed, retryAfterMs } = await checkRateLimit(
-		`change-password:${session.userId}`,
-		rateLimits.changePassword.limit,
-		rateLimits.changePassword.windowMs
+		`2fa-disable-request:${session.userId}`,
+		rateLimits.sensitiveActionRequest.limit,
+		rateLimits.sensitiveActionRequest.windowMs
 	);
 	if (!allowed) {
 		return {
@@ -41,57 +35,42 @@ export async function requestPasswordChangeAction(currentPassword: string): Prom
 		};
 	}
 
-	const userRow = await db
-		.select({ passwordHash: userTable.passwordHash })
-		.from(userTable)
-		.where(eq(userTable.id, session.userId))
-		.limit(1)
-		.then((rows) => rows[0] ?? null);
-
-	if (!userRow?.passwordHash) {
-		return {
-			error:
-				"Your account uses passkey-only login and has no password set. You can set a password from the password reset flow.",
-		};
-	}
-
-	const isValid = await verifyPasswordHash(userRow.passwordHash, currentPassword);
-	if (!isValid) return { error: "Current password is incorrect." };
+	const existingKey = await getUserTotpKey(session.userId);
+	if (!existingKey) return { error: "TOTP is not enabled." };
 
 	const requestHeaders = await headers();
 	const client = extractClientContext(requestHeaders);
 
 	const code = await createSensitiveActionVerification(
 		session.userId,
-		"password_change",
+		"two_factor_disable",
 		{},
 		client.ip
 	);
 
 	await sendMail({
 		to: user.email,
-		subject: "Confirm your password change",
+		subject: "Confirm disabling two-factor authentication",
 		template: VerificationEmail({
 			code,
-			title: "Confirm your password change",
+			title: "Confirm disabling 2FA",
 			message:
-				"You requested to change the password on your Scrimflow account. Enter the code below to confirm.",
-			actionText: "enter the following verification code",
+				"You requested to disable two-factor authentication on your Scrimflow account. This will make your account less secure. If you did not request this, secure your account immediately.",
+			actionText: "enter the following verification code to confirm",
 		}),
 	});
 
 	return { success: true };
 }
 
-export async function confirmPasswordChangeAction(
-	code: string,
-	newPassword: string
-): Promise<ActionResult> {
+// ─── Step 2: verify code, disable TOTP ───────────────────────────────────────
+
+export async function confirmTwoFactorDisableAction(code: string): Promise<ActionResult> {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) return { error: "Session expired. Please sign in again." };
 
 	const { allowed, retryAfterMs } = await checkRateLimit(
-		`change-password-verify:${session.userId}`,
+		`2fa-disable-verify:${session.userId}`,
 		rateLimits.sensitiveActionVerify.limit,
 		rateLimits.sensitiveActionVerify.windowMs
 	);
@@ -101,24 +80,25 @@ export async function confirmPasswordChangeAction(
 		};
 	}
 
-	const result = await validateAndConsumeSensitiveAction(session.userId, "password_change", code);
+	const result = await validateAndConsumeSensitiveAction(
+		session.userId,
+		"two_factor_disable",
+		code
+	);
 	if (!result.success) return { error: "Invalid or expired verification code." };
 
-	const newHash = await hashPassword(newPassword);
-	await db.update(userTable).set({ passwordHash: newHash }).where(eq(userTable.id, session.userId));
+	const existingKey = await getUserTotpKey(session.userId);
+	if (!existingKey) {
+		await deleteSensitiveActionVerification(session.userId, "two_factor_disable");
+		return { error: "TOTP is not enabled." };
+	}
 
-	await db
-		.update(sessionTable)
-		.set({ revokedAt: new Date(), revocationReason: "password_change" })
-		.where(
-			and(
-				eq(sessionTable.userId, session.userId),
-				ne(sessionTable.id, session.id),
-				isNull(sessionTable.revokedAt)
-			)
-		);
+	await deleteUserTotpKey(session.userId);
 
-	await deleteSensitiveActionVerification(session.userId, "password_change");
+	const { clearRecoveryCodeIfNo2FA } = await import("@/lib/auth/2fa");
+	await clearRecoveryCodeIfNo2FA(session.userId);
+
+	await deleteSensitiveActionVerification(session.userId, "two_factor_disable");
 
 	const requestHeaders = await headers();
 	const client = extractClientContext(requestHeaders);
@@ -129,26 +109,29 @@ export async function confirmPasswordChangeAction(
 		ip: client.ip,
 		device: client.deviceName,
 		geo,
-		alertType: "password_changed",
+		alertType: "two_factor_disabled",
+		twoFactorMethod: "totp",
 	}).catch(() => {});
 
 	writeAuditLog(
 		session.userId,
-		"password_change",
+		"two_factor_disable",
 		client.ip,
 		client.userAgent,
 		geo.country,
 		geo.city,
-		undefined
+		{ method: "totp" }
 	);
 
 	return { success: true };
 }
 
-export async function cancelPasswordChangeAction(): Promise<ActionResult> {
+// ─── Cancel pending disable ───────────────────────────────────────────────────
+
+export async function cancelTwoFactorDisableAction(): Promise<ActionResult> {
 	const { session } = await getCurrentSession();
 	if (!session) return { error: "Session expired. Please sign in again." };
 
-	await deleteSensitiveActionVerification(session.userId, "password_change");
+	await deleteSensitiveActionVerification(session.userId, "two_factor_disable");
 	return { success: true };
 }

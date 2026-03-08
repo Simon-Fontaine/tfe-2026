@@ -49,7 +49,7 @@ export function TwoFactorMethodsSection() {
 						<Link
 							key={m.key}
 							href={m.anchor}
-							className="flex items-center gap-3 px-1 py-3 text-xs transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+							className="flex items-center gap-3 px-1 py-3 text-xs transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						>
 							<HugeiconsIcon
 								icon={m.icon}

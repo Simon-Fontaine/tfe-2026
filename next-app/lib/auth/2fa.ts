@@ -31,7 +31,7 @@ export function resetRecoveryCodeRateLimit(userId: string): Promise<void> {
 // ─── Recovery code helpers ─────────────────────────────────────────────────────
 
 /** Generates cryptographically random base32 recovery code. */
-function generateRecoveryCode(): string {
+export function generateRecoveryCode(): string {
 	const bytes = new Uint8Array(10);
 	crypto.getRandomValues(bytes);
 	return encodeBase32UpperCaseNoPadding(bytes);

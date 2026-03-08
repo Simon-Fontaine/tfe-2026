@@ -1,6 +1,6 @@
 "use server";
 
-import { decodeBase64, encodeBase32UpperCaseNoPadding, encodeBase64 } from "@oslojs/encoding";
+import { decodeBase64, encodeBase64 } from "@oslojs/encoding";
 import {
 	ClientDataType,
 	coseAlgorithmES256,
@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
+import { generateRecoveryCode } from "@/lib/auth/2fa";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { extractClientContext } from "@/lib/auth/device";
 import { sendSecurityAlertEmail } from "@/lib/auth/email-security";
@@ -20,8 +21,6 @@ import {
 	createPasskeyCredential,
 	createSecurityKeyCredential,
 	decodeCOSEMapWithSize,
-	deleteUserPasskeyCredential,
-	deleteUserSecurityKeyCredential,
 	getUserPasskeyCredentials,
 	getUserSecurityKeyCredentials,
 	verifyWebAuthnChallenge,
@@ -52,13 +51,6 @@ const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:3000";
 const SUPPORTED_ALGORITHMS = new Set([coseAlgorithmES256, coseAlgorithmRS256]);
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Generates a random base32 recovery code. */
-function generateRecoveryCode(): string {
-	const bytes = new Uint8Array(10);
-	crypto.getRandomValues(bytes);
-	return encodeBase32UpperCaseNoPadding(bytes);
-}
 
 /** Ensures the user has a recovery code. Creates one if missing. */
 async function ensureRecoveryCode(userId: string): Promise<string | null> {
@@ -381,106 +373,6 @@ export async function registerSecurityKeyAction(
 	);
 
 	return { success: true, ...(recoveryCode ? { recoveryCode } : {}) };
-}
-
-// ─── Credential deletion ───────────────────────────────────────────────────────
-
-export async function deletePasskeyAction(credentialId: string): Promise<SetupResult> {
-	const { session, user } = await getCurrentSession();
-	if (!session || !user) return { error: "Session expired. Please sign in again." };
-
-	// Rate limit: passkey deletion
-	const { allowed, retryAfterMs } = await checkRateLimit(
-		`webauthn:delete:${session.userId}`,
-		rateLimits.webauthnDelete.limit,
-		rateLimits.webauthnDelete.windowMs
-	);
-	if (!allowed) {
-		return {
-			error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
-		};
-	}
-
-	const deleted = await deleteUserPasskeyCredential(session.userId, decodeBase64(credentialId));
-	if (!deleted) return { error: "Credential not found." };
-	const { clearRecoveryCodeIfNo2FA } = await import("@/lib/auth/2fa");
-	await clearRecoveryCodeIfNo2FA(session.userId);
-
-	const requestHeaders = await headers();
-	const client = extractClientContext(requestHeaders);
-	const geo = await fetchGeoData(client.ip);
-
-	await sendSecurityAlertEmail({
-		to: user.email,
-		ip: client.ip,
-		device: client.deviceName,
-		geo,
-		alertType: "two_factor_disabled",
-		twoFactorMethod: "passkey",
-	});
-
-	writeAuditLog(
-		session.userId,
-		"passkey_remove",
-		client.ip,
-		client.userAgent,
-		geo.country,
-		geo.city,
-		{
-			credentialId,
-		}
-	);
-
-	return { success: true };
-}
-
-export async function deleteSecurityKeyAction(credentialId: string): Promise<SetupResult> {
-	const { session, user } = await getCurrentSession();
-	if (!session || !user) return { error: "Session expired. Please sign in again." };
-
-	// Rate limit: security key deletion
-	const { allowed, retryAfterMs } = await checkRateLimit(
-		`webauthn:delete:${session.userId}`,
-		rateLimits.webauthnDelete.limit,
-		rateLimits.webauthnDelete.windowMs
-	);
-	if (!allowed) {
-		return {
-			error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
-		};
-	}
-
-	const deleted = await deleteUserSecurityKeyCredential(session.userId, decodeBase64(credentialId));
-	if (!deleted) return { error: "Credential not found." };
-	const { clearRecoveryCodeIfNo2FA } = await import("@/lib/auth/2fa");
-	await clearRecoveryCodeIfNo2FA(session.userId);
-
-	const requestHeaders = await headers();
-	const client = extractClientContext(requestHeaders);
-	const geo = await fetchGeoData(client.ip);
-
-	await sendSecurityAlertEmail({
-		to: user.email,
-		ip: client.ip,
-		device: client.deviceName,
-		geo,
-		alertType: "two_factor_disabled",
-		twoFactorMethod: "security_key",
-	});
-
-	writeAuditLog(
-		session.userId,
-		"security_key_remove",
-		client.ip,
-		client.userAgent,
-		geo.country,
-		geo.city,
-		{
-			credentialId,
-		}
-	);
-
-	return { success: true };
 }
 
 // ─── List credentials ──────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { type AuthStep, useAuthFlow } from "@/stores/auth-flow";
+import { type AuthStep, type TwoFactorMethods, useAuthFlow } from "@/stores/auth-flow";
 import { ForgotPasswordSentStepPanel } from "./forgot-password-sent-step-panel";
 import { ForgotPasswordStepPanel } from "./forgot-password-step-panel";
 import { LoginStepPanel } from "./login-step-panel";
@@ -16,16 +16,26 @@ interface AuthStepRouterProps {
 	initialStep?: AuthStep;
 	resetToken?: string;
 	next?: string;
+	initialTwoFactorMethods?: TwoFactorMethods;
 }
 
-export function AuthStepRouter({ initialStep, resetToken, next }: AuthStepRouterProps) {
+export function AuthStepRouter({
+	initialStep,
+	resetToken,
+	next,
+	initialTwoFactorMethods,
+}: AuthStepRouterProps) {
 	const { step, transitionTo } = useAuthFlow();
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Mount-only — syncs URL params into store once
 	useEffect(() => {
 		if (initialStep) {
-			transitionTo(initialStep, { resetToken, next });
+			transitionTo(initialStep, {
+				resetToken,
+				next,
+				twoFactorMethods: initialTwoFactorMethods,
+			});
 		} else if (next) {
 			transitionTo(step, { next });
 		}

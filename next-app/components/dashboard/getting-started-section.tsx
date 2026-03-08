@@ -82,7 +82,7 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<CardTitle className="text-sm">Get started</CardTitle>
+				<CardTitle>Get started</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-2">
 				<ChecklistCard

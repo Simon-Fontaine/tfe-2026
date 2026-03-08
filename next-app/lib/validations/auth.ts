@@ -181,15 +181,29 @@ export type ResetPasswordInput = v.InferOutput<typeof ResetPasswordSchema>;
 
 // ─── Change Password ─────────────────────────────────────────────────────────
 
-export const ChangePasswordSchema = v.pipe(
+/** Step 1: verify current password and trigger an emailed confirmation code. */
+export const RequestPasswordChangeSchema = v.object({
+	currentPassword: v.pipe(
+		v.string(),
+		v.nonEmpty("Current password is required"),
+		v.maxLength(PASSWORD_MAX_LENGTH, "Password must be at most 128 characters")
+	),
+});
+
+export type RequestPasswordChangeInput = v.InferOutput<typeof RequestPasswordChangeSchema>;
+
+/** Step 2: submit new password + emailed code to commit the change. */
+export const ConfirmPasswordChangeSchema = v.pipe(
 	v.object({
-		currentPassword: v.pipe(
-			v.string(),
-			v.nonEmpty("Current password is required"),
-			v.maxLength(PASSWORD_MAX_LENGTH, "Password must be at most 128 characters")
-		),
 		newPassword: passwordComplexityPipe,
 		confirmNewPassword: v.pipe(v.string(), v.nonEmpty("Please confirm your new password")),
+		code: v.pipe(
+			v.string(),
+			v.trim(),
+			v.nonEmpty("Verification code is required"),
+			v.length(6, "Code must be exactly 6 digits"),
+			v.regex(/^\d{6}$/, "Code must contain only digits")
+		),
 	}),
 	v.forward(
 		v.check((input) => input.newPassword === input.confirmNewPassword, "Passwords do not match"),
@@ -197,7 +211,10 @@ export const ChangePasswordSchema = v.pipe(
 	)
 );
 
-export type ChangePasswordInput = v.InferOutput<typeof ChangePasswordSchema>;
+export type ConfirmPasswordChangeInput = v.InferOutput<typeof ConfirmPasswordChangeSchema>;
+
+export const ChangePasswordSchema = ConfirmPasswordChangeSchema;
+export type ChangePasswordInput = ConfirmPasswordChangeInput;
 
 // ─── Recovery Code ───────────────────────────────────────────────────────────
 
@@ -206,6 +223,45 @@ export const RecoveryCodeSchema = v.object({
 });
 
 export type RecoveryCodeInput = v.InferOutput<typeof RecoveryCodeSchema>;
+
+// ─── Change Email ─────────────────────────────────────────────────────────────
+
+export const ChangeEmailSchema = v.object({
+	newEmail: v.pipe(
+		v.string(),
+		v.trim(),
+		v.nonEmpty("Email is required"),
+		v.email("Invalid email address"),
+		v.maxLength(255, "Email must be at most 255 characters")
+	),
+});
+
+export type ChangeEmailInput = v.InferOutput<typeof ChangeEmailSchema>;
+
+// ─── Delete Account ───────────────────────────────────────────────────────────
+
+export const DeleteAccountSchema = v.object({
+	reason: v.optional(
+		v.pipe(v.string(), v.trim(), v.maxLength(500, "Reason must be at most 500 characters"))
+	),
+});
+
+export type DeleteAccountInput = v.InferOutput<typeof DeleteAccountSchema>;
+
+// ─── Change Username ──────────────────────────────────────────────────────────
+
+export const ChangeUsernameSchema = v.object({
+	username: v.pipe(
+		v.string(),
+		v.trim(),
+		v.nonEmpty("Username is required"),
+		v.minLength(3, "Username must be at least 3 characters"),
+		v.maxLength(20, "Username must be at most 20 characters"),
+		v.regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores")
+	),
+});
+
+export type ChangeUsernameInput = v.InferOutput<typeof ChangeUsernameSchema>;
 
 // ─── Credential Name ─────────────────────────────────────────────────────────
 

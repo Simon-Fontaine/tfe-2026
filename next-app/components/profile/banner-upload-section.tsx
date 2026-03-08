@@ -89,7 +89,7 @@ export function BannerUploadSection({ bannerUrl: initialBannerUrl }: BannerUploa
 	return (
 		<Card>
 			<CardHeader className="pb-3">
-				<CardTitle className="text-sm">Banner</CardTitle>
+				<CardTitle>Banner</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-3">
 				<div className="relative aspect-[4/1] w-full overflow-hidden border bg-muted">

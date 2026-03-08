@@ -43,6 +43,13 @@
 			"when": 1772884683076,
 			"tag": "0005_soft_lightspeed",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1772989489056,
+			"tag": "0006_tearful_living_tribunal",
+			"breakpoints": true
 		}
 	]
 }

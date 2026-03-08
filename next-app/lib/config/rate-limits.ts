@@ -73,4 +73,14 @@ export const rateLimits = {
 	sessionRevoke: { limit: 10, windowMs: minutes(15) },
 	/** Bulk "revoke all other sessions". */
 	sessionRevokeAll: { limit: 3, windowMs: minutes(15) },
+
+	// ── Profile updates ──────────────────────────────────────────────────────
+	/** Username change attempts. */
+	changeUsername: { limit: 3, windowMs: minutes(15) },
+
+	// ── Sensitive account actions ────────────────────────────────────────────
+	/** Requesting a sensitive action verification code (email change, deletion, etc.). */
+	sensitiveActionRequest: { limit: 3, windowMs: minutes(15) },
+	/** Verifying a sensitive action code. */
+	sensitiveActionVerify: { limit: 5, windowMs: minutes(15) },
 } as const satisfies Record<string, RateLimitRule>;
