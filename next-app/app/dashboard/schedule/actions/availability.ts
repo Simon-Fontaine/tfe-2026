@@ -9,6 +9,7 @@ import { availabilityTable } from "@/db/schema";
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { extractErrors } from "@/lib/action-utils";
 import { getCurrentSession } from "@/lib/auth/session";
+import { verifyUserOnTeam } from "@/lib/data/player";
 import { AvailabilitySchema } from "@/lib/validations/profile";
 
 export async function addAvailabilityAction(
@@ -21,6 +22,7 @@ export async function addAvailabilityAction(
 	}
 
 	const parsed = v.safeParse(AvailabilitySchema, {
+		teamId: formData.get("teamId"),
 		type: formData.get("type"),
 		dayOfWeek: formData.get("dayOfWeek") !== null ? Number(formData.get("dayOfWeek")) : null,
 		specificDate: formData.get("specificDate") || null,
@@ -34,10 +36,17 @@ export async function addAvailabilityAction(
 		return { fieldErrors: extractErrors(parsed.issues) };
 	}
 
-	const { type, dayOfWeek, specificDate, startTime, endTime, timezone, label } = parsed.output;
+	const { teamId, type, dayOfWeek, specificDate, startTime, endTime, timezone, label } =
+		parsed.output;
+
+	const onTeam = await verifyUserOnTeam(user.id, teamId);
+	if (!onTeam) {
+		return { error: "You are not an active member of this team." };
+	}
 
 	await db.insert(availabilityTable).values({
 		userId: user.id,
+		teamId,
 		dayOfWeek: type === "recurring" ? (dayOfWeek ?? null) : null,
 		specificDate: type === "one_off" && specificDate ? new Date(specificDate) : null,
 		startTime,
@@ -46,7 +55,7 @@ export async function addAvailabilityAction(
 		label: label || null,
 	});
 
-	revalidatePath("/dashboard/profile");
+	revalidatePath(`/dashboard/schedule?team=${teamId}`);
 	return { success: true };
 }
 
@@ -64,14 +73,19 @@ export async function deleteAvailabilityAction(
 
 	const row = await db.query.availabilityTable.findFirst({
 		where: eq(availabilityTable.id, id),
-		columns: { userId: true },
+		columns: { userId: true, teamId: true },
 	});
 
 	if (!row) return { error: "Availability window not found." };
 	if (row.userId !== user.id) return { error: "Not authorized." };
 
+	const onTeam = await verifyUserOnTeam(user.id, row.teamId);
+	if (!onTeam) {
+		return { error: "You are no longer an active member of this team." };
+	}
+
 	await db.delete(availabilityTable).where(eq(availabilityTable.id, id));
 
-	revalidatePath("/dashboard/profile");
+	revalidatePath(`/dashboard/schedule?team=${row.teamId}`);
 	return { success: true };
 }

@@ -4,13 +4,12 @@ import {
 	ArrowUpDownIcon,
 	BubbleChatIcon,
 	GameController01Icon,
-	Search01Icon,
 	Sword03Icon,
-	UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { getUserInitials, UserMenuDropdown } from "@/components/shared/user-menu-dropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -30,17 +29,16 @@ import type { SessionUser } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 
 const COMING_SOON_LINKS = [
-	{ label: "Teams", icon: UserGroupIcon, href: "/dashboard/teams" },
 	{ label: "Scrims", icon: GameController01Icon, href: "/dashboard/scrims" },
-	{ label: "LFG", icon: Search01Icon, href: "/dashboard/lfg" },
 	{ label: "Chat", icon: BubbleChatIcon, href: "/dashboard/chat" },
 ];
 
 interface DashboardSidebarProps {
 	user: SessionUser;
+	unreadCount: number;
 }
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, unreadCount }: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const initials = getUserInitials(user.displayName);
 
@@ -69,31 +67,33 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 				</SidebarMenu>
 			</SidebarHeader>
 
-			{/* ── Content: nav links ────────────────────────────── */}
+			{/* ── Content: nav groups ────────────────────────────── */}
 			<SidebarContent>
-				<SidebarGroup>
-					<SidebarGroupLabel>Navigation</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							{siteConfig.nav.dashboard.map((link) => {
-								const isActive =
-									link.href === "/dashboard"
-										? pathname === "/dashboard"
-										: pathname.startsWith(link.href);
-								return (
-									<SidebarMenuItem key={link.href}>
-										<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
-											<Link href={link.href}>
-												<HugeiconsIcon icon={link.icon} strokeWidth={2} />
-												{link.label}
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								);
-							})}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
+				{siteConfig.nav.dashboard.map((group, i) => (
+					<SidebarGroup key={group.label ?? i}>
+						{group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+						<SidebarGroupContent>
+							<SidebarMenu>
+								{group.links.map((link) => {
+									const isActive =
+										link.href === "/dashboard"
+											? pathname === "/dashboard"
+											: pathname.startsWith(link.href);
+									return (
+										<SidebarMenuItem key={link.href}>
+											<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
+												<Link href={link.href}>
+													<HugeiconsIcon icon={link.icon} strokeWidth={2} />
+													{link.label}
+												</Link>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									);
+								})}
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				))}
 
 				<SidebarSeparator />
 
@@ -118,9 +118,14 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 				</SidebarGroup>
 			</SidebarContent>
 
-			{/* ── Footer: user menu ─────────────────────────────── */}
+			{/* ── Footer: notification bell + user menu ─────────── */}
 			<SidebarFooter>
 				<SidebarMenu>
+					<SidebarMenuItem>
+						<div className="px-2 py-1">
+							<NotificationBell unreadCount={unreadCount} />
+						</div>
+					</SidebarMenuItem>
 					<SidebarMenuItem>
 						<UserMenuDropdown
 							user={user}
@@ -134,7 +139,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 								tooltip={user.displayName}
 							>
-								<Avatar className="size-8 shrink-0 rounded-none overflow-hidden after:rounded-none">
+								<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
 									<AvatarImage className="rounded-none" src={user.avatarUrl ?? undefined} />
 									<AvatarFallback className="rounded-none text-xs">{initials}</AvatarFallback>
 								</Avatar>

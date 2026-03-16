@@ -99,15 +99,13 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 					description="Organisations manage one or more teams and handle scrim invitations."
 					ctaLabel="Browse orgs"
 					ctaHref="/dashboard/orgs"
-					comingSoon
 				/>
 				<ChecklistCard
 					icon={Search01Icon}
-					title="Find scrims"
-					description="Browse the LFG board or invite another team to a scrim directly."
-					ctaLabel="Find scrims"
-					ctaHref="/dashboard/scrims"
-					comingSoon
+					title="Find a team"
+					description="Browse recruiting teams or post on the LFG board to find teammates."
+					ctaLabel="Find teams"
+					ctaHref="/dashboard/teams"
 				/>
 			</CardContent>
 		</Card>

@@ -88,6 +88,7 @@ const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const AvailabilitySchema = v.pipe(
 	v.object({
+		teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
 		type: v.picklist(["recurring", "one_off"] as const, "Please select a type"),
 		dayOfWeek: v.optional(
 			v.nullable(

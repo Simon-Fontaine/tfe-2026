@@ -133,6 +133,24 @@ export const lfgApplicationStatusEnum = pgEnum("lfg_application_status", [
 	"withdrawn",
 ]);
 
+/** Team invite lifecycle. */
+export const teamInviteStatusEnum = pgEnum("team_invite_status", [
+	"pending",
+	"accepted",
+	"declined",
+	"expired",
+	"cancelled",
+]);
+
+/** Org invite lifecycle. */
+export const orgInviteStatusEnum = pgEnum("org_invite_status", [
+	"pending",
+	"accepted",
+	"declined",
+	"expired",
+	"cancelled",
+]);
+
 /** Security audit log event types — immutable append-only log. */
 export const auditActionEnum = pgEnum("audit_action", [
 	"login_success",
@@ -182,4 +200,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 	"new_location_login",
 	"session_revoked_alert",
 	"generic",
+	"team_invite_received",
+	"team_invite_accepted",
+	"org_invite_received",
 ]);

@@ -25,11 +25,13 @@ import {
 	matchResultEnum,
 	notificationTypeEnum,
 	ocrJobStatusEnum,
+	orgInviteStatusEnum,
 	orgRoleEnum,
 	ow2RankEnum,
 	ow2RoleEnum,
 	rosterStatusEnum,
 	scrimStatusEnum,
+	teamInviteStatusEnum,
 } from "./enums";
 // ============================================================================
 // PLAYER PROFILE — Extends auth user with Overwatch 2-specific data
@@ -293,6 +295,9 @@ export const teamTable = pgTable(
 		/** Archived teams are hidden from matchmaking. */
 		isArchived: boolean("is_archived").notNull().default(false),
 
+		/** Whether the team is actively looking for new players. */
+		isRecruiting: boolean("is_recruiting").notNull().default(false),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()
@@ -470,6 +475,11 @@ export const availabilityTable = pgTable(
 			.notNull()
 			.references(() => userTable.id, { onDelete: "cascade" }),
 
+		/** Team this availability is scoped to. */
+		teamId: uuid("team_id")
+			.notNull()
+			.references(() => teamTable.id, { onDelete: "cascade" }),
+
 		/** Day of the week (0=Sun, 6=Sat). Null for one-off slots. */
 		dayOfWeek: smallint("day_of_week"),
 
@@ -496,8 +506,10 @@ export const availabilityTable = pgTable(
 	},
 	(table) => [
 		index("availability_user_idx").on(table.userId),
-		index("availability_schedule_idx").on(table.userId, table.dayOfWeek),
-		index("availability_specific_idx").on(table.userId, table.specificDate),
+		index("availability_team_idx").on(table.teamId),
+		index("availability_user_team_idx").on(table.userId, table.teamId),
+		index("availability_schedule_idx").on(table.userId, table.teamId, table.dayOfWeek),
+		index("availability_specific_idx").on(table.userId, table.teamId, table.specificDate),
 	]
 );
 
@@ -961,6 +973,103 @@ export const chatChannelMemberTable = pgTable(
 		index("chat_member_channel_idx").on(table.channelId, table.leftAt),
 	]
 );
+
+// ============================================================================
+// TEAM INVITES — Direct invitations from managers to players
+// ============================================================================
+
+/**
+ * A direct invitation from a team manager to a user. Distinct from LFG
+ * applications (which are player-initiated). Invite expires after 7 days.
+ * The uniqueIndex prevents duplicate pending invites to the same player.
+ */
+export const teamInviteTable = pgTable(
+	"team_invite",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		teamId: uuid("team_id")
+			.notNull()
+			.references(() => teamTable.id, { onDelete: "cascade" }),
+
+		/** User who received the invite. */
+		inviteeUserId: uuid("invitee_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+
+		/** Manager who sent the invite. */
+		inviterUserId: uuid("inviter_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "restrict" }),
+
+		/** Role the invitee will join with. */
+		roleInTeam: ow2RoleEnum("role_in_team").notNull(),
+
+		status: teamInviteStatusEnum("status").notNull().default("pending"),
+
+		expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("team_invite_unique_idx").on(table.teamId, table.inviteeUserId),
+		index("team_invite_team_idx").on(table.teamId),
+		index("team_invite_invitee_idx").on(table.inviteeUserId),
+	]
+);
+
+// ============================================================================
+// ORG INVITES — Direct invitations from org managers to users
+// ============================================================================
+
+/**
+ * A direct invitation from an org owner/manager to a user.
+ * Accepted invites insert a row into `organizationMemberTable`.
+ */
+export const orgInviteTable = pgTable(
+	"org_invite",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organizationTable.id, { onDelete: "cascade" }),
+
+		/** User who received the invite. */
+		inviteeUserId: uuid("invitee_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+
+		/** Manager who sent the invite. */
+		inviterUserId: uuid("inviter_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "restrict" }),
+
+		/** Role the invitee will join as. */
+		role: orgRoleEnum("role").notNull().default("player"),
+
+		status: orgInviteStatusEnum("status").notNull().default("pending"),
+
+		expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("org_invite_unique_idx").on(table.organizationId, table.inviteeUserId),
+		index("org_invite_org_idx").on(table.organizationId),
+		index("org_invite_invitee_idx").on(table.inviteeUserId),
+	]
+);
+
+// ============================================================================
+// MESSAGING — Channel-based chat system
+// ============================================================================
 
 /**
  * Append-only chat messages. Edits update `content` and set `editedAt`.

@@ -1,8 +1,13 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { cache } from "react";
 
 import { db } from "@/db";
-import { availabilityTable, playerHeroTable, playerProfileTable } from "@/db/schema";
+import {
+	availabilityTable,
+	playerHeroTable,
+	playerProfileTable,
+	teamRosterTable,
+} from "@/db/schema";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,12 +34,19 @@ export type PlayerStats = {
 
 export type AvailabilityRow = {
 	id: string;
+	teamId: string;
 	dayOfWeek: number | null;
 	specificDate: Date | null;
 	startTime: string;
 	endTime: string;
 	timezone: string;
 	label: string | null;
+};
+
+export type UserTeam = {
+	id: string;
+	name: string;
+	tag: string;
 };
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
@@ -104,21 +116,56 @@ export const getPlayerStats = cache(async (userId: string): Promise<PlayerStats>
 });
 
 /**
- * Fetches the player's availability windows.
+ * Fetches a player's availability windows for a specific team.
  * Memoized per request with React's `cache()`.
  */
-export const getPlayerAvailability = cache(async (userId: string): Promise<AvailabilityRow[]> => {
-	return db.query.availabilityTable.findMany({
-		where: eq(availabilityTable.userId, userId),
-		columns: {
-			id: true,
-			dayOfWeek: true,
-			specificDate: true,
-			startTime: true,
-			endTime: true,
-			timezone: true,
-			label: true,
+export const getPlayerAvailability = cache(
+	async (userId: string, teamId: string): Promise<AvailabilityRow[]> => {
+		return db.query.availabilityTable.findMany({
+			where: and(eq(availabilityTable.userId, userId), eq(availabilityTable.teamId, teamId)),
+			columns: {
+				id: true,
+				teamId: true,
+				dayOfWeek: true,
+				specificDate: true,
+				startTime: true,
+				endTime: true,
+				timezone: true,
+				label: true,
+			},
+			orderBy: [asc(availabilityTable.dayOfWeek), asc(availabilityTable.specificDate)],
+		});
+	}
+);
+
+/**
+ * Fetches all teams where the user is an active roster member.
+ * Memoized per request with React's `cache()`.
+ */
+export const getActiveTeamsForUser = cache(async (userId: string): Promise<UserTeam[]> => {
+	const rows = await db.query.teamRosterTable.findMany({
+		where: and(eq(teamRosterTable.userId, userId), eq(teamRosterTable.status, "active")),
+		with: {
+			team: {
+				columns: { id: true, name: true, tag: true },
+			},
 		},
-		orderBy: [asc(availabilityTable.dayOfWeek), asc(availabilityTable.specificDate)],
 	});
+	return rows.map((r) => r.team);
 });
+
+/**
+ * Checks whether a user is an active member of a team.
+ * Not memoized — used inside Server Actions outside the render cycle.
+ */
+export async function verifyUserOnTeam(userId: string, teamId: string): Promise<boolean> {
+	const row = await db.query.teamRosterTable.findFirst({
+		where: and(
+			eq(teamRosterTable.userId, userId),
+			eq(teamRosterTable.teamId, teamId),
+			eq(teamRosterTable.status, "active")
+		),
+		columns: { id: true },
+	});
+	return row !== undefined;
+}

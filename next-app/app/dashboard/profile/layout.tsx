@@ -8,7 +8,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
 				backHref="/dashboard"
 				icon={UserCircle02Icon}
 				title="Your profile"
-				subtitle="Manage your player profile, roles, hero pool and availability"
+				subtitle="Manage your player profile, roles and hero pool"
 			/>
 			{children}
 		</div>

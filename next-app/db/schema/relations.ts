@@ -15,6 +15,7 @@ import {
 	ocrJobTable,
 	organizationMemberTable,
 	organizationTable,
+	orgInviteTable,
 	playerHeroTable,
 	playerMapTable,
 	playerProfileTable,
@@ -25,6 +26,7 @@ import {
 	sensitiveActionVerificationTable,
 	sessionTable,
 	srHistoryTable,
+	teamInviteTable,
 	teamRosterTable,
 	teamTable,
 	userDeviceTable,
@@ -54,6 +56,10 @@ export const userRelations = relations(userTable, ({ one, many }) => ({
 	sensitiveActionVerifications: many(sensitiveActionVerificationTable),
 	heroPool: many(playerHeroTable),
 	preferredMaps: many(playerMapTable),
+	receivedTeamInvites: many(teamInviteTable, { relationName: "inviteeTeamInvites" }),
+	sentTeamInvites: many(teamInviteTable, { relationName: "inviterTeamInvites" }),
+	receivedOrgInvites: many(orgInviteTable, { relationName: "inviteeOrgInvites" }),
+	sentOrgInvites: many(orgInviteTable, { relationName: "inviterOrgInvites" }),
 }));
 
 export const sessionRelations = relations(sessionTable, ({ one }) => ({
@@ -81,6 +87,7 @@ export const organizationRelations = relations(organizationTable, ({ one, many }
 	}),
 	members: many(organizationMemberTable),
 	teams: many(teamTable),
+	orgInvites: many(orgInviteTable),
 }));
 
 export const organizationMemberRelations = relations(organizationMemberTable, ({ one }) => ({
@@ -100,11 +107,13 @@ export const teamRelations = relations(teamTable, ({ one, many }) => ({
 		references: [organizationTable.id],
 	}),
 	roster: many(teamRosterTable),
+	availabilities: many(availabilityTable),
 	homeScrims: many(scrimTable, { relationName: "homeTeamScrims" }),
 	awayScrims: many(scrimTable, { relationName: "awayTeamScrims" }),
 	confirmations: many(scrimConfirmationTable),
 	lfgPosts: many(lfgPostTable),
 	chatChannels: many(chatChannelTable, { relationName: "teamChatChannels" }),
+	invites: many(teamInviteTable),
 }));
 
 export const teamRosterRelations = relations(teamRosterTable, ({ one }) => ({
@@ -150,6 +159,10 @@ export const availabilityRelations = relations(availabilityTable, ({ one }) => (
 	user: one(userTable, {
 		fields: [availabilityTable.userId],
 		references: [userTable.id],
+	}),
+	team: one(teamTable, {
+		fields: [availabilityTable.teamId],
+		references: [teamTable.id],
 	}),
 }));
 
@@ -369,5 +382,39 @@ export const auditLogRelations = relations(auditLogTable, ({ one }) => ({
 	user: one(userTable, {
 		fields: [auditLogTable.userId],
 		references: [userTable.id],
+	}),
+}));
+
+export const teamInviteRelations = relations(teamInviteTable, ({ one }) => ({
+	team: one(teamTable, {
+		fields: [teamInviteTable.teamId],
+		references: [teamTable.id],
+	}),
+	invitee: one(userTable, {
+		fields: [teamInviteTable.inviteeUserId],
+		references: [userTable.id],
+		relationName: "inviteeTeamInvites",
+	}),
+	inviter: one(userTable, {
+		fields: [teamInviteTable.inviterUserId],
+		references: [userTable.id],
+		relationName: "inviterTeamInvites",
+	}),
+}));
+
+export const orgInviteRelations = relations(orgInviteTable, ({ one }) => ({
+	organization: one(organizationTable, {
+		fields: [orgInviteTable.organizationId],
+		references: [organizationTable.id],
+	}),
+	invitee: one(userTable, {
+		fields: [orgInviteTable.inviteeUserId],
+		references: [userTable.id],
+		relationName: "inviteeOrgInvites",
+	}),
+	inviter: one(userTable, {
+		fields: [orgInviteTable.inviterUserId],
+		references: [userTable.id],
+		relationName: "inviterOrgInvites",
 	}),
 }));

@@ -1,0 +1,90 @@
+"use client";
+
+import { respondToOrgInviteAction } from "@/app/dashboard/orgs/actions/org";
+import { respondToTeamInviteAction } from "@/app/dashboard/teams/[teamId]/actions/invites";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useFormAction } from "@/hooks/use-form-action";
+import type { OrgInviteSummary } from "@/lib/data/organization";
+import type { TeamInviteSummary } from "@/lib/data/team";
+
+type PendingInviteCardProps =
+	| { type: "team"; invite: TeamInviteSummary }
+	| { type: "org"; invite: OrgInviteSummary };
+
+const ROLE_LABELS: Record<string, string> = {
+	tank: "Tank",
+	damage: "DPS",
+	support: "Support",
+	owner: "Owner",
+	manager: "Manager",
+	coach: "Coach",
+	analyst: "Analyst",
+	player: "Player",
+};
+
+function formatExpiry(date: Date): string {
+	const days = Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+	return days <= 1 ? "Expires soon" : `Expires in ${days}d`;
+}
+
+export function PendingInviteCard(props: PendingInviteCardProps) {
+	// Both hooks must be called unconditionally; the correct one is selected below.
+	const teamForm = useFormAction(respondToTeamInviteAction, {
+		loadingMessage: "Processing…",
+		successMessage: "Invite response sent",
+	});
+	const orgForm = useFormAction(respondToOrgInviteAction, {
+		loadingMessage: "Processing…",
+		successMessage: "Invite response sent",
+	});
+
+	const { submit, isPending } = props.type === "team" ? teamForm : orgForm;
+
+	function respond(action: "accept" | "decline") {
+		const fd = new FormData();
+		fd.set("inviteId", props.invite.id);
+		fd.set("action", action);
+		submit(fd);
+	}
+
+	const name = props.type === "team" ? props.invite.teamName : props.invite.orgName;
+	const avatarUrl = props.type === "team" ? props.invite.teamAvatarUrl : props.invite.orgAvatarUrl;
+	const tag = props.type === "team" ? props.invite.teamTag : null;
+	const role = props.type === "team" ? props.invite.roleInTeam : props.invite.role;
+
+	return (
+		<div className="flex items-center gap-3 border p-4">
+			<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+				<AvatarImage src={avatarUrl ?? undefined} className="rounded-none" />
+				<AvatarFallback className="rounded-none font-mono text-xs font-bold">
+					{tag ?? name.slice(0, 2).toUpperCase()}
+				</AvatarFallback>
+			</Avatar>
+
+			<div className="min-w-0 flex-1">
+				<div className="flex items-baseline gap-2">
+					<p className="truncate text-sm font-semibold">{tag ? `[${tag}] ${name}` : name}</p>
+					<Badge variant="outline" className="shrink-0 text-[10px]">
+						{ROLE_LABELS[role] ?? role}
+					</Badge>
+				</div>
+				<p className="mt-0.5 text-xs text-muted-foreground">
+					Invited by {props.invite.inviterDisplayName} · {formatExpiry(props.invite.expiresAt)}
+				</p>
+			</div>
+
+			<div className="flex shrink-0 gap-2">
+				<Button size="sm" onClick={() => respond("accept")} disabled={isPending}>
+					{isPending && <Spinner className="mr-1.5" />}
+					Accept
+				</Button>
+				<Button size="sm" variant="outline" onClick={() => respond("decline")} disabled={isPending}>
+					Decline
+				</Button>
+			</div>
+		</div>
+	);
+}

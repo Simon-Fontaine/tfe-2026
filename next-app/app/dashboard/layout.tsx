@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { db } from "@/db";
 import { accountDeletionRequestTable, playerProfileTable } from "@/db/schema";
 import { getCurrentSession } from "@/lib/auth/session";
+import { getUnreadNotificationCount } from "@/lib/data/notifications";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const { session, user } = await getCurrentSession();
@@ -27,5 +28,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	});
 	if (pendingDeletion) redirect("/deletion-pending");
 
-	return <DashboardShell user={user}>{children}</DashboardShell>;
+	const unreadCount = await getUnreadNotificationCount(user.id);
+
+	return (
+		<DashboardShell user={user} unreadCount={unreadCount}>
+			{children}
+		</DashboardShell>
+	);
 }

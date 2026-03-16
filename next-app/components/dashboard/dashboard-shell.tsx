@@ -6,13 +6,14 @@ import { DashboardSidebar } from "./dashboard-sidebar";
 
 interface DashboardShellProps {
 	user: SessionUser;
+	unreadCount: number;
 	children: React.ReactNode;
 }
 
-export function DashboardShell({ user, children }: DashboardShellProps) {
+export function DashboardShell({ user, unreadCount, children }: DashboardShellProps) {
 	return (
 		<SidebarProvider>
-			<DashboardSidebar user={user} />
+			<DashboardSidebar user={user} unreadCount={unreadCount} />
 			<SidebarInset>
 				<header className="sticky top-0 z-10 flex h-12 shrink-0 items-center border-b bg-background px-3">
 					<SidebarTrigger />

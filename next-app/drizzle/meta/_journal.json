@@ -50,6 +50,20 @@
 			"when": 1772989489056,
 			"tag": "0006_tearful_living_tribunal",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1773045265071,
+			"tag": "0007_gray_wendell_rand",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1773058737140,
+			"tag": "0008_ancient_white_queen",
+			"breakpoints": true
 		}
 	]
 }
