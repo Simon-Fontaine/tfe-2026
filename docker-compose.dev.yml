@@ -23,8 +23,8 @@ services:
   # --- Database Migrations ---
   db-migrate:
     build:
-      context: ./next-app
-      dockerfile: ../Dockerfile.dev
+      context: ./apps/web
+      dockerfile: ../../Dockerfile.dev
       target: dev
     container_name: scrimflow_db_migrate_dev
     environment:
@@ -101,16 +101,57 @@ services:
     networks:
       - scrimflow_network
 
+  # --- Hono API (Bun) ---
+  api:
+    image: oven/bun:latest
+    container_name: scrimflow_api_dev
+    restart: unless-stopped
+    working_dir: /app
+    command: bun --watch src/index.ts
+    environment:
+      NODE_ENV: development
+      API_PORT: 3001
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@cache:6379
+      S3_ENDPOINT: http://storage:9000
+      S3_ACCESS_KEY: ${MINIO_USER}
+      S3_SECRET_KEY: ${MINIO_PASSWORD}
+      S3_BUCKET_AVATARS: avatars
+      S3_BUCKET_SCREENSHOTS: screenshots
+      S3_BUCKET_BANNERS: banners
+      S3_BUCKET_HEROES: heroes
+      S3_BUCKET_MAPS: maps
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9000}
+      SMTP_HOST: mail
+      SMTP_PORT: 1025
+      SMTP_FROM: noreply@scrimflow.local
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./packages/api:/app
+      - /app/node_modules
+    networks:
+      - scrimflow_network
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
   # --- Next.js Application (Development with Hot Reload) ---
   app:
     build:
-      context: ./next-app
-      dockerfile: ../Dockerfile.dev
+      context: ./apps/web
+      dockerfile: ../../Dockerfile.dev
       target: dev
     container_name: scrimflow_app_dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
+      API_URL: http://api:3001
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       REDIS_URL: redis://:${REDIS_PASSWORD}@cache:6379
       # MinIO/S3 Configuration
@@ -130,7 +171,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./next-app:/app
+      - ./apps/web:/app
       - /app/node_modules
       - /app/.next
     networks:
@@ -145,6 +186,8 @@ services:
       storage:
         condition: service_healthy
       mail:
+        condition: service_started
+      api:
         condition: service_started
 
   # --- Python OCR Worker (Development) ---
