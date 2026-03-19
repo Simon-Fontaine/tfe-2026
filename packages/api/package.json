@@ -1,0 +1,41 @@
+{
+	"name": "@scrimflow/api",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"start": "bun src/index.ts",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio"
+	},
+	"dependencies": {
+		"@scrimflow/shared": "workspace:*",
+		"hono": "^4",
+		"@oslojs/crypto": "^1.0.1",
+		"@oslojs/encoding": "^1.1.0",
+		"@oslojs/otp": "^1.1.0",
+		"@oslojs/webauthn": "^1.0.0",
+		"@node-rs/argon2": "^2.0.2",
+		"drizzle-orm": "^0.45.1",
+		"pg": "^8.18.0",
+		"valibot": "^1.2.0",
+		"ioredis": "^5.9.3",
+		"@aws-sdk/client-s3": "^3.1004.0",
+		"nodemailer": "^8.0.1",
+		"@react-email/components": "^0.0.41",
+		"@react-email/render": "^2.0.4",
+		"pino": "^10.3.1",
+		"react": "^19.2.3"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/pg": "^8",
+		"@types/nodemailer": "^6",
+		"@types/react": "^19",
+		"drizzle-kit": "^0.31.1",
+		"typescript": "^5"
+	}
+}

@@ -1,8 +1,9 @@
 {
 	"scripts": {
-		"dev": "cd next-app && pnpm dev",
-		"start": "cd next-app && pnpm start",
-		"build": "cd next-app && pnpm build",
+		"dev": "cd apps/web && pnpm dev",
+		"dev:api": "cd packages/api && bun --watch src/index.ts",
+		"start": "cd apps/web && pnpm start",
+		"build": "cd apps/web && pnpm build",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"lint": "biome lint .",
