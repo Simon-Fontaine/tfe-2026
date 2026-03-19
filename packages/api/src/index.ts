@@ -3,6 +3,7 @@ import { logger as honoLogger } from "hono/logger";
 import { errorHandler } from "@/middleware/error-handler";
 import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
+import { settingsRoutes } from "@/routes/settings";
 
 const app = new Hono();
 
@@ -15,6 +16,7 @@ app.onError(errorHandler);
 
 // Routes
 app.route("/api/auth", authRoutes);
+app.route("/api/settings", settingsRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));
