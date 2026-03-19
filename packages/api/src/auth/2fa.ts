@@ -1,5 +1,8 @@
 import { encodeBase32UpperCaseNoPadding } from "@oslojs/encoding";
+import { rateLimits } from "@scrimflow/shared";
 import { and, eq, isNull } from "drizzle-orm";
+import { decryptTextToString, encryptStringToText } from "@/crypto/encryption";
+import { timingSafeCompare } from "@/crypto/utils";
 import { db } from "@/db";
 import {
 	passkeyCredentialTable,
@@ -8,9 +11,6 @@ import {
 	totpCredentialTable,
 	userTable,
 } from "@/db/schema";
-import { rateLimits } from "@scrimflow/shared";
-import { timingSafeCompare } from "@/crypto/utils";
-import { decryptTextToString, encryptStringToText } from "@/crypto/encryption";
 import { checkRateLimit, type RateLimitResult, resetRateLimit } from "@/rate-limit";
 
 // ─── Rate limiters ─────────────────────────────────────────────────────────────

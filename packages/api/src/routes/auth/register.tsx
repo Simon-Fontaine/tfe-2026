@@ -1,19 +1,17 @@
-import { Hono } from "hono";
+import { RegisterSchema, rateLimits } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
+import { Hono } from "hono";
 import * as v from "valibot";
-
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
-import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import { writeAuditLog } from "@/auth/audit";
 import { createEmailVerificationRequest } from "@/auth/email-verification";
 import { hashPassword, verifyPasswordStrength } from "@/auth/password";
-import { rateLimits } from "@/config/rate-limits";
-import logger from "@/utils/logger";
+import { db } from "@/db";
+import { userTable } from "@/db/schema";
 import { sendMail } from "@/email/mailer";
-import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
-import { RegisterSchema } from "@scrimflow/shared";
+import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import logger from "@/utils/logger";
 
 import { type ActionResult, extractErrors, normalizeEmail, setPendingCookie } from "./utils";
 

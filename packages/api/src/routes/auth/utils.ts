@@ -1,6 +1,6 @@
+import { encodeBase64 } from "@oslojs/encoding";
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { encodeBase64 } from "@oslojs/encoding";
 import type * as v from "valibot";
 
 import { getUserTwoFactorStatus } from "@/auth/2fa";

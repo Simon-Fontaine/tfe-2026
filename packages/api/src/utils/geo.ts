@@ -2,8 +2,8 @@
  * Best-effort geolocation with fail-open empty GeoData.
  */
 
-import logger from "@/utils/logger";
 import redis from "@/db/redis";
+import logger from "@/utils/logger";
 
 export interface GeoData {
 	/** ISO 3166-1 alpha-2 */

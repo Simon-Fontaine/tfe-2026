@@ -1,7 +1,7 @@
+import { sendMail } from "@/email/mailer";
 import { SecurityAlertEmail, type SecurityAlertType } from "@/email/templates/SecurityAlertEmail";
 import { formatLocation, type GeoData } from "@/utils/geo";
 import logger from "@/utils/logger";
-import { sendMail } from "@/email/mailer";
 
 export async function sendSecurityAlertEmail({
 	to,

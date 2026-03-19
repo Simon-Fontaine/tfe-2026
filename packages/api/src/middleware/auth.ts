@@ -1,7 +1,7 @@
-import { createMiddleware } from "hono/factory";
-import { getCookie } from "hono/cookie";
-import { validateSessionToken } from "@/auth/session";
 import type { Session, SessionUser } from "@scrimflow/shared";
+import { getCookie } from "hono/cookie";
+import { createMiddleware } from "hono/factory";
+import { validateSessionToken } from "@/auth/session";
 
 export type AuthEnv = {
 	Variables: {

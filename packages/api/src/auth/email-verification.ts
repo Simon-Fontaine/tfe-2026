@@ -1,7 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
+import { generateNumericCode } from "@/crypto/utils";
 import { db } from "@/db";
 import { emailVerificationRequestTable } from "@/db/schema";
-import { generateNumericCode } from "@/crypto/utils";
 
 const EXPIRY_MS = 1_000 * 60 * 15; // 15 minutes
 

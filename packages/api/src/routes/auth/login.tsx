@@ -1,31 +1,29 @@
-import { Hono } from "hono";
+import { LoginSchema, rateLimits } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
+import { Hono } from "hono";
 import * as v from "valibot";
-
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
-import { SecurityAlertEmail } from "@/email/templates/SecurityAlertEmail";
-import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import { getUserTwoFactorStatus } from "@/auth/2fa";
 import { writeAuditLog } from "@/auth/audit";
 import { type ClientContext, isKnownLocation, resolveDevice } from "@/auth/device";
 import { createEmailVerificationRequest } from "@/auth/email-verification";
 import { verifyPasswordHash } from "@/auth/password";
-import { rateLimits } from "@/config/rate-limits";
+import { db } from "@/db";
+import { userTable } from "@/db/schema";
+import { sendMail } from "@/email/mailer";
+import { SecurityAlertEmail } from "@/email/templates/SecurityAlertEmail";
+import { VerificationEmail } from "@/email/templates/VerificationEmail";
+import type { RequestContextEnv } from "@/middleware/request-context";
+import { checkRateLimit, formatRetryAfter, resetRateLimit } from "@/rate-limit";
 import { fetchGeoData, formatLocation, type GeoData } from "@/utils/geo";
 import logger from "@/utils/logger";
-import { sendMail } from "@/email/mailer";
-import { checkRateLimit, formatRetryAfter, resetRateLimit } from "@/rate-limit";
-import { LoginSchema } from "@scrimflow/shared";
-import type { RequestContextEnv } from "@/middleware/request-context";
 
 import {
 	type ActionResult,
-	type SessionContext,
 	buildTwoFactorMethods,
 	createUserSession,
 	extractErrors,
 	normalizeEmail,
+	type SessionContext,
 	safeRedirectUrl,
 	setPendingCookie,
 } from "./utils";

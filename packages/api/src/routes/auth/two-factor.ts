@@ -1,9 +1,7 @@
-import { Hono } from "hono";
+import { VerifyCodeSchema } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
+import { Hono } from "hono";
 import * as v from "valibot";
-
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
 import {
 	checkRecoveryCodeRateLimit,
 	resetRecoveryCodeRateLimit,
@@ -12,10 +10,11 @@ import {
 import { writeAuditLog } from "@/auth/audit";
 import { setSessionAs2FAVerified } from "@/auth/session";
 import { checkAndUpdateTotpCounter, checkTotpRateLimit, getUserTotpKey } from "@/auth/totp";
-import { formatRetryAfter } from "@/rate-limit";
-import { VerifyCodeSchema } from "@scrimflow/shared";
-import { requireAuth, type AuthEnv } from "@/middleware/auth";
+import { db } from "@/db";
+import { userTable } from "@/db/schema";
+import { type AuthEnv, requireAuth } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { formatRetryAfter } from "@/rate-limit";
 
 import { type ActionResult, extractErrors, safeRedirectUrl } from "./utils";
 
@@ -71,7 +70,9 @@ twoFactorRoutes.post("/totp", async (c) => {
 	const accepted = await checkAndUpdateTotpCounter(session.userId, matchedWindow);
 	if (!accepted)
 		return c.json(
-			{ error: "This code has already been used. Please wait for a new code." } satisfies ActionResult,
+			{
+				error: "This code has already been used. Please wait for a new code.",
+			} satisfies ActionResult,
 			400
 		);
 	await setSessionAs2FAVerified(session.id);
@@ -104,8 +105,7 @@ twoFactorRoutes.post("/recovery", async (c) => {
 	}
 
 	const success = await resetUser2faWithRecoveryCode(session.userId, code);
-	if (!success)
-		return c.json({ error: "Invalid recovery code." } satisfies ActionResult, 400);
+	if (!success) return c.json({ error: "Invalid recovery code." } satisfies ActionResult, 400);
 
 	await resetRecoveryCodeRateLimit(session.userId);
 	await setSessionAs2FAVerified(session.id);
@@ -124,7 +124,7 @@ twoFactorRoutes.post("/recovery", async (c) => {
 
 	let newRecoveryCode: string | undefined;
 	if (user?.recoveryCode) {
-		const { decryptTextToString } = await import("@/utils/encryption");
+		const { decryptTextToString } = await import("@/crypto/encryption");
 		newRecoveryCode = decryptTextToString(user.recoveryCode);
 	}
 

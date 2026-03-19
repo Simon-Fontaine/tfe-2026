@@ -1,9 +1,9 @@
 import { decodeBase64, encodeBase64, encodeHexLowerCase } from "@oslojs/encoding";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import redis from "@/db/redis";
 import { passkeyCredentialTable, securityKeyCredentialTable } from "@/db/schema";
 import logger from "@/utils/logger";
-import redis from "@/db/redis";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

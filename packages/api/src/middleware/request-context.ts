@@ -1,5 +1,5 @@
 import { createMiddleware } from "hono/factory";
-import { extractClientContext, type ClientContext } from "@/auth/device";
+import { type ClientContext, extractClientContext } from "@/auth/device";
 
 export type RequestContextEnv = {
 	Variables: {

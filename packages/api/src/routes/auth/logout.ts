@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { deleteCookie } from "hono/cookie";
 
 import { invalidateSession } from "@/auth/session";
-import { requireAuth, type AuthEnv } from "@/middleware/auth";
+import { type AuthEnv, requireAuth } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 
 const logoutRoutes = new Hono<RequestContextEnv & AuthEnv>();

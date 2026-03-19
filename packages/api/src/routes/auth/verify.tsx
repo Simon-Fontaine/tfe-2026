@@ -1,22 +1,20 @@
-import { Hono } from "hono";
+import { rateLimits, VerifyCodeSchema } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
+import { Hono } from "hono";
 import * as v from "valibot";
-
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
-import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import {
 	createEmailVerificationRequest,
 	deleteVerificationRequests,
 	getActiveVerificationRequest,
 } from "@/auth/email-verification";
-import { rateLimits } from "@/config/rate-limits";
-import { timingSafeCompare } from "@/utils/crypto";
-import logger from "@/utils/logger";
+import { timingSafeCompare } from "@/crypto/utils";
+import { db } from "@/db";
+import { userTable } from "@/db/schema";
 import { sendMail } from "@/email/mailer";
-import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
-import { VerifyCodeSchema } from "@scrimflow/shared";
+import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import logger from "@/utils/logger";
 
 import {
 	type ActionResult,
@@ -35,7 +33,8 @@ verifyRoutes.post("/email", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const userId = getPendingUserId(c);
-	if (!userId) return c.json({ error: "Session expired. Please start over." } satisfies ActionResult, 401);
+	if (!userId)
+		return c.json({ error: "Session expired. Please start over." } satisfies ActionResult, 401);
 
 	const { allowed, retryAfterMs } = await checkRateLimit(
 		`verify-email:${userId}`,
@@ -58,7 +57,10 @@ verifyRoutes.post("/email", async (c) => {
 		);
 
 	if (!timingSafeCompare(request.code, parsed.output.code)) {
-		return c.json({ error: "Invalid verification code. Please try again." } satisfies ActionResult, 400);
+		return c.json(
+			{ error: "Invalid verification code. Please try again." } satisfies ActionResult,
+			400
+		);
 	}
 
 	await Promise.all([
@@ -78,7 +80,8 @@ verifyRoutes.post("/device", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const userId = getPendingUserId(c);
-	if (!userId) return c.json({ error: "Session expired. Please start over." } satisfies ActionResult, 401);
+	if (!userId)
+		return c.json({ error: "Session expired. Please start over." } satisfies ActionResult, 401);
 
 	const { allowed, retryAfterMs } = await checkRateLimit(
 		`verify-device:${userId}`,
@@ -101,7 +104,10 @@ verifyRoutes.post("/device", async (c) => {
 		);
 
 	if (!timingSafeCompare(request.code, parsed.output.code)) {
-		return c.json({ error: "Invalid verification code. Please try again." } satisfies ActionResult, 400);
+		return c.json(
+			{ error: "Invalid verification code. Please try again." } satisfies ActionResult,
+			400
+		);
 	}
 
 	await deleteVerificationRequests(userId);
@@ -114,7 +120,8 @@ verifyRoutes.post("/device", async (c) => {
 
 verifyRoutes.post("/resend", async (c) => {
 	const userId = getPendingUserId(c);
-	if (!userId) return c.json({ error: "Session expired. Please start over." } satisfies ActionResult, 401);
+	if (!userId)
+		return c.json({ error: "Session expired. Please start over." } satisfies ActionResult, 401);
 
 	const { allowed, retryAfterMs } = await checkRateLimit(
 		`resend:${userId}`,
