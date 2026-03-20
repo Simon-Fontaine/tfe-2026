@@ -4,6 +4,7 @@ import { requireAuth } from "@/middleware/auth";
 import { errorHandler } from "@/middleware/error-handler";
 import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
+import { heroRoutes } from "@/routes/heroes";
 import { lfgRoutes } from "@/routes/lfg";
 import { notificationRoutes } from "@/routes/notifications";
 import { onboardingRoutes } from "@/routes/onboarding";
@@ -55,6 +56,9 @@ app.route("/api/uploads", uploadRoutes);
 
 app.use("/api/users/*", requireAuth);
 app.route("/api/users", userRoutes);
+
+// Public routes (no auth)
+app.route("/api/heroes", heroRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));

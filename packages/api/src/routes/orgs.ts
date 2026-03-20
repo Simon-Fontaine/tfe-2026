@@ -6,7 +6,7 @@ import {
 	UpdateOrgMemberRoleSchema,
 	UpdateOrgSchema,
 } from "@scrimflow/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -16,6 +16,7 @@ import {
 	organizationTable,
 	orgInviteTable,
 	teamRosterTable,
+	teamTable,
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
@@ -23,6 +24,78 @@ import { extractErrors } from "@/routes/auth/utils";
 import { ensureUniqueSlug, getUserOrgRole, nameToSlug, verifyOrgManager } from "@/utils/org";
 
 const orgRoutes = new Hono<AuthEnv>();
+
+// GET / — List user's organizations
+orgRoutes.get("/", async (c) => {
+	const user = c.get("user");
+
+	const rows = await db.query.organizationMemberTable.findMany({
+		where: eq(organizationMemberTable.userId, user.id),
+		with: {
+			organization: {
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+					avatarUrl: true,
+					description: true,
+				},
+				with: {
+					teams: {
+						columns: { id: true },
+						where: eq(teamTable.isArchived, false),
+					},
+				},
+			},
+		},
+	});
+
+	return c.json({
+		data: rows.map((row) => ({
+			id: row.organization.id,
+			name: row.organization.name,
+			slug: row.organization.slug,
+			avatarUrl: row.organization.avatarUrl,
+			description: row.organization.description ?? null,
+			role: row.role,
+			teamCount: row.organization.teams.length,
+		})),
+	});
+});
+
+// GET /invites/received — Pending org invites for the current user
+orgRoutes.get("/invites/received", async (c) => {
+	const user = c.get("user");
+	const now = new Date();
+
+	const rows = await db.query.orgInviteTable.findMany({
+		where: and(
+			eq(orgInviteTable.inviteeUserId, user.id),
+			eq(orgInviteTable.status, "pending"),
+			gt(orgInviteTable.expiresAt, now)
+		),
+		with: {
+			organization: {
+				columns: { id: true, name: true, avatarUrl: true },
+			},
+			inviter: { columns: { displayName: true } },
+		},
+		orderBy: (t, { desc }) => [desc(t.createdAt)],
+	});
+
+	return c.json({
+		data: rows.map((r) => ({
+			id: r.id,
+			organizationId: r.organization.id,
+			orgName: r.organization.name,
+			orgAvatarUrl: r.organization.avatarUrl,
+			inviterDisplayName: r.inviter.displayName,
+			role: r.role,
+			expiresAt: r.expiresAt,
+			createdAt: r.createdAt,
+		})),
+	});
+});
 
 // POST / — Create organization
 orgRoutes.post("/", async (c) => {
@@ -49,6 +122,110 @@ orgRoutes.post("/", async (c) => {
 	});
 
 	return c.json({ success: true, orgId: org.id });
+});
+
+// GET /:id — Get org detail with teams and members
+orgRoutes.get("/:id", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+
+	const membership = await getUserOrgRole(orgId, user.id);
+	if (!membership) return c.json({ error: "Not a member of this organisation." }, 403);
+
+	const org = await db.query.organizationTable.findFirst({
+		where: eq(organizationTable.id, orgId),
+		columns: {
+			id: true,
+			name: true,
+			slug: true,
+			avatarUrl: true,
+			bannerUrl: true,
+			description: true,
+			ownerId: true,
+		},
+		with: {
+			teams: {
+				where: eq(teamTable.isArchived, false),
+				columns: {
+					id: true,
+					name: true,
+					tag: true,
+					avatarUrl: true,
+					teamSr: true,
+					isRecruiting: true,
+				},
+			},
+			members: {
+				with: {
+					user: {
+						columns: {
+							id: true,
+							displayName: true,
+							avatarUrl: true,
+						},
+					},
+				},
+			},
+		},
+	});
+
+	if (!org) return c.json({ error: "Organisation not found." }, 404);
+
+	return c.json({
+		data: {
+			id: org.id,
+			name: org.name,
+			slug: org.slug,
+			avatarUrl: org.avatarUrl,
+			bannerUrl: org.bannerUrl ?? null,
+			description: org.description ?? null,
+			ownerId: org.ownerId,
+			teams: org.teams,
+			members: org.members.map((m) => ({
+				id: m.id,
+				userId: m.user.id,
+				displayName: m.user.displayName,
+				avatarUrl: m.user.avatarUrl,
+				role: m.role,
+			})),
+		},
+	});
+});
+
+// GET /:id/invites — Pending invites for the org (manager/owner only)
+orgRoutes.get("/:id/invites", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+
+	const isManager = await verifyOrgManager(orgId, user.id);
+	if (!isManager) return c.json({ data: [] });
+
+	const now = new Date();
+	const rows = await db.query.orgInviteTable.findMany({
+		where: and(
+			eq(orgInviteTable.organizationId, orgId),
+			eq(orgInviteTable.status, "pending"),
+			gt(orgInviteTable.expiresAt, now)
+		),
+		with: {
+			invitee: {
+				columns: { id: true, displayName: true, avatarUrl: true },
+			},
+		},
+		orderBy: (t, { desc }) => [desc(t.createdAt)],
+	});
+
+	return c.json({
+		data: rows.map((r) => ({
+			id: r.id,
+			inviteeUserId: r.invitee.id,
+			inviteeDisplayName: r.invitee.displayName,
+			inviteeAvatarUrl: r.invitee.avatarUrl,
+			role: r.role,
+			expiresAt: r.expiresAt,
+			createdAt: r.createdAt,
+		})),
+	});
 });
 
 // PATCH /:id — Update organization

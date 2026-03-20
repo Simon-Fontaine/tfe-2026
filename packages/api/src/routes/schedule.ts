@@ -1,15 +1,56 @@
 import { AvailabilitySchema } from "@scrimflow/shared";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { availabilityTable } from "@/db/schema";
+import { availabilityTable, teamRosterTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { verifyUserOnTeam } from "@/utils/team";
 
 const scheduleRoutes = new Hono<AuthEnv>();
+
+// GET /availability — Get user's availability for a team
+scheduleRoutes.get("/availability", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.query("teamId");
+
+	if (!teamId) return c.json({ error: "teamId query parameter is required." }, 400);
+
+	const rows = await db.query.availabilityTable.findMany({
+		where: and(eq(availabilityTable.userId, user.id), eq(availabilityTable.teamId, teamId)),
+		columns: {
+			id: true,
+			teamId: true,
+			dayOfWeek: true,
+			specificDate: true,
+			startTime: true,
+			endTime: true,
+			timezone: true,
+			label: true,
+		},
+		orderBy: [asc(availabilityTable.dayOfWeek), asc(availabilityTable.specificDate)],
+	});
+
+	return c.json({ data: rows });
+});
+
+// GET /teams — Get user's active teams (for team selector)
+scheduleRoutes.get("/teams", async (c) => {
+	const user = c.get("user");
+
+	const rows = await db.query.teamRosterTable.findMany({
+		where: and(eq(teamRosterTable.userId, user.id), eq(teamRosterTable.status, "active")),
+		with: {
+			team: {
+				columns: { id: true, name: true, tag: true },
+			},
+		},
+	});
+
+	return c.json({ data: rows.map((r) => r.team) });
+});
 
 // POST /availability — Add availability
 scheduleRoutes.post("/availability", async (c) => {

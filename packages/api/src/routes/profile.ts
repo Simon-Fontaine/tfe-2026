@@ -1,5 +1,5 @@
 import { UpdateBasicInfoSchema, UpdateGameProfileSchema } from "@scrimflow/shared";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -9,6 +9,65 @@ import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 
 const profileRoutes = new Hono<AuthEnv>();
+
+// GET / — Get current user's full profile
+profileRoutes.get("/", async (c) => {
+	const user = c.get("user");
+
+	const profile = await db.query.playerProfileTable.findFirst({
+		where: eq(playerProfileTable.userId, user.id),
+		columns: {
+			battletag: true,
+			primaryRole: true,
+			secondaryRole: true,
+			rank: true,
+			rankDivision: true,
+			internalSr: true,
+		},
+	});
+
+	if (!profile) return c.json({ data: null });
+
+	const heroRows = await db.query.playerHeroTable.findMany({
+		where: eq(playerHeroTable.userId, user.id),
+		with: {
+			hero: {
+				columns: { id: true, displayName: true, role: true, imageUrl: true },
+			},
+		},
+		orderBy: [asc(playerHeroTable.heroId)],
+	});
+
+	return c.json({
+		data: {
+			battletag: profile.battletag,
+			primaryRole: profile.primaryRole,
+			secondaryRole: profile.secondaryRole ?? null,
+			rank: profile.rank ?? null,
+			rankDivision: profile.rankDivision ?? null,
+			internalSr: profile.internalSr,
+			heroes: heroRows.map((row) => row.hero),
+		},
+	});
+});
+
+// GET /stats — Get player stats summary
+profileRoutes.get("/stats", async (c) => {
+	const user = c.get("user");
+
+	const profile = await db.query.playerProfileTable.findFirst({
+		where: eq(playerProfileTable.userId, user.id),
+		columns: { internalSr: true },
+	});
+
+	return c.json({
+		data: {
+			sr: profile?.internalSr ?? 1500,
+			scrimsPlayed: 0,
+			wins: 0,
+		},
+	});
+});
 
 // PATCH / basic — Update display name, bio, social links
 profileRoutes.patch("/basic", async (c) => {

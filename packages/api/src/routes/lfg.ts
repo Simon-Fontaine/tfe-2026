@@ -4,7 +4,7 @@ import {
 	CreateLfgPostSchema,
 	RespondToApplicationSchema,
 } from "@scrimflow/shared";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -22,6 +22,98 @@ import { verifyOrgManager } from "@/utils/org";
 import { isUserOnTeam } from "@/utils/team";
 
 const lfgRoutes = new Hono<AuthEnv>();
+
+// GET / — List open LFG posts with optional filters
+lfgRoutes.get("/", async (c) => {
+	const typeFilter = c.req.query("type");
+	const roleFilter = c.req.query("role");
+	const regionFilter = c.req.query("region");
+
+	const rows = await db.query.lfgPostTable.findMany({
+		where: and(
+			eq(lfgPostTable.status, "open"),
+			typeFilter
+				? eq(lfgPostTable.type, typeFilter as "team_seeking_player" | "player_seeking_team")
+				: undefined
+		),
+		with: {
+			user: {
+				columns: { id: true, displayName: true, avatarUrl: true },
+			},
+			team: {
+				columns: {
+					id: true,
+					name: true,
+					tag: true,
+					avatarUrl: true,
+					teamSr: true,
+				},
+			},
+		},
+		orderBy: [desc(lfgPostTable.createdAt)],
+		limit: 50,
+	});
+
+	const filtered = rows.filter((r) => {
+		if (roleFilter && !(r.rolesNeeded as string[]).includes(roleFilter)) return false;
+		if (regionFilter && r.region !== regionFilter) return false;
+		return true;
+	});
+
+	return c.json({
+		data: filtered.map((r) => ({
+			id: r.id,
+			type: r.type,
+			status: r.status,
+			rolesNeeded: (r.rolesNeeded as string[]) ?? [],
+			minRank: r.minRank ?? null,
+			maxRank: r.maxRank ?? null,
+			description: r.description ?? null,
+			region: r.region ?? null,
+			expiresAt: r.expiresAt ?? null,
+			createdAt: r.createdAt,
+			userId: r.user.id,
+			userDisplayName: r.user.displayName,
+			userAvatarUrl: r.user.avatarUrl,
+			teamId: r.team?.id ?? null,
+			teamName: r.team?.name ?? null,
+			teamTag: r.team?.tag ?? null,
+			teamAvatarUrl: r.team?.avatarUrl ?? null,
+			teamSr: r.team?.teamSr ?? null,
+		})),
+	});
+});
+
+// GET /applications — Current user's LFG applications
+lfgRoutes.get("/applications", async (c) => {
+	const user = c.get("user");
+
+	const rows = await db.query.lfgApplicationTable.findMany({
+		where: eq(lfgApplicationTable.applicantUserId, user.id),
+		with: {
+			post: {
+				columns: { id: true },
+				with: {
+					team: { columns: { name: true, tag: true } },
+				},
+			},
+		},
+		orderBy: [desc(lfgApplicationTable.createdAt)],
+		limit: 30,
+	});
+
+	return c.json({
+		data: rows.map((r) => ({
+			id: r.id,
+			status: r.status,
+			message: r.message ?? null,
+			createdAt: r.createdAt,
+			postId: r.postId,
+			teamName: r.post.team?.name ?? null,
+			teamTag: r.post.team?.tag ?? null,
+		})),
+	});
+});
 
 // POST / — Create LFG post
 lfgRoutes.post("/", async (c) => {

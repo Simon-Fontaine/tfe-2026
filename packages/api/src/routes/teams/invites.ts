@@ -1,5 +1,5 @@
 import { InviteToTeamSchema, RespondToTeamInviteSchema } from "@scrimflow/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -11,6 +11,41 @@ import { extractErrors } from "@/routes/auth/utils";
 import { verifyOrgManager } from "@/utils/org";
 
 const teamInviteRoutes = new Hono<AuthEnv>();
+
+// GET /received — Pending team invites for the current user
+teamInviteRoutes.get("/received", async (c) => {
+	const user = c.get("user");
+	const now = new Date();
+
+	const rows = await db.query.teamInviteTable.findMany({
+		where: and(
+			eq(teamInviteTable.inviteeUserId, user.id),
+			eq(teamInviteTable.status, "pending"),
+			gt(teamInviteTable.expiresAt, now)
+		),
+		with: {
+			team: {
+				columns: { id: true, name: true, tag: true, avatarUrl: true },
+			},
+			inviter: { columns: { displayName: true } },
+		},
+		orderBy: (t, { desc }) => [desc(t.createdAt)],
+	});
+
+	return c.json({
+		data: rows.map((r) => ({
+			id: r.id,
+			teamId: r.team.id,
+			teamName: r.team.name,
+			teamTag: r.team.tag,
+			teamAvatarUrl: r.team.avatarUrl,
+			inviterDisplayName: r.inviter.displayName,
+			roleInTeam: r.roleInTeam,
+			expiresAt: r.expiresAt,
+			createdAt: r.createdAt,
+		})),
+	});
+});
 
 // POST /:id/respond — Accept/decline team invite
 // NOTE: Mounted at /teams/invites/:id/respond
@@ -131,6 +166,56 @@ export { teamInviteRoutes };
 
 export function createTeamIdInviteRoutes() {
 	const routes = new Hono<AuthEnv>();
+
+	// GET / — List pending invites for this team (manager/owner only)
+	routes.get("/", async (c) => {
+		const user = c.get("user");
+		const teamId = c.req.param("id") as string;
+
+		const team = await db.query.teamTable.findFirst({
+			where: eq(teamTable.id, teamId),
+			columns: { organizationId: true },
+		});
+		if (!team) return c.json({ data: [] });
+
+		const orgMember = await db.query.organizationMemberTable.findFirst({
+			where: and(
+				eq(organizationMemberTable.organizationId, team.organizationId),
+				eq(organizationMemberTable.userId, user.id)
+			),
+			columns: { role: true },
+		});
+		if (!orgMember || (orgMember.role !== "owner" && orgMember.role !== "manager")) {
+			return c.json({ data: [] });
+		}
+
+		const now = new Date();
+		const rows = await db.query.teamInviteTable.findMany({
+			where: and(
+				eq(teamInviteTable.teamId, teamId),
+				eq(teamInviteTable.status, "pending"),
+				gt(teamInviteTable.expiresAt, now)
+			),
+			with: {
+				invitee: {
+					columns: { id: true, displayName: true, avatarUrl: true },
+				},
+			},
+			orderBy: (t, { desc }) => [desc(t.createdAt)],
+		});
+
+		return c.json({
+			data: rows.map((r) => ({
+				id: r.id,
+				inviteeUserId: r.invitee.id,
+				inviteeDisplayName: r.invitee.displayName,
+				inviteeAvatarUrl: r.invitee.avatarUrl,
+				roleInTeam: r.roleInTeam,
+				expiresAt: r.expiresAt,
+				createdAt: r.createdAt,
+			})),
+		});
+	});
 
 	// POST / — Send team invite
 	routes.post("/", async (c) => {

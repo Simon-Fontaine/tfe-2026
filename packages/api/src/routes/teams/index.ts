@@ -5,12 +5,18 @@ import {
 	ToggleRecruitingSchema,
 	UpdateTeamSchema,
 } from "@scrimflow/shared";
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { teamTable } from "@/db/schema";
+import {
+	lfgApplicationTable,
+	lfgPostTable,
+	organizationMemberTable,
+	teamRosterTable,
+	teamTable,
+} from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { createTeamIdInviteRoutes, teamInviteRoutes } from "@/routes/teams/invites";
@@ -19,8 +25,52 @@ import { getUserOrgRole, verifyOrgManager } from "@/utils/org";
 
 const teamRoutes = new Hono<AuthEnv>();
 
-// Mount sub-routes
+// Mount sub-routes (must be before /:id to avoid conflict)
 teamRoutes.route("/invites", teamInviteRoutes);
+
+// GET / — Discovery: list non-archived teams
+teamRoutes.get("/", async (c) => {
+	const recruiting = c.req.query("recruiting");
+
+	const teams = await db.query.teamTable.findMany({
+		where: and(
+			eq(teamTable.isArchived, false),
+			recruiting !== undefined ? eq(teamTable.isRecruiting, recruiting === "true") : undefined
+		),
+		columns: {
+			id: true,
+			organizationId: true,
+			name: true,
+			tag: true,
+			description: true,
+			avatarUrl: true,
+			teamSr: true,
+			isRecruiting: true,
+		},
+		with: {
+			roster: {
+				where: eq(teamRosterTable.status, "active"),
+				columns: { id: true },
+			},
+		},
+		orderBy: [asc(teamTable.name)],
+		limit: 60,
+	});
+
+	return c.json({
+		data: teams.map((t) => ({
+			id: t.id,
+			organizationId: t.organizationId,
+			name: t.name,
+			tag: t.tag,
+			description: t.description ?? null,
+			avatarUrl: t.avatarUrl,
+			teamSr: t.teamSr,
+			isRecruiting: t.isRecruiting,
+			activeRosterCount: t.roster.length,
+		})),
+	});
+});
 
 // POST / — Create team
 teamRoutes.post("/", async (c) => {
@@ -152,6 +202,153 @@ teamRoutes.delete("/:id", async (c) => {
 	await db.delete(teamTable).where(eq(teamTable.id, teamId));
 
 	return c.json({ success: true });
+});
+
+// GET /:id — Get team with full roster
+teamRoutes.get("/:id", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.param("id");
+
+	const team = await db.query.teamTable.findFirst({
+		where: eq(teamTable.id, teamId),
+		columns: {
+			id: true,
+			organizationId: true,
+			name: true,
+			tag: true,
+			description: true,
+			avatarUrl: true,
+			teamSr: true,
+			matchesPlayed: true,
+			isRecruiting: true,
+		},
+	});
+
+	if (!team) return c.json({ error: "Team not found." }, 404);
+
+	// Verify user is a member of the owning org
+	const orgMember = await db.query.organizationMemberTable.findFirst({
+		where: and(
+			eq(organizationMemberTable.organizationId, team.organizationId),
+			eq(organizationMemberTable.userId, user.id)
+		),
+		columns: { id: true },
+	});
+	if (!orgMember) return c.json({ error: "Not a member of this organisation." }, 403);
+
+	const rosterRows = await db.query.teamRosterTable.findMany({
+		where: eq(teamRosterTable.teamId, teamId),
+		with: {
+			user: {
+				columns: { id: true, displayName: true, avatarUrl: true },
+				with: {
+					profile: {
+						columns: {
+							primaryRole: true,
+							rank: true,
+							rankDivision: true,
+						},
+					},
+				},
+			},
+		},
+		orderBy: [asc(teamRosterTable.joinedAt)],
+	});
+
+	return c.json({
+		data: {
+			id: team.id,
+			organizationId: team.organizationId,
+			name: team.name,
+			tag: team.tag,
+			description: team.description ?? null,
+			avatarUrl: team.avatarUrl,
+			teamSr: team.teamSr,
+			matchesPlayed: team.matchesPlayed,
+			isRecruiting: team.isRecruiting,
+			roster: rosterRows.map((row) => ({
+				id: row.id,
+				userId: row.user.id,
+				displayName: row.user.displayName,
+				avatarUrl: row.user.avatarUrl,
+				primaryRole: row.user.profile?.primaryRole ?? "damage",
+				rank: row.user.profile?.rank ?? null,
+				rankDivision: row.user.profile?.rankDivision ?? null,
+				roleInTeam: row.roleInTeam,
+				status: row.status,
+				joinedAt: row.joinedAt,
+			})),
+		},
+	});
+});
+
+// GET /:id/applications — Pending LFG applications for the team
+teamRoutes.get("/:id/applications", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.param("id");
+
+	const team = await db.query.teamTable.findFirst({
+		where: eq(teamTable.id, teamId),
+		columns: { organizationId: true },
+	});
+	if (!team) return c.json({ error: "Team not found." }, 404);
+
+	const isManager = await verifyOrgManager(team.organizationId, user.id);
+	if (!isManager) return c.json({ data: [] });
+
+	const posts = await db.query.lfgPostTable.findMany({
+		where: and(eq(lfgPostTable.teamId, teamId), eq(lfgPostTable.status, "open")),
+		columns: { id: true },
+	});
+
+	if (posts.length === 0) return c.json({ data: [] });
+
+	const postIds = posts.map((p) => p.id);
+
+	const rows = await db.query.lfgApplicationTable.findMany({
+		where: eq(lfgApplicationTable.status, "pending"),
+		with: {
+			post: { columns: { id: true } },
+			applicant: {
+				columns: { id: true, displayName: true, avatarUrl: true },
+				with: {
+					profile: {
+						columns: { primaryRole: true, rank: true },
+					},
+				},
+			},
+		},
+		orderBy: [desc(lfgApplicationTable.createdAt)],
+	});
+
+	return c.json({
+		data: rows
+			.filter((r) => postIds.includes(r.postId))
+			.map((r) => ({
+				id: r.id,
+				postId: r.postId,
+				status: r.status,
+				message: r.message ?? null,
+				createdAt: r.createdAt,
+				applicantUserId: r.applicant.id,
+				applicantDisplayName: r.applicant.displayName,
+				applicantAvatarUrl: r.applicant.avatarUrl,
+				applicantPrimaryRole: r.applicant.profile?.primaryRole ?? null,
+				applicantRank: r.applicant.profile?.rank ?? null,
+			})),
+	});
+});
+
+// GET /:id/lfg — LFG posts for the team
+teamRoutes.get("/:id/lfg", async (c) => {
+	const teamId = c.req.param("id");
+
+	const posts = await db.query.lfgPostTable.findMany({
+		where: eq(lfgPostTable.teamId, teamId),
+		orderBy: [desc(lfgPostTable.createdAt)],
+	});
+
+	return c.json({ data: posts });
 });
 
 // Mount roster and invite routes under /:id/
