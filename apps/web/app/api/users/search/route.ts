@@ -1,22 +1,16 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getCurrentSession } from "@/lib/auth/session";
-import { searchUsersByDisplayName } from "@/lib/data/team";
+const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
 export async function GET(request: Request) {
-	const { session, user } = await getCurrentSession();
-	if (!session || !user) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
+	const cookieStore = await cookies();
 	const { searchParams } = new URL(request.url);
-	const q = searchParams.get("q")?.trim() ?? "";
-	const excludeTeamId = searchParams.get("excludeTeamId") ?? undefined;
 
-	if (q.length < 2) {
-		return NextResponse.json({ users: [] });
-	}
+	const res = await fetch(`${API_URL}/api/users/search?${searchParams.toString()}`, {
+		headers: { cookie: cookieStore.toString() },
+	});
 
-	const users = await searchUsersByDisplayName(q, excludeTeamId, 10);
-	return NextResponse.json({ users });
+	const data = await res.json();
+	return NextResponse.json(data, { status: res.status });
 }
