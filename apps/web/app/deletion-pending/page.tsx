@@ -1,24 +1,17 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { DeletionPendingView } from "@/components/deletion-pending/deletion-pending-view";
-import { db } from "@/db";
-import { accountDeletionRequestTable } from "@/db/schema";
+import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 
 export default async function DeletionPendingPage() {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 
-	const record = await db.query.accountDeletionRequestTable.findFirst({
-		where: and(
-			eq(accountDeletionRequestTable.userId, user.id),
-			isNull(accountDeletionRequestTable.cancelledAt),
-			gt(accountDeletionRequestTable.scheduledDeletionAt, new Date())
-		),
-		columns: { scheduledDeletionAt: true },
-	});
-	if (!record?.scheduledDeletionAt) redirect("/dashboard");
+	const res = await apiGet<{ isPending: boolean; scheduledAt: string | null }>(
+		"/api/settings/account/deletion"
+	);
+	if (!("data" in res) || !res.data.isPending || !res.data.scheduledAt) redirect("/dashboard");
 
-	return <DeletionPendingView scheduledAt={record.scheduledDeletionAt.toISOString()} />;
+	return <DeletionPendingView scheduledAt={res.data.scheduledAt} />;
 }

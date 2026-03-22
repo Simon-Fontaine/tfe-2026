@@ -1,12 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { and, eq, gt, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { db } from "@/db";
-import { accountDeletionRequestTable } from "@/db/schema";
+import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 
@@ -14,15 +12,8 @@ export default async function DeletionPendingLayout({ children }: { children: Re
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 
-	const pending = await db.query.accountDeletionRequestTable.findFirst({
-		where: and(
-			eq(accountDeletionRequestTable.userId, user.id),
-			isNull(accountDeletionRequestTable.cancelledAt),
-			gt(accountDeletionRequestTable.scheduledDeletionAt, new Date())
-		),
-		columns: { id: true },
-	});
-	if (!pending) redirect("/dashboard");
+	const deletionRes = await apiGet<{ isPending: boolean }>("/api/settings/account/deletion");
+	if (!("data" in deletionRes) || !deletionRes.data.isPending) redirect("/dashboard");
 
 	return (
 		<div className="flex min-h-dvh flex-col items-center justify-center px-4 py-12">

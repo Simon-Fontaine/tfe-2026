@@ -10,6 +10,32 @@ import { extractErrors } from "@/routes/auth/utils";
 
 const profileRoutes = new Hono<AuthEnv>();
 
+// GET /exists — Check if player profile exists (for layout guards)
+profileRoutes.get("/exists", async (c) => {
+	const user = c.get("user");
+	const profile = await db.query.playerProfileTable.findFirst({
+		where: eq(playerProfileTable.userId, user.id),
+		columns: { id: true },
+	});
+	return c.json({ data: { exists: !!profile } });
+});
+
+// GET /user-info — Get user display info (for profile page editing)
+profileRoutes.get("/user-info", async (c) => {
+	const user = c.get("user");
+	const row = await db.query.userTable.findFirst({
+		where: eq(userTable.id, user.id),
+		columns: {
+			displayName: true,
+			bio: true,
+			socialLinks: true,
+			avatarUrl: true,
+			bannerUrl: true,
+		},
+	});
+	return c.json({ data: row ?? null });
+});
+
 // GET / — Get current user's full profile
 profileRoutes.get("/", async (c) => {
 	const user = c.get("user");

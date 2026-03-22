@@ -6,6 +6,7 @@ import { accountRoutes } from "./account";
 import { credentialRoutes } from "./credentials";
 import { emailRoutes } from "./email";
 import { passwordRoutes } from "./password";
+import { securityRoutes } from "./security";
 import { sessionRoutes } from "./sessions";
 import { twoFactorDisableRoutes } from "./two-factor";
 import { usernameRoutes } from "./username";
@@ -24,5 +25,6 @@ settingsRoutes.route("/credentials", credentialRoutes);
 settingsRoutes.route("/sessions", sessionRoutes);
 settingsRoutes.route("/account", accountRoutes);
 settingsRoutes.route("/verifications", verificationRoutes);
+settingsRoutes.route("/security", securityRoutes);
 
 export { settingsRoutes };
