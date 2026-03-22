@@ -12,6 +12,8 @@ type ApiError = { error: string; fieldErrors?: Partial<Record<string, string[]>>
 type ApiResponse<T> = ApiSuccess<T> | ApiError;
 type ApiMutationResponse = ApiMutationSuccess | ApiError;
 
+const API_UNAVAILABLE_ERROR = "Unable to reach the API server.";
+
 // ─── Cookie forwarding ─────────────────────────────────────────────────────
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -19,14 +21,27 @@ async function authHeaders(): Promise<Record<string, string>> {
 	return { cookie: cookieStore.toString() };
 }
 
+function isApiError(value: Response | ApiError): value is ApiError {
+	return "error" in value;
+}
+
+async function fetchApi(path: string, init?: RequestInit): Promise<Response | ApiError> {
+	try {
+		return await fetch(`${API_URL}${path}`, init);
+	} catch {
+		return { error: API_UNAVAILABLE_ERROR };
+	}
+}
+
 // ─── GET ────────────────────────────────────────────────────────────────────
 
 export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
 	const headers = await authHeaders();
-	const res = await fetch(`${API_URL}${path}`, {
+	const res = await fetchApi(path, {
 		headers,
 		cache: "no-store",
 	});
+	if (isApiError(res)) return res;
 
 	if (!res.ok) {
 		const body = await res.json().catch(() => null);
@@ -65,11 +80,12 @@ async function apiMutate<T = unknown>(
 	body?: Record<string, unknown>
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
-	const res = await fetch(`${API_URL}${path}`, {
+	const res = await fetchApi(path, {
 		method,
 		headers: { ...headers, "Content-Type": "application/json" },
 		body: body ? JSON.stringify(body) : undefined,
 	});
+	if (isApiError(res)) return res;
 
 	const json = await res.json().catch(() => null);
 
@@ -117,11 +133,12 @@ export async function apiAuthPost<T = unknown>(
 	body?: Record<string, unknown>
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
-	const res = await fetch(`${API_URL}${path}`, {
+	const res = await fetchApi(path, {
 		method: "POST",
 		headers: { ...headers, "Content-Type": "application/json" },
 		body: body ? JSON.stringify(body) : undefined,
 	});
+	if (isApiError(res)) return res;
 
 	await forwardSetCookieHeaders(res);
 
@@ -141,11 +158,12 @@ export async function apiAuthDelete<T = unknown>(
 	body?: Record<string, unknown>
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
-	const res = await fetch(`${API_URL}${path}`, {
+	const res = await fetchApi(path, {
 		method: "DELETE",
 		headers: { ...headers, "Content-Type": "application/json" },
 		body: body ? JSON.stringify(body) : undefined,
 	});
+	if (isApiError(res)) return res;
 
 	await forwardSetCookieHeaders(res);
 
@@ -165,11 +183,12 @@ export async function apiPostFormData<T = unknown>(
 	formData: FormData
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
-	const res = await fetch(`${API_URL}${path}`, {
+	const res = await fetchApi(path, {
 		method: "POST",
 		headers,
 		body: formData,
 	});
+	if (isApiError(res)) return res;
 
 	const json = await res.json().catch(() => null);
 
@@ -182,10 +201,11 @@ export async function apiPostFormData<T = unknown>(
 
 export async function apiDeleteRaw(path: string): Promise<ApiMutationResponse> {
 	const headers = await authHeaders();
-	const res = await fetch(`${API_URL}${path}`, {
+	const res = await fetchApi(path, {
 		method: "DELETE",
 		headers,
 	});
+	if (isApiError(res)) return res;
 
 	const json = await res.json().catch(() => null);
 
