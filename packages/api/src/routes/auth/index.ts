@@ -3,6 +3,7 @@ import { loginRoutes } from "./login";
 import { logoutRoutes } from "./logout";
 import { registerRoutes } from "./register";
 import { resetRoutes } from "./reset";
+import { authSessionRoutes } from "./session";
 import { totpSetupRoutes } from "./totp-setup";
 import { twoFactorRoutes } from "./two-factor";
 import { verifyRoutes } from "./verify";
@@ -11,6 +12,7 @@ import { webauthnSetupRoutes } from "./webauthn-setup";
 
 const authRoutes = new Hono();
 
+authRoutes.route("/session", authSessionRoutes);
 authRoutes.route("/login", loginRoutes);
 authRoutes.route("/register", registerRoutes);
 authRoutes.route("/verify", verifyRoutes);

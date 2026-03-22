@@ -82,6 +82,82 @@ async function apiMutate<T = unknown>(
 	return json;
 }
 
+// ─── Auth mutations (forwards Set-Cookie from API to browser) ───────────────
+
+async function forwardSetCookieHeaders(res: Response): Promise<void> {
+	const setCookieHeaders = res.headers.getSetCookie();
+	if (setCookieHeaders.length === 0) return;
+
+	const cookieStore = await cookies();
+	for (const header of setCookieHeaders) {
+		const parts = header.split(";").map((s) => s.trim());
+		const [nameValue] = parts;
+		const eqIdx = nameValue.indexOf("=");
+		if (eqIdx === -1) continue;
+		const name = nameValue.slice(0, eqIdx).trim();
+		const value = nameValue.slice(eqIdx + 1).trim();
+
+		const opts: Record<string, unknown> = { path: "/" };
+		for (const part of parts.slice(1)) {
+			const lower = part.toLowerCase();
+			if (lower === "httponly") opts.httpOnly = true;
+			else if (lower === "secure") opts.secure = true;
+			else if (lower.startsWith("samesite=")) opts.sameSite = lower.split("=")[1];
+			else if (lower.startsWith("max-age=")) opts.maxAge = Number(lower.split("=")[1]);
+			else if (lower.startsWith("path=")) opts.path = part.split("=")[1];
+			else if (lower.startsWith("expires="))
+				opts.expires = new Date(part.split("=").slice(1).join("="));
+		}
+		cookieStore.set(name, value, opts);
+	}
+}
+
+export async function apiAuthPost<T = unknown>(
+	path: string,
+	body?: Record<string, unknown>
+): Promise<(ApiMutationSuccess & T) | ApiError> {
+	const headers = await authHeaders();
+	const res = await fetch(`${API_URL}${path}`, {
+		method: "POST",
+		headers: { ...headers, "Content-Type": "application/json" },
+		body: body ? JSON.stringify(body) : undefined,
+	});
+
+	await forwardSetCookieHeaders(res);
+
+	const json = await res.json().catch(() => null);
+
+	if (!res.ok) {
+		if (json?.fieldErrors)
+			return { error: json.error ?? "Validation failed.", fieldErrors: json.fieldErrors };
+		return { error: json?.error ?? `Request failed (${res.status})` };
+	}
+
+	return json;
+}
+
+export async function apiAuthDelete<T = unknown>(
+	path: string,
+	body?: Record<string, unknown>
+): Promise<(ApiMutationSuccess & T) | ApiError> {
+	const headers = await authHeaders();
+	const res = await fetch(`${API_URL}${path}`, {
+		method: "DELETE",
+		headers: { ...headers, "Content-Type": "application/json" },
+		body: body ? JSON.stringify(body) : undefined,
+	});
+
+	await forwardSetCookieHeaders(res);
+
+	const json = await res.json().catch(() => null);
+
+	if (!res.ok) {
+		return { error: json?.error ?? `Request failed (${res.status})` };
+	}
+
+	return json;
+}
+
 // ─── FormData proxy (for file uploads) ──────────────────────────────────────
 
 export async function apiPostFormData<T = unknown>(
