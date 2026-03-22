@@ -2,10 +2,16 @@
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Key01Icon } from "@hugeicons/core-free-icons";
+import {
+	type ConfirmPasswordChangeInput,
+	ConfirmPasswordChangeSchema,
+	getPasswordStrength,
+	type RequestPasswordChangeInput,
+	RequestPasswordChangeSchema,
+} from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-
 import {
 	cancelPasswordChangeAction,
 	confirmPasswordChangeAction,
@@ -18,13 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import {
-	type ConfirmPasswordChangeInput,
-	ConfirmPasswordChangeSchema,
-	getPasswordStrength,
-	type RequestPasswordChangeInput,
-	RequestPasswordChangeSchema,
-} from "@/lib/validations/auth";
 
 type Step = "idle" | "code-sent";
 

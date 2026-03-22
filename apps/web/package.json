@@ -9,6 +9,7 @@
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",
+		"@scrimflow/shared": "workspace:*",
 		"@hugeicons/core-free-icons": "^4.0.0",
 		"@hugeicons/react": "^1.1.5",
 		"@oslojs/binary": "^1.0.0",

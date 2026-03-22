@@ -2,13 +2,12 @@
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { UserCircle02Icon } from "@hugeicons/core-free-icons";
+import { type BattletagInput, BattletagSchema } from "@scrimflow/shared";
 import { Controller, useForm } from "react-hook-form";
-
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { type BattletagInput, BattletagSchema } from "@/lib/validations/onboarding";
 import { useOnboardingFlow } from "@/stores/onboarding-flow";
 
 export function BattletagStepPanel() {

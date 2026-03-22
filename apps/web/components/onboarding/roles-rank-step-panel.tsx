@@ -3,14 +3,13 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { ArrowLeft01Icon, Award01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { type RolesAndRankInput, RolesAndRankSchema } from "@scrimflow/shared";
 import { Controller, useForm } from "react-hook-form";
-
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { RANKS, ROLES } from "@/lib/ow2";
 import { cn } from "@/lib/utils";
-import { type RolesAndRankInput, RolesAndRankSchema } from "@/lib/validations/onboarding";
 import { useOnboardingFlow } from "@/stores/onboarding-flow";
 
 export function RolesAndRankStepPanel() {

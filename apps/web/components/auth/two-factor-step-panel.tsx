@@ -8,6 +8,7 @@ import {
 	SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { type VerifyCodeInput, VerifyCodeSchema } from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -24,7 +25,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthAction } from "@/hooks/use-auth-action";
 import { authenticate2fa } from "@/lib/auth/webauthn-client";
-import { type VerifyCodeInput, VerifyCodeSchema } from "@/lib/validations/auth";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function TwoFactorStepPanel() {

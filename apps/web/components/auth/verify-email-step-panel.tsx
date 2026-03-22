@@ -2,6 +2,7 @@
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { MailOpenIcon } from "@hugeicons/core-free-icons";
+import { type VerifyCodeInput, VerifyCodeSchema } from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -12,7 +13,6 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
-import { type VerifyCodeInput, VerifyCodeSchema } from "@/lib/validations/auth";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function VerifyEmailStepPanel() {

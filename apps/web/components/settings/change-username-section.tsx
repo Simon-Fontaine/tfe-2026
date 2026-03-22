@@ -3,10 +3,10 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Cancel01Icon, CheckmarkCircle02Icon, UserCircle02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { type ChangeUsernameInput, ChangeUsernameSchema } from "@scrimflow/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-
 import { checkUsernameAction } from "@/app/(auth)/auth/actions";
 import { changeUsernameAction } from "@/app/dashboard/settings/actions/username";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
-import { type ChangeUsernameInput, ChangeUsernameSchema } from "@/lib/validations/auth";
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken";
 

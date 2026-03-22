@@ -1,9 +1,9 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type AvailabilityInput, AvailabilitySchema } from "@scrimflow/shared";
 import { useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
-
 import { addAvailabilityAction } from "@/app/dashboard/schedule/actions/availability";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
 import { COMMON_TIMEZONES, DAYS } from "@/lib/schedule/constants";
 import { cn } from "@/lib/utils";
-import { type AvailabilityInput, AvailabilitySchema } from "@/lib/validations/profile";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

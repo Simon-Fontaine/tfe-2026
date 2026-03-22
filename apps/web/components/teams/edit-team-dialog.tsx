@@ -1,6 +1,7 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type UpdateTeamInput, UpdateTeamSchema } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { updateTeamAction } from "@/app/dashboard/teams/actions/team";
@@ -17,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
-import { type UpdateTeamInput, UpdateTeamSchema } from "@/lib/validations/org";
 
 interface EditTeamDialogProps {
 	orgId: string;

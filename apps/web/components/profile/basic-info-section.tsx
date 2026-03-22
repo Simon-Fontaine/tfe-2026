@@ -1,8 +1,8 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type UpdateBasicInfoInput, UpdateBasicInfoSchema } from "@scrimflow/shared";
 import { useForm } from "react-hook-form";
-
 import { updateBasicInfoAction } from "@/app/dashboard/profile/actions/update-basic-info";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,6 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
-import { type UpdateBasicInfoInput, UpdateBasicInfoSchema } from "@/lib/validations/profile";
 
 const SOCIAL_FIELDS = [
 	{ key: "twitter", label: "Twitter / X" },
