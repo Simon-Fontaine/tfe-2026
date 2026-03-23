@@ -23,13 +23,13 @@ services:
   # --- Database Migrations ---
   db-migrate:
     build:
-      context: ./next-app
-      dockerfile: ../Dockerfile
-      target: runner
+      context: .
+      dockerfile: Dockerfile.api
     container_name: scrimflow_db_migrate
+    working_dir: /app/packages/api
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-    command: sh -c "pnpm db:migrate"
+    command: sh -c "bunx drizzle-kit migrate"
     networks:
       - scrimflow_network
     depends_on:
@@ -101,16 +101,56 @@ services:
     networks:
       - scrimflow_network
 
+  # --- Hono API (Bun - Production) ---
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: scrimflow_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_PORT: 3001
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@cache:6379
+      S3_ENDPOINT: http://storage:9000
+      S3_ACCESS_KEY: ${MINIO_USER}
+      S3_SECRET_KEY: ${MINIO_PASSWORD}
+      S3_BUCKET_AVATARS: avatars
+      S3_BUCKET_SCREENSHOTS: screenshots
+      S3_BUCKET_BANNERS: banners
+      S3_BUCKET_HEROES: heroes
+      S3_BUCKET_MAPS: maps
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+      SMTP_HOST: ${SMTP_HOST:-mail}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM:-noreply@scrimflow.com}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN}
+    networks:
+      - scrimflow_network
+    depends_on:
+      db:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      cache:
+        condition: service_healthy
+
   # --- Next.js Application (Production) ---
   app:
     build:
-      context: ./next-app
-      dockerfile: ../Dockerfile
+      context: .
+      dockerfile: Dockerfile
       target: runner
     container_name: scrimflow_app
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      API_URL: http://api:3001
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       REDIS_URL: redis://:${REDIS_PASSWORD}@cache:6379
       # MinIO/S3 Configuration
@@ -134,6 +174,8 @@ services:
         condition: service_healthy
       storage:
         condition: service_healthy
+      api:
+        condition: service_started
 
   # --- Python OCR Worker (Production) ---
   # TODO: Uncomment when worker is ready

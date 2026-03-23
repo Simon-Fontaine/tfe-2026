@@ -23,10 +23,10 @@ services:
   # --- Database Migrations ---
   db-migrate:
     build:
-      context: ./apps/web
-      dockerfile: ../../Dockerfile.dev
-      target: dev
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: scrimflow_db_migrate_dev
+    working_dir: /app/packages/api
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
     command: sh -c "pnpm db:migrate"
@@ -106,7 +106,7 @@ services:
     image: oven/bun:latest
     container_name: scrimflow_api_dev
     restart: unless-stopped
-    working_dir: /app
+    working_dir: /app/packages/api
     command: bun --watch src/index.ts
     environment:
       NODE_ENV: development
@@ -131,8 +131,11 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./packages/api:/app
+      - .:/app
       - /app/node_modules
+      - /app/packages/api/node_modules
+      - /app/packages/shared/node_modules
+      - /app/apps/web/node_modules
     networks:
       - scrimflow_network
     depends_on:
@@ -144,11 +147,11 @@ services:
   # --- Next.js Application (Development with Hot Reload) ---
   app:
     build:
-      context: ./apps/web
-      dockerfile: ../../Dockerfile.dev
-      target: dev
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: scrimflow_app_dev
     restart: unless-stopped
+    working_dir: /app/apps/web
     environment:
       NODE_ENV: development
       API_URL: http://api:3001
@@ -171,9 +174,12 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./apps/web:/app
+      - .:/app
       - /app/node_modules
-      - /app/.next
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+      - /app/packages/shared/node_modules
+      - /app/packages/api/node_modules
     networks:
       - scrimflow_network
     depends_on:
