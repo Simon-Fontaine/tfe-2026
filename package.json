@@ -1,8 +1,8 @@
 {
 	"scripts": {
-		"dev": "pnpm --parallel --filter next-app --filter @scrimflow/api run dev",
-		"dev:web": "pnpm --filter next-app run dev",
-		"dev:api": "pnpm --filter @scrimflow/api run dev",
+		"dev": "dotenv -e .env -- pnpm --parallel --filter next-app --filter @scrimflow/api run dev",
+		"dev:web": "dotenv -e .env -- pnpm --filter next-app run dev",
+		"dev:api": "dotenv -e .env -- pnpm --filter @scrimflow/api run dev",
 		"start": "pnpm --filter next-app run start",
 		"build": "pnpm --filter next-app run build",
 		"check": "biome check .",
@@ -11,14 +11,15 @@
 		"lint:fix": "biome lint --write .",
 		"format": "biome format .",
 		"format:fix": "biome format --write .",
-		"db:generate": "pnpm --filter @scrimflow/api run db:generate",
-		"db:migrate": "pnpm --filter @scrimflow/api run db:migrate",
-		"db:push": "pnpm --filter @scrimflow/api run db:push",
-		"db:studio": "pnpm --filter @scrimflow/api run db:studio",
+		"db:generate": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:generate",
+		"db:migrate": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:migrate",
+		"db:push": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:push",
+		"db:studio": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:studio",
 		"prepare": "lefthook install"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.15",
+		"dotenv-cli": "^11.0.0",
 		"lefthook": "^2.1.1",
 		"shadcn": "^3.8.5"
 	}
