@@ -15,6 +15,7 @@
 		"db:migrate": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:migrate",
 		"db:push": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:push",
 		"db:studio": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:studio",
+		"db:seed": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:seed",
 		"prepare": "lefthook install"
 	},
 	"devDependencies": {
