@@ -1,4 +1,5 @@
 # Production Dockerfile for Next.js App
+# Build context must be the repository root
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
@@ -10,8 +11,13 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all workspace package.json files for dependency resolution
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/api/package.json ./packages/api/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -23,14 +29,18 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm
 
+# Copy installed dependencies from all workspace locations
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
 COPY . .
 
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build Next.js app
-RUN pnpm run build
+RUN cd apps/web && pnpm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -42,17 +52,24 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# With outputFileTracingRoot set to monorepo root, the standalone output
+# preserves the monorepo directory structure:
+#   .next/standalone/apps/web/server.js
+#   .next/standalone/packages/shared/...
+#   .next/standalone/node_modules/...
+
+# Copy standalone output (includes server.js, traced node_modules, shared packages)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+
+# Copy static assets
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+
 # Copy public assets
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+RUN mkdir -p apps/web/.next
+RUN chown nextjs:nodejs apps/web/.next
 
 USER nextjs
 
@@ -61,4 +78,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# server.js is inside the apps/web subdirectory in monorepo standalone output
+CMD ["node", "apps/web/server.js"]

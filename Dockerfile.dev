@@ -1,4 +1,5 @@
-# Development Dockerfile for Next.js App
+# Development Dockerfile for the monorepo
+# Build context must be the repository root
 FROM node:20-alpine AS dev
 
 RUN apk add --no-cache libc6-compat
@@ -8,8 +9,13 @@ WORKDIR /app
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all workspace package.json files for dependency resolution
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/api/package.json ./packages/api/
 
 # Install dependencies
 RUN pnpm install
@@ -19,6 +25,8 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+WORKDIR /app/apps/web
 
 # Start the development server
 CMD ["pnpm", "dev"]

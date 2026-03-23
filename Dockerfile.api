@@ -1,0 +1,44 @@
+# Production Dockerfile for Hono API (Bun runtime)
+# Build context must be the repository root
+# Uses pnpm for dependency installation (matching the monorepo), Bun for runtime
+FROM node:20-alpine AS deps
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy workspace package.json files
+COPY packages/api/package.json ./packages/api/
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/web/package.json ./apps/web/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Runtime image with Bun
+FROM oven/bun:latest AS runner
+
+WORKDIR /app
+
+# Copy installed dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+
+# Copy source code for API and shared packages
+COPY packages/api/ ./packages/api/
+COPY packages/shared/ ./packages/shared/
+
+EXPOSE 3001
+
+ENV API_PORT=3001
+
+WORKDIR /app/packages/api
+
+CMD ["bun", "src/index.ts"]
