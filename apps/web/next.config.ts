@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 	output: "standalone",
 	turbopack: {
-		root: path.join(__dirname, "."),
+		root: path.resolve(__dirname, "../.."),
 	},
 	images: {
 		remotePatterns: [

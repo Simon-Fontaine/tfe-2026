@@ -3,6 +3,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { FingerPrintIcon, HandGripIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { type LoginInput, LoginSchema } from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -17,7 +18,6 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
 import { authenticateDiscoverable } from "@/lib/auth/webauthn-client";
-import { type LoginInput, LoginSchema } from "@/lib/validations/auth";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function LoginStepPanel({ next }: { next?: string }) {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { PasswordStrength } from "@/lib/validations/auth";
+import type { PasswordStrength } from "@scrimflow/shared";
 
 const strengthLabel: Record<PasswordStrength, string> = {
 	weak: "Weak",

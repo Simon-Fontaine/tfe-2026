@@ -3,6 +3,12 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Cancel01Icon, CheckmarkCircle02Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	getPasswordStrength,
+	type PasswordStrength,
+	type RegisterInput,
+	RegisterSchema,
+} from "@scrimflow/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { checkUsernameAction, registerAction } from "@/app/(auth)/auth/actions";
@@ -15,12 +21,6 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
-import {
-	getPasswordStrength,
-	type PasswordStrength,
-	type RegisterInput,
-	RegisterSchema,
-} from "@/lib/validations/auth";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function RegisterStepPanel() {

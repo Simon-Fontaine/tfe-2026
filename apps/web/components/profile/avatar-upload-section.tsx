@@ -48,7 +48,7 @@ export function AvatarUploadSection({ avatarUrl: initialAvatarUrl }: AvatarUploa
 			const formData = new FormData();
 			formData.append("file", file);
 
-			const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+			const res = await fetch("/api/uploads/avatar", { method: "POST", body: formData });
 			const data = (await res.json()) as { url?: string; error?: string };
 
 			if (!res.ok || !data.url) throw new Error(data.error ?? "Upload failed");
@@ -72,7 +72,7 @@ export function AvatarUploadSection({ avatarUrl: initialAvatarUrl }: AvatarUploa
 		const id = toast.loading("Removing avatar…");
 
 		try {
-			const res = await fetch("/api/upload/avatar", { method: "DELETE" });
+			const res = await fetch("/api/uploads/avatar", { method: "DELETE" });
 			const data = (await res.json()) as { success?: boolean; error?: string };
 
 			if (!res.ok || !data.success) throw new Error(data.error ?? "Remove failed");

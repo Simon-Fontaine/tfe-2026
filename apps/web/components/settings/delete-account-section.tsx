@@ -3,11 +3,16 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	type DeleteAccountInput,
+	DeleteAccountSchema,
+	type VerifyCodeInput,
+	VerifyCodeSchema,
+} from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-
 import {
 	confirmAccountDeletionAction,
 	requestAccountDeletionAction,
@@ -29,12 +34,6 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	type DeleteAccountInput,
-	DeleteAccountSchema,
-	type VerifyCodeInput,
-	VerifyCodeSchema,
-} from "@/lib/validations/auth";
 
 type Step = "idle" | "reason" | "code-sent";
 

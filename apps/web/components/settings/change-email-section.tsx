@@ -3,10 +3,15 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	type ChangeEmailInput,
+	ChangeEmailSchema,
+	type VerifyCodeInput,
+	VerifyCodeSchema,
+} from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-
 import {
 	cancelEmailChangeAction,
 	requestEmailChangeAction,
@@ -18,12 +23,6 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
-import {
-	type ChangeEmailInput,
-	ChangeEmailSchema,
-	type VerifyCodeInput,
-	VerifyCodeSchema,
-} from "@/lib/validations/auth";
 
 type Step = "idle" | "code-sent";
 

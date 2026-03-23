@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import {
 	listPasskeysAction,
@@ -13,8 +12,7 @@ import { SecurityKeyManagementSection } from "@/components/settings/security-key
 import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
 import { TotpManagementSection } from "@/components/settings/totp-management-section";
 import { TwoFactorMethodsSection } from "@/components/settings/two-factor-methods-section";
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
+import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { SecurityStatusProvider } from "@/stores/security-status";
 
@@ -22,19 +20,14 @@ export default async function SecuritySettingsPage() {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 
-	const [userRow, passkeys, securityKeys, pending] = await Promise.all([
-		db
-			.select({ passwordHash: userTable.passwordHash })
-			.from(userTable)
-			.where(eq(userTable.id, user.id))
-			.limit(1)
-			.then((rows) => rows[0] ?? null),
+	const [securityRes, passkeys, securityKeys, pending] = await Promise.all([
+		apiGet<{ hasPassword: boolean }>("/api/settings/security/summary"),
 		listPasskeysAction(),
 		listSecurityKeysAction(),
 		getPendingVerificationsAction(),
 	]);
 
-	const hasPassword = !!userRow?.passwordHash;
+	const hasPassword = "data" in securityRes ? securityRes.data.hasPassword : false;
 
 	return (
 		<SecurityStatusProvider

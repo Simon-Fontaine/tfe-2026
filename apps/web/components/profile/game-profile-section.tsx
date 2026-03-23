@@ -1,9 +1,9 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type UpdateGameProfileInput, UpdateGameProfileSchema } from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-
 import { updateGameProfileAction } from "@/app/dashboard/profile/actions/update-game-profile";
 import { HeroPoolPicker } from "@/components/shared/hero-pool-picker";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import type { HeroRow } from "@/lib/data/heroes";
 import type { PlayerProfileFull } from "@/lib/data/player";
 import { RANKS, ROLES } from "@/lib/ow2";
 import { cn } from "@/lib/utils";
-import { type UpdateGameProfileInput, UpdateGameProfileSchema } from "@/lib/validations/profile";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

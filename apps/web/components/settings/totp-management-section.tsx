@@ -3,11 +3,11 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Clock01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { type VerifyCodeInput, VerifyCodeSchema } from "@scrimflow/shared";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-
 import {
 	generateTotpSecretAction,
 	verifyAndEnableTotpAction,
@@ -25,7 +25,6 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
-import { type VerifyCodeInput, VerifyCodeSchema } from "@/lib/validations/auth";
 import { useSecurityStatus } from "@/stores/security-status";
 
 type State =

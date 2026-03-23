@@ -2,6 +2,7 @@
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { HelpCircleIcon } from "@hugeicons/core-free-icons";
+import { type ForgotPasswordInput, ForgotPasswordSchema } from "@scrimflow/shared";
 import { Controller, useForm } from "react-hook-form";
 import { forgotPasswordAction } from "@/app/(auth)/auth/actions";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
@@ -10,7 +11,6 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
-import { type ForgotPasswordInput, ForgotPasswordSchema } from "@/lib/validations/auth";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function ForgotPasswordStepPanel() {

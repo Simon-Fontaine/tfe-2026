@@ -1,33 +1,32 @@
-import { eq } from "drizzle-orm";
 import { AvatarUploadSection } from "@/components/profile/avatar-upload-section";
 import { BannerUploadSection } from "@/components/profile/banner-upload-section";
 import { BasicInfoSection } from "@/components/profile/basic-info-section";
 import { GameProfileSection } from "@/components/profile/game-profile-section";
-import { db } from "@/db";
-import { userTable } from "@/db/schema";
+import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getActiveHeroes } from "@/lib/data/heroes";
 import { getPlayerProfileFull } from "@/lib/data/player";
+
+type UserInfo = {
+	displayName: string;
+	bio: string | null;
+	socialLinks: Record<string, string> | null;
+	avatarUrl: string | null;
+	bannerUrl: string | null;
+};
 
 export default async function ProfilePage() {
 	const { user } = await getCurrentSession();
 	if (!user) return null; // layout guard ensures this never happens
 	const userId = user.id;
 
-	const [profile, userRow, heroes] = await Promise.all([
+	const [profile, userInfoRes, heroes] = await Promise.all([
 		getPlayerProfileFull(userId),
-		db.query.userTable.findFirst({
-			where: eq(userTable.id, userId),
-			columns: {
-				displayName: true,
-				bio: true,
-				socialLinks: true,
-				avatarUrl: true,
-				bannerUrl: true,
-			},
-		}),
+		apiGet<UserInfo | null>("/api/profile/user-info"),
 		getActiveHeroes(),
 	]);
+
+	const userRow = "data" in userInfoRes ? userInfoRes.data : null;
 
 	return (
 		<div className="space-y-8">

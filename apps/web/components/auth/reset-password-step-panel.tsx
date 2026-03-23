@@ -2,6 +2,12 @@
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { LockIcon } from "@hugeicons/core-free-icons";
+import {
+	getPasswordStrength,
+	type PasswordStrength,
+	type ResetPasswordInput,
+	ResetPasswordSchema,
+} from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { resetPasswordAction } from "@/app/(auth)/auth/actions";
@@ -12,12 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
-import {
-	getPasswordStrength,
-	type PasswordStrength,
-	type ResetPasswordInput,
-	ResetPasswordSchema,
-} from "@/lib/validations/auth";
 
 export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
 	const { submit, isPending } = useAuthAction(resetPasswordAction, {

@@ -1,74 +1,19 @@
-import { and, asc, eq } from "drizzle-orm";
+import type { DiscoveryFilters, DiscoveryTeam } from "@scrimflow/shared";
 import { cache } from "react";
+import { apiGet } from "@/lib/api-client";
 
-import { db } from "@/db";
-import { teamRosterTable, teamTable } from "@/db/schema";
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-export type DiscoveryTeam = {
-	id: string;
-	organizationId: string;
-	name: string;
-	tag: string;
-	description: string | null;
-	avatarUrl: string | null;
-	teamSr: number;
-	isRecruiting: boolean;
-	activeRosterCount: number;
-};
-
-export type DiscoveryFilters = {
-	recruiting?: boolean;
-	region?: string;
-};
+export type { DiscoveryFilters, DiscoveryTeam };
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
 
-/**
- * Returns non-archived teams for the discovery feed.
- * Optionally filter to recruiting-only teams.
- * Memoized per request.
- */
 export const getTeamsForDiscovery = cache(
 	async (filters: DiscoveryFilters = {}): Promise<DiscoveryTeam[]> => {
-		const teams = await db.query.teamTable.findMany({
-			where: and(
-				eq(teamTable.isArchived, false),
-				filters.recruiting !== undefined
-					? eq(teamTable.isRecruiting, filters.recruiting)
-					: undefined
-			),
-			columns: {
-				id: true,
-				organizationId: true,
-				name: true,
-				tag: true,
-				description: true,
-				avatarUrl: true,
-				teamSr: true,
-				isRecruiting: true,
-			},
-			with: {
-				roster: {
-					where: eq(teamRosterTable.status, "active"),
-					columns: { id: true },
-				},
-			},
-			orderBy: [asc(teamTable.name)],
-			limit: 60,
-		});
-
-		return teams.map((t) => ({
-			id: t.id,
-			organizationId: t.organizationId,
-			name: t.name,
-			tag: t.tag,
-			description: t.description ?? null,
-			avatarUrl: t.avatarUrl,
-			teamSr: t.teamSr,
-			isRecruiting: t.isRecruiting,
-			activeRosterCount: t.roster.length,
-		}));
+		const params = new URLSearchParams();
+		if (filters.recruiting !== undefined) params.set("recruiting", String(filters.recruiting));
+		if (filters.region) params.set("region", filters.region);
+		const qs = params.toString();
+		const res = await apiGet<DiscoveryTeam[]>(`/api/teams${qs ? `?${qs}` : ""}`);
+		if ("data" in res) return res.data;
+		throw new Error(res.error);
 	}
 );
