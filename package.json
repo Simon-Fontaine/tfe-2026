@@ -1,15 +1,20 @@
 {
 	"scripts": {
-		"dev": "cd apps/web && pnpm dev",
-		"dev:api": "cd packages/api && bun --watch src/index.ts",
-		"start": "cd apps/web && pnpm start",
-		"build": "cd apps/web && pnpm build",
+		"dev": "pnpm --parallel --filter next-app --filter @scrimflow/api run dev",
+		"dev:web": "pnpm --filter next-app run dev",
+		"dev:api": "pnpm --filter @scrimflow/api run dev",
+		"start": "pnpm --filter next-app run start",
+		"build": "pnpm --filter next-app run build",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"lint": "biome lint .",
 		"lint:fix": "biome lint --write .",
 		"format": "biome format .",
 		"format:fix": "biome format --write .",
+		"db:generate": "pnpm --filter @scrimflow/api run db:generate",
+		"db:migrate": "pnpm --filter @scrimflow/api run db:migrate",
+		"db:push": "pnpm --filter @scrimflow/api run db:push",
+		"db:studio": "pnpm --filter @scrimflow/api run db:studio",
 		"prepare": "lefthook install"
 	},
 	"devDependencies": {
