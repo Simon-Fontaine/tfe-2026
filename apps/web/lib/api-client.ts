@@ -8,7 +8,7 @@ const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
 type ApiSuccess<T> = { data: T };
 type ApiMutationSuccess = { success: true };
-type ApiError = { error: string; fieldErrors?: Partial<Record<string, string[]>> };
+type ApiError = { error: string; status?: number; fieldErrors?: Partial<Record<string, string[]>> };
 type ApiResponse<T> = ApiSuccess<T> | ApiError;
 type ApiMutationResponse = ApiMutationSuccess | ApiError;
 
@@ -45,7 +45,7 @@ export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
 
 	if (!res.ok) {
 		const body = await res.json().catch(() => null);
-		return { error: body?.error ?? `Request failed (${res.status})` };
+		return { error: body?.error ?? `Request failed (${res.status})`, status: res.status };
 	}
 
 	return res.json();

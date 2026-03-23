@@ -1,46 +1,15 @@
+import type { Session, SessionUser, SessionValidationResult } from "@scrimflow/shared";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-export interface SessionFlags {
-	twoFactorVerified: boolean;
-}
-
-export interface SessionMetadata {
-	ipAddress?: string | null;
-	userAgent?: string | null;
-	deviceId?: string | null;
-	geoCountry?: string | null;
-	geoCity?: string | null;
-	geoLat?: string | null;
-	geoLon?: string | null;
-}
-
-export interface Session extends SessionFlags {
-	id: string;
-	userId: string;
-	expiresAt: Date;
-}
-
-export interface SessionUser {
-	id: string;
-	email: string;
-	username: string;
-	displayName: string;
-	avatarUrl: string | null;
-	emailVerified: boolean;
-	isBanned: boolean;
-	registeredTOTP: boolean;
-	registeredPasskey: boolean;
-	registeredSecurityKey: boolean;
-	registered2FA: boolean;
-}
-
-export type SessionValidationResult =
-	| { session: Session; user: SessionUser }
-	| { session: null; user: null };
+export type {
+	Session,
+	SessionFlags,
+	SessionMetadata,
+	SessionUser,
+	SessionValidationResult,
+} from "@scrimflow/shared";
 
 // ─── Session query ──────────────────────────────────────────────────────────
 
