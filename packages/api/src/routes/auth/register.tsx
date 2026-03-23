@@ -116,20 +116,20 @@ registerRoutes.post("/", async (c) => {
 
 registerRoutes.get("/check-username", async (c) => {
 	const username = c.req.query("username")?.trim();
-	if (!username) return c.json({ available: false });
+	if (!username) return c.json({ data: { available: false } });
 
 	const { allowed } = await checkRateLimit(
 		`username-check:${username}`,
 		rateLimits.usernameCheck.limit,
 		rateLimits.usernameCheck.windowMs
 	);
-	if (!allowed) return c.json({ available: false });
+	if (!allowed) return c.json({ data: { available: false } });
 
 	const existing = await db.query.userTable.findFirst({
 		where: eq(userTable.username, username),
 		columns: { id: true },
 	});
-	return c.json({ available: !existing });
+	return c.json({ data: { available: !existing } });
 });
 
 export { registerRoutes };
