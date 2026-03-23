@@ -1,15 +1,8 @@
+import type { HeroRow } from "@scrimflow/shared";
 import { cache } from "react";
-
 import { apiGet } from "@/lib/api-client";
 
-/** Minimal hero data needed by the UI. */
-export type HeroRow = {
-	id: string;
-	displayName: string;
-	role: "tank" | "damage" | "support";
-	imageUrl: string | null;
-	description: string | null;
-};
+export type { HeroRow };
 
 /**
  * Fetch active heroes, sorted by role then name.
@@ -18,5 +11,5 @@ export type HeroRow = {
 export const getActiveHeroes = cache(async (): Promise<HeroRow[]> => {
 	const res = await apiGet<HeroRow[]>("/api/heroes");
 	if ("data" in res) return res.data;
-	return [];
+	throw new Error(res.error);
 });
