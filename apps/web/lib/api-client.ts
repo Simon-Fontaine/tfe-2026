@@ -8,11 +8,17 @@ const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
 type ApiSuccess<T> = { data: T };
 type ApiMutationSuccess = { success: true };
-type ApiError = { error: string; status?: number; fieldErrors?: Partial<Record<string, string[]>> };
+type ApiError = { error: string; status: number; fieldErrors?: Partial<Record<string, string[]>> };
 type ApiResponse<T> = ApiSuccess<T> | ApiError;
 type ApiMutationResponse = ApiMutationSuccess | ApiError;
 
+type FetchApiInit = RequestInit & {
+	timeoutMs?: number;
+};
+
 const API_UNAVAILABLE_ERROR = "Unable to reach the API server.";
+const API_TIMEOUT_ERROR = "The request to the API timed out.";
+const API_ABORTED_ERROR = "The request was canceled.";
 
 // ─── Cookie forwarding ─────────────────────────────────────────────────────
 
@@ -25,11 +31,70 @@ function isApiError(value: Response | ApiError): value is ApiError {
 	return "error" in value;
 }
 
-async function fetchApi(path: string, init?: RequestInit): Promise<Response | ApiError> {
+async function readJsonSafe(res: Response): Promise<Record<string, unknown> | null> {
+	return res.json().catch(() => null);
+}
+
+function normalizeApiError(params: {
+	status: number;
+	body: Record<string, unknown> | null;
+	fallbackMessage: string;
+}): ApiError {
+	const { status, body, fallbackMessage } = params;
+	const fieldErrors = body?.fieldErrors;
+
+	return {
+		error: typeof body?.error === "string" ? body.error : fallbackMessage,
+		status,
+		...(fieldErrors && typeof fieldErrors === "object"
+			? { fieldErrors: fieldErrors as Partial<Record<string, string[]>> }
+			: {}),
+	};
+}
+
+async function fetchApi(path: string, init?: FetchApiInit): Promise<Response | ApiError> {
+	const { timeoutMs, signal, ...requestInit } = init ?? {};
+	const timeoutController = timeoutMs ? new AbortController() : null;
+	const cleanup: Array<() => void> = [];
+
+	if (!signal && !timeoutController) {
+		try {
+			return await fetch(`${API_URL}${path}`, requestInit);
+		} catch {
+			return { error: API_UNAVAILABLE_ERROR, status: 503 };
+		}
+	}
+
+	const compositeController = new AbortController();
+	const onAbort = () => compositeController.abort();
+	if (signal) {
+		if (signal.aborted) compositeController.abort();
+		signal.addEventListener("abort", onAbort);
+		cleanup.push(() => signal.removeEventListener("abort", onAbort));
+	}
+	if (timeoutController) {
+		timeoutController.signal.addEventListener("abort", onAbort);
+		cleanup.push(() => timeoutController.signal.removeEventListener("abort", onAbort));
+	}
+
+	const timeoutId =
+		timeoutMs && timeoutController
+			? setTimeout(() => {
+					timeoutController.abort();
+				}, timeoutMs)
+			: null;
+	if (timeoutId) cleanup.push(() => clearTimeout(timeoutId));
+
 	try {
-		return await fetch(`${API_URL}${path}`, init);
-	} catch {
-		return { error: API_UNAVAILABLE_ERROR };
+		return await fetch(`${API_URL}${path}`, { ...requestInit, signal: compositeController.signal });
+	} catch (error) {
+		if (error instanceof DOMException && error.name === "AbortError") {
+			if (timeoutController?.signal.aborted) return { error: API_TIMEOUT_ERROR, status: 408 };
+			return { error: API_ABORTED_ERROR, status: 499 };
+		}
+		return { error: API_UNAVAILABLE_ERROR, status: 503 };
+	} finally {
+		for (const fn of cleanup) fn();
 	}
 }
 
@@ -44,8 +109,12 @@ export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
 	if (isApiError(res)) return res;
 
 	if (!res.ok) {
-		const body = await res.json().catch(() => null);
-		return { error: body?.error ?? `Request failed (${res.status})`, status: res.status };
+		const body = await readJsonSafe(res);
+		return normalizeApiError({
+			status: res.status,
+			body,
+			fallbackMessage: `Request failed (${res.status})`,
+		});
 	}
 
 	return res.json();
@@ -87,15 +156,17 @@ async function apiMutate<T = unknown>(
 	});
 	if (isApiError(res)) return res;
 
-	const json = await res.json().catch(() => null);
+	const json = await readJsonSafe(res);
 
 	if (!res.ok) {
-		if (json?.fieldErrors)
-			return { error: json.error ?? "Validation failed.", fieldErrors: json.fieldErrors };
-		return { error: json?.error ?? `Request failed (${res.status})` };
+		return normalizeApiError({
+			status: res.status,
+			body: json,
+			fallbackMessage: `Request failed (${res.status})`,
+		});
 	}
 
-	return json;
+	return json as ApiMutationSuccess & T;
 }
 
 // ─── Auth mutations (forwards Set-Cookie from API to browser) ───────────────
@@ -142,15 +213,17 @@ export async function apiAuthPost<T = unknown>(
 
 	await forwardSetCookieHeaders(res);
 
-	const json = await res.json().catch(() => null);
+	const json = await readJsonSafe(res);
 
 	if (!res.ok) {
-		if (json?.fieldErrors)
-			return { error: json.error ?? "Validation failed.", fieldErrors: json.fieldErrors };
-		return { error: json?.error ?? `Request failed (${res.status})` };
+		return normalizeApiError({
+			status: res.status,
+			body: json,
+			fallbackMessage: `Request failed (${res.status})`,
+		});
 	}
 
-	return json;
+	return json as ApiMutationSuccess & T;
 }
 
 export async function apiAuthDelete<T = unknown>(
@@ -167,13 +240,17 @@ export async function apiAuthDelete<T = unknown>(
 
 	await forwardSetCookieHeaders(res);
 
-	const json = await res.json().catch(() => null);
+	const json = await readJsonSafe(res);
 
 	if (!res.ok) {
-		return { error: json?.error ?? `Request failed (${res.status})` };
+		return normalizeApiError({
+			status: res.status,
+			body: json,
+			fallbackMessage: `Request failed (${res.status})`,
+		});
 	}
 
-	return json;
+	return json as ApiMutationSuccess & T;
 }
 
 // ─── FormData proxy (for file uploads) ──────────────────────────────────────
@@ -190,13 +267,17 @@ export async function apiPostFormData<T = unknown>(
 	});
 	if (isApiError(res)) return res;
 
-	const json = await res.json().catch(() => null);
+	const json = await readJsonSafe(res);
 
 	if (!res.ok) {
-		return { error: json?.error ?? `Upload failed (${res.status})` };
+		return normalizeApiError({
+			status: res.status,
+			body: json,
+			fallbackMessage: `Upload failed (${res.status})`,
+		});
 	}
 
-	return json;
+	return json as ApiMutationSuccess & T;
 }
 
 export async function apiDeleteRaw(path: string): Promise<ApiMutationResponse> {
@@ -207,11 +288,15 @@ export async function apiDeleteRaw(path: string): Promise<ApiMutationResponse> {
 	});
 	if (isApiError(res)) return res;
 
-	const json = await res.json().catch(() => null);
+	const json = await readJsonSafe(res);
 
 	if (!res.ok) {
-		return { error: json?.error ?? `Request failed (${res.status})` };
+		return normalizeApiError({
+			status: res.status,
+			body: json,
+			fallbackMessage: `Request failed (${res.status})`,
+		});
 	}
 
-	return json;
+	return json as ApiMutationSuccess;
 }
