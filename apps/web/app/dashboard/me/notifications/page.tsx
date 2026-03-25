@@ -14,42 +14,46 @@ export default async function NotificationsPage() {
 	const unreadCount = notifications.filter((n) => !n.isRead).length;
 
 	return (
-		<div className="space-y-6">
-			<SettingsHeaderBar
-				backHref="/dashboard"
-				icon={Notification01Icon}
-				title="Notifications"
-				subtitle={
-					unreadCount > 0
-						? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-						: "All caught up"
-				}
-			/>
+		<div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+			<div className="flex flex-col gap-6">
+				<SettingsHeaderBar
+					backHref="/dashboard"
+					icon={Notification01Icon}
+					title="Notifications"
+					subtitle={
+						unreadCount > 0
+							? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
+							: "All caught up"
+					}
+				/>
 
-			{notifications.length === 0 ? (
-				<div className="flex flex-col items-center justify-center border border-dashed px-6 py-16 text-center">
-					<HugeiconsIcon
-						icon={Notification01Icon}
-						strokeWidth={1.5}
-						className="mb-4 size-10 text-muted-foreground/40"
-					/>
-					<p className="text-sm font-medium">No notifications yet</p>
-					<p className="mt-1 text-xs text-muted-foreground">
-						Activity from teams, invites, and scrims will appear here.
-					</p>
-				</div>
-			) : (
-				<div className="space-y-1">
-					{unreadCount > 0 && (
-						<div className="flex justify-end pb-2">
-							<MarkAllReadButton />
+				{notifications.length === 0 ? (
+					<div className="flex flex-col items-center justify-center border border-dashed px-6 py-16 text-center">
+						<HugeiconsIcon
+							icon={Notification01Icon}
+							strokeWidth={1.5}
+							className="mb-4 size-10 text-muted-foreground/40"
+						/>
+						<p className="text-sm font-medium">No notifications yet</p>
+						<p className="mt-1 text-xs text-muted-foreground">
+							Activity from teams, invites, and scrims will appear here.
+						</p>
+					</div>
+				) : (
+					<div className="flex flex-col gap-2">
+						{unreadCount > 0 && (
+							<div className="flex justify-end">
+								<MarkAllReadButton />
+							</div>
+						)}
+						<div className="border">
+							{notifications.map((notification) => (
+								<NotificationItem key={notification.id} notification={notification} />
+							))}
 						</div>
-					)}
-					{notifications.map((notification) => (
-						<NotificationItem key={notification.id} notification={notification} />
-					))}
-				</div>
-			)}
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }
