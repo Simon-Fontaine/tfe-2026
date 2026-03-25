@@ -33,7 +33,7 @@ export async function createTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true, teamId: actionResult.data.teamId };
 }
 
@@ -98,7 +98,7 @@ export async function archiveTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true };
 }
 
@@ -118,6 +118,6 @@ export async function deleteTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
-	redirect(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	redirect(`/dashboard/workspace/orgs/${orgId}`);
 }

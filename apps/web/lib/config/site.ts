@@ -2,7 +2,6 @@ import {
 	Calendar03Icon,
 	Home01Icon,
 	Mail01Icon,
-	Search01Icon,
 	Settings01Icon,
 	Sword03Icon,
 	UserCircle02Icon,
@@ -60,9 +59,10 @@ export const siteConfig: SiteConfig = {
 	nav: {
 		// Desktop-only nav bar links. Authed users also see Dashboard here.
 		primary: [
+			{ label: "Home", href: "/", visibility: "all" },
 			{ label: "Players", href: "/players", visibility: "all" },
 			{ label: "Teams", href: "/teams", visibility: "all" },
-			{ label: "Organizations", href: "/orgs", visibility: "all" },
+			{ label: "Orgs", href: "/orgs", visibility: "all" },
 			{ label: "Scrims", href: "/scrims", visibility: "all" },
 			{ label: "Dashboard", href: "/dashboard", visibility: "auth" },
 		],
@@ -71,22 +71,26 @@ export const siteConfig: SiteConfig = {
 		// Sidebar navigation inside the dashboard, split into labelled groups.
 		dashboard: [
 			{
-				links: [{ label: "Home", href: "/dashboard", icon: Home01Icon }],
+				links: [{ label: "Dashboard", href: "/dashboard", icon: Home01Icon }],
 			},
 			{
 				label: "Workspace",
-				links: [{ label: "Workspace", href: "/dashboard/workspace", icon: UserGroupIcon }],
+				links: [{ label: "Orgs", href: "/dashboard/workspace/orgs", icon: UserGroupIcon }],
 			},
 			{
 				label: "Recruit",
 				links: [
-					{ label: "LFG Feed", href: "/dashboard/recruit/lfg", icon: UserSearch01Icon },
-					{ label: "Find Teams", href: "/dashboard/recruit/teams", icon: Search01Icon },
-					{ label: "Inbox", href: "/dashboard/recruit/inbox", icon: Mail01Icon },
+					{ label: "LFG", href: "/dashboard/recruit/lfg", icon: UserSearch01Icon },
+					{
+						label: "Applications",
+						href: "/dashboard/recruit/applications",
+						icon: UserCircle02Icon,
+					},
+					{ label: "Invitations", href: "/dashboard/recruit/invitations", icon: Mail01Icon },
 				],
 			},
 			{
-				label: "Personal",
+				label: "Me",
 				links: [
 					{ label: "Profile", href: "/dashboard/me/profile", icon: UserCircle02Icon },
 					{ label: "Schedule", href: "/dashboard/me/schedule", icon: Calendar03Icon },

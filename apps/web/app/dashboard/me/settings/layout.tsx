@@ -6,7 +6,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 	return (
 		<div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
 			<SettingsHeaderBar
-				backHref="/dashboard/me"
+				backHref="/dashboard"
 				icon={Settings01Icon}
 				title="Settings"
 				subtitle="Manage your account and security preferences"

@@ -98,14 +98,14 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 					title="Create or join an organisation"
 					description="Organisations manage one or more teams and handle scrim invitations."
 					ctaLabel="Open Workspace"
-					ctaHref="/dashboard/workspace"
+					ctaHref="/dashboard/workspace/orgs"
 				/>
 				<ChecklistCard
 					icon={Search01Icon}
 					title="Find a team"
 					description="Browse recruiting teams or post on the LFG board to find teammates."
 					ctaLabel="Open Recruit"
-					ctaHref="/dashboard/recruit/teams"
+					ctaHref="/dashboard/recruit/lfg"
 				/>
 			</CardContent>
 		</Card>

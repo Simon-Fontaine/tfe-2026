@@ -41,9 +41,9 @@ export default async function InvitesPage({ searchParams }: InvitesPageProps) {
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			<SettingsHeaderBar
-				backHref="/dashboard/recruit"
+				backHref="/dashboard"
 				icon={Mail01Icon}
-				title="Recruit Inbox"
+				title="Recruit Invitations"
 				subtitle="Invite lifecycle: pending, accepted, declined, expired"
 			/>
 
@@ -53,8 +53,8 @@ export default async function InvitesPage({ searchParams }: InvitesPageProps) {
 						key={status}
 						href={
 							status === "all"
-								? "/dashboard/recruit/inbox"
-								: `/dashboard/recruit/inbox?status=${status}`
+								? "/dashboard/recruit/invitations"
+								: `/dashboard/recruit/invitations?status=${status}`
 						}
 					>
 						<Badge variant={filter === status ? "default" : "outline"} className="capitalize">

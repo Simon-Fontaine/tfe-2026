@@ -9,7 +9,7 @@ export default function OrgNotFound() {
 				This organization doesn't exist or you don't have access to it.
 			</p>
 			<Button asChild variant="outline" size="sm">
-				<Link href="/dashboard/orgs">Back to organizations</Link>
+				<Link href="/dashboard/workspace/orgs">Back to organizations</Link>
 			</Button>
 		</div>
 	);

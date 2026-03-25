@@ -43,7 +43,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 			{/* Org header */}
 			<div className="flex items-start gap-4">
 				<Button asChild variant="ghost" size="sm" className="-ml-2 mt-0.5 shrink-0">
-					<Link href="/dashboard/workspace">
+					<Link href="/dashboard/workspace/orgs">
 						<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 						Workspace
 					</Link>

@@ -57,7 +57,7 @@ export async function respondToTeamInviteAction(
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath("/dashboard/recruit/inbox");
+	revalidatePath("/dashboard/recruit/invitations");
 	revalidatePath("/dashboard/teams");
 	return { success: true };
 }

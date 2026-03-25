@@ -28,7 +28,7 @@ export default function TeamsDirectoryPage() {
 							<Link href="/auth?step=register">Create an account to publish a team</Link>
 						</Button>
 						<Button asChild size="sm" variant="outline">
-							<Link href="/dashboard/recruit/teams">Browse recruiting posts</Link>
+							<Link href="/dashboard/recruit/lfg">Browse recruiting posts</Link>
 						</Button>
 					</div>
 				</div>

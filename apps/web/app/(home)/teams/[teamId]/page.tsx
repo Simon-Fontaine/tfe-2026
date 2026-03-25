@@ -62,7 +62,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 				<div className="mt-3 flex flex-wrap gap-2">
 					{team.isRecruiting || team.hasOpenRolePost ? (
 						<Button asChild size="sm">
-							<Link href="/dashboard/recruit/teams">
+							<Link href="/dashboard/recruit/lfg">
 								Find open team posts
 								<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-1 size-4" />
 							</Link>
