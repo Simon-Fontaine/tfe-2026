@@ -38,9 +38,18 @@ const OW2_ROLES = [
 interface TeamApplicationsSectionProps {
 	applications: LfgApplicationSummary[];
 	orgId: string;
+	teamId: string;
 }
 
-function ApplicationCard({ app, orgId }: { app: LfgApplicationSummary; orgId: string }) {
+function ApplicationCard({
+	app,
+	orgId,
+	teamId,
+}: {
+	app: LfgApplicationSummary;
+	orgId: string;
+	teamId: string;
+}) {
 	const [roleInTeam, setRoleInTeam] = useState<"tank" | "damage" | "support">(
 		(app.applicantPrimaryRole as "tank" | "damage" | "support") ?? "damage"
 	);
@@ -52,8 +61,10 @@ function ApplicationCard({ app, orgId }: { app: LfgApplicationSummary; orgId: st
 
 	function respond(action: "accept" | "reject") {
 		const fd = new FormData();
+		fd.set("postId", app.postId);
 		fd.set("applicationId", app.id);
 		fd.set("orgId", orgId);
+		fd.set("teamId", teamId);
 		fd.set("action", action);
 		if (action === "accept") fd.set("roleInTeam", roleInTeam);
 		submit(fd);
@@ -124,7 +135,11 @@ function ApplicationCard({ app, orgId }: { app: LfgApplicationSummary; orgId: st
 	);
 }
 
-export function TeamApplicationsSection({ applications, orgId }: TeamApplicationsSectionProps) {
+export function TeamApplicationsSection({
+	applications,
+	orgId,
+	teamId,
+}: TeamApplicationsSectionProps) {
 	if (applications.length === 0) {
 		return <p className="text-xs text-muted-foreground">No pending applications.</p>;
 	}
@@ -132,7 +147,7 @@ export function TeamApplicationsSection({ applications, orgId }: TeamApplication
 	return (
 		<div className="space-y-3">
 			{applications.map((app) => (
-				<ApplicationCard key={app.id} app={app} orgId={orgId} />
+				<ApplicationCard key={app.id} app={app} orgId={orgId} teamId={teamId} />
 			))}
 		</div>
 	);
