@@ -1,19 +1,17 @@
-import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { LfgPostCard } from "@/components/lfg/lfg-post-card";
 import { SettingsHeaderBar } from "@/components/settings/settings-header-bar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getOpenLfgPosts, getUserApplications } from "@/lib/data/lfg";
+import { getOpenLfgPosts } from "@/lib/data/lfg";
 
 export default async function LfgPage() {
 	const { user } = await getCurrentSession();
 	if (!user) return null;
 
-	const [teamPosts, myApplications] = await Promise.all([
-		getOpenLfgPosts({ type: "team_seeking_player" }),
-		getUserApplications(user.id),
-	]);
+	const teamPosts = await getOpenLfgPosts({ type: "team_seeking_player" });
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
@@ -24,48 +22,27 @@ export default async function LfgPage() {
 				subtitle="Find a team to join"
 			/>
 
-			<Tabs defaultValue="teams">
-				<TabsList className="w-full">
-					<TabsTrigger value="teams" className="flex-1">
-						Teams Looking ({teamPosts.length})
-					</TabsTrigger>
-					<TabsTrigger value="mine" className="flex-1">
-						My Applications ({myApplications.length})
-					</TabsTrigger>
-				</TabsList>
+			<div className="flex items-center justify-between gap-2 border p-3">
+				<p className="text-xs text-muted-foreground">
+					Track your submitted applications in the dedicated applications view.
+				</p>
+				<Button asChild size="sm" variant="outline" className="shrink-0">
+					<Link href="/dashboard/recruit/applications">
+						Applications
+						<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" strokeWidth={2} />
+					</Link>
+				</Button>
+			</div>
 
-				<TabsContent value="teams" className="mt-4 space-y-3">
-					{teamPosts.length === 0 ? (
-						<EmptyState message="No teams are currently looking for players." />
-					) : (
-						teamPosts.map((post) => (
-							<LfgPostCard key={post.id} post={post} currentUserId={user.id} />
-						))
-					)}
-				</TabsContent>
-
-				<TabsContent value="mine" className="mt-4 space-y-3">
-					{myApplications.length === 0 ? (
-						<EmptyState message="You haven't applied to any posts yet." />
-					) : (
-						myApplications.map((app) => (
-							<div key={app.id} className="flex items-center justify-between border px-4 py-3">
-								<div>
-									<p className="text-sm font-medium">
-										{app.teamName ? `[${app.teamTag}] ${app.teamName}` : "Player post"}
-									</p>
-									{app.message && (
-										<p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-											{app.message}
-										</p>
-									)}
-								</div>
-								<span className="text-xs text-muted-foreground capitalize">{app.status}</span>
-							</div>
-						))
-					)}
-				</TabsContent>
-			</Tabs>
+			{teamPosts.length === 0 ? (
+				<EmptyState message="No teams are currently looking for players." />
+			) : (
+				<div className="flex flex-col gap-3">
+					{teamPosts.map((post) => (
+						<LfgPostCard key={post.id} post={post} currentUserId={user.id} />
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

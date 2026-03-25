@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SiteFooter } from "@/components/home/site-footer";
 import { SiteHeader } from "@/components/home/site-header";
 import { getCurrentSession } from "@/lib/auth/session";
 
@@ -18,6 +19,7 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
 		<div>
 			<SiteHeader user={headerUser} />
 			<main id="main-content">{children}</main>
+			<SiteFooter />
 		</div>
 	);
 }

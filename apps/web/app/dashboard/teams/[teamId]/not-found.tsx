@@ -9,7 +9,7 @@ export default function TeamNotFound() {
 				This team doesn't exist or you don't have access to it.
 			</p>
 			<Button asChild variant="outline" size="sm">
-				<Link href="/dashboard/teams">Back to teams</Link>
+				<Link href="/dashboard/workspace/orgs">Back to teams</Link>
 			</Button>
 		</div>
 	);
