@@ -9,6 +9,7 @@ import { lfgRoutes } from "@/routes/lfg";
 import { notificationRoutes } from "@/routes/notifications";
 import { onboardingRoutes } from "@/routes/onboarding";
 import { orgRoutes } from "@/routes/orgs";
+import { publicOrgRoutes } from "@/routes/orgs/public";
 import { profileRoutes } from "@/routes/profile";
 import { scheduleRoutes } from "@/routes/schedule";
 import { settingsRoutes } from "@/routes/settings";
@@ -61,6 +62,7 @@ app.route("/api/users", userRoutes);
 // Public routes (no auth)
 app.route("/api/heroes", heroRoutes);
 app.route("/api/public/teams", publicTeamRoutes);
+app.route("/api/public/orgs", publicOrgRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));

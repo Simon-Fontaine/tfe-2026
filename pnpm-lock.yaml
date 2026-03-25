@@ -185,6 +185,8 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/app-sdk: {}
+
   packages/shared:
     dependencies:
       valibot:

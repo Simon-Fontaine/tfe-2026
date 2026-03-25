@@ -22,6 +22,7 @@ import { extractErrors } from "@/routes/auth/utils";
 import { createTeamIdInviteRoutes, teamInviteRoutes } from "@/routes/teams/invites";
 import { rosterRoutes } from "@/routes/teams/roster";
 import { getUserOrgRole, verifyOrgManager } from "@/utils/org";
+import { verifyTeamBelongsToOrg } from "@/utils/team";
 
 const teamRoutes = new Hono<AuthEnv>();
 
@@ -152,6 +153,8 @@ teamRoutes.patch("/:id/recruiting", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const { orgId } = parsed.output;
+	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
 
 	const isManager = await verifyOrgManager(orgId, user.id);
 	if (!isManager) return c.json({ error: "You do not have permission to manage this team." }, 403);
@@ -182,6 +185,8 @@ teamRoutes.post("/:id/archive", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const { orgId } = parsed.output;
+	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
 
 	const isManager = await verifyOrgManager(orgId, user.id);
 	if (!isManager) return c.json({ error: "You do not have permission to archive this team." }, 403);
@@ -190,6 +195,29 @@ teamRoutes.post("/:id/archive", async (c) => {
 		.update(teamTable)
 		.set({ isArchived: true, isRecruiting: false })
 		.where(eq(teamTable.id, teamId));
+
+	return c.json({ success: true });
+});
+
+// POST /:id/unarchive — Restore archived team
+teamRoutes.post("/:id/unarchive", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.param("id");
+
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(ArchiveTeamSchema, { ...body, teamId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const { orgId } = parsed.output;
+	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
+
+	const isManager = await verifyOrgManager(orgId, user.id);
+	if (!isManager) return c.json({ error: "You do not have permission to restore this team." }, 403);
+
+	await db.update(teamTable).set({ isArchived: false }).where(eq(teamTable.id, teamId));
 
 	return c.json({ success: true });
 });
@@ -206,6 +234,8 @@ teamRoutes.delete("/:id", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const { orgId } = parsed.output;
+	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
 
 	const role = await getUserOrgRole(orgId, user.id);
 	if (role !== "owner")
@@ -363,6 +393,27 @@ teamRoutes.get("/:id/lfg", async (c) => {
 	});
 
 	return c.json({ data: posts });
+});
+
+// DELETE /:id/leave — Current user leaves team roster
+teamRoutes.delete("/:id/leave", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.param("id");
+
+	const roster = await db.query.teamRosterTable.findFirst({
+		where: and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.userId, user.id)),
+		columns: { id: true, status: true },
+	});
+	if (!roster) return c.json({ error: "You are not on this roster." }, 404);
+	if (roster.status === "inactive")
+		return c.json({ error: "You are no longer active on this roster." }, 400);
+
+	await db
+		.update(teamRosterTable)
+		.set({ status: "inactive", leftAt: new Date() })
+		.where(eq(teamRosterTable.id, roster.id));
+
+	return c.json({ success: true });
 });
 
 // Mount roster and invite routes under /:id/

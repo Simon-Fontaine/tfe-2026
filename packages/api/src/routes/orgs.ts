@@ -429,6 +429,45 @@ orgRoutes.delete("/:id/members/:userId", async (c) => {
 	return c.json({ success: true });
 });
 
+// DELETE /:id/leave — Leave organization as current user
+orgRoutes.delete("/:id/leave", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+
+	const membership = await db.query.organizationMemberTable.findFirst({
+		where: and(
+			eq(organizationMemberTable.organizationId, orgId),
+			eq(organizationMemberTable.userId, user.id)
+		),
+		columns: { id: true, role: true },
+	});
+	if (!membership) return c.json({ error: "You are not a member of this organisation." }, 404);
+	if (membership.role === "owner")
+		return c.json({ error: "The owner must transfer ownership before leaving." }, 400);
+
+	await db.transaction(async (tx) => {
+		const rosterEntries = await tx.query.teamRosterTable.findMany({
+			where: eq(teamRosterTable.userId, user.id),
+			with: { team: { columns: { organizationId: true } } },
+			columns: { id: true },
+		});
+		const rosterIds = rosterEntries
+			.filter((entry) => entry.team.organizationId === orgId)
+			.map((entry) => entry.id);
+
+		for (const rosterId of rosterIds) {
+			await tx
+				.update(teamRosterTable)
+				.set({ status: "inactive", leftAt: new Date() })
+				.where(eq(teamRosterTable.id, rosterId));
+		}
+
+		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, membership.id));
+	});
+
+	return c.json({ success: true });
+});
+
 // POST /:id/invites — Invite to organization
 orgRoutes.post("/:id/invites", async (c) => {
 	const user = c.get("user");

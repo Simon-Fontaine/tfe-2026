@@ -9,6 +9,7 @@ export type RemoveOrgMemberInput = { orgId: string; memberId: string };
 export type InviteOrgMemberInput = { orgId: string; userId: string; role: string };
 export type RespondOrgInviteInput = { inviteId: string; action: string };
 export type ManageOrgInviteInput = { orgId: string; inviteId: string };
+export type OrgScopedInput = { orgId: string };
 
 export class OrgsService {
 	constructor(private readonly transport: Transport) {}
@@ -66,5 +67,9 @@ export class OrgsService {
 		return this.transport.post<MutationSuccess>(
 			`/api/orgs/${input.orgId}/invites/${input.inviteId}/resend`
 		);
+	}
+
+	leave(input: OrgScopedInput): Promise<SdkResult<MutationSuccess>> {
+		return this.transport.delete<MutationSuccess>(`/api/orgs/${input.orgId}/leave`);
 	}
 }

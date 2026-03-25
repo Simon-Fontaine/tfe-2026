@@ -8,7 +8,7 @@ import { teamRosterTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { verifyOrgManager } from "@/utils/org";
-import { getOrgIdForRoster } from "@/utils/team";
+import { getOrgIdForRoster, verifyTeamBelongsToOrg } from "@/utils/team";
 
 const rosterRoutes = new Hono<AuthEnv>();
 
@@ -23,6 +23,8 @@ rosterRoutes.post("/", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const { teamId, orgId, userId, roleInTeam, status } = parsed.output;
+	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
 
 	const isManager = await verifyOrgManager(orgId, user.id);
 	if (!isManager)

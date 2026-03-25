@@ -5,6 +5,8 @@ import type {
 	OrgRole,
 	OrgTeamSummary,
 	OrgWithTeams,
+	PublicOrgDetail,
+	PublicOrgSummary,
 	UserOrg,
 } from "@scrimflow/shared";
 import { cache } from "react";
@@ -17,6 +19,8 @@ export type {
 	OrgPendingInvite,
 	OrgRole,
 	OrgTeamSummary,
+	PublicOrgDetail,
+	PublicOrgSummary,
 	OrgWithTeams,
 	UserOrg,
 };
@@ -61,3 +65,18 @@ export async function getOrgPendingInvites(
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 }
+
+export const getPublicOrgs = cache(async (): Promise<PublicOrgSummary[]> => {
+	const res = await apiGet<PublicOrgSummary[]>(apiRoutes.orgs.publicRoot);
+	if ("data" in res) return res.data;
+	throw new Error(res.error);
+});
+
+export const getPublicOrgByIdOrSlug = cache(
+	async (orgIdOrSlug: string): Promise<PublicOrgDetail | null> => {
+		const res = await apiGet<PublicOrgDetail>(apiRoutes.orgs.publicById(orgIdOrSlug));
+		if ("data" in res) return res.data;
+		if (res.status === 404) return null;
+		throw new Error(res.error);
+	}
+);

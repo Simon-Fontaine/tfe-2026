@@ -19,7 +19,7 @@ import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
 import { verifyOrgManager } from "@/utils/org";
-import { isUserOnTeam } from "@/utils/team";
+import { isUserOnTeam, verifyTeamBelongsToOrg } from "@/utils/team";
 
 const lfgRoutes = new Hono<AuthEnv>();
 
@@ -134,6 +134,8 @@ lfgRoutes.post("/", async (c) => {
 		description,
 		region,
 	} = parsed.output;
+	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
 
 	const isManager = await verifyOrgManager(orgId, user.id);
 	if (!isManager)
@@ -170,6 +172,14 @@ lfgRoutes.post("/:id/close", async (c) => {
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const { postId, orgId } = parsed.output;
+	const post = await db.query.lfgPostTable.findFirst({
+		where: eq(lfgPostTable.id, postId),
+		with: { team: { columns: { organizationId: true } } },
+		columns: { id: true, teamId: true },
+	});
+	if (!post) return c.json({ error: "Post not found." }, 404);
+	if (!post.teamId || post.team?.organizationId !== orgId)
+		return c.json({ error: "Post does not belong to this organisation." }, 404);
 
 	const isManager = await verifyOrgManager(orgId, user.id);
 	if (!isManager) return c.json({ error: "You do not have permission to close this post." }, 403);
@@ -285,9 +295,13 @@ lfgRoutes.post("/:id/applications/:appId/respond", async (c) => {
 		return c.json({ error: "This application has already been reviewed." }, 400);
 	if (app.post.status !== "open")
 		return c.json({ error: "The associated post is no longer open." }, 400);
+	if (!app.post.teamId) return c.json({ error: "No team associated with this post." }, 400);
+
+	const belongsToOrg = await verifyTeamBelongsToOrg(app.post.teamId, orgId);
+	if (!belongsToOrg)
+		return c.json({ error: "Application does not belong to this organisation." }, 404);
 
 	if (action === "accept") {
-		if (!app.post.teamId) return c.json({ error: "No team associated with this post." }, 400);
 		const postTeamId = app.post.teamId;
 		const role = roleInTeam ?? "damage";
 
