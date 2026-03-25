@@ -30,12 +30,24 @@ teamRoutes.route("/invites", teamInviteRoutes);
 
 // GET / — Discovery: list non-archived teams
 teamRoutes.get("/", async (c) => {
+	/**
+	 * Discovery API contract:
+	 * - `recruiting` is the only supported query param for team discovery today.
+	 * - Accepted values are the string literals `"true"` and `"false"`.
+	 * - Unknown params (for example `region`) are intentionally ignored.
+	 *
+	 * If we add new filter dimensions in the future, update this parser and the
+	 * shared `DiscoveryFilters` type in the same change to keep UI/backend behavior
+	 * aligned.
+	 */
 	const recruiting = c.req.query("recruiting");
+	const recruitingFilter =
+		recruiting === "true" ? true : recruiting === "false" ? false : undefined;
 
 	const teams = await db.query.teamTable.findMany({
 		where: and(
 			eq(teamTable.isArchived, false),
-			recruiting !== undefined ? eq(teamTable.isRecruiting, recruiting === "true") : undefined
+			recruitingFilter !== undefined ? eq(teamTable.isRecruiting, recruitingFilter) : undefined
 		),
 		columns: {
 			id: true,

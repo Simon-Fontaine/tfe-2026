@@ -266,7 +266,6 @@ export type DiscoveryTeam = {
 
 export type DiscoveryFilters = {
 	recruiting?: boolean;
-	region?: string;
 };
 
 // ─── LFG types ─────────────────────────────────────────────────────────────
