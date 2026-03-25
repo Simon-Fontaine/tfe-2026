@@ -10,7 +10,6 @@ export const getTeamsForDiscovery = cache(
 	async (filters: DiscoveryFilters = {}): Promise<DiscoveryTeam[]> => {
 		const params = new URLSearchParams();
 		if (filters.recruiting !== undefined) params.set("recruiting", String(filters.recruiting));
-		if (filters.region) params.set("region", filters.region);
 		const qs = params.toString();
 		const res = await apiGet<DiscoveryTeam[]>(`/api/teams${qs ? `?${qs}` : ""}`);
 		if ("data" in res) return res.data;

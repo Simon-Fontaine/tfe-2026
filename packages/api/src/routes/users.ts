@@ -12,7 +12,7 @@ userRoutes.get("/search", async (c) => {
 	const q = c.req.query("q")?.trim() ?? "";
 	const excludeTeamId = c.req.query("excludeTeamId");
 
-	if (q.length < 2) return c.json({ users: [] });
+	if (q.length < 2) return c.json({ data: [] });
 
 	// Collect userIds to exclude (active roster members of the target team)
 	let excludedUserIds: string[] = [];
@@ -52,7 +52,7 @@ userRoutes.get("/search", async (c) => {
 		rank: r.rank ?? null,
 	}));
 
-	return c.json({ users });
+	return c.json({ data: users });
 });
 
 export { userRoutes };

@@ -53,7 +53,7 @@ export interface SessionMetadata {
 export interface Session extends SessionFlags {
 	id: string;
 	userId: string;
-	expiresAt: Date;
+	expiresAt: IsoDateString;
 }
 
 export interface SessionUser {
@@ -109,6 +109,14 @@ export type ApiErrorResponse = {
 	fieldErrors?: Partial<Record<string, string[]>>;
 };
 
+// ─── Temporal conventions ───────────────────────────────────────────────────
+
+/**
+ * ISO-8601 timestamp string serialized for transport across API/service boundaries.
+ * Convention: DTOs use `IsoDateString`; convert to `Date` only after explicit parsing in domain/UI layers.
+ */
+export type IsoDateString = string;
+
 // ─── Headers interface ──────────────────────────────────────────────────────
 
 /** Minimal header getter used by extractClientContext and other framework-agnostic code. */
@@ -134,7 +142,7 @@ export type RosterMember = {
 	rankDivision: number | null;
 	roleInTeam: OW2Role;
 	status: RosterStatus;
-	joinedAt: Date;
+	joinedAt: IsoDateString;
 };
 
 export type TeamWithRoster = {
@@ -166,8 +174,8 @@ export type TeamInviteSummary = {
 	teamAvatarUrl: string | null;
 	inviterDisplayName: string;
 	roleInTeam: OW2Role;
-	expiresAt: Date;
-	createdAt: Date;
+	expiresAt: IsoDateString;
+	createdAt: IsoDateString;
 };
 
 export type TeamPendingInvite = {
@@ -176,8 +184,8 @@ export type TeamPendingInvite = {
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
 	roleInTeam: OW2Role;
-	expiresAt: Date;
-	createdAt: Date;
+	expiresAt: IsoDateString;
+	createdAt: IsoDateString;
 };
 
 // ─── Organization types ────────────────────────────────────────────────────
@@ -228,8 +236,8 @@ export type OrgInviteSummary = {
 	orgAvatarUrl: string | null;
 	inviterDisplayName: string;
 	role: OrgRole;
-	expiresAt: Date;
-	createdAt: Date;
+	expiresAt: IsoDateString;
+	createdAt: IsoDateString;
 };
 
 export type OrgPendingInvite = {
@@ -238,8 +246,8 @@ export type OrgPendingInvite = {
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
 	role: OrgRole;
-	expiresAt: Date;
-	createdAt: Date;
+	expiresAt: IsoDateString;
+	createdAt: IsoDateString;
 };
 
 // ─── Discovery types ───────────────────────────────────────────────────────
@@ -258,7 +266,6 @@ export type DiscoveryTeam = {
 
 export type DiscoveryFilters = {
 	recruiting?: boolean;
-	region?: string;
 };
 
 // ─── LFG types ─────────────────────────────────────────────────────────────
@@ -272,8 +279,8 @@ export type LfgPostSummary = {
 	maxRank: string | null;
 	description: string | null;
 	region: string | null;
-	expiresAt: Date | null;
-	createdAt: Date;
+	expiresAt: IsoDateString | null;
+	createdAt: IsoDateString;
 	userId: string;
 	userDisplayName: string;
 	userAvatarUrl: string | null;
@@ -289,7 +296,7 @@ export type LfgApplicationSummary = {
 	postId: string;
 	status: string;
 	message: string | null;
-	createdAt: Date;
+	createdAt: IsoDateString;
 	applicantUserId: string;
 	applicantDisplayName: string;
 	applicantAvatarUrl: string | null;
@@ -301,7 +308,7 @@ export type UserApplicationSummary = {
 	id: string;
 	status: string;
 	message: string | null;
-	createdAt: Date;
+	createdAt: IsoDateString;
 	postId: string;
 	teamName: string | null;
 	teamTag: string | null;
@@ -323,7 +330,7 @@ export type NotificationSummary = {
 	referenceType: string | null;
 	referenceId: string | null;
 	isRead: boolean;
-	createdAt: Date;
+	createdAt: IsoDateString;
 };
 
 // ─── Player types ──────────────────────────────────────────────────────────
@@ -353,7 +360,7 @@ export type AvailabilityRow = {
 	id: string;
 	teamId: string;
 	dayOfWeek: number | null;
-	specificDate: Date | null;
+	specificDate: IsoDateString | null;
 	startTime: string;
 	endTime: string;
 	timezone: string;

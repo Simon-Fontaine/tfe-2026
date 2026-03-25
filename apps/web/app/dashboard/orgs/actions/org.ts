@@ -4,22 +4,24 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
-import { apiDelete, apiPatch, apiPost } from "@/lib/api-client";
-
-// ─── Actions ──────────────────────────────────────────────────────────────────
+import { toActionResult } from "@/lib/action-result";
+import { getServerSdk } from "@/lib/app-sdk";
 
 export async function createOrgAction(
 	_prev: FormActionResult | null,
 	formData: FormData
 ): Promise<FormActionResult & { orgId?: string }> {
-	const res = await apiPost<{ orgId: string }>("/api/orgs", {
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.create({
 		name: String(formData.get("name") ?? ""),
-		description: formData.get("description") || undefined,
+		description: formData.get("description")?.toString() || undefined,
 	});
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath("/dashboard/orgs");
-	return { success: true, orgId: res.orgId };
+	return { success: true, orgId: actionResult.data.orgId };
 }
 
 export async function updateOrgAction(
@@ -27,11 +29,15 @@ export async function updateOrgAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const res = await apiPatch(`/api/orgs/${orgId}`, {
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.update({
+		orgId,
 		name: String(formData.get("name") ?? ""),
-		description: formData.get("description") || undefined,
+		description: formData.get("description")?.toString() || undefined,
 	});
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath(`/dashboard/orgs/${orgId}`);
 	return { success: true };
@@ -42,10 +48,14 @@ export async function deleteOrgAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const res = await apiDelete(`/api/orgs/${orgId}`, {
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.delete({
+		orgId,
 		confirmName: String(formData.get("confirmName") ?? ""),
 	});
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath("/dashboard/orgs");
 	redirect("/dashboard/orgs");
@@ -56,11 +66,15 @@ export async function updateOrgMemberRoleAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const memberId = String(formData.get("memberId") ?? "");
-	const res = await apiPatch(`/api/orgs/${orgId}/members/${memberId}/role`, {
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.updateMemberRole({
+		orgId,
+		memberId: String(formData.get("memberId") ?? ""),
 		role: String(formData.get("role") ?? ""),
 	});
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath(`/dashboard/orgs/${orgId}`);
 	return { success: true };
@@ -71,9 +85,14 @@ export async function removeOrgMemberAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const memberId = String(formData.get("memberId") ?? "");
-	const res = await apiDelete(`/api/orgs/${orgId}/members/${memberId}`);
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.removeMember({
+		orgId,
+		memberId: String(formData.get("memberId") ?? ""),
+	});
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath(`/dashboard/orgs/${orgId}`);
 	return { success: true };
@@ -84,11 +103,15 @@ export async function inviteToOrgAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const res = await apiPost(`/api/orgs/${orgId}/invites`, {
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.invite({
+		orgId,
 		userId: String(formData.get("userId") ?? ""),
 		role: String(formData.get("role") ?? ""),
 	});
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath(`/dashboard/orgs/${orgId}`);
 	return { success: true };
@@ -98,11 +121,14 @@ export async function respondToOrgInviteAction(
 	_prev: FormActionResult | null,
 	formData: FormData
 ): Promise<FormActionResult> {
-	const inviteId = String(formData.get("inviteId") ?? "");
-	const res = await apiPost(`/api/orgs/invites/${inviteId}/respond`, {
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.respondToInvite({
+		inviteId: String(formData.get("inviteId") ?? ""),
 		action: String(formData.get("action") ?? ""),
 	});
-	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath("/dashboard/invitations");
 	revalidatePath("/dashboard/orgs");
