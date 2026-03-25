@@ -13,6 +13,7 @@ import { profileRoutes } from "@/routes/profile";
 import { scheduleRoutes } from "@/routes/schedule";
 import { settingsRoutes } from "@/routes/settings";
 import { teamRoutes } from "@/routes/teams";
+import { publicTeamRoutes } from "@/routes/teams/public";
 import { uploadRoutes } from "@/routes/uploads";
 import { userRoutes } from "@/routes/users";
 
@@ -59,6 +60,7 @@ app.route("/api/users", userRoutes);
 
 // Public routes (no auth)
 app.route("/api/heroes", heroRoutes);
+app.route("/api/public/teams", publicTeamRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));

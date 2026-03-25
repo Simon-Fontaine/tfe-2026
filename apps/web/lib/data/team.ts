@@ -4,6 +4,7 @@ import type {
 	RosterStatus,
 	TeamInviteSummary,
 	TeamPendingInvite,
+	TeamPublicPreview,
 	TeamWithRoster,
 	UserSearchResult,
 } from "@scrimflow/shared";
@@ -16,6 +17,7 @@ export type {
 	RosterStatus,
 	TeamInviteSummary,
 	TeamPendingInvite,
+	TeamPublicPreview,
 	TeamWithRoster,
 	UserSearchResult,
 };
@@ -25,6 +27,15 @@ export type {
 export const getTeamWithRoster = cache(
 	async (teamId: string, _userId: string): Promise<TeamWithRoster | null> => {
 		const res = await apiGet<TeamWithRoster>(`/api/teams/${teamId}`);
+		if ("data" in res) return res.data;
+		if (res.status === 404) return null;
+		throw new Error(res.error);
+	}
+);
+
+export const getPublicTeamPreview = cache(
+	async (teamId: string): Promise<TeamPublicPreview | null> => {
+		const res = await apiGet<TeamPublicPreview>(`/api/public/teams/${teamId}`);
 		if ("data" in res) return res.data;
 		if (res.status === 404) return null;
 		throw new Error(res.error);
