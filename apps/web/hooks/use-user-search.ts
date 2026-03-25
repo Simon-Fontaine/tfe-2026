@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { searchUsers } from "@/lib/client/user-search";
 import type { UserSearchResult } from "@/lib/data/team";
 
 interface UseUserSearchOptions {
@@ -33,11 +34,8 @@ export function useUserSearch({
 		setSearching(true);
 		const timer = setTimeout(async () => {
 			try {
-				const params = new URLSearchParams({ q: query });
-				if (excludeTeamId) params.set("excludeTeamId", excludeTeamId);
-				const res = await fetch(`/api/users/search?${params.toString()}`);
-				const data = await res.json();
-				setResults(data.users ?? []);
+				const users = await searchUsers(query, { excludeTeamId });
+				setResults(users);
 			} finally {
 				setSearching(false);
 			}
