@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { addPlayerAction } from "@/app/dashboard/teams/[teamId]/actions/roster";
+import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,18 +88,6 @@ export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProp
 		submit(fd);
 	}
 
-	const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
-	const RANK_LABELS: Record<string, string> = {
-		bronze: "Bronze",
-		silver: "Silver",
-		gold: "Gold",
-		platinum: "Platinum",
-		diamond: "Diamond",
-		master: "Master",
-		grandmaster: "Grandmaster",
-		champion: "Champion",
-	};
-
 	return (
 		<Dialog
 			open={open}
@@ -124,14 +113,7 @@ export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProp
 						onQueryChange={updateQuery}
 						onSelect={selectUser}
 						onClearSelection={clearSelection}
-						renderUserMeta={(u) =>
-							u.primaryRole || u.rank ? (
-								<>
-									{u.primaryRole && ROLE_LABELS[u.primaryRole]}
-									{u.rank && ` · ${RANK_LABELS[u.rank] ?? u.rank}`}
-								</>
-							) : null
-						}
+						renderUserMeta={renderOw2RoleRankMeta}
 					/>
 
 					<Field>

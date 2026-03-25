@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { sendTeamInviteAction } from "@/app/dashboard/teams/[teamId]/actions/invites";
+import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,18 +25,6 @@ const OW2_ROLES = [
 ] as const;
 
 type OW2Role = (typeof OW2_ROLES)[number]["value"];
-
-const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
-const RANK_LABELS: Record<string, string> = {
-	bronze: "Bronze",
-	silver: "Silver",
-	gold: "Gold",
-	platinum: "Platinum",
-	diamond: "Diamond",
-	master: "Master",
-	grandmaster: "Grandmaster",
-	champion: "Champion",
-};
 
 interface InvitePlayerDialogProps {
 	teamId: string;
@@ -117,14 +106,7 @@ export function InvitePlayerDialog({ teamId, orgId, children }: InvitePlayerDial
 						onQueryChange={updateQuery}
 						onSelect={selectUser}
 						onClearSelection={clearSelection}
-						renderUserMeta={(u) =>
-							u.primaryRole || u.rank ? (
-								<>
-									{u.primaryRole && ROLE_LABELS[u.primaryRole as keyof typeof ROLE_LABELS]}
-									{u.rank && ` · ${RANK_LABELS[u.rank] ?? u.rank}`}
-								</>
-							) : null
-						}
+						renderUserMeta={renderOw2RoleRankMeta}
 					/>
 
 					<Field>

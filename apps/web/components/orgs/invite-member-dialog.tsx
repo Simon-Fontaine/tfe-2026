@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { inviteToOrgAction } from "@/app/dashboard/orgs/actions/org";
+import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,18 +26,6 @@ const ORG_ROLES = [
 ] as const;
 
 type OrgRole = (typeof ORG_ROLES)[number]["value"];
-
-const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
-const RANK_LABELS: Record<string, string> = {
-	bronze: "Bronze",
-	silver: "Silver",
-	gold: "Gold",
-	platinum: "Platinum",
-	diamond: "Diamond",
-	master: "Master",
-	grandmaster: "Grandmaster",
-	champion: "Champion",
-};
 
 interface InviteMemberDialogProps {
 	orgId: string;
@@ -111,14 +100,7 @@ export function InviteMemberDialog({ orgId, children }: InviteMemberDialogProps)
 						onQueryChange={updateQuery}
 						onSelect={selectUser}
 						onClearSelection={clearSelection}
-						renderUserMeta={(u) =>
-							u.primaryRole || u.rank ? (
-								<>
-									{u.primaryRole && ROLE_LABELS[u.primaryRole as keyof typeof ROLE_LABELS]}
-									{u.rank && ` · ${RANK_LABELS[u.rank] ?? u.rank}`}
-								</>
-							) : null
-						}
+						renderUserMeta={renderOw2RoleRankMeta}
 					/>
 
 					<Field>
