@@ -74,19 +74,32 @@ export const disputeResolutionEnum = pgEnum("dispute_resolution", [
 	"voided",
 ]);
 
-/** LFG post direction. */
-export const lfgTypeEnum = pgEnum("lfg_type", ["team_seeking_player", "player_seeking_team"]);
+/** Unified recruitment post categories. */
+export const lfgTypeEnum = pgEnum("lfg_type", ["lft", "lfp", "lfr", "lfs"]);
 
 export const lfgStatusEnum = pgEnum("lfg_status", ["open", "closed", "fulfilled", "expired"]);
 
-/** RBAC roles within an organization. */
-export const orgRoleEnum = pgEnum("org_role", ["owner", "manager", "coach", "analyst", "player"]);
+/** Access roles within an organization. */
+export const orgRoleEnum = pgEnum("org_role", ["owner", "admin", "member"]);
+
+/** Functional membership type. */
+export const memberTypeEnum = pgEnum("member_type", ["player", "staff"]);
+
+/** Functional staff specialties. */
+export const staffRoleEnum = pgEnum("staff_role", ["coach", "analyst", "manager", "staff"]);
 
 /** Roster slot status — tracks whether a player is actively competing. */
 export const rosterStatusEnum = pgEnum("roster_status", ["active", "benched", "trial", "inactive"]);
 
 /** Team-local permission level layered on top of gameplay role/status. */
 export const teamMemberRoleEnum = pgEnum("team_member_role", ["admin", "member"]);
+
+/** Recruit post ownership. */
+export const recruitmentOwnerTypeEnum = pgEnum("recruitment_owner_type", [
+	"player",
+	"team",
+	"organization",
+]);
 
 /** OCR async job lifecycle. */
 export const ocrJobStatusEnum = pgEnum("ocr_job_status", [

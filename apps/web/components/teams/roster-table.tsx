@@ -6,8 +6,9 @@ import { useTransition } from "react";
 import {
 	removeRosterMemberAction,
 	updateRosterStatusAction,
+	updateTeamMemberAction,
 	updateTeamMemberPermissionAction,
-} from "@/app/dashboard/teams/[teamId]/actions/roster";
+} from "@/app/dashboard/workspace/orgs/actions/team";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,6 +48,12 @@ const STATUS_OPTIONS: { value: RosterStatus; label: string }[] = [
 	{ value: "trial", label: "Trial" },
 	{ value: "inactive", label: "Inactive" },
 ];
+const STAFF_ROLE_OPTIONS = [
+	{ value: "coach", label: "Coach" },
+	{ value: "analyst", label: "Analyst" },
+	{ value: "manager", label: "Manager" },
+	{ value: "staff", label: "Staff" },
+] as const;
 
 interface RosterRowProps {
 	member: RosterMember;
@@ -87,6 +94,22 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 		});
 	}
 
+	function updateMemberDetails(input: {
+		memberType?: "player" | "staff";
+		roleInTeam?: "tank" | "damage" | "support";
+		staffRole?: "coach" | "analyst" | "manager" | "staff";
+	}) {
+		const fd = new FormData();
+		fd.set("teamId", teamId);
+		fd.set("memberId", member.id);
+		if (input.memberType) fd.set("memberType", input.memberType);
+		if (input.roleInTeam) fd.set("roleInTeam", input.roleInTeam);
+		if (input.staffRole) fd.set("staffRole", input.staffRole);
+		startTransition(() => {
+			void updateTeamMemberAction(null, fd);
+		});
+	}
+
 	return (
 		<div
 			className={cn(
@@ -104,7 +127,11 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 			<div className="min-w-0 flex-1">
 				<p className="truncate text-xs font-medium">{member.displayName}</p>
 				<p className="text-[10px] text-muted-foreground">
-					{ROLE_LABELS[member.roleInTeam]}
+					{member.roleInTeam
+						? ROLE_LABELS[member.roleInTeam]
+						: member.staffRole
+							? member.staffRole[0].toUpperCase() + member.staffRole.slice(1)
+							: "Staff"}
 					{member.rank &&
 						` · ${RANK_LABELS[member.rank] ?? member.rank}${member.rankDivision ? ` ${member.rankDivision}` : ""}`}
 				</p>
@@ -130,6 +157,47 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 						</button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="w-40">
+						<DropdownMenuLabel className="text-xs">Member type</DropdownMenuLabel>
+						<DropdownMenuItem
+							className="text-xs"
+							onSelect={() =>
+								updateMemberDetails({
+									memberType: member.memberType === "player" ? "staff" : "player",
+									roleInTeam: member.memberType === "staff" ? "damage" : undefined,
+									staffRole: member.memberType === "player" ? "staff" : undefined,
+								})
+							}
+						>
+							{member.memberType === "player" ? "Convert to staff" : "Convert to player"}
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuLabel className="text-xs">
+							{member.memberType === "player" ? "Game role" : "Staff role"}
+						</DropdownMenuLabel>
+						{member.memberType === "player"
+							? (Object.entries(ROLE_LABELS) as Array<["tank" | "damage" | "support", string]>)
+									.filter(([role]) => role !== member.roleInTeam)
+									.map(([role, label]) => (
+										<DropdownMenuItem
+											key={role}
+											className="text-xs"
+											onSelect={() => updateMemberDetails({ roleInTeam: role })}
+										>
+											{label}
+										</DropdownMenuItem>
+									))
+							: STAFF_ROLE_OPTIONS.filter((option) => option.value !== member.staffRole).map(
+									(option) => (
+										<DropdownMenuItem
+											key={option.value}
+											className="text-xs"
+											onSelect={() => updateMemberDetails({ staffRole: option.value })}
+										>
+											{option.label}
+										</DropdownMenuItem>
+									)
+								)}
+						<DropdownMenuSeparator />
 						<DropdownMenuLabel className="text-xs">Change status</DropdownMenuLabel>
 						{STATUS_OPTIONS.filter((o) => o.value !== member.status).map((opt) => (
 							<DropdownMenuItem
@@ -172,6 +240,7 @@ interface RosterTableProps {
 	canManage: boolean;
 	canManageAdmins?: boolean;
 	teamId: string;
+	emptyLabel?: string;
 }
 
 export function RosterTable({
@@ -179,6 +248,7 @@ export function RosterTable({
 	canManage,
 	canManageAdmins = false,
 	teamId,
+	emptyLabel = "No members yet. Add your first member to get started.",
 }: RosterTableProps) {
 	const active = roster.filter((r) => r.status !== "inactive");
 	const inactive = roster.filter((r) => r.status === "inactive");
@@ -186,9 +256,7 @@ export function RosterTable({
 	if (roster.length === 0) {
 		return (
 			<div className="flex items-center justify-center border border-dashed px-6 py-10 text-center">
-				<p className="text-xs text-muted-foreground">
-					No players yet. Add your first player to get started.
-				</p>
+				<p className="text-xs text-muted-foreground">{emptyLabel}</p>
 			</div>
 		);
 	}

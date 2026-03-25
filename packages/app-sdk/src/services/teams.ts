@@ -6,6 +6,7 @@ export type CreateTeamInput = {
 	name: string;
 	tag: string;
 	description?: string;
+	avatarUrl?: string;
 };
 
 export type UpdateTeamInput = {
@@ -13,37 +14,41 @@ export type UpdateTeamInput = {
 	name: string;
 	tag: string;
 	description?: string;
+	avatarUrl?: string;
 };
 
 export type TeamScopedInput = { teamId: string };
 export type AddTeamMemberInput = {
 	teamId: string;
 	userId: string;
-	roleInTeam: string;
+	memberType?: "player" | "staff";
+	roleInTeam?: string;
+	gameRole?: string;
+	staffRole?: string;
 	status: string;
 	permissionRole?: string;
 };
 export type UpdateTeamMemberInput = {
 	teamId: string;
 	memberId: string;
+	memberType?: "player" | "staff";
 	roleInTeam?: string;
+	gameRole?: string;
+	staffRole?: string;
 	status?: string;
 	permissionRole?: string;
 };
 export type InviteToTeamInput = {
 	teamId: string;
 	userId: string;
-	roleInTeam: string;
+	memberType?: "player" | "staff";
+	roleInTeam?: string;
+	gameRole?: string;
+	staffRole?: string;
 	permissionRole?: string;
 };
 export type ManageTeamInviteInput = { teamId: string; inviteId: string };
 export type RespondTeamInviteInput = { inviteId: string; action: string };
-export type CreateTeamRequestInput = {
-	teamId: string;
-	requestedRoleInTeam: string;
-	message?: string;
-};
-export type RespondTeamRequestInput = { teamId: string; requestId: string; action: string };
 
 export class TeamsService {
 	constructor(private readonly transport: Transport) {}
@@ -57,6 +62,7 @@ export class TeamsService {
 			name: input.name,
 			tag: input.tag,
 			description: input.description,
+			avatarUrl: input.avatarUrl,
 		});
 	}
 
@@ -83,7 +89,10 @@ export class TeamsService {
 	addMember(input: AddTeamMemberInput): Promise<SdkResult<MutationSuccess>> {
 		return this.transport.post<MutationSuccess>(`/api/teams/${input.teamId}/roster`, {
 			userId: input.userId,
+			memberType: input.memberType,
 			roleInTeam: input.roleInTeam,
+			gameRole: input.gameRole,
+			staffRole: input.staffRole,
 			status: input.status,
 			permissionRole: input.permissionRole,
 		});
@@ -93,7 +102,10 @@ export class TeamsService {
 		return this.transport.patch<MutationSuccess>(
 			`/api/teams/${input.teamId}/roster/${input.memberId}`,
 			{
+				memberType: input.memberType,
 				roleInTeam: input.roleInTeam,
+				gameRole: input.gameRole,
+				staffRole: input.staffRole,
 				status: input.status,
 				permissionRole: input.permissionRole,
 			}
@@ -120,7 +132,10 @@ export class TeamsService {
 	invite(input: InviteToTeamInput): Promise<SdkResult<MutationSuccess>> {
 		return this.transport.post<MutationSuccess>(`/api/teams/${input.teamId}/invites`, {
 			userId: input.userId,
+			memberType: input.memberType,
 			roleInTeam: input.roleInTeam,
+			gameRole: input.gameRole,
+			staffRole: input.staffRole,
 			permissionRole: input.permissionRole,
 		});
 	}
@@ -141,19 +156,5 @@ export class TeamsService {
 		return this.transport.post<MutationSuccess>(`/api/teams/invites/${input.inviteId}/respond`, {
 			action: input.action,
 		});
-	}
-
-	requestToJoin(input: CreateTeamRequestInput): Promise<SdkResult<MutationSuccess>> {
-		return this.transport.post<MutationSuccess>(`/api/teams/${input.teamId}/requests`, {
-			requestedRoleInTeam: input.requestedRoleInTeam,
-			message: input.message,
-		});
-	}
-
-	respondToRequest(input: RespondTeamRequestInput): Promise<SdkResult<MutationSuccess>> {
-		return this.transport.post<MutationSuccess>(
-			`/api/teams/${input.teamId}/requests/${input.requestId}/respond`,
-			{ action: input.action }
-		);
 	}
 }

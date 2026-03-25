@@ -3,15 +3,10 @@ import { and, asc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import {
-	organizationMemberTable,
-	organizationTable,
-	orgJoinRequestTable,
-	teamRosterTable,
-	teamTable,
-} from "@/db/schema";
+import { lfgPostTable, organizationTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
+import { mapRecruitmentPost } from "@/utils/recruit";
 
 const publicOrgRoutes = new Hono<AuthEnv>();
 
@@ -37,6 +32,10 @@ publicOrgRoutes.get("/", async (c) => {
 					},
 				},
 			},
+			lfgPosts: {
+				where: eq(lfgPostTable.status, "open"),
+				columns: { id: true },
+			},
 		},
 		orderBy: [asc(organizationTable.name)],
 		limit: 100,
@@ -50,6 +49,7 @@ publicOrgRoutes.get("/", async (c) => {
 		description: row.description ?? null,
 		teamCount: row.teams.length,
 		activeRosterCount: row.teams.reduce((sum, team) => sum + team.roster.length, 0),
+		openPostCount: row.lfgPosts.length,
 	}));
 
 	return c.json({ data });
@@ -74,6 +74,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 				where: and(eq(teamTable.isArchived, false)),
 				columns: {
 					id: true,
+					organizationId: true,
 					name: true,
 					tag: true,
 					description: true,
@@ -90,34 +91,19 @@ publicOrgRoutes.get("/:id", async (c) => {
 				},
 				orderBy: [asc(teamTable.name)],
 			},
+			lfgPosts: {
+				where: eq(lfgPostTable.status, "open"),
+				with: {
+					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+					applications: { columns: { id: true, status: true, applicantUserId: true } },
+				},
+			},
 		},
 	});
 
 	if (!org) return c.json({ error: "Organisation not found." }, 404);
-
-	const hasPendingJoinRequest = user
-		? Boolean(
-				await db.query.orgJoinRequestTable.findFirst({
-					where: and(
-						eq(orgJoinRequestTable.organizationId, org.id),
-						eq(orgJoinRequestTable.requesterUserId, user.id),
-						eq(orgJoinRequestTable.status, "pending")
-					),
-					columns: { id: true },
-				})
-			)
-		: false;
-	const isMember = user
-		? Boolean(
-				await db.query.organizationMemberTable.findFirst({
-					where: and(
-						eq(organizationMemberTable.organizationId, org.id),
-						eq(organizationMemberTable.userId, user.id)
-					),
-					columns: { id: true },
-				})
-			)
-		: false;
 
 	const data: PublicOrgDetail = {
 		id: org.id,
@@ -134,6 +120,8 @@ publicOrgRoutes.get("/:id", async (c) => {
 		teams: org.teams.map((team) => ({
 			id: team.id,
 			organizationId: org.id,
+			organizationName: org.name,
+			organizationSlug: org.slug,
 			name: team.name,
 			tag: team.tag,
 			description: team.description ?? null,
@@ -149,7 +137,8 @@ publicOrgRoutes.get("/:id", async (c) => {
 					.map((row) => row.userId)
 			).size,
 		})),
-		hasPendingJoinRequest: !isMember && hasPendingJoinRequest,
+		openPosts: org.lfgPosts.map((post) => mapRecruitmentPost(post, { viewerId: user?.id ?? null })),
+		hasPendingJoinRequest: false,
 	};
 
 	return c.json({ data });

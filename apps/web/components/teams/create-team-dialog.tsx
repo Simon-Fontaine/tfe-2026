@@ -5,7 +5,7 @@ import { type CreateTeamInput, CreateTeamSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { createTeamAction } from "@/app/dashboard/teams/actions/team";
+import { createTeamAction } from "@/app/dashboard/workspace/orgs/actions/team";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -36,7 +36,7 @@ export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
 
 	const form = useForm<CreateTeamInput>({
 		resolver: valibotResolver(CreateTeamSchema),
-		defaultValues: { orgId, name: "", tag: "", description: "" },
+		defaultValues: { orgId, name: "", tag: "", description: "", avatarUrl: "" },
 	});
 
 	useEffect(() => {
@@ -54,13 +54,14 @@ export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
 		fd.set("name", values.name);
 		fd.set("tag", values.tag);
 		if (values.description) fd.set("description", values.description);
+		if (values.avatarUrl) fd.set("avatarUrl", values.avatarUrl);
 		submit(fd);
 	}
 
 	return (
 		<Dialog
 			onOpenChange={(open) => {
-				if (open) form.reset({ orgId, name: "", tag: "", description: "" });
+				if (open) form.reset({ orgId, name: "", tag: "", description: "", avatarUrl: "" });
 			}}
 		>
 			<DialogTrigger asChild>{children}</DialogTrigger>
@@ -108,6 +109,14 @@ export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
 							{...form.register("description")}
 						/>
 						<FieldError errors={[form.formState.errors.description]} />
+					</Field>
+
+					<Field>
+						<FieldLabel htmlFor="team-avatar">
+							Avatar URL <span className="font-normal text-muted-foreground/70">(optional)</span>
+						</FieldLabel>
+						<Input id="team-avatar" placeholder="https://…" {...form.register("avatarUrl")} />
+						<FieldError errors={[form.formState.errors.avatarUrl]} />
 					</Field>
 
 					<div className="flex gap-2">

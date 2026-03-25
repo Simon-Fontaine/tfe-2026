@@ -63,6 +63,7 @@ export const siteConfig: SiteConfig = {
 			{ label: "Players", href: "/players", visibility: "all" },
 			{ label: "Teams", href: "/teams", visibility: "all" },
 			{ label: "Orgs", href: "/orgs", visibility: "all" },
+			{ label: "Posts", href: "/posts", visibility: "all" },
 			{ label: "Scrims", href: "/scrims", visibility: "all" },
 			{ label: "Dashboard", href: "/dashboard", visibility: "auth" },
 		],
@@ -80,10 +81,10 @@ export const siteConfig: SiteConfig = {
 			{
 				label: "Recruit",
 				links: [
-					{ label: "LFG", href: "/dashboard/recruit/lfg", icon: UserSearch01Icon },
+					{ label: "Posts", href: "/dashboard/recruit/posts", icon: UserSearch01Icon },
 					{
-						label: "Applications",
-						href: "/dashboard/recruit/applications",
+						label: "Conversations",
+						href: "/dashboard/recruit/conversations",
 						icon: UserCircle02Icon,
 					},
 					{ label: "Invitations", href: "/dashboard/recruit/invitations", icon: Mail01Icon },

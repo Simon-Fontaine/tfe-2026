@@ -8,3 +8,4 @@ export * from "./validations/lfg";
 export * from "./validations/onboarding";
 export * from "./validations/org";
 export * from "./validations/profile";
+export * from "./validations/recruit";

@@ -3,15 +3,15 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { lfgPostTable, teamJoinRequestTable, teamRosterTable, teamTable } from "@/db/schema";
+import { lfgPostTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
+import { mapRecruitmentPost } from "@/utils/recruit";
 
 const publicTeamRoutes = new Hono<AuthEnv>();
 
 publicTeamRoutes.use("*", optionalAuth);
 
-// GET /:id — Public team preview with safe fields only
 publicTeamRoutes.get("/:id", async (c) => {
 	const teamId = c.req.param("id");
 	const user = c.get("user");
@@ -41,27 +41,19 @@ publicTeamRoutes.get("/:id", async (c) => {
 				where: eq(teamRosterTable.status, "active"),
 				columns: { id: true },
 			},
+			lfgPosts: {
+				where: eq(lfgPostTable.status, "open"),
+				with: {
+					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+					applications: { columns: { id: true, status: true, applicantUserId: true } },
+				},
+			},
 		},
 	});
 
 	if (!team) return c.json({ error: "Team not found." }, 404);
-
-	const openLfgPost = await db.query.lfgPostTable.findFirst({
-		where: and(eq(lfgPostTable.teamId, teamId), eq(lfgPostTable.status, "open")),
-		columns: { id: true },
-	});
-	const hasPendingJoinRequest = user
-		? Boolean(
-				await db.query.teamJoinRequestTable.findFirst({
-					where: and(
-						eq(teamJoinRequestTable.teamId, teamId),
-						eq(teamJoinRequestTable.requesterUserId, user.id),
-						eq(teamJoinRequestTable.status, "pending")
-					),
-					columns: { id: true },
-				})
-			)
-		: false;
 
 	const data: TeamPublicPreview = {
 		id: team.id,
@@ -77,8 +69,10 @@ publicTeamRoutes.get("/:id", async (c) => {
 		isRecruiting: team.isRecruiting,
 		isArchived: team.isArchived,
 		activeRosterCount: team.roster.length,
-		hasOpenRolePost: Boolean(openLfgPost),
-		hasPendingJoinRequest,
+		openPostCount: team.lfgPosts.length,
+		hasOpenRolePost: team.lfgPosts.length > 0,
+		hasPendingJoinRequest: false,
+		posts: team.lfgPosts.map((post) => mapRecruitmentPost(post, { viewerId: user?.id ?? null })),
 	};
 
 	return c.json({ data });

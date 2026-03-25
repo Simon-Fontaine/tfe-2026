@@ -103,9 +103,9 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 				<ChecklistCard
 					icon={Search01Icon}
 					title="Find a team"
-					description="Browse recruiting teams or post on the LFG board to find teammates."
+					description="Browse recruiting posts or publish your own availability to connect with the right team."
 					ctaLabel="Open Recruit"
-					ctaHref="/dashboard/recruit/lfg"
+					ctaHref="/dashboard/recruit/posts"
 				/>
 			</CardContent>
 		</Card>

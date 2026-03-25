@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { deleteOrgAction } from "@/app/dashboard/orgs/actions/org";
+import { deleteOrgAction } from "@/app/dashboard/workspace/orgs/actions/org";
 import {
 	AlertDialog,
 	AlertDialogCancel,

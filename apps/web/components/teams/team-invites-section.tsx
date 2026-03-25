@@ -3,7 +3,7 @@
 import {
 	cancelTeamInviteAction,
 	resendTeamInviteAction,
-} from "@/app/dashboard/teams/[teamId]/actions/invites";
+} from "@/app/dashboard/workspace/orgs/actions/team";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,11 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 						<p className="truncate text-xs font-medium">{invite.inviteeDisplayName}</p>
 						<div className="mt-0.5 flex items-center gap-2">
 							<Badge variant="outline" className="text-[10px]">
-								{ROLE_LABELS[invite.roleInTeam] ?? invite.roleInTeam}
+								{invite.roleInTeam
+									? (ROLE_LABELS[invite.roleInTeam] ?? invite.roleInTeam)
+									: invite.staffRole
+										? invite.staffRole[0].toUpperCase() + invite.staffRole.slice(1)
+										: "Staff"}
 							</Badge>
 							{invite.permissionRole === "admin" && (
 								<Badge variant="secondary" className="text-[10px]">

@@ -40,28 +40,67 @@ export const apiRoutes = {
 			resend: (teamId: string, inviteId: string) =>
 				`/api/teams/${teamId}/invites/${inviteId}/resend`,
 		},
+		roster: {
+			root: (teamId: string) => `/api/teams/${teamId}/roster`,
+			byId: (teamId: string, rosterId: string) => `/api/teams/${teamId}/roster/${rosterId}`,
+		},
 		requests: {
 			root: (teamId: string) => `/api/teams/${teamId}/requests`,
 			respond: (teamId: string, requestId: string) =>
 				`/api/teams/${teamId}/requests/${requestId}/respond`,
 		},
-		roster: {
-			root: (teamId: string) => `/api/teams/${teamId}/roster`,
-			byId: (teamId: string, rosterId: string) => `/api/teams/${teamId}/roster/${rosterId}`,
-		},
 		applications: (teamId: string) => `/api/teams/${teamId}/applications`,
-		lfg: (teamId: string) => `/api/teams/${teamId}/lfg`,
+		lfg: (teamId: string) => `/api/teams/${teamId}/posts`,
+		posts: (teamId: string) => `/api/teams/${teamId}/posts`,
+		conversations: (teamId: string) => `/api/teams/${teamId}/conversations`,
+	},
+	posts: {
+		root: "/api/posts",
+		mine: "/api/posts/mine",
+		byId: (postId: string) => `/api/posts/${postId}`,
+		responses: (postId: string) => `/api/posts/${postId}/responses`,
+		publicRoot: "/api/public/posts",
+	},
+	responses: {
+		root: "/api/responses",
+		mine: "/api/responses/mine",
+		byId: (responseId: string) => `/api/responses/${responseId}`,
+		decision: (responseId: string) => `/api/responses/${responseId}/decision`,
+	},
+	threads: {
+		root: "/api/threads",
+		byId: (threadId: string) => `/api/threads/${threadId}`,
+		messages: (threadId: string) => `/api/threads/${threadId}/messages`,
+	},
+	recruit: {
+		posts: {
+			root: "/api/posts",
+			mine: "/api/posts/mine",
+			byId: (postId: string) => `/api/posts/${postId}`,
+			responses: (postId: string) => `/api/posts/${postId}/responses`,
+			publicRoot: "/api/public/posts",
+		},
+		responses: {
+			root: "/api/responses",
+			mine: "/api/responses/mine",
+			byId: (responseId: string) => `/api/responses/${responseId}`,
+			decision: (responseId: string) => `/api/responses/${responseId}/decision`,
+		},
+		threads: {
+			root: "/api/threads",
+			byId: (threadId: string) => `/api/threads/${threadId}`,
+			messages: (threadId: string) => `/api/threads/${threadId}/messages`,
+		},
 	},
 	lfg: {
-		root: "/api/lfg",
-		byId: (postId: string) => `/api/lfg/${postId}`,
-		applications: "/api/lfg/applications",
-		close: (postId: string) => `/api/lfg/${postId}/close`,
-		apply: (postId: string) => `/api/lfg/${postId}/apply`,
-		applicationById: (postId: string, applicationId: string) =>
-			`/api/lfg/${postId}/applications/${applicationId}`,
-		respondToApplication: (postId: string, applicationId: string) =>
-			`/api/lfg/${postId}/applications/${applicationId}/respond`,
+		root: "/api/posts",
+		byId: (postId: string) => `/api/posts/${postId}`,
+		applications: "/api/responses/mine",
+		close: (postId: string) => `/api/posts/${postId}`,
+		apply: (postId: string) => `/api/posts/${postId}/responses`,
+		applicationById: (_postId: string, applicationId: string) => `/api/responses/${applicationId}`,
+		respondToApplication: (_postId: string, applicationId: string) =>
+			`/api/responses/${applicationId}/decision`,
 	},
 } as const;
 
@@ -74,9 +113,11 @@ export const dashboardRoutes = {
 			`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`,
 	},
 	recruit: {
-		lfg: "/dashboard/recruit/lfg",
+		posts: "/dashboard/recruit/posts",
+		conversations: "/dashboard/recruit/conversations",
 		invitations: "/dashboard/recruit/invitations",
-		applications: "/dashboard/recruit/applications",
+		lfg: "/dashboard/recruit/posts",
+		applications: "/dashboard/recruit/conversations",
 	},
 	me: {
 		schedule: "/dashboard/me/schedule",

@@ -2,12 +2,14 @@ import { ArrowRight01Icon, GameController01Icon } from "@hugeicons/core-free-ico
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RequestJoinOrgDialog } from "@/components/orgs/request-join-org-dialog";
+
+import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
+import { getManageableRecruitEntities } from "@/lib/data/recruit";
 
 export default async function OrgProfilePage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { orgId } = await params;
@@ -17,9 +19,10 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 	const { user } = await getCurrentSession();
 	const userOrgRole = user ? await getUserOrgRole(org.id, user.id).catch(() => null) : null;
 	const isMember = userOrgRole !== null;
+	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			<div className="border p-5">
 				<div className="flex items-start gap-4">
 					<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
@@ -36,27 +39,51 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						)}
 						<p className="mt-2 text-xs text-muted-foreground">
 							{org.teamCount} team{org.teamCount === 1 ? "" : "s"} · {org.activeRosterCount} active
-							players
+							members
 						</p>
 					</div>
 				</div>
 			</div>
 
 			<div className="flex flex-wrap gap-2">
-				{user && !isMember && !org.hasPendingJoinRequest && (
-					<RequestJoinOrgDialog orgId={org.id}>
-						<Button size="sm">Request to join</Button>
-					</RequestJoinOrgDialog>
-				)}
-				{user && !isMember && org.hasPendingJoinRequest && (
-					<Button size="sm" disabled>
-						Request pending
-					</Button>
-				)}
+				<Button asChild size="sm">
+					<Link href="/posts">
+						Browse all posts
+						<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-1 size-4" />
+					</Link>
+				</Button>
 				{isMember && (
 					<Button asChild size="sm" variant="outline">
 						<Link href={`/dashboard/workspace/orgs/${org.id}`}>Open workspace</Link>
 					</Button>
+				)}
+			</div>
+
+			<div className="space-y-4">
+				<div>
+					<h2 className="text-sm font-semibold">Open organisation posts</h2>
+					<p className="text-xs text-muted-foreground">
+						Public organisation recruiting posts are surfaced here instead of join-request forms.
+					</p>
+				</div>
+				{org.openPosts.length === 0 ? (
+					<div className="border border-dashed px-6 py-10 text-center">
+						<p className="text-sm font-medium">No open organisation posts right now</p>
+						<p className="mt-1 text-xs text-muted-foreground">
+							Explore team posts below or browse the full public posts hub.
+						</p>
+					</div>
+				) : (
+					<div className="space-y-4">
+						{org.openPosts.map((post) => (
+							<RecruitmentPostCard
+								key={post.id}
+								post={post}
+								currentUserId={user?.id ?? null}
+								entityOptions={entityOptions}
+							/>
+						))}
+					</div>
 				)}
 			</div>
 
@@ -90,7 +117,6 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 										Recruiting
 									</Badge>
 								)}
-								<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
 							</Link>
 						))}
 					</div>

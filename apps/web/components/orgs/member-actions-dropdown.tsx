@@ -3,7 +3,10 @@
 import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
-import { removeOrgMemberAction, updateOrgMemberRoleAction } from "@/app/dashboard/orgs/actions/org";
+import {
+	removeOrgMemberAction,
+	updateOrgMemberRoleAction,
+} from "@/app/dashboard/workspace/orgs/actions/org";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -29,13 +32,26 @@ import type { OrgMemberSummary } from "@/lib/data/organization";
 import { cn } from "@/lib/utils";
 
 const ORG_ROLES = [
-	{ value: "manager", label: "Manager" },
+	{ value: "admin", label: "Admin" },
+	{ value: "member", label: "Member" },
+] as const;
+const MEMBER_TYPES = [
+	{ value: "player", label: "Player" },
+	{ value: "staff", label: "Staff" },
+] as const;
+const GAME_ROLES = [
+	{ value: "tank", label: "Tank" },
+	{ value: "damage", label: "DPS" },
+	{ value: "support", label: "Support" },
+] as const;
+const STAFF_ROLES = [
 	{ value: "coach", label: "Coach" },
 	{ value: "analyst", label: "Analyst" },
-	{ value: "player", label: "Player" },
+	{ value: "manager", label: "Manager" },
+	{ value: "staff", label: "Staff" },
 ] as const;
 
-type EditableRole = "manager" | "coach" | "analyst" | "player";
+type EditableRole = "admin" | "member";
 
 interface MemberActionsDropdownProps {
 	orgId: string;
@@ -47,10 +63,17 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 	const [editRoleOpen, setEditRoleOpen] = useState(false);
 	const [removeOpen, setRemoveOpen] = useState(false);
 	const [selectedRole, setSelectedRole] = useState<EditableRole>(
-		(member.role as EditableRole) ?? "player"
+		(member.role as EditableRole) ?? "member"
+	);
+	const [memberType, setMemberType] = useState<"player" | "staff">(member.memberType);
+	const [gameRole, setGameRole] = useState<"tank" | "damage" | "support">(
+		member.gameRole ?? "damage"
+	);
+	const [staffRole, setStaffRole] = useState<"coach" | "analyst" | "manager" | "staff">(
+		member.staffRole ?? "staff"
 	);
 	const editableRoles = ORG_ROLES.filter((role) =>
-		viewerRole === "owner" ? true : role.value !== "manager"
+		viewerRole === "owner" ? true : role.value !== "admin"
 	);
 
 	const roleForm = useFormAction(updateOrgMemberRoleAction, {
@@ -68,6 +91,9 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 		fd.set("orgId", orgId);
 		fd.set("memberId", member.id);
 		fd.set("role", selectedRole);
+		fd.set("memberType", memberType);
+		if (memberType === "player") fd.set("gameRole", gameRole);
+		if (memberType === "staff") fd.set("staffRole", staffRole);
 		roleForm.submit(fd);
 		setEditRoleOpen(false);
 	}
@@ -81,7 +107,7 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 	}
 
 	if (member.role === "owner") return null;
-	if (viewerRole === "manager" && member.role === "manager") return null;
+	if (viewerRole === "admin" && member.role === "admin") return null;
 
 	return (
 		<>
@@ -111,6 +137,7 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 						<DialogTitle>Edit role — {member.displayName}</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-2 py-2">
+						<p className="text-[11px] font-medium text-muted-foreground">Permission</p>
 						{editableRoles.map((r) => (
 							<button
 								key={r.value}
@@ -126,12 +153,59 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 							</button>
 						))}
 					</div>
+					<div className="flex flex-col gap-2 py-2">
+						<p className="text-[11px] font-medium text-muted-foreground">Member type</p>
+						{MEMBER_TYPES.map((type) => (
+							<button
+								key={type.value}
+								type="button"
+								data-selected={memberType === type.value}
+								onClick={() => setMemberType(type.value)}
+								className={cn(
+									"border px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-muted",
+									"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+								)}
+							>
+								{type.label}
+							</button>
+						))}
+					</div>
+					<div className="flex flex-col gap-2 py-2">
+						<p className="text-[11px] font-medium text-muted-foreground">
+							{memberType === "player" ? "Primary role" : "Staff role"}
+						</p>
+						{memberType === "player"
+							? GAME_ROLES.map((role) => (
+									<button
+										key={role.value}
+										type="button"
+										data-selected={gameRole === role.value}
+										onClick={() => setGameRole(role.value)}
+										className={cn(
+											"border px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-muted",
+											"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+										)}
+									>
+										{role.label}
+									</button>
+								))
+							: STAFF_ROLES.map((role) => (
+									<button
+										key={role.value}
+										type="button"
+										data-selected={staffRole === role.value}
+										onClick={() => setStaffRole(role.value)}
+										className={cn(
+											"border px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-muted",
+											"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+										)}
+									>
+										{role.label}
+									</button>
+								))}
+					</div>
 					<div className="flex gap-2">
-						<Button
-							size="sm"
-							onClick={submitRoleChange}
-							disabled={roleForm.isPending || selectedRole === member.role}
-						>
+						<Button size="sm" onClick={submitRoleChange} disabled={roleForm.isPending}>
 							{roleForm.isPending && <Spinner className="mr-1.5" />}
 							Save
 						</Button>

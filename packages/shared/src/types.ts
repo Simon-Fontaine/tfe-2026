@@ -128,10 +128,17 @@ export interface HeadersGetter {
 
 export type OW2Role = "tank" | "damage" | "support";
 export type RosterStatus = "active" | "benched" | "trial" | "inactive";
-export type OrgRole = "owner" | "manager" | "coach" | "analyst" | "player";
+export type OrgPermissionRole = "owner" | "admin" | "member";
+export type OrgRole = OrgPermissionRole;
 export type TeamPermissionRole = "admin" | "member";
+export type MemberType = "player" | "staff";
+export type StaffRole = "coach" | "analyst" | "manager" | "staff";
 export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
 export type JoinRequestStatus = "pending" | "approved" | "rejected" | "withdrawn" | "cancelled";
+export type RecruitmentPostCategory = "lft" | "lfp" | "lfr" | "lfs";
+export type RecruitmentOwnerType = "player" | "team" | "organization";
+export type RecruitmentPostStatus = "open" | "closed" | "fulfilled" | "expired";
+export type RecruitmentResponseStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 
 export type UserSearchResult = {
 	id: string;
@@ -144,36 +151,46 @@ export type UserSearchResult = {
 // ─── Team types ────────────────────────────────────────────────────────────
 
 export type TeamPermissions = {
-	orgRole: OrgRole | null;
+	orgRole: OrgPermissionRole | null;
 	teamPermissionRole: TeamPermissionRole | null;
 	canManage: boolean;
 	canManageAdmins: boolean;
+	canManageMembers: boolean;
 	canManageRoster: boolean;
 	canManageInvites: boolean;
+	canManagePosts: boolean;
+	canManageConversations: boolean;
 	canManageRequests: boolean;
 	canManageSettings: boolean;
 	canLeave: boolean;
 };
 
-export type RosterMember = {
+export type TeamMemberSummary = {
 	id: string;
 	userId: string;
 	displayName: string;
 	avatarUrl: string | null;
-	primaryRole: OW2Role;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRole: OW2Role | null;
+	roleInTeam: OW2Role | null;
+	primaryRole: OW2Role | null;
 	rank: string | null;
 	rankDivision: number | null;
 	permissionRole: TeamPermissionRole;
-	roleInTeam: OW2Role;
 	status: RosterStatus;
 	joinedAt: IsoDateString;
 	leftAt: IsoDateString | null;
 	statusChangedAt: IsoDateString;
 };
 
+export type RosterMember = TeamMemberSummary;
+
 export type TeamSummary = {
 	id: string;
 	organizationId: string;
+	organizationName: string | null;
+	organizationSlug: string | null;
 	name: string;
 	tag: string;
 	description: string | null;
@@ -192,7 +209,7 @@ export type TeamAdminSummary = {
 	displayName: string;
 	avatarUrl: string | null;
 	permissionRole: TeamPermissionRole;
-	orgRole: OrgRole | null;
+	orgRole: OrgPermissionRole | null;
 	source: "team" | "organization";
 };
 
@@ -203,7 +220,10 @@ export type TeamInviteSummary = {
 	teamTag: string;
 	teamAvatarUrl: string | null;
 	inviterDisplayName: string;
-	roleInTeam: OW2Role;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRole: OW2Role | null;
+	roleInTeam: OW2Role | null;
 	permissionRole: TeamPermissionRole;
 	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
@@ -216,7 +236,10 @@ export type TeamPendingInvite = {
 	inviteeUserId: string;
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
-	roleInTeam: OW2Role;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRole: OW2Role | null;
+	roleInTeam: OW2Role | null;
 	permissionRole: TeamPermissionRole;
 	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
@@ -238,16 +261,21 @@ export type TeamJoinRequestSummary = {
 	statusChangedAt: IsoDateString;
 };
 
+export type TeamWorkspaceConversation = RecruitmentConversationSummary;
+
 export type TeamWorkspaceDetail = TeamSummary & {
-	organizationName: string;
-	organizationSlug: string;
 	currentUser: TeamPermissions;
-	roster: RosterMember[];
+	members: TeamMemberSummary[];
+	players: TeamMemberSummary[];
+	staff: TeamMemberSummary[];
+	roster: TeamMemberSummary[];
 	admins: TeamAdminSummary[];
 	pendingInvites: TeamPendingInvite[];
 	pendingJoinRequests: TeamJoinRequestSummary[];
-	applications: LfgApplicationSummary[];
-	lfgPosts: LfgPostSummary[];
+	ownedPosts: RecruitmentPostSummary[];
+	conversations: TeamWorkspaceConversation[];
+	applications: RecruitmentResponseSummary[];
+	lfgPosts: RecruitmentPostSummary[];
 };
 
 export type TeamWithRoster = TeamWorkspaceDetail;
@@ -266,21 +294,25 @@ export type TeamPublicPreview = {
 	isRecruiting: boolean;
 	isArchived: boolean;
 	activeRosterCount: number;
+	openPostCount: number;
 	hasOpenRolePost: boolean;
 	hasPendingJoinRequest: boolean;
+	posts: RecruitmentPostSummary[];
 };
 
 // ─── Organization types ────────────────────────────────────────────────────
 
 export type OrgPermissions = {
-	role: OrgRole | null;
+	role: OrgPermissionRole | null;
 	canManage: boolean;
 	canDelete: boolean;
 	canTransferOwnership: boolean;
 	canLeave: boolean;
-	canReviewRequests: boolean;
 	canManageMembers: boolean;
 	canManageTeams: boolean;
+	canManageInvites: boolean;
+	canManageSettings: boolean;
+	canReviewRequests: boolean;
 };
 
 export type UserOrg = {
@@ -289,8 +321,9 @@ export type UserOrg = {
 	slug: string;
 	avatarUrl: string | null;
 	description: string | null;
-	role: OrgRole;
+	role: OrgPermissionRole;
 	teamCount: number;
+	openPostCount: number;
 	canManage: boolean;
 };
 
@@ -301,7 +334,11 @@ export type OrgMemberSummary = {
 	userId: string;
 	displayName: string;
 	avatarUrl: string | null;
-	role: OrgRole;
+	permissionRole: OrgPermissionRole;
+	role: OrgPermissionRole;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRole: OW2Role | null;
 	activeTeamCount: number;
 	joinedAt: IsoDateString;
 };
@@ -312,7 +349,11 @@ export type OrgInviteSummary = {
 	orgName: string;
 	orgAvatarUrl: string | null;
 	inviterDisplayName: string;
-	role: OrgRole;
+	permissionRole: OrgPermissionRole;
+	role: OrgPermissionRole;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRole: OW2Role | null;
 	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
@@ -324,7 +365,11 @@ export type OrgPendingInvite = {
 	inviteeUserId: string;
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
-	role: OrgRole;
+	permissionRole: OrgPermissionRole;
+	role: OrgPermissionRole;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRole: OW2Role | null;
 	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
@@ -357,6 +402,8 @@ export type OrgWorkspaceDetail = {
 	archivedTeams: OrgTeamSummary[];
 	members: OrgMemberSummary[];
 	pendingInvites: OrgPendingInvite[];
+	ownedPosts: RecruitmentPostSummary[];
+	conversations: RecruitmentConversationSummary[];
 	pendingJoinRequests: OrgJoinRequestSummary[];
 };
 
@@ -370,6 +417,7 @@ export type PublicOrgSummary = {
 	description: string | null;
 	teamCount: number;
 	activeRosterCount: number;
+	openPostCount: number;
 };
 
 export type PublicOrgDetail = {
@@ -382,6 +430,7 @@ export type PublicOrgDetail = {
 	teamCount: number;
 	activeRosterCount: number;
 	teams: OrgTeamSummary[];
+	openPosts: RecruitmentPostSummary[];
 	hasPendingJoinRequest: boolean;
 };
 
@@ -397,60 +446,140 @@ export type DiscoveryTeam = {
 	teamSr: number;
 	isRecruiting: boolean;
 	activeRosterCount: number;
+	openPostCount: number;
 };
 
 export type DiscoveryFilters = {
 	recruiting?: boolean;
 };
 
-// ─── LFG types ─────────────────────────────────────────────────────────────
+// ─── Recruitment types ─────────────────────────────────────────────────────
 
-export type LfgPostSummary = {
+export type RecruitmentPostSummary = {
 	id: string;
-	type: "team_seeking_player" | "player_seeking_team";
-	status: string;
-	rolesNeeded: string[];
+	category: RecruitmentPostCategory;
+	type: RecruitmentPostCategory;
+	status: RecruitmentPostStatus;
+	ownerType: RecruitmentOwnerType;
+	title: string;
+	description: string | null;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	gameRoles: OW2Role[];
+	rolesNeeded: OW2Role[];
 	minRank: string | null;
 	maxRank: string | null;
-	description: string | null;
+	minSr: number | null;
+	maxSr: number | null;
 	region: string | null;
 	expiresAt: IsoDateString | null;
 	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+	ownerUserId: string;
 	userId: string;
+	ownerDisplayName: string;
 	userDisplayName: string;
+	ownerAvatarUrl: string | null;
 	userAvatarUrl: string | null;
+	organizationId: string | null;
+	organizationName: string | null;
+	organizationSlug: string | null;
+	organizationAvatarUrl: string | null;
 	teamId: string | null;
 	teamName: string | null;
 	teamTag: string | null;
 	teamAvatarUrl: string | null;
 	teamSr: number | null;
+	responseCount: number;
+	hasResponded: boolean;
+	canManage: boolean;
+	canRespond: boolean;
 };
 
-export type LfgApplicationSummary = {
+export type RecruitmentResponseSummary = {
 	id: string;
 	postId: string;
-	status: string;
+	threadId: string | null;
+	status: RecruitmentResponseStatus;
 	message: string | null;
 	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+	senderType: RecruitmentOwnerType;
+	senderUserId: string;
+	senderDisplayName: string;
+	senderAvatarUrl: string | null;
+	senderOrganizationId: string | null;
+	senderOrganizationName: string | null;
+	senderTeamId: string | null;
+	senderTeamName: string | null;
+	senderTeamTag: string | null;
+	teamName: string | null;
+	teamTag: string | null;
+	senderMemberType: MemberType;
+	senderStaffRole: StaffRole | null;
+	senderGameRoles: OW2Role[];
+	senderPrimaryRole: OW2Role | null;
+	senderRank: string | null;
 	applicantUserId: string;
 	applicantDisplayName: string;
 	applicantAvatarUrl: string | null;
-	applicantPrimaryRole: string | null;
+	applicantPrimaryRole: OW2Role | null;
 	applicantRank: string | null;
+	postCategory: RecruitmentPostCategory;
+	postTitle: string;
 };
 
-export type UserApplicationSummary = {
-	id: string;
-	status: string;
-	message: string | null;
-	createdAt: IsoDateString;
+export type RecruitmentConversationSummary = {
+	threadId: string;
+	responseId: string;
 	postId: string;
-	teamName: string | null;
-	teamTag: string | null;
+	postCategory: RecruitmentPostCategory;
+	postTitle: string;
+	postStatus: RecruitmentPostStatus;
+	counterpartLabel: string;
+	counterpartAvatarUrl: string | null;
+	organizationId: string | null;
+	teamId: string | null;
+	lastMessagePreview: string | null;
+	lastMessageAt: IsoDateString | null;
+	unreadCount: number;
 };
+
+export type RecruitmentMessage = {
+	id: string;
+	threadId: string;
+	senderId: string;
+	senderDisplayName: string;
+	senderAvatarUrl: string | null;
+	content: string;
+	isSystemMessage: boolean;
+	createdAt: IsoDateString;
+};
+
+export type RecruitmentThreadParticipant = {
+	id: string;
+	displayName: string;
+	avatarUrl: string | null;
+};
+
+export type RecruitmentThread = {
+	id: string;
+	responseId: string;
+	post: RecruitmentPostSummary;
+	response: RecruitmentResponseSummary;
+	participants: RecruitmentThreadParticipant[];
+	messages: RecruitmentMessage[];
+};
+
+// ─── Legacy LFG aliases ────────────────────────────────────────────────────
+
+export type LfgPostSummary = RecruitmentPostSummary;
+export type LfgApplicationSummary = RecruitmentResponseSummary;
+export type UserApplicationSummary = RecruitmentResponseSummary;
 
 export type LfgFilters = {
-	type?: "team_seeking_player" | "player_seeking_team";
+	type?: RecruitmentPostCategory;
+	category?: RecruitmentPostCategory;
 	role?: string;
 	region?: string;
 };
@@ -506,6 +635,25 @@ export type UserTeam = {
 	id: string;
 	name: string;
 	tag: string;
+};
+
+// ─── Public player types ───────────────────────────────────────────────────
+
+export type PublicPlayerSummary = {
+	id: string;
+	username: string;
+	displayName: string;
+	avatarUrl: string | null;
+	bio: string | null;
+	primaryRole: OW2Role | null;
+	secondaryRole: OW2Role | null;
+	rank: string | null;
+	rankDivision: number | null;
+	openPosts: RecruitmentPostSummary[];
+};
+
+export type PublicPlayerDetail = PublicPlayerSummary & {
+	bannerUrl: string | null;
 };
 
 // ─── Hero types ────────────────────────────────────────────────────────────

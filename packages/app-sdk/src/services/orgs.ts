@@ -1,17 +1,42 @@
 import type { Transport } from "../transport";
 import type { MutationSuccess, SdkResult } from "../types";
 
-export type CreateOrgInput = { name: string; description?: string };
-export type UpdateOrgInput = { orgId: string; name: string; slug?: string; description?: string };
+export type CreateOrgInput = {
+	name: string;
+	description?: string;
+	avatarUrl?: string;
+	bannerUrl?: string;
+};
+export type UpdateOrgInput = {
+	orgId: string;
+	name: string;
+	slug?: string;
+	description?: string;
+	avatarUrl?: string;
+	bannerUrl?: string;
+};
 export type DeleteOrgInput = { orgId: string; confirmName: string };
 export type TransferOrgOwnershipInput = { orgId: string; memberId: string };
 export type UpdateOrgMemberRoleInput = { orgId: string; memberId: string; role: string };
+export type UpdateOrgMemberInput = {
+	orgId: string;
+	memberId: string;
+	role?: string;
+	memberType?: "player" | "staff";
+	staffRole?: "coach" | "analyst" | "manager" | "staff";
+	gameRole?: "tank" | "damage" | "support";
+};
 export type RemoveOrgMemberInput = { orgId: string; memberId: string };
-export type InviteOrgMemberInput = { orgId: string; userId: string; role: string };
+export type InviteOrgMemberInput = {
+	orgId: string;
+	userId: string;
+	role: string;
+	memberType?: "player" | "staff";
+	staffRole?: "coach" | "analyst" | "manager" | "staff";
+	gameRole?: "tank" | "damage" | "support";
+};
 export type RespondOrgInviteInput = { inviteId: string; action: string };
 export type ManageOrgInviteInput = { orgId: string; inviteId: string };
-export type CreateOrgRequestInput = { orgId: string; message?: string };
-export type RespondOrgRequestInput = { orgId: string; requestId: string; action: string };
 export type OrgScopedInput = { orgId: string };
 
 export class OrgsService {
@@ -26,6 +51,8 @@ export class OrgsService {
 			name: input.name,
 			slug: input.slug,
 			description: input.description,
+			avatarUrl: input.avatarUrl,
+			bannerUrl: input.bannerUrl,
 		});
 	}
 
@@ -48,6 +75,18 @@ export class OrgsService {
 		);
 	}
 
+	updateMember(input: UpdateOrgMemberInput): Promise<SdkResult<MutationSuccess>> {
+		return this.transport.patch<MutationSuccess>(
+			`/api/orgs/${input.orgId}/members/${input.memberId}/role`,
+			{
+				role: input.role,
+				memberType: input.memberType,
+				staffRole: input.staffRole,
+				gameRole: input.gameRole,
+			}
+		);
+	}
+
 	removeMember(input: RemoveOrgMemberInput): Promise<SdkResult<MutationSuccess>> {
 		return this.transport.delete<MutationSuccess>(
 			`/api/orgs/${input.orgId}/members/${input.memberId}`
@@ -58,6 +97,9 @@ export class OrgsService {
 		return this.transport.post<MutationSuccess>(`/api/orgs/${input.orgId}/invites`, {
 			userId: input.userId,
 			role: input.role,
+			memberType: input.memberType,
+			staffRole: input.staffRole,
+			gameRole: input.gameRole,
 		});
 	}
 
@@ -76,19 +118,6 @@ export class OrgsService {
 	resendInvite(input: ManageOrgInviteInput): Promise<SdkResult<MutationSuccess>> {
 		return this.transport.post<MutationSuccess>(
 			`/api/orgs/${input.orgId}/invites/${input.inviteId}/resend`
-		);
-	}
-
-	requestToJoin(input: CreateOrgRequestInput): Promise<SdkResult<MutationSuccess>> {
-		return this.transport.post<MutationSuccess>(`/api/orgs/${input.orgId}/requests`, {
-			message: input.message,
-		});
-	}
-
-	respondToRequest(input: RespondOrgRequestInput): Promise<SdkResult<MutationSuccess>> {
-		return this.transport.post<MutationSuccess>(
-			`/api/orgs/${input.orgId}/requests/${input.requestId}/respond`,
-			{ action: input.action }
 		);
 	}
 

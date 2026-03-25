@@ -2,13 +2,15 @@ import * as v from "valibot";
 
 const OW2_ROLE_VALUES = ["tank", "damage", "support"] as const;
 const ROSTER_STATUS_VALUES = ["active", "benched", "trial", "inactive"] as const;
-const ORG_ROLE_VALUES = ["owner", "manager", "coach", "analyst", "player"] as const;
+const ORG_ROLE_VALUES = ["owner", "admin", "member"] as const;
 const TEAM_PERMISSION_ROLE_VALUES = ["admin", "member"] as const;
+const MEMBER_TYPE_VALUES = ["player", "staff"] as const;
+const STAFF_ROLE_VALUES = ["coach", "analyst", "manager", "staff"] as const;
 const INVITE_ACTION_VALUES = ["accept", "decline"] as const;
 const REQUEST_ACTION_VALUES = ["approve", "reject", "cancel"] as const;
 
 const optionalDescription = v.optional(
-	v.pipe(v.string(), v.maxLength(280, "Description cannot exceed 280 characters"))
+	v.pipe(v.string(), v.trim(), v.maxLength(800, "Description cannot exceed 800 characters"))
 );
 
 const optionalMessage = v.optional(
@@ -25,6 +27,14 @@ const optionalSlug = v.optional(
 	)
 );
 
+const optionalUrl = v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500, "URL is too long")));
+
+const optionalGameRole = v.optional(v.picklist(OW2_ROLE_VALUES, "Please select a role"));
+const optionalStaffRole = v.optional(v.picklist(STAFF_ROLE_VALUES, "Please select a staff role"));
+const optionalPermissionRole = v.optional(
+	v.picklist(TEAM_PERMISSION_ROLE_VALUES, "Please select a team permission role")
+);
+
 // ─── Organisation ─────────────────────────────────────────────────────────────
 
 export const CreateOrgSchema = v.object({
@@ -35,6 +45,8 @@ export const CreateOrgSchema = v.object({
 		v.maxLength(50, "Organisation name cannot exceed 50 characters")
 	),
 	description: optionalDescription,
+	avatarUrl: optionalUrl,
+	bannerUrl: optionalUrl,
 });
 
 export type CreateOrgInput = v.InferOutput<typeof CreateOrgSchema>;
@@ -49,6 +61,8 @@ export const UpdateOrgSchema = v.object({
 	),
 	slug: optionalSlug,
 	description: optionalDescription,
+	avatarUrl: optionalUrl,
+	bannerUrl: optionalUrl,
 });
 
 export type UpdateOrgInput = v.InferOutput<typeof UpdateOrgSchema>;
@@ -75,6 +89,27 @@ export const UpdateOrgMemberRoleSchema = v.object({
 
 export type UpdateOrgMemberRoleInput = v.InferOutput<typeof UpdateOrgMemberRoleSchema>;
 
+export const UpdateOrgMemberSchema = v.pipe(
+	v.object({
+		orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
+		memberId: v.pipe(v.string(), v.uuid("Invalid member ID")),
+		role: v.optional(v.picklist(ORG_ROLE_VALUES, "Please select a role")),
+		memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
+		staffRole: optionalStaffRole,
+		gameRole: optionalGameRole,
+	}),
+	v.check(
+		(input) =>
+			input.role !== undefined ||
+			input.memberType !== undefined ||
+			input.staffRole !== undefined ||
+			input.gameRole !== undefined,
+		"Provide at least one organisation member field to update"
+	)
+);
+
+export type UpdateOrgMemberInput = v.InferOutput<typeof UpdateOrgMemberSchema>;
+
 export const RemoveOrgMemberSchema = v.object({
 	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 	memberId: v.pipe(v.string(), v.uuid("Invalid member ID")),
@@ -100,6 +135,7 @@ export const CreateTeamSchema = v.object({
 		v.regex(/^[A-Za-z0-9]+$/, "Tag must contain only letters and numbers")
 	),
 	description: optionalDescription,
+	avatarUrl: optionalUrl,
 });
 
 export type CreateTeamInput = v.InferOutput<typeof CreateTeamSchema>;
@@ -120,6 +156,7 @@ export const UpdateTeamSchema = v.object({
 		v.regex(/^[A-Za-z0-9]+$/, "Tag must contain only letters and numbers")
 	),
 	description: optionalDescription,
+	avatarUrl: optionalUrl,
 });
 
 export type UpdateTeamInput = v.InferOutput<typeof UpdateTeamSchema>;
@@ -137,16 +174,17 @@ export const TeamMemberScopedSchema = v.object({
 
 export type TeamMemberScopedInput = v.InferOutput<typeof TeamMemberScopedSchema>;
 
-// ─── Team roster ──────────────────────────────────────────────────────────────
+// ─── Team members ─────────────────────────────────────────────────────────────
 
 export const AddPlayerSchema = v.object({
 	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
 	userId: v.pipe(v.string(), v.uuid("Invalid user ID")),
-	roleInTeam: v.picklist(OW2_ROLE_VALUES, "Please select a role"),
+	memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
+	roleInTeam: optionalGameRole,
+	gameRole: optionalGameRole,
+	staffRole: optionalStaffRole,
 	status: v.picklist(ROSTER_STATUS_VALUES, "Please select a status"),
-	permissionRole: v.optional(
-		v.picklist(TEAM_PERMISSION_ROLE_VALUES, "Please select a team permission role")
-	),
+	permissionRole: optionalPermissionRole,
 });
 
 export type AddPlayerInput = v.InferOutput<typeof AddPlayerSchema>;
@@ -155,15 +193,19 @@ export const UpdateTeamMemberSchema = v.pipe(
 	v.object({
 		teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
 		memberId: v.pipe(v.string(), v.uuid("Invalid member ID")),
-		roleInTeam: v.optional(v.picklist(OW2_ROLE_VALUES, "Please select a role")),
+		memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
+		roleInTeam: optionalGameRole,
+		gameRole: optionalGameRole,
+		staffRole: optionalStaffRole,
 		status: v.optional(v.picklist(ROSTER_STATUS_VALUES, "Please select a status")),
-		permissionRole: v.optional(
-			v.picklist(TEAM_PERMISSION_ROLE_VALUES, "Please select a team permission role")
-		),
+		permissionRole: optionalPermissionRole,
 	}),
 	v.check(
 		(input) =>
+			input.memberType !== undefined ||
 			input.roleInTeam !== undefined ||
+			input.gameRole !== undefined ||
+			input.staffRole !== undefined ||
 			input.status !== undefined ||
 			input.permissionRole !== undefined,
 		"Provide at least one team member field to update"
@@ -214,10 +256,11 @@ export type DeleteTeamInput = v.InferOutput<typeof DeleteTeamSchema>;
 export const InviteToTeamSchema = v.object({
 	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
 	userId: v.pipe(v.string(), v.uuid("Invalid user ID")),
-	roleInTeam: v.picklist(OW2_ROLE_VALUES, "Please select a role"),
-	permissionRole: v.optional(
-		v.picklist(TEAM_PERMISSION_ROLE_VALUES, "Please select a permission role")
-	),
+	memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
+	roleInTeam: optionalGameRole,
+	gameRole: optionalGameRole,
+	staffRole: optionalStaffRole,
+	permissionRole: optionalPermissionRole,
 });
 
 export type InviteToTeamInput = v.InferOutput<typeof InviteToTeamSchema>;
@@ -241,7 +284,10 @@ export type CancelTeamInviteInput = v.InferOutput<typeof CancelTeamInviteSchema>
 export const InviteToOrgSchema = v.object({
 	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 	userId: v.pipe(v.string(), v.uuid("Invalid user ID")),
-	role: v.picklist(["manager", "coach", "analyst", "player"] as const, "Please select a role"),
+	role: v.picklist(["admin", "member"] as const, "Please select a role"),
+	memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
+	staffRole: optionalStaffRole,
+	gameRole: optionalGameRole,
 });
 
 export type InviteToOrgInput = v.InferOutput<typeof InviteToOrgSchema>;
@@ -253,7 +299,7 @@ export const RespondToOrgInviteSchema = v.object({
 
 export type RespondToOrgInviteInput = v.InferOutput<typeof RespondToOrgInviteSchema>;
 
-// ─── Join requests ────────────────────────────────────────────────────────────
+// ─── Legacy join request schemas ─────────────────────────────────────────────
 
 export const CreateOrgJoinRequestSchema = v.object({
 	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),

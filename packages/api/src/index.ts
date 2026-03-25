@@ -5,16 +5,20 @@ import { errorHandler } from "@/middleware/error-handler";
 import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
 import { heroRoutes } from "@/routes/heroes";
-import { lfgRoutes } from "@/routes/lfg";
 import { notificationRoutes } from "@/routes/notifications";
 import { onboardingRoutes } from "@/routes/onboarding";
 import { orgRoutes } from "@/routes/orgs";
 import { publicOrgRoutes } from "@/routes/orgs/public";
+import { publicPlayerRoutes } from "@/routes/players/public";
+import { postsRoutes } from "@/routes/posts";
+import { publicPostsRoutes } from "@/routes/posts/public";
 import { profileRoutes } from "@/routes/profile";
+import { responsesRoutes } from "@/routes/responses";
 import { scheduleRoutes } from "@/routes/schedule";
 import { settingsRoutes } from "@/routes/settings";
 import { teamRoutes } from "@/routes/teams";
 import { publicTeamRoutes } from "@/routes/teams/public";
+import { threadsRoutes } from "@/routes/threads";
 import { uploadRoutes } from "@/routes/uploads";
 import { userRoutes } from "@/routes/users";
 
@@ -44,8 +48,14 @@ app.route("/api/orgs", orgRoutes);
 app.use("/api/teams/*", requireAuth);
 app.route("/api/teams", teamRoutes);
 
-app.use("/api/lfg/*", requireAuth);
-app.route("/api/lfg", lfgRoutes);
+app.use("/api/posts/*", requireAuth);
+app.route("/api/posts", postsRoutes);
+
+app.use("/api/responses/*", requireAuth);
+app.route("/api/responses", responsesRoutes);
+
+app.use("/api/threads/*", requireAuth);
+app.route("/api/threads", threadsRoutes);
 
 app.use("/api/schedule/*", requireAuth);
 app.route("/api/schedule", scheduleRoutes);
@@ -63,6 +73,8 @@ app.route("/api/users", userRoutes);
 app.route("/api/heroes", heroRoutes);
 app.route("/api/public/teams", publicTeamRoutes);
 app.route("/api/public/orgs", publicOrgRoutes);
+app.route("/api/public/players", publicPlayerRoutes);
+app.route("/api/public/posts", publicPostsRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));

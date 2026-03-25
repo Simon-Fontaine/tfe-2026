@@ -1,5 +1,6 @@
 import { AuthService } from "./services/auth";
 import { OrgsService } from "./services/orgs";
+import { RecruitService } from "./services/recruit";
 import { TeamsService } from "./services/teams";
 import { Transport } from "./transport";
 import type { SdkClientConfig } from "./types";
@@ -9,6 +10,7 @@ export function createAppSdk(config: SdkClientConfig) {
 	return {
 		auth: new AuthService(transport),
 		orgs: new OrgsService(transport),
+		recruit: new RecruitService(transport),
 		teams: new TeamsService(transport),
 	};
 }

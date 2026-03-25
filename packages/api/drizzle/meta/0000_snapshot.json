@@ -1,5 +1,5 @@
 {
-	"id": "f1c9422e-e1e0-4196-b8a6-4fc0fad75e34",
+	"id": "ae261ac4-4784-49ec-b041-fe6eabd7bf3c",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -3120,27 +3120,6 @@
 				}
 			},
 			"indexes": {
-				"org_invite_unique_idx": {
-					"name": "org_invite_unique_idx",
-					"columns": [
-						{
-							"expression": "organization_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						},
-						{
-							"expression": "invitee_user_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						}
-					],
-					"isUnique": true,
-					"concurrently": false,
-					"method": "btree",
-					"with": {}
-				},
 				"org_invite_org_idx": {
 					"name": "org_invite_org_idx",
 					"columns": [
@@ -3198,6 +3177,116 @@
 					"columnsFrom": ["inviter_user_id"],
 					"columnsTo": ["id"],
 					"onDelete": "restrict",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.org_join_request": {
+			"name": "org_join_request",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"organization_id": {
+					"name": "organization_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"requester_user_id": {
+					"name": "requester_user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"message": {
+					"name": "message",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"status": {
+					"name": "status",
+					"type": "join_request_status",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'pending'"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"org_join_request_org_idx": {
+					"name": "org_join_request_org_idx",
+					"columns": [
+						{
+							"expression": "organization_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"org_join_request_requester_idx": {
+					"name": "org_join_request_requester_idx",
+					"columns": [
+						{
+							"expression": "requester_user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"org_join_request_organization_id_organization_id_fk": {
+					"name": "org_join_request_organization_id_organization_id_fk",
+					"tableFrom": "org_join_request",
+					"tableTo": "organization",
+					"columnsFrom": ["organization_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"org_join_request_requester_user_id_user_id_fk": {
+					"name": "org_join_request_requester_user_id_user_id_fk",
+					"tableFrom": "org_join_request",
+					"tableTo": "user",
+					"columnsFrom": ["requester_user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
 					"onUpdate": "no action"
 				}
 			},
@@ -4777,6 +4866,14 @@
 					"primaryKey": false,
 					"notNull": true
 				},
+				"permission_role": {
+					"name": "permission_role",
+					"type": "team_member_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'member'"
+				},
 				"status": {
 					"name": "status",
 					"type": "team_invite_status",
@@ -4807,27 +4904,6 @@
 				}
 			},
 			"indexes": {
-				"team_invite_unique_idx": {
-					"name": "team_invite_unique_idx",
-					"columns": [
-						{
-							"expression": "team_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						},
-						{
-							"expression": "invitee_user_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						}
-					],
-					"isUnique": true,
-					"concurrently": false,
-					"method": "btree",
-					"with": {}
-				},
 				"team_invite_team_idx": {
 					"name": "team_invite_team_idx",
 					"columns": [
@@ -4894,6 +4970,123 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
+		"public.team_join_request": {
+			"name": "team_join_request",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"team_id": {
+					"name": "team_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"requester_user_id": {
+					"name": "requester_user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"requested_role_in_team": {
+					"name": "requested_role_in_team",
+					"type": "ow2_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"message": {
+					"name": "message",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"status": {
+					"name": "status",
+					"type": "join_request_status",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'pending'"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"team_join_request_team_idx": {
+					"name": "team_join_request_team_idx",
+					"columns": [
+						{
+							"expression": "team_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"team_join_request_requester_idx": {
+					"name": "team_join_request_requester_idx",
+					"columns": [
+						{
+							"expression": "requester_user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"team_join_request_team_id_team_id_fk": {
+					"name": "team_join_request_team_id_team_id_fk",
+					"tableFrom": "team_join_request",
+					"tableTo": "team",
+					"columnsFrom": ["team_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"team_join_request_requester_user_id_user_id_fk": {
+					"name": "team_join_request_requester_user_id_user_id_fk",
+					"tableFrom": "team_join_request",
+					"tableTo": "user",
+					"columnsFrom": ["requester_user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
 		"public.team_roster": {
 			"name": "team_roster",
 			"schema": "",
@@ -4923,6 +5116,14 @@
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true
+				},
+				"permission_role": {
+					"name": "permission_role",
+					"type": "team_member_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'member'"
 				},
 				"status": {
 					"name": "status",
@@ -5252,6 +5453,11 @@
 				"unranked_open_queue"
 			]
 		},
+		"public.join_request_status": {
+			"name": "join_request_status",
+			"schema": "public",
+			"values": ["pending", "approved", "rejected", "withdrawn", "cancelled"]
+		},
 		"public.lfg_application_status": {
 			"name": "lfg_application_status",
 			"schema": "public",
@@ -5377,6 +5583,11 @@
 			"name": "team_invite_status",
 			"schema": "public",
 			"values": ["pending", "accepted", "declined", "expired", "cancelled"]
+		},
+		"public.team_member_role": {
+			"name": "team_member_role",
+			"schema": "public",
+			"values": ["admin", "member"]
 		},
 		"public.verification_action": {
 			"name": "verification_action",

@@ -14,8 +14,18 @@ export type {
 	RespondOrgInviteInput,
 	TransferOrgOwnershipInput,
 	UpdateOrgInput,
+	UpdateOrgMemberInput,
 	UpdateOrgMemberRoleInput,
 } from "./services/orgs";
+export type {
+	CreateRecruitmentPostInput,
+	CreateRecruitmentResponseInput,
+	DecideRecruitmentResponseInput,
+	DeleteRecruitmentPostInput,
+	SendRecruitmentMessageInput,
+	UpdateRecruitmentPostInput,
+	WithdrawRecruitmentResponseInput,
+} from "./services/recruit";
 export type {
 	CreateTeamInput,
 	InviteToTeamInput,

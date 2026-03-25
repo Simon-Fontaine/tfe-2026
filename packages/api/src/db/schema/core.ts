@@ -24,14 +24,17 @@ import {
 	lfgTypeEnum,
 	mapTypeEnum,
 	matchResultEnum,
+	memberTypeEnum,
 	notificationTypeEnum,
 	ocrJobStatusEnum,
 	orgInviteStatusEnum,
 	orgRoleEnum,
 	ow2RankEnum,
 	ow2RoleEnum,
+	recruitmentOwnerTypeEnum,
 	rosterStatusEnum,
 	scrimStatusEnum,
+	staffRoleEnum,
 	teamInviteStatusEnum,
 	teamMemberRoleEnum,
 } from "./enums";
@@ -253,7 +256,10 @@ export const organizationMemberTable = pgTable(
 		userId: uuid("user_id")
 			.notNull()
 			.references(() => userTable.id, { onDelete: "cascade" }),
-		role: orgRoleEnum("role").notNull().default("player"),
+		role: orgRoleEnum("role").notNull().default("member"),
+		memberType: memberTypeEnum("member_type").notNull().default("player"),
+		staffRole: staffRoleEnum("staff_role"),
+		gameRole: ow2RoleEnum("game_role"),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -333,7 +339,9 @@ export const teamRosterTable = pgTable(
 			.references(() => userTable.id, { onDelete: "cascade" }),
 
 		/** Role on this specific team. */
-		roleInTeam: ow2RoleEnum("role_in_team").notNull(),
+		memberType: memberTypeEnum("member_type").notNull().default("player"),
+		roleInTeam: ow2RoleEnum("role_in_team"),
+		staffRole: staffRoleEnum("staff_role"),
 		permissionRole: teamMemberRoleEnum("permission_role").notNull().default("member"),
 		status: rosterStatusEnum("status").notNull().default("active"),
 
@@ -370,14 +378,23 @@ export const lfgPostTable = pgTable(
 		id: uuid("id").primaryKey().defaultRandom(),
 		type: lfgTypeEnum("type").notNull(),
 		status: lfgStatusEnum("status").notNull().default("open"),
+		ownerType: recruitmentOwnerTypeEnum("owner_type").notNull().default("player"),
 
 		/** User who created the post. */
 		userId: uuid("user_id")
 			.notNull()
 			.references(() => userTable.id, { onDelete: "cascade" }),
 
-		/** Set only for team_seeking_player posts. */
+		organizationId: uuid("organization_id").references(() => organizationTable.id, {
+			onDelete: "cascade",
+		}),
+
+		/** Set for team-owned posts. */
 		teamId: uuid("team_id").references(() => teamTable.id, { onDelete: "cascade" }),
+
+		title: text("title").notNull().default(""),
+		memberType: memberTypeEnum("member_type").notNull().default("player"),
+		staffRole: staffRoleEnum("staff_role"),
 
 		/** Target roles as JSONB array. */
 		rolesNeeded: jsonb("roles_needed").$type<string[]>().notNull().default([]),
@@ -443,6 +460,12 @@ export const lfgApplicationTable = pgTable(
 		applicantTeamId: uuid("applicant_team_id").references(() => teamTable.id, {
 			onDelete: "cascade",
 		}),
+		applicantOrganizationId: uuid("applicant_organization_id").references(
+			() => organizationTable.id,
+			{
+				onDelete: "cascade",
+			}
+		),
 
 		message: text("message"),
 		status: lfgApplicationStatusEnum("status").notNull().default("pending"),
@@ -1005,7 +1028,9 @@ export const teamInviteTable = pgTable(
 			.references(() => userTable.id, { onDelete: "restrict" }),
 
 		/** Role the invitee will join with. */
-		roleInTeam: ow2RoleEnum("role_in_team").notNull(),
+		memberType: memberTypeEnum("member_type").notNull().default("player"),
+		roleInTeam: ow2RoleEnum("role_in_team"),
+		staffRole: staffRoleEnum("staff_role"),
 		permissionRole: teamMemberRoleEnum("permission_role").notNull().default("member"),
 
 		status: teamInviteStatusEnum("status").notNull().default("pending"),
@@ -1051,7 +1076,10 @@ export const orgInviteTable = pgTable(
 			.references(() => userTable.id, { onDelete: "restrict" }),
 
 		/** Role the invitee will join as. */
-		role: orgRoleEnum("role").notNull().default("player"),
+		role: orgRoleEnum("role").notNull().default("member"),
+		memberType: memberTypeEnum("member_type").notNull().default("player"),
+		staffRole: staffRoleEnum("staff_role"),
+		gameRole: ow2RoleEnum("game_role"),
 
 		status: orgInviteStatusEnum("status").notNull().default("pending"),
 

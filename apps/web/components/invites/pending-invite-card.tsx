@@ -1,10 +1,8 @@
 "use client";
 
 import { canRespondToInvite } from "@scrimflow/shared";
-import {
-	respondToOrgInviteAction,
-	respondToTeamInviteAction,
-} from "@/app/dashboard/invites/actions/mutations";
+import { respondToOrgInviteAction } from "@/app/dashboard/workspace/orgs/actions/org";
+import { respondToTeamInviteAction } from "@/app/dashboard/workspace/orgs/actions/team";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,10 +20,9 @@ const ROLE_LABELS: Record<string, string> = {
 	damage: "DPS",
 	support: "Support",
 	owner: "Owner",
-	manager: "Manager",
-	coach: "Coach",
-	analyst: "Analyst",
-	player: "Player",
+	admin: "Admin",
+	member: "Member",
+	staff: "Staff",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -64,7 +61,10 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 	const name = props.type === "team" ? props.invite.teamName : props.invite.orgName;
 	const avatarUrl = props.type === "team" ? props.invite.teamAvatarUrl : props.invite.orgAvatarUrl;
 	const tag = props.type === "team" ? props.invite.teamTag : null;
-	const role = props.type === "team" ? props.invite.roleInTeam : props.invite.role;
+	const role =
+		props.type === "team"
+			? (props.invite.roleInTeam ?? props.invite.staffRole ?? props.invite.memberType)
+			: props.invite.role;
 	const permissionRole = props.type === "team" ? props.invite.permissionRole : null;
 	const canRespond = canRespondToInvite(props.invite.status, props.invite.expiresAt);
 

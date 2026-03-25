@@ -1,1 +1,1 @@
-export { lfgRoutes } from "@/routes/lfg";
+export {};

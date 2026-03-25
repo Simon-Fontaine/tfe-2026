@@ -5,7 +5,7 @@ import {
 	deleteTeamAction,
 	leaveTeamAction,
 	unarchiveTeamAction,
-} from "@/app/dashboard/teams/actions/team";
+} from "@/app/dashboard/workspace/orgs/actions/team";
 import { EditTeamDialog } from "@/components/teams/edit-team-dialog";
 import { RecruitingToggle } from "@/components/teams/recruiting-toggle";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ interface TeamSettingsPanelProps {
 export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 	const canManageSettings = team.currentUser.canManageSettings;
 	const canManageLifecycle =
-		team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "manager";
+		team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin";
 	const archiveForm = useFormAction(archiveTeamAction, {
 		loadingMessage: "Archiving team…",
 		successMessage: "Team archived",
@@ -76,6 +76,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 								name: team.name,
 								tag: team.tag,
 								description: team.description,
+								avatarUrl: team.avatarUrl,
 							}}
 						>
 							<Button size="sm" variant="outline">

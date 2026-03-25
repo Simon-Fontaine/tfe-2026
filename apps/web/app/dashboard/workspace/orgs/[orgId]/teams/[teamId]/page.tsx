@@ -1,14 +1,15 @@
-import { ArrowLeft01Icon, Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowLeft01Icon, Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
+import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { RecruitmentPostFormDialog } from "@/components/recruit/recruitment-post-form-dialog";
 import { AddPlayerDialog } from "@/components/teams/add-player-dialog";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { RecruitingToggle } from "@/components/teams/recruiting-toggle";
 import { RosterTable } from "@/components/teams/roster-table";
-import { TeamApplicationsSection } from "@/components/teams/team-applications-section";
 import { TeamInvitesSection } from "@/components/teams/team-invites-section";
-import { TeamJoinRequestsSection } from "@/components/teams/team-join-requests-section";
 import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
+import { getRecruitmentResponsesForPost } from "@/lib/data/recruit";
 import { getTeamWithRoster } from "@/lib/data/teams";
 import { dashboardRoutes } from "@/lib/routes";
 
@@ -33,10 +35,17 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 
 	const canManage = team.currentUser.canManage;
 	const canManageAdmins = team.currentUser.canManageAdmins;
-	const openPostCount = team.lfgPosts.filter((post) => post.status === "open").length;
+	const openPostCount = team.ownedPosts.filter((post) => post.status === "open").length;
+	const responsesByPost = new Map(
+		await Promise.all(
+			team.ownedPosts.map(
+				async (post) => [post.id, await getRecruitmentResponsesForPost(post.id)] as const
+			)
+		)
+	);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+		<div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
 			<Button asChild variant="ghost" size="sm" className="-ml-2">
 				<Link href={dashboardRoutes.workspace.orgById(team.organizationId)}>
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
@@ -71,9 +80,11 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 			<Tabs defaultValue="overview" className="space-y-4">
 				<TabsList variant="line">
 					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="roster">Roster</TabsTrigger>
-					{canManage && <TabsTrigger value="requests">Requests & Invites</TabsTrigger>}
-					{canManage && <TabsTrigger value="applications">Applications</TabsTrigger>}
+					<TabsTrigger value="players">Players</TabsTrigger>
+					<TabsTrigger value="staff">Staff</TabsTrigger>
+					<TabsTrigger value="posts">Posts</TabsTrigger>
+					<TabsTrigger value="conversations">Conversations</TabsTrigger>
+					<TabsTrigger value="invitations">Invitations</TabsTrigger>
 					{(canManage || team.currentUser.canLeave) && (
 						<TabsTrigger value="settings">Settings</TabsTrigger>
 					)}
@@ -86,12 +97,12 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 						</CardHeader>
 						<CardContent className="grid gap-3 sm:grid-cols-4">
 							<div className="border p-4">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Roster</p>
-								<p className="mt-2 text-2xl font-semibold">{team.activeRosterCount}</p>
+								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Players</p>
+								<p className="mt-2 text-2xl font-semibold">{team.players.length}</p>
 							</div>
 							<div className="border p-4">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Admins</p>
-								<p className="mt-2 text-2xl font-semibold">{team.adminCount}</p>
+								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Staff</p>
+								<p className="mt-2 text-2xl font-semibold">{team.staff.length}</p>
 							</div>
 							<div className="border p-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Invites</p>
@@ -99,9 +110,9 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 							</div>
 							<div className="border p-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-									Requests
+									Open posts
 								</p>
-								<p className="mt-2 text-2xl font-semibold">{team.pendingJoinRequests.length}</p>
+								<p className="mt-2 text-2xl font-semibold">{openPostCount}</p>
 							</div>
 						</CardContent>
 					</Card>
@@ -141,7 +152,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 										<p className="truncate text-xs font-medium">{admin.displayName}</p>
 										<p className="text-[11px] text-muted-foreground capitalize">
 											{admin.source === "organization"
-												? `${admin.orgRole} admin`
+												? `${admin.orgRole} access`
 												: `${admin.permissionRole} access`}
 										</p>
 									</div>
@@ -151,23 +162,33 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					</Card>
 				</TabsContent>
 
-				<TabsContent value="roster" className="space-y-4">
+				<TabsContent value="players" className="space-y-4">
 					<div className="flex items-center justify-between">
 						<div>
-							<p className="text-sm font-medium">Roster</p>
+							<p className="text-sm font-medium">Players</p>
 							<p className="text-xs text-muted-foreground">
-								Manage players, roles, and delegated admins.
+								Manage rostered players, their roles, and delegated admin access.
 							</p>
 						</div>
 						{canManage && (
 							<div className="flex gap-2">
-								<InvitePlayerDialog teamId={team.id} canManageAdmins={canManageAdmins}>
+								<InvitePlayerDialog
+									teamId={team.id}
+									canManageAdmins={canManageAdmins}
+									defaultMemberType="player"
+									title="Invite player"
+								>
 									<Button size="sm" variant="outline">
 										<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-										Invite
+										Invite player
 									</Button>
 								</InvitePlayerDialog>
-								<AddPlayerDialog teamId={team.id} canManageAdmins={canManageAdmins}>
+								<AddPlayerDialog
+									teamId={team.id}
+									canManageAdmins={canManageAdmins}
+									defaultMemberType="player"
+									title="Add player"
+								>
 									<Button size="sm" variant="outline">
 										<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 										Add player
@@ -177,49 +198,137 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 						)}
 					</div>
 					<RosterTable
-						roster={team.roster}
+						roster={team.players}
 						canManage={canManage}
 						canManageAdmins={canManageAdmins}
 						teamId={team.id}
+						emptyLabel="No players on this team yet."
 					/>
 				</TabsContent>
 
-				{canManage && (
-					<TabsContent value="requests" className="space-y-4">
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-sm">Join requests</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<TeamJoinRequestsSection teamId={team.id} requests={team.pendingJoinRequests} />
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-sm">Pending invites</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<TeamInvitesSection teamId={team.id} invites={team.pendingInvites} />
-							</CardContent>
-						</Card>
-					</TabsContent>
-				)}
+				<TabsContent value="staff" className="space-y-4">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium">Staff</p>
+							<p className="text-xs text-muted-foreground">
+								Manage coaches, analysts, and managers through the same team membership model.
+							</p>
+						</div>
+						{canManage && (
+							<div className="flex gap-2">
+								<InvitePlayerDialog
+									teamId={team.id}
+									canManageAdmins={canManageAdmins}
+									defaultMemberType="staff"
+									title="Invite staff"
+								>
+									<Button size="sm" variant="outline">
+										<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+										Invite staff
+									</Button>
+								</InvitePlayerDialog>
+								<AddPlayerDialog
+									teamId={team.id}
+									canManageAdmins={canManageAdmins}
+									defaultMemberType="staff"
+									title="Add staff"
+								>
+									<Button size="sm" variant="outline">
+										<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+										Add staff
+									</Button>
+								</AddPlayerDialog>
+							</div>
+						)}
+					</div>
+					<RosterTable
+						roster={team.staff}
+						canManage={canManage}
+						canManageAdmins={canManageAdmins}
+						teamId={team.id}
+						emptyLabel="No staff members on this team yet."
+					/>
+				</TabsContent>
 
-				{canManage && (
-					<TabsContent value="applications" className="space-y-4">
-						<Card>
-							<CardHeader className="flex flex-row items-center justify-between pb-3">
-								<CardTitle className="text-sm">LFG applications</CardTitle>
-								<span className="text-xs text-muted-foreground">
-									{openPostCount} open post{openPostCount === 1 ? "" : "s"}
-								</span>
-							</CardHeader>
-							<CardContent>
-								<TeamApplicationsSection applications={team.applications} teamId={team.id} />
-							</CardContent>
-						</Card>
-					</TabsContent>
-				)}
+				<TabsContent value="posts" className="space-y-4">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium">Team posts</p>
+							<p className="text-xs text-muted-foreground">
+								Publish openings for players, ringers, and team staff from this workspace.
+							</p>
+						</div>
+						{canManage && (
+							<RecruitmentPostFormDialog fixedOwnerType="team" fixedTeamId={team.id}>
+								<Button size="sm">
+									<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									New post
+								</Button>
+							</RecruitmentPostFormDialog>
+						)}
+					</div>
+
+					{team.ownedPosts.length === 0 ? (
+						<div className="border border-dashed px-6 py-10 text-center">
+							<p className="text-sm font-medium">No team posts yet</p>
+							<p className="mt-1 text-xs text-muted-foreground">
+								Create a post here to replace Discord recruiting threads for this team.
+							</p>
+						</div>
+					) : (
+						<div className="space-y-4">
+							{team.ownedPosts.map((post) => (
+								<RecruitmentPostCard
+									key={post.id}
+									post={post}
+									currentUserId={user.id}
+									responses={responsesByPost.get(post.id) ?? []}
+									teamId={team.id}
+									organizationId={team.organizationId}
+								/>
+							))}
+						</div>
+					)}
+				</TabsContent>
+
+				<TabsContent value="conversations" className="space-y-4">
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-sm">Recruit conversations</CardTitle>
+						</CardHeader>
+						<CardContent>
+							{team.conversations.length === 0 ? (
+								<p className="text-xs text-muted-foreground">
+									No recruiting conversations have started for this team yet.
+								</p>
+							) : (
+								<div className="space-y-2">
+									{team.conversations.map((conversation) => (
+										<Link
+											key={conversation.threadId}
+											href={`${dashboardRoutes.recruit.conversations}?thread=${conversation.threadId}`}
+											className="block border px-4 py-3 transition-colors hover:bg-muted/50"
+										>
+											<p className="text-sm font-medium">{conversation.counterpartLabel}</p>
+											<p className="mt-1 text-xs text-muted-foreground">{conversation.postTitle}</p>
+										</Link>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="invitations" className="space-y-4">
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-sm">Pending invites</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<TeamInvitesSection teamId={team.id} invites={team.pendingInvites} />
+						</CardContent>
+					</Card>
+				</TabsContent>
 
 				{(canManage || team.currentUser.canLeave) && (
 					<TabsContent value="settings">

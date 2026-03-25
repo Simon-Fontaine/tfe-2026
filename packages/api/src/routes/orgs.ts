@@ -1,13 +1,11 @@
 import {
-	CreateOrgJoinRequestSchema,
 	CreateOrgSchema,
 	canAssignOrgRole,
 	DeleteOrgSchema,
 	InviteToOrgSchema,
 	RespondToOrgInviteSchema,
-	RespondToOrgJoinRequestSchema,
 	TransferOrgOwnershipSchema,
-	UpdateOrgMemberRoleSchema,
+	UpdateOrgMemberSchema,
 	UpdateOrgSchema,
 } from "@scrimflow/shared";
 import { and, asc, desc, eq } from "drizzle-orm";
@@ -16,10 +14,10 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import {
+	lfgPostTable,
 	organizationMemberTable,
 	organizationTable,
 	orgInviteTable,
-	orgJoinRequestTable,
 	teamRosterTable,
 	teamTable,
 } from "@/db/schema";
@@ -27,11 +25,57 @@ import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
 import { ensureUniqueSlug, getOrgPermissions, getUserOrgRole, nameToSlug } from "@/utils/org";
+import {
+	ensureOrganizationMembership,
+	getRecruitmentConversationsForUser,
+	mapRecruitmentPost,
+} from "@/utils/recruit";
 
 const orgRoutes = new Hono<AuthEnv>();
 
 function getEffectiveInviteStatus(status: string, expiresAt: Date) {
 	return status === "pending" && expiresAt < new Date() ? "expired" : status;
+}
+
+function toOrgTeamSummary(
+	org: { id: string; name: string; slug: string },
+	team: {
+		id: string;
+		organizationId: string;
+		name: string;
+		tag: string;
+		description: string | null;
+		avatarUrl: string | null;
+		teamSr: number;
+		matchesPlayed: number;
+		isRecruiting: boolean;
+		isArchived: boolean;
+		roster: Array<{ userId: string; permissionRole: "admin" | "member"; status: string }>;
+	}
+) {
+	const activeRosterCount = team.roster.filter((member) => member.status !== "inactive").length;
+	const adminCount = new Set(
+		team.roster
+			.filter((member) => member.status !== "inactive" && member.permissionRole === "admin")
+			.map((member) => member.userId)
+	).size;
+
+	return {
+		id: team.id,
+		organizationId: team.organizationId,
+		organizationName: org.name,
+		organizationSlug: org.slug,
+		name: team.name,
+		tag: team.tag,
+		description: team.description ?? null,
+		avatarUrl: team.avatarUrl,
+		teamSr: team.teamSr,
+		matchesPlayed: team.matchesPlayed,
+		isRecruiting: team.isRecruiting,
+		isArchived: team.isArchived,
+		activeRosterCount,
+		adminCount,
+	};
 }
 
 async function getOrgWorkspaceDetail(orgId: string, userId: string) {
@@ -53,6 +97,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			teams: {
 				columns: {
 					id: true,
+					organizationId: true,
 					name: true,
 					tag: true,
 					description: true,
@@ -65,7 +110,6 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 				with: {
 					roster: {
 						columns: {
-							id: true,
 							userId: true,
 							permissionRole: true,
 							status: true,
@@ -86,69 +130,41 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 	});
 	if (!org) return null;
 
-	const [inviteRows, requestRows] = await Promise.all([
+	const [inviteRows, postRows, conversations] = await Promise.all([
 		db.query.orgInviteTable.findMany({
 			where: eq(orgInviteTable.organizationId, orgId),
 			with: {
-				invitee: {
-					columns: { id: true, displayName: true, avatarUrl: true },
-				},
+				invitee: { columns: { id: true, displayName: true, avatarUrl: true } },
 			},
 			orderBy: [desc(orgInviteTable.createdAt)],
 		}),
-		db.query.orgJoinRequestTable.findMany({
-			where: eq(orgJoinRequestTable.organizationId, orgId),
+		db.query.lfgPostTable.findMany({
+			where: eq(lfgPostTable.organizationId, orgId),
 			with: {
-				requester: {
-					columns: { id: true, displayName: true, avatarUrl: true },
-					with: {
-						profile: {
-							columns: { primaryRole: true, rank: true },
-						},
-					},
+				user: { columns: { id: true, displayName: true, avatarUrl: true } },
+				organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+				team: {
+					columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },
+				},
+				applications: {
+					columns: { id: true, status: true, applicantUserId: true },
 				},
 			},
-			orderBy: [desc(orgJoinRequestTable.createdAt)],
+			orderBy: [desc(lfgPostTable.createdAt)],
 		}),
+		getRecruitmentConversationsForUser(userId),
 	]);
 
-	const orgAdminCount = org.members.filter(
-		(member) => member.role === "owner" || member.role === "manager"
-	).length;
-	const activeRosterCountsByUser = new Map<string, number>();
-
+	const activeTeamCountsByUser = new Map<string, number>();
 	for (const team of org.teams) {
-		for (const rosterRow of team.roster) {
-			if (rosterRow.status === "inactive") continue;
-			activeRosterCountsByUser.set(
-				rosterRow.userId,
-				(activeRosterCountsByUser.get(rosterRow.userId) ?? 0) + 1
+		for (const member of team.roster) {
+			if (member.status === "inactive") continue;
+			activeTeamCountsByUser.set(
+				member.userId,
+				(activeTeamCountsByUser.get(member.userId) ?? 0) + 1
 			);
 		}
 	}
-
-	const teamSummaries = org.teams.map((team) => {
-		const teamAdminCount = new Set(
-			team.roster
-				.filter((row) => row.status !== "inactive" && row.permissionRole === "admin")
-				.map((row) => row.userId)
-		).size;
-
-		return {
-			id: team.id,
-			organizationId: org.id,
-			name: team.name,
-			tag: team.tag,
-			description: team.description ?? null,
-			avatarUrl: team.avatarUrl,
-			teamSr: team.teamSr,
-			matchesPlayed: team.matchesPlayed,
-			isRecruiting: team.isRecruiting,
-			isArchived: team.isArchived,
-			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
-			adminCount: teamAdminCount + orgAdminCount,
-		};
-	});
 
 	return {
 		id: org.id,
@@ -164,48 +180,56 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			canDelete: permissions.canDelete,
 			canTransferOwnership: permissions.canTransferOwnership,
 			canLeave: permissions.canLeave,
-			canReviewRequests: permissions.canReviewRequests,
 			canManageMembers: permissions.canManageMembers,
 			canManageTeams: permissions.canManageTeams,
+			canManageInvites: permissions.canManage,
+			canManageSettings: permissions.canManage,
+			canReviewRequests: false,
 		},
-		activeTeams: teamSummaries.filter((team) => !team.isArchived),
-		archivedTeams: teamSummaries.filter((team) => team.isArchived),
+		activeTeams: org.teams
+			.filter((team) => !team.isArchived)
+			.map((team) => toOrgTeamSummary(org, team)),
+		archivedTeams: org.teams
+			.filter((team) => team.isArchived)
+			.map((team) => toOrgTeamSummary(org, team)),
 		members: org.members.map((member) => ({
 			id: member.id,
 			userId: member.user.id,
 			displayName: member.user.displayName,
 			avatarUrl: member.user.avatarUrl,
+			permissionRole: member.role,
 			role: member.role,
-			activeTeamCount: activeRosterCountsByUser.get(member.user.id) ?? 0,
-			joinedAt: member.createdAt,
+			memberType: member.memberType,
+			staffRole: member.staffRole ?? null,
+			gameRole: member.gameRole ?? null,
+			activeTeamCount: activeTeamCountsByUser.get(member.user.id) ?? 0,
+			joinedAt: member.createdAt.toISOString(),
 		})),
 		pendingInvites: inviteRows
-			.map((row) => ({
-				id: row.id,
-				inviteeUserId: row.invitee.id,
-				inviteeDisplayName: row.invitee.displayName,
-				inviteeAvatarUrl: row.invitee.avatarUrl,
-				role: row.role,
-				status: getEffectiveInviteStatus(row.status, row.expiresAt),
-				expiresAt: row.expiresAt,
-				createdAt: row.createdAt,
-				statusChangedAt: row.updatedAt,
+			.map((invite) => ({
+				id: invite.id,
+				inviteeUserId: invite.invitee.id,
+				inviteeDisplayName: invite.invitee.displayName,
+				inviteeAvatarUrl: invite.invitee.avatarUrl,
+				permissionRole: invite.role,
+				role: invite.role,
+				memberType: invite.memberType,
+				staffRole: invite.staffRole ?? null,
+				gameRole: invite.gameRole ?? null,
+				status: getEffectiveInviteStatus(invite.status, invite.expiresAt),
+				expiresAt: invite.expiresAt.toISOString(),
+				createdAt: invite.createdAt.toISOString(),
+				statusChangedAt: invite.updatedAt.toISOString(),
 			}))
-			.filter((row) => row.status === "pending"),
-		pendingJoinRequests: requestRows
-			.filter((row) => row.status === "pending")
-			.map((row) => ({
-				id: row.id,
-				requesterUserId: row.requester.id,
-				requesterDisplayName: row.requester.displayName,
-				requesterAvatarUrl: row.requester.avatarUrl,
-				requesterPrimaryRole: row.requester.profile?.primaryRole ?? null,
-				requesterRank: row.requester.profile?.rank ?? null,
-				message: row.message ?? null,
-				status: row.status,
-				createdAt: row.createdAt,
-				statusChangedAt: row.updatedAt,
-			})),
+			.filter((invite) => invite.status === "pending"),
+		ownedPosts: postRows.map((post) =>
+			mapRecruitmentPost(post, {
+				viewerId: userId,
+				canManage: permissions.canManage,
+			})
+		),
+		conversations: conversations.filter((conversation) => conversation.organizationId === orgId),
+		pendingJoinRequests: [],
 	};
 }
 
@@ -228,6 +252,10 @@ orgRoutes.get("/", async (c) => {
 						where: eq(teamTable.isArchived, false),
 						columns: { id: true },
 					},
+					lfgPosts: {
+						where: eq(lfgPostTable.status, "open"),
+						columns: { id: true },
+					},
 				},
 			},
 		},
@@ -243,7 +271,8 @@ orgRoutes.get("/", async (c) => {
 			description: membership.organization.description ?? null,
 			role: membership.role,
 			teamCount: membership.organization.teams.length,
-			canManage: membership.role === "owner" || membership.role === "manager",
+			openPostCount: membership.organization.lfgPosts.length,
+			canManage: membership.role === "owner" || membership.role === "admin",
 		})),
 	});
 });
@@ -268,11 +297,15 @@ orgRoutes.get("/invites/received", async (c) => {
 			orgName: row.organization.name,
 			orgAvatarUrl: row.organization.avatarUrl,
 			inviterDisplayName: row.inviter.displayName,
+			permissionRole: row.role,
 			role: row.role,
+			memberType: row.memberType,
+			staffRole: row.staffRole ?? null,
+			gameRole: row.gameRole ?? null,
 			status: getEffectiveInviteStatus(row.status, row.expiresAt),
-			expiresAt: row.expiresAt,
-			createdAt: row.createdAt,
-			statusChangedAt: row.updatedAt,
+			expiresAt: row.expiresAt.toISOString(),
+			createdAt: row.createdAt.toISOString(),
+			statusChangedAt: row.updatedAt.toISOString(),
 		})),
 	});
 });
@@ -293,6 +326,9 @@ orgRoutes.post("/invites/:id/respond", async (c) => {
 			inviteeUserId: true,
 			organizationId: true,
 			role: true,
+			memberType: true,
+			staffRole: true,
+			gameRole: true,
 			status: true,
 			expiresAt: true,
 		},
@@ -306,20 +342,14 @@ orgRoutes.post("/invites/:id/respond", async (c) => {
 
 	if (parsed.output.action === "accept") {
 		await db.transaction(async (tx) => {
-			const membership = await tx.query.organizationMemberTable.findFirst({
-				where: and(
-					eq(organizationMemberTable.organizationId, invite.organizationId),
-					eq(organizationMemberTable.userId, user.id)
-				),
-				columns: { id: true },
+			await ensureOrganizationMembership(tx, {
+				organizationId: invite.organizationId,
+				userId: user.id,
+				role: invite.role,
+				memberType: invite.memberType,
+				staffRole: invite.staffRole ?? null,
+				gameRole: invite.gameRole ?? null,
 			});
-			if (!membership) {
-				await tx.insert(organizationMemberTable).values({
-					organizationId: invite.organizationId,
-					userId: user.id,
-					role: invite.role,
-				});
-			}
 
 			await tx
 				.update(orgInviteTable)
@@ -351,6 +381,8 @@ orgRoutes.post("/", async (c) => {
 			name: parsed.output.name,
 			slug,
 			description: parsed.output.description || null,
+			avatarUrl: parsed.output.avatarUrl || null,
+			bannerUrl: parsed.output.bannerUrl || null,
 			ownerId: user.id,
 		})
 		.returning({ id: organizationTable.id });
@@ -359,6 +391,8 @@ orgRoutes.post("/", async (c) => {
 		organizationId: org.id,
 		userId: user.id,
 		role: "owner",
+		memberType: "staff",
+		staffRole: "manager",
 	});
 
 	return c.json({ success: true, orgId: org.id });
@@ -395,6 +429,8 @@ orgRoutes.patch("/:id", async (c) => {
 			name: parsed.output.name,
 			slug,
 			description: parsed.output.description || null,
+			avatarUrl: parsed.output.avatarUrl || null,
+			bannerUrl: parsed.output.bannerUrl || null,
 		})
 		.where(eq(organizationTable.id, orgId));
 
@@ -414,10 +450,11 @@ orgRoutes.post("/:id/ownership", async (c) => {
 	if (!permissions.canTransferOwnership || !permissions.membership) {
 		return c.json({ error: "Only the org owner can transfer ownership." }, 403);
 	}
+	const currentMembershipId = permissions.membership.id;
 
 	const target = await db.query.organizationMemberTable.findFirst({
 		where: eq(organizationMemberTable.id, parsed.output.memberId),
-		columns: { id: true, organizationId: true, role: true, userId: true },
+		columns: { id: true, organizationId: true, userId: true },
 	});
 	if (!target || target.organizationId !== orgId)
 		return c.json({ error: "Target member not found." }, 404);
@@ -425,12 +462,12 @@ orgRoutes.post("/:id/ownership", async (c) => {
 	await db.transaction(async (tx) => {
 		await tx
 			.update(organizationMemberTable)
-			.set({ role: "manager" })
-			.where(eq(organizationMemberTable.id, permissions.membership.id));
+			.set({ role: "admin" })
+			.where(eq(organizationMemberTable.id, currentMembershipId));
 
 		await tx
 			.update(organizationMemberTable)
-			.set({ role: "owner" })
+			.set({ role: "owner", memberType: "staff", staffRole: "manager" })
 			.where(eq(organizationMemberTable.id, target.id));
 
 		await tx
@@ -474,11 +511,11 @@ orgRoutes.patch("/:id/members/:memberId/role", async (c) => {
 	const body = await c.req.json().catch(() => null);
 	if (!body) return c.json({ error: "Invalid request body." }, 400);
 
-	const parsed = v.safeParse(UpdateOrgMemberRoleSchema, { ...body, orgId, memberId });
+	const parsed = v.safeParse(UpdateOrgMemberSchema, { ...body, orgId, memberId });
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const actorRole = await getUserOrgRole(orgId, user.id);
-	if (!canAssignOrgRole(actorRole, parsed.output.role)) {
+	if (parsed.output.role && !canAssignOrgRole(actorRole, parsed.output.role)) {
 		return c.json({ error: "You do not have permission to assign that role." }, 403);
 	}
 
@@ -489,13 +526,18 @@ orgRoutes.patch("/:id/members/:memberId/role", async (c) => {
 	if (!member || member.organizationId !== orgId)
 		return c.json({ error: "Member not found." }, 404);
 	if (member.role === "owner") return c.json({ error: "The owner's role cannot be changed." }, 400);
-	if (actorRole === "manager" && member.role === "manager") {
-		return c.json({ error: "Managers cannot change another manager's role." }, 403);
+	if (actorRole !== "owner" && member.role === "admin") {
+		return c.json({ error: "Only the owner can modify another admin." }, 403);
 	}
 
 	await db
 		.update(organizationMemberTable)
-		.set({ role: parsed.output.role })
+		.set({
+			role: parsed.output.role ?? undefined,
+			memberType: parsed.output.memberType ?? undefined,
+			staffRole: parsed.output.staffRole ?? undefined,
+			gameRole: parsed.output.gameRole ?? undefined,
+		})
 		.where(eq(organizationMemberTable.id, memberId));
 
 	return c.json({ success: true });
@@ -507,7 +549,7 @@ orgRoutes.delete("/:id/members/:memberId", async (c) => {
 	const memberId = c.req.param("memberId");
 
 	const actorRole = await getUserOrgRole(orgId, user.id);
-	if (actorRole !== "owner" && actorRole !== "manager") {
+	if (actorRole !== "owner" && actorRole !== "admin") {
 		return c.json({ error: "You do not have permission to remove members." }, 403);
 	}
 
@@ -518,8 +560,8 @@ orgRoutes.delete("/:id/members/:memberId", async (c) => {
 	if (!member || member.organizationId !== orgId)
 		return c.json({ error: "Member not found." }, 404);
 	if (member.role === "owner") return c.json({ error: "The owner cannot be removed." }, 400);
-	if (actorRole === "manager" && member.role === "manager") {
-		return c.json({ error: "Managers cannot remove another manager." }, 403);
+	if (actorRole !== "owner" && member.role === "admin") {
+		return c.json({ error: "Only the owner can remove another admin." }, 403);
 	}
 
 	const orgTeams = await db.query.teamRosterTable.findMany({
@@ -586,9 +628,7 @@ orgRoutes.get("/:id/invites", async (c) => {
 	const rows = await db.query.orgInviteTable.findMany({
 		where: eq(orgInviteTable.organizationId, c.req.param("id")),
 		with: {
-			invitee: {
-				columns: { id: true, displayName: true, avatarUrl: true },
-			},
+			invitee: { columns: { id: true, displayName: true, avatarUrl: true } },
 		},
 		orderBy: [desc(orgInviteTable.createdAt)],
 	});
@@ -600,11 +640,15 @@ orgRoutes.get("/:id/invites", async (c) => {
 				inviteeUserId: row.invitee.id,
 				inviteeDisplayName: row.invitee.displayName,
 				inviteeAvatarUrl: row.invitee.avatarUrl,
+				permissionRole: row.role,
 				role: row.role,
+				memberType: row.memberType,
+				staffRole: row.staffRole ?? null,
+				gameRole: row.gameRole ?? null,
 				status: getEffectiveInviteStatus(row.status, row.expiresAt),
-				expiresAt: row.expiresAt,
-				createdAt: row.createdAt,
-				statusChangedAt: row.updatedAt,
+				expiresAt: row.expiresAt.toISOString(),
+				createdAt: row.createdAt.toISOString(),
+				statusChangedAt: row.updatedAt.toISOString(),
 			}))
 			.filter((row) => row.status === "pending"),
 	});
@@ -656,6 +700,9 @@ orgRoutes.post("/:id/invites", async (c) => {
 		inviteeUserId: parsed.output.userId,
 		inviterUserId: user.id,
 		role: parsed.output.role,
+		memberType: parsed.output.memberType ?? "player",
+		staffRole: parsed.output.staffRole ?? null,
+		gameRole: parsed.output.gameRole ?? null,
 		expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 	});
 
@@ -663,7 +710,7 @@ orgRoutes.post("/:id/invites", async (c) => {
 		userId: parsed.output.userId,
 		type: "org_invite_received",
 		title: `You've been invited to join ${org?.name ?? "an organisation"}`,
-		body: `You were invited as ${parsed.output.role}.`,
+		body: `Access: ${parsed.output.role}.`,
 		referenceType: "org_invite",
 	});
 
@@ -722,161 +769,21 @@ orgRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 		userId: invite.inviteeUserId,
 		type: "org_invite_received",
 		title: `You've been invited to join ${invite.organization?.name ?? "an organisation"}`,
-		body: `You were invited as ${invite.role}.`,
+		body: `Access: ${invite.role}.`,
 		referenceType: "org_invite",
 	});
 
 	return c.json({ success: true });
 });
 
-orgRoutes.get("/:id/requests", async (c) => {
-	const user = c.get("user");
-	const permissions = await getOrgPermissions(c.req.param("id"), user.id);
-	if (!permissions.canReviewRequests) return c.json({ data: [] });
-
-	const rows = await db.query.orgJoinRequestTable.findMany({
-		where: eq(orgJoinRequestTable.organizationId, c.req.param("id")),
-		with: {
-			requester: {
-				columns: { id: true, displayName: true, avatarUrl: true },
-				with: {
-					profile: {
-						columns: { primaryRole: true, rank: true },
-					},
-				},
-			},
-		},
-		orderBy: [desc(orgJoinRequestTable.createdAt)],
-	});
-
-	return c.json({
-		data: rows
-			.filter((row) => row.status === "pending")
-			.map((row) => ({
-				id: row.id,
-				requesterUserId: row.requester.id,
-				requesterDisplayName: row.requester.displayName,
-				requesterAvatarUrl: row.requester.avatarUrl,
-				requesterPrimaryRole: row.requester.profile?.primaryRole ?? null,
-				requesterRank: row.requester.profile?.rank ?? null,
-				message: row.message ?? null,
-				status: row.status,
-				createdAt: row.createdAt,
-				statusChangedAt: row.updatedAt,
-			})),
-	});
-});
-
-orgRoutes.post("/:id/requests", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(CreateOrgJoinRequestSchema, { ...body, orgId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const org = await db.query.organizationTable.findFirst({
-		where: eq(organizationTable.id, orgId),
-		columns: { id: true },
-	});
-	if (!org) return c.json({ error: "Organisation not found." }, 404);
-
-	const membership = await db.query.organizationMemberTable.findFirst({
-		where: and(
-			eq(organizationMemberTable.organizationId, orgId),
-			eq(organizationMemberTable.userId, user.id)
-		),
-		columns: { id: true },
-	});
-	if (membership) return c.json({ error: "You are already a member of this organisation." }, 409);
-
-	const existing = await db.query.orgJoinRequestTable.findFirst({
-		where: and(
-			eq(orgJoinRequestTable.organizationId, orgId),
-			eq(orgJoinRequestTable.requesterUserId, user.id),
-			eq(orgJoinRequestTable.status, "pending")
-		),
-		columns: { id: true },
-	});
-	if (existing) return c.json({ error: "You already have a pending org request." }, 409);
-
-	await db.insert(orgJoinRequestTable).values({
-		organizationId: orgId,
-		requesterUserId: user.id,
-		message: parsed.output.message ?? null,
-	});
-
-	return c.json({ success: true });
-});
-
-orgRoutes.post("/:id/requests/:requestId/respond", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const requestId = c.req.param("requestId");
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(RespondToOrgJoinRequestSchema, { ...body, requestId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const request = await db.query.orgJoinRequestTable.findFirst({
-		where: eq(orgJoinRequestTable.id, requestId),
-		columns: { id: true, organizationId: true, requesterUserId: true, status: true },
-	});
-	if (!request || request.organizationId !== orgId)
-		return c.json({ error: "Request not found." }, 404);
-	if (request.status !== "pending")
-		return c.json({ error: "This request is no longer active." }, 400);
-
-	if (parsed.output.action === "cancel") {
-		if (request.requesterUserId !== user.id) {
-			return c.json({ error: "Only the requester can cancel this request." }, 403);
-		}
-
-		await db
-			.update(orgJoinRequestTable)
-			.set({ status: "cancelled" })
-			.where(eq(orgJoinRequestTable.id, requestId));
-
-		return c.json({ success: true });
-	}
-
-	const permissions = await getOrgPermissions(orgId, user.id);
-	if (!permissions.canReviewRequests) {
-		return c.json({ error: "You do not have permission to review requests." }, 403);
-	}
-
-	if (parsed.output.action === "approve") {
-		await db.transaction(async (tx) => {
-			const membership = await tx.query.organizationMemberTable.findFirst({
-				where: and(
-					eq(organizationMemberTable.organizationId, orgId),
-					eq(organizationMemberTable.userId, request.requesterUserId)
-				),
-				columns: { id: true },
-			});
-			if (!membership) {
-				await tx.insert(organizationMemberTable).values({
-					organizationId: orgId,
-					userId: request.requesterUserId,
-					role: "player",
-				});
-			}
-
-			await tx
-				.update(orgJoinRequestTable)
-				.set({ status: "approved" })
-				.where(eq(orgJoinRequestTable.id, requestId));
-		});
-	} else {
-		await db
-			.update(orgJoinRequestTable)
-			.set({ status: "rejected" })
-			.where(eq(orgJoinRequestTable.id, requestId));
-	}
-
-	return c.json({ success: true });
-});
+orgRoutes.get("/:id/requests", (c) =>
+	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
+);
+orgRoutes.post("/:id/requests", (c) =>
+	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
+);
+orgRoutes.post("/:id/requests/:requestId/respond", (c) =>
+	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
+);
 
 export { orgRoutes };

@@ -7,10 +7,8 @@ import type { UserOrg } from "@/lib/data/organization";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
-	manager: "Manager",
-	coach: "Coach",
-	analyst: "Analyst",
-	player: "Player",
+	admin: "Admin",
+	member: "Member",
 };
 
 interface OrgCardProps {

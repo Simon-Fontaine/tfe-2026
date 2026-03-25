@@ -91,6 +91,7 @@ export const organizationRelations = relations(organizationTable, ({ one, many }
 	}),
 	members: many(organizationMemberTable),
 	teams: many(teamTable),
+	lfgPosts: many(lfgPostTable),
 	orgInvites: many(orgInviteTable),
 	joinRequests: many(orgJoinRequestTable),
 }));
@@ -138,6 +139,10 @@ export const lfgPostRelations = relations(lfgPostTable, ({ one, many }) => ({
 		fields: [lfgPostTable.userId],
 		references: [userTable.id],
 	}),
+	organization: one(organizationTable, {
+		fields: [lfgPostTable.organizationId],
+		references: [organizationTable.id],
+	}),
 	team: one(teamTable, {
 		fields: [lfgPostTable.teamId],
 		references: [teamTable.id],
@@ -157,6 +162,10 @@ export const lfgApplicationRelations = relations(lfgApplicationTable, ({ one, ma
 	applicantTeam: one(teamTable, {
 		fields: [lfgApplicationTable.applicantTeamId],
 		references: [teamTable.id],
+	}),
+	applicantOrganization: one(organizationTable, {
+		fields: [lfgApplicationTable.applicantOrganizationId],
+		references: [organizationTable.id],
 	}),
 	chatChannels: many(chatChannelTable, { relationName: "recruitmentChatChannels" }),
 }));

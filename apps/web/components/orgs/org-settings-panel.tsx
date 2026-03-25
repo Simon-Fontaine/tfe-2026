@@ -5,7 +5,7 @@ import {
 	leaveOrgAction,
 	transferOrgOwnershipAction,
 	updateOrgAction,
-} from "@/app/dashboard/orgs/actions/org";
+} from "@/app/dashboard/workspace/orgs/actions/org";
 import { DeleteOrgDialog } from "@/components/orgs/delete-org-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,8 @@ export function OrgSettingsPanel({ org }: OrgSettingsPanelProps) {
 	const [name, setName] = useState(org.name);
 	const [slug, setSlug] = useState(org.slug);
 	const [description, setDescription] = useState(org.description ?? "");
+	const [avatarUrl, setAvatarUrl] = useState(org.avatarUrl ?? "");
+	const [bannerUrl, setBannerUrl] = useState(org.bannerUrl ?? "");
 
 	const updateForm = useFormAction(updateOrgAction, {
 		loadingMessage: "Saving org settings…",
@@ -45,6 +47,8 @@ export function OrgSettingsPanel({ org }: OrgSettingsPanelProps) {
 		fd.set("name", name);
 		fd.set("slug", slug);
 		fd.set("description", description);
+		fd.set("avatarUrl", avatarUrl);
+		fd.set("bannerUrl", bannerUrl);
 		updateForm.submit(fd);
 	}
 
@@ -85,6 +89,14 @@ export function OrgSettingsPanel({ org }: OrgSettingsPanelProps) {
 								rows={4}
 								maxLength={280}
 							/>
+						</Field>
+						<Field>
+							<FieldLabel>Avatar URL</FieldLabel>
+							<Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} />
+						</Field>
+						<Field>
+							<FieldLabel>Banner URL</FieldLabel>
+							<Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} />
 						</Field>
 						<Button type="submit" size="sm" disabled={updateForm.isPending}>
 							{updateForm.isPending && <Spinner className="mr-1.5" />}

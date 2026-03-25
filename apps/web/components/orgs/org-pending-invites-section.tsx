@@ -1,6 +1,9 @@
 "use client";
 
-import { cancelOrgInviteAction, resendOrgInviteAction } from "@/app/dashboard/orgs/actions/org";
+import {
+	cancelOrgInviteAction,
+	resendOrgInviteAction,
+} from "@/app/dashboard/workspace/orgs/actions/org";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,10 +18,8 @@ interface OrgPendingInvitesSectionProps {
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
-	manager: "Manager",
-	coach: "Coach",
-	analyst: "Analyst",
-	player: "Player",
+	admin: "Admin",
+	member: "Member",
 };
 
 function formatExpiry(iso: string): string {
@@ -83,6 +84,11 @@ export function OrgPendingInvitesSection({ orgId, invites }: OrgPendingInvitesSe
 						<div className="mt-0.5 flex items-center gap-2">
 							<Badge variant="outline" className="text-[10px]">
 								{ROLE_LABELS[invite.role] ?? invite.role}
+							</Badge>
+							<Badge variant="secondary" className="text-[10px] capitalize">
+								{invite.memberType === "staff"
+									? (invite.staffRole ?? "staff")
+									: (invite.gameRole ?? "player")}
 							</Badge>
 							<span className="text-[10px] text-muted-foreground">
 								{formatExpiry(invite.expiresAt)}

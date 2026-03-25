@@ -1,37 +1,35 @@
-import type { InviteLifecycleStatus, OrgRole, TeamPermissionRole } from "./types";
+import type { InviteLifecycleStatus, OrgPermissionRole, TeamPermissionRole } from "./types";
 
-export function canManageOrg(role: OrgRole | null | undefined): boolean {
-	return role === "owner" || role === "manager";
+export function canManageOrg(role: OrgPermissionRole | null | undefined): boolean {
+	return role === "owner" || role === "admin";
 }
 
-export function canDeleteOrg(role: OrgRole | null | undefined): boolean {
+export function canDeleteOrg(role: OrgPermissionRole | null | undefined): boolean {
 	return role === "owner";
 }
 
-export function canTransferOrgOwnership(role: OrgRole | null | undefined): boolean {
+export function canTransferOrgOwnership(role: OrgPermissionRole | null | undefined): boolean {
 	return role === "owner";
 }
 
 export function canAssignOrgRole(
-	actorRole: OrgRole | null | undefined,
-	targetRole: OrgRole
+	actorRole: OrgPermissionRole | null | undefined,
+	targetRole: OrgPermissionRole
 ): boolean {
 	if (actorRole === "owner") return true;
-	if (actorRole === "manager") {
-		return targetRole === "coach" || targetRole === "analyst" || targetRole === "player";
-	}
+	if (actorRole === "admin") return targetRole === "member";
 	return false;
 }
 
 export function canManageTeam(
-	orgRole: OrgRole | null | undefined,
+	orgRole: OrgPermissionRole | null | undefined,
 	teamPermissionRole: TeamPermissionRole | null | undefined
 ): boolean {
 	return canManageOrg(orgRole) || teamPermissionRole === "admin";
 }
 
 export function canAssignTeamAdmin(
-	orgRole: OrgRole | null | undefined,
+	orgRole: OrgPermissionRole | null | undefined,
 	teamPermissionRole: TeamPermissionRole | null | undefined,
 	targetPermissionRole: TeamPermissionRole
 ): boolean {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { addPlayerAction } from "@/app/dashboard/teams/[teamId]/actions/roster";
+import { addPlayerAction } from "@/app/dashboard/workspace/orgs/actions/team";
 import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
 import { Button } from "@/components/ui/button";
@@ -34,23 +34,38 @@ const TEAM_PERMISSION_OPTIONS = [
 	{ value: "member", label: "Member access" },
 	{ value: "admin", label: "Admin access" },
 ] as const;
+const STAFF_ROLE_OPTIONS = [
+	{ value: "coach", label: "Coach" },
+	{ value: "analyst", label: "Analyst" },
+	{ value: "manager", label: "Manager" },
+	{ value: "staff", label: "Staff" },
+] as const;
 
 type TeamPermissionRole = (typeof TEAM_PERMISSION_OPTIONS)[number]["value"];
+type MemberType = "player" | "staff";
 
 interface AddPlayerDialogProps {
 	teamId: string;
 	canManageAdmins?: boolean;
+	defaultMemberType?: MemberType;
+	title?: string;
+	submitLabel?: string;
 	children: React.ReactNode;
 }
 
 export function AddPlayerDialog({
 	teamId,
 	canManageAdmins = false,
+	defaultMemberType = "player",
+	title = "Add member",
+	submitLabel = "Add to roster",
 	children,
 }: AddPlayerDialogProps) {
 	const pendingRef = useRef(false);
 	const [open, setOpen] = useState(false);
+	const [memberType, setMemberType] = useState<MemberType>(defaultMemberType);
 	const [roleInTeam, setRoleInTeam] = useState<"tank" | "damage" | "support">("damage");
+	const [staffRole, setStaffRole] = useState<"coach" | "analyst" | "manager" | "staff">("staff");
 	const [status, setStatus] = useState<"active" | "trial" | "benched">("active");
 	const [permissionRole, setPermissionRole] = useState<TeamPermissionRole>("member");
 	const {
@@ -65,13 +80,13 @@ export function AddPlayerDialog({
 	} = useUserSearch({
 		excludeTeamId: teamId,
 		prefillFromSelection: (user) => {
-			if (user.primaryRole) setRoleInTeam(user.primaryRole);
+			if (defaultMemberType === "player" && user.primaryRole) setRoleInTeam(user.primaryRole);
 		},
 	});
 
 	const { state, submit, isPending } = useFormAction(addPlayerAction, {
-		loadingMessage: "Adding player…",
-		successMessage: "Player added to roster",
+		loadingMessage: "Adding member…",
+		successMessage: "Member added to team",
 	});
 
 	useEffect(() => {
@@ -83,7 +98,9 @@ export function AddPlayerDialog({
 
 	function reset() {
 		resetSearch();
+		setMemberType(defaultMemberType);
 		setRoleInTeam("damage");
+		setStaffRole("staff");
 		setStatus("active");
 		setPermissionRole("member");
 	}
@@ -95,7 +112,9 @@ export function AddPlayerDialog({
 		const fd = new FormData();
 		fd.set("teamId", teamId);
 		fd.set("userId", selected.id);
-		fd.set("roleInTeam", roleInTeam);
+		fd.set("memberType", memberType);
+		if (memberType === "player") fd.set("roleInTeam", roleInTeam);
+		if (memberType === "staff") fd.set("staffRole", staffRole);
 		fd.set("status", status);
 		if (canManageAdmins) fd.set("permissionRole", permissionRole);
 		submit(fd);
@@ -112,7 +131,7 @@ export function AddPlayerDialog({
 			<DialogTrigger asChild>{children}</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>Add player</DialogTitle>
+					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -130,25 +149,69 @@ export function AddPlayerDialog({
 					/>
 
 					<Field>
-						<FieldLabel>Role on team</FieldLabel>
+						<FieldLabel>Member type</FieldLabel>
 						<div className="flex gap-2">
-							{OW2_ROLES.map((r) => (
+							{(["player", "staff"] as const).map((option) => (
 								<button
-									key={r.value}
+									key={option}
 									type="button"
-									data-selected={roleInTeam === r.value}
-									onClick={() => setRoleInTeam(r.value)}
+									data-selected={memberType === option}
+									onClick={() => setMemberType(option)}
 									className={cn(
-										"flex-1 border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+										"flex-1 border border-border px-3 py-2 text-xs font-medium capitalize transition-colors hover:bg-muted",
 										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 										"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
 									)}
 								>
-									{r.label}
+									{option}
 								</button>
 							))}
 						</div>
 					</Field>
+
+					{memberType === "player" ? (
+						<Field>
+							<FieldLabel>Role on team</FieldLabel>
+							<div className="flex gap-2">
+								{OW2_ROLES.map((r) => (
+									<button
+										key={r.value}
+										type="button"
+										data-selected={roleInTeam === r.value}
+										onClick={() => setRoleInTeam(r.value)}
+										className={cn(
+											"flex-1 border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+											"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+										)}
+									>
+										{r.label}
+									</button>
+								))}
+							</div>
+						</Field>
+					) : (
+						<Field>
+							<FieldLabel>Staff role</FieldLabel>
+							<div className="grid gap-2 sm:grid-cols-2">
+								{STAFF_ROLE_OPTIONS.map((option) => (
+									<button
+										key={option.value}
+										type="button"
+										data-selected={staffRole === option.value}
+										onClick={() => setStaffRole(option.value)}
+										className={cn(
+											"border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+											"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+										)}
+									>
+										{option.label}
+									</button>
+								))}
+							</div>
+						</Field>
+					)}
 
 					<Field>
 						<FieldLabel>Roster status</FieldLabel>
@@ -197,7 +260,7 @@ export function AddPlayerDialog({
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={!selected || isPending}>
 							{isPending && <Spinner className="mr-1.5" />}
-							Add to roster
+							{submitLabel}
 						</Button>
 						<Button
 							type="button"

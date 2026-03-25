@@ -4,7 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { type UpdateTeamInput, UpdateTeamSchema } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { updateTeamAction } from "@/app/dashboard/teams/actions/team";
+import { updateTeamAction } from "@/app/dashboard/workspace/orgs/actions/team";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -25,6 +25,7 @@ interface EditTeamDialogProps {
 		name: string;
 		tag: string;
 		description: string | null;
+		avatarUrl?: string | null;
 	};
 	children: React.ReactNode;
 }
@@ -45,6 +46,7 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 			name: initialValues.name,
 			tag: initialValues.tag,
 			description: initialValues.description ?? "",
+			avatarUrl: initialValues.avatarUrl ?? "",
 		},
 	});
 
@@ -62,6 +64,7 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 		fd.set("name", values.name);
 		fd.set("tag", values.tag);
 		if (values.description) fd.set("description", values.description);
+		if (values.avatarUrl) fd.set("avatarUrl", values.avatarUrl);
 		submit(fd);
 	}
 
@@ -76,6 +79,7 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 						name: initialValues.name,
 						tag: initialValues.tag,
 						description: initialValues.description ?? "",
+						avatarUrl: initialValues.avatarUrl ?? "",
 					});
 				}
 			}}
@@ -122,6 +126,14 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 							{...form.register("description")}
 						/>
 						<FieldError errors={[form.formState.errors.description]} />
+					</Field>
+
+					<Field>
+						<FieldLabel htmlFor="team-avatar">
+							Avatar URL <span className="font-normal text-muted-foreground/70">(optional)</span>
+						</FieldLabel>
+						<Input id="team-avatar" placeholder="https://…" {...form.register("avatarUrl")} />
+						<FieldError errors={[form.formState.errors.avatarUrl]} />
 					</Field>
 
 					<div className="flex gap-2">

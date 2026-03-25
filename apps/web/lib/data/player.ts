@@ -1,8 +1,22 @@
-import type { AvailabilityRow, PlayerProfileFull, PlayerStats, UserTeam } from "@scrimflow/shared";
+import type {
+	AvailabilityRow,
+	PlayerProfileFull,
+	PlayerStats,
+	PublicPlayerDetail,
+	PublicPlayerSummary,
+	UserTeam,
+} from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
 
-export type { AvailabilityRow, PlayerProfileFull, PlayerStats, UserTeam };
+export type {
+	AvailabilityRow,
+	PlayerProfileFull,
+	PlayerStats,
+	PublicPlayerDetail,
+	PublicPlayerSummary,
+	UserTeam,
+};
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
 
@@ -37,3 +51,18 @@ export const getActiveTeamsForUser = cache(async (_userId: string): Promise<User
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 });
+
+export const getPublicPlayers = cache(async (): Promise<PublicPlayerSummary[]> => {
+	const res = await apiGet<PublicPlayerSummary[]>("/api/public/players");
+	if ("data" in res) return res.data;
+	throw new Error(res.error);
+});
+
+export const getPublicPlayerByUsername = cache(
+	async (username: string): Promise<PublicPlayerDetail | null> => {
+		const res = await apiGet<PublicPlayerDetail>(`/api/public/players/${username}`);
+		if ("data" in res) return res.data;
+		if (res.status === 404) return null;
+		throw new Error(res.error);
+	}
+);

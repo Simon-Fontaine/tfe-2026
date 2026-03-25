@@ -36,7 +36,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 
 	const form = useForm<CreateOrgInput>({
 		resolver: valibotResolver(CreateOrgSchema),
-		defaultValues: { name: "", description: "" },
+		defaultValues: { name: "", description: "", avatarUrl: "", bannerUrl: "" },
 	});
 
 	// Close dialog and navigate to new org on success.
@@ -54,6 +54,8 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 		const fd = new FormData();
 		fd.set("name", values.name);
 		if (values.description) fd.set("description", values.description);
+		if (values.avatarUrl) fd.set("avatarUrl", values.avatarUrl);
+		if (values.bannerUrl) fd.set("bannerUrl", values.bannerUrl);
 		submit(fd);
 	}
 
@@ -94,6 +96,22 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 							{...form.register("description")}
 						/>
 						<FieldError errors={[form.formState.errors.description]} />
+					</Field>
+
+					<Field>
+						<FieldLabel htmlFor="org-avatar">
+							Avatar URL <span className="font-normal text-muted-foreground/70">(optional)</span>
+						</FieldLabel>
+						<Input id="org-avatar" placeholder="https://…" {...form.register("avatarUrl")} />
+						<FieldError errors={[form.formState.errors.avatarUrl]} />
+					</Field>
+
+					<Field>
+						<FieldLabel htmlFor="org-banner">
+							Banner URL <span className="font-normal text-muted-foreground/70">(optional)</span>
+						</FieldLabel>
+						<Input id="org-banner" placeholder="https://…" {...form.register("bannerUrl")} />
+						<FieldError errors={[form.formState.errors.bannerUrl]} />
 					</Field>
 
 					<div className="flex gap-2">
