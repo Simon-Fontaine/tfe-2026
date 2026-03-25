@@ -1,5 +1,7 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function ScrimsDirectoryPage() {
 	return (
@@ -10,7 +12,7 @@ export default function ScrimsDirectoryPage() {
 						Scrims
 					</h1>
 					<p className="mt-3 max-w-[48ch] text-xs text-muted-foreground leading-relaxed">
-						Find upcoming practice matches for your team.
+						Browse upcoming scrims and open practice requests.
 					</p>
 				</div>
 				<div className="flex flex-col items-center justify-center border p-6 py-16 text-center ring-0 focus-within:ring-0">
@@ -21,10 +23,18 @@ export default function ScrimsDirectoryPage() {
 							className="size-5 text-primary"
 						/>
 					</div>
-					<p className="text-sm font-bold">No scrims found</p>
+					<p className="text-sm font-bold">Scrim listings coming soon</p>
 					<p className="mt-1 text-xs text-muted-foreground">
-						There are no public scrim listings at the moment.
+						Scrim board entries will appear here once listing sync is enabled.
 					</p>
+					<div className="mt-4 flex flex-wrap justify-center gap-2">
+						<Button asChild size="sm" variant="outline">
+							<Link href="/auth?step=login">Sign in to access dashboard scheduling</Link>
+						</Button>
+						<Button asChild size="sm">
+							<Link href="/dashboard">Go to dashboard</Link>
+						</Button>
+					</div>
 				</div>
 			</div>
 		</section>
