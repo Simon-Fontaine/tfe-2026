@@ -20,7 +20,7 @@ export async function createOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/orgs");
+	revalidatePath("/dashboard/workspace/orgs");
 	return { success: true, orgId: actionResult.data.orgId };
 }
 
@@ -39,7 +39,7 @@ export async function updateOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true };
 }
 
@@ -57,8 +57,8 @@ export async function deleteOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/orgs");
-	redirect("/dashboard/orgs");
+	revalidatePath("/dashboard/workspace/orgs");
+	redirect("/dashboard/workspace/orgs");
 }
 
 export async function updateOrgMemberRoleAction(
@@ -76,7 +76,7 @@ export async function updateOrgMemberRoleAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true };
 }
 
@@ -94,7 +94,7 @@ export async function removeOrgMemberAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true };
 }
 
@@ -113,7 +113,7 @@ export async function inviteToOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/orgs/${orgId}`);
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true };
 }
 
@@ -130,8 +130,8 @@ export async function respondToOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/recruit/inbox");
-	revalidatePath("/dashboard/orgs");
+	revalidatePath("/dashboard/recruit/invitations");
+	revalidatePath("/dashboard/workspace/orgs");
 	return { success: true };
 }
 

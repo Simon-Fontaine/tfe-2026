@@ -1,6 +1,6 @@
 # Dashboard IA Spec
 
-## Domain model
+## Canonical dashboard domains
 
 ### 1) Home
 - **Route:** `/dashboard`
@@ -10,18 +10,17 @@
 - **Route group:** `/dashboard/workspace/...`
 - **Purpose:** Team operations and organizational management.
 - **Includes:**
-  - `/dashboard/workspace` (workspace overview / org list entry point)
+  - `/dashboard/workspace/orgs`
   - `/dashboard/workspace/orgs/[orgId]`
-  - `/dashboard/workspace/teams/[teamId]`
+  - `/dashboard/workspace/orgs/[orgId]/teams/[teamId]`
 
 ### 3) Recruit
 - **Route group:** `/dashboard/recruit/...`
-- **Purpose:** Discovery, LFG, and recruiting workflows.
+- **Purpose:** LFG, applications, and invitation workflows.
 - **Includes:**
   - `/dashboard/recruit/lfg`
-  - `/dashboard/recruit/teams`
   - `/dashboard/recruit/applications`
-  - `/dashboard/recruit/inbox`
+  - `/dashboard/recruit/invitations`
 
 ### 4) Personal
 - **Route group:** `/dashboard/me/...`
@@ -34,5 +33,5 @@
   - `/dashboard/me/settings/security`
 
 ## URL policy
-- Canonical dashboard URLs are only the routes above.
-- Legacy URLs under prior dashboard paths are intentionally not maintained.
+- Canonical dashboard URLs are defined in `apps/web/docs/route-map.md`.
+- Legacy paths are not maintained; only canonical URLs are supported.

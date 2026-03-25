@@ -22,7 +22,7 @@ export async function addAvailabilityAction(
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath(`/dashboard/schedule?team=${teamId}`);
+	revalidatePath(`/dashboard/me/schedule?team=${teamId}`);
 	return { success: true };
 }
 
@@ -34,6 +34,6 @@ export async function deleteAvailabilityAction(
 	const res = await apiDelete(`/api/schedule/availability/${id}`);
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath("/dashboard/schedule");
+	revalidatePath("/dashboard/me/schedule");
 	return { success: true };
 }

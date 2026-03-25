@@ -5,7 +5,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
 	return (
 		<div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
 			<SettingsHeaderBar
-				backHref="/dashboard/me"
+				backHref="/dashboard"
 				icon={UserCircle02Icon}
 				title="Your profile"
 				subtitle="Manage your player profile, roles and hero pool"
