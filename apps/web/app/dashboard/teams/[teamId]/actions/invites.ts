@@ -57,7 +57,20 @@ export async function respondToTeamInviteAction(
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath("/dashboard/invitations");
+	revalidatePath("/dashboard/recruit/inbox");
 	revalidatePath("/dashboard/teams");
+	return { success: true };
+}
+
+export async function resendTeamInviteAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const inviteId = String(formData.get("inviteId") ?? "");
+	const teamId = String(formData.get("teamId") ?? "");
+	const res = await apiPost(`/api/teams/${teamId}/invites/${inviteId}/resend`);
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (orgId) revalidatePath(`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`);
 	return { success: true };
 }

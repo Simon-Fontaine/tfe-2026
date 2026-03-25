@@ -143,6 +143,8 @@ export type RosterMember = {
 	roleInTeam: OW2Role;
 	status: RosterStatus;
 	joinedAt: IsoDateString;
+	leftAt: IsoDateString | null;
+	statusChangedAt: IsoDateString;
 };
 
 export type TeamWithRoster = {
@@ -180,6 +182,8 @@ export type UserSearchResult = {
 	rank: string | null;
 };
 
+export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
+
 export type TeamInviteSummary = {
 	id: string;
 	teamId: string;
@@ -188,8 +192,10 @@ export type TeamInviteSummary = {
 	teamAvatarUrl: string | null;
 	inviterDisplayName: string;
 	roleInTeam: OW2Role;
+	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
+	statusChangedAt: IsoDateString;
 };
 
 export type TeamPendingInvite = {
@@ -198,8 +204,10 @@ export type TeamPendingInvite = {
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
 	roleInTeam: OW2Role;
+	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
+	statusChangedAt: IsoDateString;
 };
 
 // ─── Organization types ────────────────────────────────────────────────────
@@ -250,8 +258,10 @@ export type OrgInviteSummary = {
 	orgAvatarUrl: string | null;
 	inviterDisplayName: string;
 	role: OrgRole;
+	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
+	statusChangedAt: IsoDateString;
 };
 
 export type OrgPendingInvite = {
@@ -260,8 +270,10 @@ export type OrgPendingInvite = {
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
 	role: OrgRole;
+	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
+	statusChangedAt: IsoDateString;
 };
 
 // ─── Discovery types ───────────────────────────────────────────────────────

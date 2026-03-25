@@ -69,11 +69,7 @@ orgRoutes.get("/invites/received", async (c) => {
 	const now = new Date();
 
 	const rows = await db.query.orgInviteTable.findMany({
-		where: and(
-			eq(orgInviteTable.inviteeUserId, user.id),
-			eq(orgInviteTable.status, "pending"),
-			gt(orgInviteTable.expiresAt, now)
-		),
+		where: eq(orgInviteTable.inviteeUserId, user.id),
 		with: {
 			organization: {
 				columns: { id: true, name: true, avatarUrl: true },
@@ -91,8 +87,10 @@ orgRoutes.get("/invites/received", async (c) => {
 			orgAvatarUrl: r.organization.avatarUrl,
 			inviterDisplayName: r.inviter.displayName,
 			role: r.role,
+			status: r.status === "pending" && r.expiresAt < now ? "expired" : r.status,
 			expiresAt: r.expiresAt,
 			createdAt: r.createdAt,
+			statusChangedAt: r.updatedAt,
 		})),
 	});
 });
@@ -222,10 +220,84 @@ orgRoutes.get("/:id/invites", async (c) => {
 			inviteeDisplayName: r.invitee.displayName,
 			inviteeAvatarUrl: r.invitee.avatarUrl,
 			role: r.role,
+			status: r.status === "pending" && r.expiresAt < now ? "expired" : r.status,
 			expiresAt: r.expiresAt,
 			createdAt: r.createdAt,
+			statusChangedAt: r.updatedAt,
 		})),
 	});
+});
+
+// DELETE /:id/invites/:inviteId — Cancel org invite
+orgRoutes.delete("/:id/invites/:inviteId", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const inviteId = c.req.param("inviteId");
+
+	const isManager = await verifyOrgManager(orgId, user.id);
+	if (!isManager) return c.json({ error: "You do not have permission to cancel invites." }, 403);
+
+	const invite = await db.query.orgInviteTable.findFirst({
+		where: eq(orgInviteTable.id, inviteId),
+		columns: { id: true, organizationId: true, status: true, expiresAt: true },
+	});
+	if (!invite || invite.organizationId !== orgId)
+		return c.json({ error: "Invite not found." }, 404);
+
+	const effectiveStatus =
+		invite.status === "pending" && invite.expiresAt < new Date() ? "expired" : invite.status;
+	if (effectiveStatus !== "pending")
+		return c.json({ error: "Only pending invites can be cancelled." }, 400);
+
+	await db
+		.update(orgInviteTable)
+		.set({ status: "cancelled" })
+		.where(eq(orgInviteTable.id, inviteId));
+
+	return c.json({ success: true });
+});
+
+// POST /:id/invites/:inviteId/resend — Extend expiry for pending invite
+orgRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const inviteId = c.req.param("inviteId");
+
+	const isManager = await verifyOrgManager(orgId, user.id);
+	if (!isManager) return c.json({ error: "You do not have permission to resend invites." }, 403);
+
+	const invite = await db.query.orgInviteTable.findFirst({
+		where: eq(orgInviteTable.id, inviteId),
+		with: { organization: { columns: { name: true } } },
+		columns: {
+			id: true,
+			organizationId: true,
+			inviteeUserId: true,
+			role: true,
+			status: true,
+			expiresAt: true,
+		},
+	});
+	if (!invite || invite.organizationId !== orgId)
+		return c.json({ error: "Invite not found." }, 404);
+
+	const effectiveStatus =
+		invite.status === "pending" && invite.expiresAt < new Date() ? "expired" : invite.status;
+	if (effectiveStatus !== "pending")
+		return c.json({ error: "Only pending invites can be resent." }, 400);
+
+	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+	await db.update(orgInviteTable).set({ expiresAt }).where(eq(orgInviteTable.id, inviteId));
+
+	await createNotification({
+		userId: invite.inviteeUserId,
+		type: "org_invite_received",
+		title: `You've been invited to join ${invite.organization?.name ?? "an organisation"}`,
+		body: `You were invited as ${invite.role}.`,
+		referenceType: "org_invite",
+	});
+
+	return c.json({ success: true });
 });
 
 // PATCH /:id — Update organization

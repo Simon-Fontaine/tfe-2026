@@ -8,6 +8,7 @@ export type UpdateOrgMemberRoleInput = { orgId: string; memberId: string; role: 
 export type RemoveOrgMemberInput = { orgId: string; memberId: string };
 export type InviteOrgMemberInput = { orgId: string; userId: string; role: string };
 export type RespondOrgInviteInput = { inviteId: string; action: string };
+export type ManageOrgInviteInput = { orgId: string; inviteId: string };
 
 export class OrgsService {
 	constructor(private readonly transport: Transport) {}
@@ -53,5 +54,17 @@ export class OrgsService {
 		return this.transport.post<MutationSuccess>(`/api/orgs/invites/${input.inviteId}/respond`, {
 			action: input.action,
 		});
+	}
+
+	cancelInvite(input: ManageOrgInviteInput): Promise<SdkResult<MutationSuccess>> {
+		return this.transport.delete<MutationSuccess>(
+			`/api/orgs/${input.orgId}/invites/${input.inviteId}`
+		);
+	}
+
+	resendInvite(input: ManageOrgInviteInput): Promise<SdkResult<MutationSuccess>> {
+		return this.transport.post<MutationSuccess>(
+			`/api/orgs/${input.orgId}/invites/${input.inviteId}/resend`
+		);
 	}
 }
