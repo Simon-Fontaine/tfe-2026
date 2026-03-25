@@ -1,8 +1,9 @@
 import { Hono } from "hono";
+import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 
-const sessionRoutes = new Hono<RequestContextEnv>();
+const sessionRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
 sessionRoutes.use("*", optionalAuth);
 
