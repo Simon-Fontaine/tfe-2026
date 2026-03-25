@@ -18,12 +18,12 @@ export default async function OrgsPage() {
 			<SettingsHeaderBar
 				backHref="/dashboard"
 				icon={UserGroupIcon}
-				title="Teams"
-				subtitle="Manage your organisations and team rosters"
+				title="Workspace"
+				subtitle="Manage your workspace organisations and team operations"
 			/>
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium">Your organisations</p>
+					<p className="text-sm font-medium">Workspace organisations</p>
 					<p className="text-xs text-muted-foreground">
 						{orgs.length === 0
 							? "Create an organisation to get started"

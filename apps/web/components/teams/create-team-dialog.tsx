@@ -5,7 +5,7 @@ import { type CreateTeamInput, CreateTeamSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { createTeamAction } from "@/app/dashboard/teams/actions/team";
+import { createTeamAction } from "@/app/dashboard/workspace/teams/actions/team";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -43,7 +43,7 @@ export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
 		if (state?.success && pendingRef.current) {
 			pendingRef.current = false;
 			const teamId = (state as { teamId?: string }).teamId;
-			if (teamId) router.push(`/dashboard/teams/${teamId}`);
+			if (teamId) router.push(`/dashboard/workspace/teams/${teamId}`);
 		}
 	}, [state, router]);
 

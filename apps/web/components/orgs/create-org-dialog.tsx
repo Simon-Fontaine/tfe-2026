@@ -5,7 +5,7 @@ import { type CreateOrgInput, CreateOrgSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { createOrgAction } from "@/app/dashboard/orgs/actions/org";
+import { createOrgAction } from "@/app/dashboard/workspace/orgs/actions/org";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -45,7 +45,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 			pendingRef.current = false;
 			openRef.current = false;
 			const orgId = (state as { orgId?: string }).orgId;
-			if (orgId) router.push(`/dashboard/orgs/${orgId}`);
+			if (orgId) router.push(`/dashboard/workspace/orgs/${orgId}`);
 		}
 	}, [state, router]);
 

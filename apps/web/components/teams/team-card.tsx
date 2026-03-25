@@ -13,7 +13,7 @@ interface TeamCardProps {
 export function TeamCard({ team }: TeamCardProps) {
 	return (
 		<Link
-			href={`/dashboard/teams/${team.id}`}
+			href={`/dashboard/workspace/teams/${team.id}`}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 rounded-none overflow-hidden after:rounded-none shrink-0">

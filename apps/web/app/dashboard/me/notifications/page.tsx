@@ -16,7 +16,7 @@ export default async function NotificationsPage() {
 	return (
 		<div className="space-y-6">
 			<SettingsHeaderBar
-				backHref="/dashboard"
+				backHref="/dashboard/me"
 				icon={Notification01Icon}
 				title="Notifications"
 				subtitle={
