@@ -13,7 +13,7 @@ export async function markNotificationReadAction(
 	const res = await apiPost(`/api/notifications/${notificationId}/read`);
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath("/dashboard/notifications");
+	revalidatePath("/dashboard/me/notifications");
 	return { success: true };
 }
 
@@ -24,6 +24,6 @@ export async function markAllNotificationsReadAction(
 	const res = await apiPost("/api/notifications/read-all");
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath("/dashboard/notifications");
+	revalidatePath("/dashboard/me/notifications");
 	return { success: true };
 }

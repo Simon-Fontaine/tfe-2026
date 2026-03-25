@@ -1,5 +1,3 @@
-"use server";
-
 import { createAppSdk } from "@scrimflow/app-sdk";
 import { cookies } from "next/headers";
 
