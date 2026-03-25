@@ -12,7 +12,7 @@ export default function ScrimsDirectoryPage() {
 						Scrims
 					</h1>
 					<p className="mt-3 max-w-[48ch] text-xs text-muted-foreground leading-relaxed">
-						In development: public scrim listings are not implemented yet.
+						Browse upcoming scrims and open practice requests.
 					</p>
 				</div>
 				<div className="flex flex-col items-center justify-center border p-6 py-16 text-center ring-0 focus-within:ring-0">
@@ -23,9 +23,9 @@ export default function ScrimsDirectoryPage() {
 							className="size-5 text-primary"
 						/>
 					</div>
-					<p className="text-sm font-bold">Public scrim board is not implemented yet</p>
+					<p className="text-sm font-bold">Scrim listings coming soon</p>
 					<p className="mt-1 text-xs text-muted-foreground">
-						Scrim posts currently live inside authenticated dashboard workflows only.
+						Scrim board entries will appear here once listing sync is enabled.
 					</p>
 					<div className="mt-4 flex flex-wrap justify-center gap-2">
 						<Button asChild size="sm" variant="outline">

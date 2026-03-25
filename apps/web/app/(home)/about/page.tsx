@@ -7,8 +7,8 @@ export default function AboutPage() {
 				and schedule coordination from a shared workspace.
 			</p>
 			<p className="text-muted-foreground leading-relaxed">
-				Current public surface area is intentionally limited. Team previews are public now, while
-				player, organization, and scrim listing pages are still under development.
+				Profiles, recruiting, and scrim discovery routes are being assembled to support end-to-end
+				team workflows.
 			</p>
 		</div>
 	);

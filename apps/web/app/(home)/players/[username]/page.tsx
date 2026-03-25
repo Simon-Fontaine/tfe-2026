@@ -9,11 +9,10 @@ export default async function PlayerProfilePage({
 	const { username } = await params;
 	return (
 		<div className="container mx-auto max-w-2xl space-y-4 py-8">
-			<h1 className="text-3xl font-bold">Player profiles are in development</h1>
+			<h1 className="text-3xl font-bold">Player profile preview</h1>
 			<p className="text-muted-foreground leading-relaxed">
-				The public profile route for <span className="font-mono">@{username}</span> is not
-				implemented yet. Use team profiles and dashboard recruiting flows while this page is under
-				development.
+				This route will display public details for <span className="font-mono">@{username}</span>,
+				including role preferences, current rank, and contact options.
 			</p>
 			<div className="flex flex-wrap gap-2">
 				<Button asChild size="sm" variant="outline">

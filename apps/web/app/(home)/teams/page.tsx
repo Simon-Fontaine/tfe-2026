@@ -12,7 +12,7 @@ export default function TeamsDirectoryPage() {
 						Teams
 					</h1>
 					<p className="mt-3 max-w-[48ch] text-xs text-muted-foreground leading-relaxed">
-						Read-only team profile previews are implemented for development testing.
+						Explore team profiles, roster size, and recruiting status.
 					</p>
 				</div>
 				<div className="flex flex-col items-center justify-center border p-6 py-16 text-center ring-0 focus-within:ring-0">

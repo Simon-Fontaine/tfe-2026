@@ -2,28 +2,12 @@
 
 Use this checklist before exposing any route in `siteConfig.nav.primary`.
 
-## Strategy choice (required)
-
-Pick exactly one strategy:
-
-- **Build now**: Ship a minimal but useful read-only experience.
-- **In development**: Gate the route with explicit status + internal testing CTA messaging.
-
 ## Checklist
 
 - [ ] Route has explicit product intent in the first viewport (what this page is for, today).
 - [ ] Copy does **not** imply unavailable functionality.
-- [ ] If incomplete, route includes clear “In development” status language.
+- [ ] If data is not available yet, route explains what will appear and where users can go next.
 - [ ] Route includes at least one concrete next action (e.g., sign in, register, contact, or alternate live route).
 - [ ] Route links to an actually available flow (no dead-end CTA).
-- [ ] If route appears in primary nav, it provides useful read-only value immediately.
+- [ ] Primary navigation links should remain intentionally curated and useful.
 - [ ] Ownership is assigned for post-launch feedback and iteration.
-
-## Current decisions for `(home)` public routes
-
-- `/teams` → **Build now** (read-only team previews + recruiting/dashboard CTAs).
-- `/players` → **In development**.
-- `/players/[username]` → **In development**.
-- `/orgs` → **In development**.
-- `/orgs/[orgId]` → **In development**.
-- `/scrims` → **In development**.

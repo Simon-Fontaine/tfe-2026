@@ -7,8 +7,7 @@ export default function TermsPage() {
 				launch.
 			</p>
 			<p className="text-sm text-muted-foreground">
-				This environment is for development only. Final public terms will be published before
-				release.
+				If you have questions about account usage rules, contact support for the latest guidance.
 			</p>
 		</div>
 	);

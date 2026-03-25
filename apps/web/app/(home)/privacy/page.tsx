@@ -7,8 +7,8 @@ export default function PrivacyPage() {
 				details are being finalized for general availability.
 			</p>
 			<p className="text-sm text-muted-foreground">
-				This environment is development-only. Contact the team directly for data access or deletion
-				requests during development.
+				For data access or deletion requests, contact support with your account details and request
+				scope.
 			</p>
 		</div>
 	);
