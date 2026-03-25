@@ -12,7 +12,8 @@ interface NotificationItemProps {
 	notification: NotificationSummary;
 }
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(iso: string): string {
+	const date = new Date(iso);
 	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
 	if (seconds < 60) return "just now";
 	const minutes = Math.floor(seconds / 60);
