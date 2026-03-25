@@ -158,6 +158,20 @@ export type TeamWithRoster = {
 	roster: RosterMember[];
 };
 
+export type TeamPublicPreview = {
+	id: string;
+	organizationId: string;
+	name: string;
+	tag: string;
+	description: string | null;
+	avatarUrl: string | null;
+	teamSr: number;
+	matchesPlayed: number;
+	isRecruiting: boolean;
+	activeRosterCount: number;
+	hasOpenRolePost: boolean;
+};
+
 export type UserSearchResult = {
 	id: string;
 	displayName: string;
