@@ -18,7 +18,8 @@ const ROLE_LABELS: Record<string, string> = {
 	support: "Support",
 };
 
-function formatExpiry(date: Date): string {
+function formatExpiry(iso: string): string {
+	const date = new Date(iso);
 	const days = Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 	return days <= 1 ? "Expires soon" : `Expires in ${days}d`;
 }
