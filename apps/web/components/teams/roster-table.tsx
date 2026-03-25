@@ -50,13 +50,15 @@ const STATUS_OPTIONS: { value: RosterStatus; label: string }[] = [
 interface RosterRowProps {
 	member: RosterMember;
 	canManage: boolean;
+	teamId: string;
 }
 
-function RosterRow({ member, canManage }: RosterRowProps) {
+function RosterRow({ member, canManage, teamId }: RosterRowProps) {
 	const [isPending, startTransition] = useTransition();
 
 	function changeStatus(status: RosterStatus) {
 		const fd = new FormData();
+		fd.set("teamId", teamId);
 		fd.set("rosterId", member.id);
 		fd.set("status", status);
 		startTransition(() => {
@@ -66,6 +68,7 @@ function RosterRow({ member, canManage }: RosterRowProps) {
 
 	function remove() {
 		const fd = new FormData();
+		fd.set("teamId", teamId);
 		fd.set("rosterId", member.id);
 		startTransition(() => {
 			void removeRosterMemberAction(null, fd);
@@ -141,7 +144,7 @@ interface RosterTableProps {
 	teamId: string;
 }
 
-export function RosterTable({ roster, canManage }: RosterTableProps) {
+export function RosterTable({ roster, canManage, teamId }: RosterTableProps) {
 	const active = roster.filter((r) => r.status !== "inactive");
 	const inactive = roster.filter((r) => r.status === "inactive");
 
@@ -158,7 +161,7 @@ export function RosterTable({ roster, canManage }: RosterTableProps) {
 	return (
 		<div className="border divide-y">
 			{active.map((member) => (
-				<RosterRow key={member.id} member={member} canManage={canManage} />
+				<RosterRow key={member.id} member={member} canManage={canManage} teamId={teamId} />
 			))}
 
 			{active.length > 0 && inactive.length > 0 && (
@@ -170,7 +173,7 @@ export function RosterTable({ roster, canManage }: RosterTableProps) {
 			)}
 
 			{inactive.map((member) => (
-				<RosterRow key={member.id} member={member} canManage={canManage} />
+				<RosterRow key={member.id} member={member} canManage={canManage} teamId={teamId} />
 			))}
 		</div>
 	);

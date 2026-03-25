@@ -17,16 +17,23 @@ import { getLfgPostsForTeam, getTeamApplications } from "@/lib/data/lfg";
 import { getUserOrgRole } from "@/lib/data/organization";
 import { getTeamPendingInvites, getTeamWithRoster } from "@/lib/data/team";
 
-export default async function TeamDetailPage({ params }: { params: Promise<{ teamId: string }> }) {
+interface TeamDetailPageProps {
+	params: Promise<{ orgId: string; teamId: string }>;
+}
+
+export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 	const { user } = await getCurrentSession();
 	if (!user) return null;
 
-	const { teamId } = await params;
+	const { orgId: routeOrgId, teamId } = await params;
 	const team = await getTeamWithRoster(teamId, user.id);
 	if (!team) notFound();
 
-	const orgId = team.organizationId;
-	const orgRole = await getUserOrgRole(orgId, user.id);
+	if (team.organizationId !== routeOrgId) {
+		notFound();
+	}
+
+	const orgRole = await getUserOrgRole(team.organizationId, user.id);
 	const canManage = orgRole === "owner" || orgRole === "manager";
 
 	const [pendingInvites, applications, lfgPosts] = canManage
@@ -41,15 +48,13 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-			{/* Back */}
 			<Button asChild variant="ghost" size="sm" className="-ml-2">
-				<Link href={`/dashboard/workspace/orgs/${orgId}`}>
+				<Link href={`/dashboard/workspace/orgs/${team.organizationId}`}>
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 					Back to org
 				</Link>
 			</Button>
 
-			{/* Team header */}
 			<div className="flex items-start gap-4">
 				<Avatar className="size-12 overflow-hidden rounded-none after:rounded-none">
 					<AvatarImage src={team.avatarUrl ?? undefined} className="rounded-none" />
@@ -69,7 +74,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 				</div>
 				{canManage && (
 					<EditTeamDialog
-						orgId={orgId}
+						orgId={team.organizationId}
 						teamId={teamId}
 						initialValues={{
 							name: team.name,
@@ -85,12 +90,15 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 			</div>
 
 			{canManage && (
-				<RecruitingToggle orgId={orgId} teamId={teamId} isRecruiting={team.isRecruiting} />
+				<RecruitingToggle
+					orgId={team.organizationId}
+					teamId={teamId}
+					isRecruiting={team.isRecruiting}
+				/>
 			)}
 
 			<Separator />
 
-			{/* Roster */}
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
 					<p className="text-sm font-medium">
@@ -101,13 +109,13 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 					</p>
 					{canManage && (
 						<div className="flex gap-2">
-							<InvitePlayerDialog teamId={teamId} orgId={orgId}>
+							<InvitePlayerDialog teamId={teamId} orgId={team.organizationId}>
 								<Button size="sm" variant="outline">
 									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 									Invite
 								</Button>
 							</InvitePlayerDialog>
-							<AddPlayerDialog teamId={teamId} orgId={orgId}>
+							<AddPlayerDialog teamId={teamId} orgId={team.organizationId}>
 								<Button size="sm" variant="outline">
 									<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 									Add player
@@ -117,14 +125,18 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 					)}
 				</div>
 
-				<RosterTable roster={team.roster} canManage={canManage} orgId={orgId} teamId={teamId} />
+				<RosterTable
+					roster={team.roster}
+					canManage={canManage}
+					orgId={team.organizationId}
+					teamId={teamId}
+				/>
 			</div>
 
 			{canManage && (
 				<>
 					<Separator />
 
-					{/* Pending invites */}
 					<div className="space-y-3">
 						<p className="text-sm font-medium">
 							Pending invites{" "}
@@ -137,7 +149,6 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 
 					<Separator />
 
-					{/* Applications */}
 					<div className="space-y-3">
 						<div className="flex items-center justify-between">
 							<p className="text-sm font-medium">
@@ -152,7 +163,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ tea
 								</span>
 							)}
 						</div>
-						<TeamApplicationsSection applications={applications} orgId={orgId} />
+						<TeamApplicationsSection applications={applications} orgId={team.organizationId} />
 					</div>
 				</>
 			)}

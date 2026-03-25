@@ -12,7 +12,7 @@ interface TeamDiscoveryCardProps {
 export function TeamDiscoveryCard({ team }: TeamDiscoveryCardProps) {
 	return (
 		<Link
-			href={`/dashboard/workspace/teams/${team.id}`}
+			href={`/dashboard/workspace/orgs/${team.organizationId}/teams/${team.id}`}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
