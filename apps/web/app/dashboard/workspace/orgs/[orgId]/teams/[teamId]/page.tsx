@@ -163,7 +163,11 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 								</span>
 							)}
 						</div>
-						<TeamApplicationsSection applications={applications} orgId={team.organizationId} />
+						<TeamApplicationsSection
+							applications={applications}
+							orgId={team.organizationId}
+							teamId={teamId}
+						/>
 					</div>
 				</>
 			)}

@@ -1,6 +1,5 @@
 import {
 	Calendar03Icon,
-	File01Icon,
 	Home01Icon,
 	Mail01Icon,
 	Search01Icon,
@@ -83,7 +82,6 @@ export const siteConfig: SiteConfig = {
 				links: [
 					{ label: "LFG Feed", href: "/dashboard/recruit/lfg", icon: UserSearch01Icon },
 					{ label: "Find Teams", href: "/dashboard/recruit/teams", icon: Search01Icon },
-					{ label: "Applications", href: "/dashboard/recruit/applications", icon: File01Icon },
 					{ label: "Inbox", href: "/dashboard/recruit/inbox", icon: Mail01Icon },
 				],
 			},
