@@ -46,8 +46,8 @@ export class AuthService {
 		return this.transport.post<AuthActionResult>("/api/auth/2fa/recovery", input);
 	}
 
-	checkUsername(username: string): Promise<SdkResult<{ available: boolean }>> {
-		return this.transport.get<{ available: boolean }>(
+	checkUsername(username: string): Promise<SdkResult<{ data: { available: boolean } }>> {
+		return this.transport.get<{ data: { available: boolean } }>(
 			`/api/auth/register/check-username?username=${encodeURIComponent(username.trim())}`
 		);
 	}

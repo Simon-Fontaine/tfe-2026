@@ -25,5 +25,5 @@ export async function checkUsernameAction(username: string): Promise<{ available
 	const sdk = getServerSdk();
 	const result = await sdk.auth.checkUsername(username);
 	if (!result.ok) return { available: false };
-	return result.data;
+	return result.data.data;
 }
