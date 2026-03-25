@@ -1,11 +1,6 @@
 "use client";
 
-import {
-	ArrowUpDownIcon,
-	BubbleChatIcon,
-	GameController01Icon,
-	Sword03Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowUpDownIcon, BubbleChatIcon, Sword03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,10 +23,7 @@ import {
 import type { SessionUser } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 
-const COMING_SOON_LINKS = [
-	{ label: "Scrims", icon: GameController01Icon, href: "/dashboard/scrims" },
-	{ label: "Chat", icon: BubbleChatIcon, href: "/dashboard/chat" },
-];
+const COMING_SOON_LINKS = [{ label: "Chat", icon: BubbleChatIcon, href: "/dashboard/chat" }];
 
 interface DashboardSidebarProps {
 	user: SessionUser;

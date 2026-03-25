@@ -72,24 +72,29 @@ export const siteConfig: SiteConfig = {
 		// Sidebar navigation inside the dashboard, split into labelled groups.
 		dashboard: [
 			{
-				links: [
-					{ label: "Dashboard", href: "/dashboard", icon: Home01Icon },
-					{ label: "Profile", href: "/dashboard/profile", icon: UserCircle02Icon },
-					{ label: "My Teams", href: "/dashboard/orgs", icon: UserGroupIcon },
-					{ label: "Schedule", href: "/dashboard/schedule", icon: Calendar03Icon },
-				],
+				links: [{ label: "Home", href: "/dashboard", icon: Home01Icon }],
+			},
+			{
+				label: "Workspace",
+				links: [{ label: "Workspace", href: "/dashboard/workspace", icon: UserGroupIcon }],
 			},
 			{
 				label: "Recruit",
 				links: [
-					{ label: "Find Teams", href: "/dashboard/teams", icon: Search01Icon },
-					{ label: "Scrims", href: "/dashboard/scrims", icon: UserSearch01Icon },
-					{ label: "Applications", href: "/dashboard/applications", icon: File01Icon },
-					{ label: "Invitations", href: "/dashboard/invitations", icon: Mail01Icon },
+					{ label: "LFG Feed", href: "/dashboard/recruit/lfg", icon: UserSearch01Icon },
+					{ label: "Find Teams", href: "/dashboard/recruit/teams", icon: Search01Icon },
+					{ label: "Applications", href: "/dashboard/recruit/applications", icon: File01Icon },
+					{ label: "Inbox", href: "/dashboard/recruit/inbox", icon: Mail01Icon },
 				],
 			},
 			{
-				links: [{ label: "Settings", href: "/dashboard/settings", icon: Settings01Icon }],
+				label: "Personal",
+				links: [
+					{ label: "Profile", href: "/dashboard/me/profile", icon: UserCircle02Icon },
+					{ label: "Schedule", href: "/dashboard/me/schedule", icon: Calendar03Icon },
+					{ label: "Notifications", href: "/dashboard/me/notifications", icon: Mail01Icon },
+					{ label: "Settings", href: "/dashboard/me/settings", icon: Settings01Icon },
+				],
 			},
 		],
 	},

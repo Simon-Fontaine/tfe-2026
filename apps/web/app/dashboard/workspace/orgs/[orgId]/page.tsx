@@ -40,9 +40,9 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 			{/* Org header */}
 			<div className="flex items-start gap-4">
 				<Button asChild variant="ghost" size="sm" className="-ml-2 mt-0.5 shrink-0">
-					<Link href="/dashboard/orgs">
+					<Link href="/dashboard/workspace">
 						<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
-						Orgs
+						Workspace
 					</Link>
 				</Button>
 			</div>
@@ -64,7 +64,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 				{isOwner && (
 					<DeleteOrgDialog orgId={org.id} orgName={org.name}>
 						<Button size="sm" variant="destructive">
-							Delete org
+							Delete workspace org
 						</Button>
 					</DeleteOrgDialog>
 				)}

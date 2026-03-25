@@ -17,21 +17,16 @@ import { getLfgPostsForTeam, getTeamApplications } from "@/lib/data/lfg";
 import { getUserOrgRole } from "@/lib/data/organization";
 import { getTeamPendingInvites, getTeamWithRoster } from "@/lib/data/team";
 
-export default async function TeamDetailPage({
-	params,
-}: {
-	params: Promise<{ orgId: string; teamId: string }>;
-}) {
+export default async function TeamDetailPage({ params }: { params: Promise<{ teamId: string }> }) {
 	const { user } = await getCurrentSession();
 	if (!user) return null;
 
-	const { orgId, teamId } = await params;
-	const [team, orgRole] = await Promise.all([
-		getTeamWithRoster(teamId, user.id),
-		getUserOrgRole(orgId, user.id),
-	]);
+	const { teamId } = await params;
+	const team = await getTeamWithRoster(teamId, user.id);
 	if (!team) notFound();
 
+	const orgId = team.organizationId;
+	const orgRole = await getUserOrgRole(orgId, user.id);
 	const canManage = orgRole === "owner" || orgRole === "manager";
 
 	const [pendingInvites, applications, lfgPosts] = canManage
@@ -48,7 +43,7 @@ export default async function TeamDetailPage({
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			{/* Back */}
 			<Button asChild variant="ghost" size="sm" className="-ml-2">
-				<Link href={`/dashboard/orgs/${orgId}`}>
+				<Link href={`/dashboard/workspace/orgs/${orgId}`}>
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 					Back to org
 				</Link>

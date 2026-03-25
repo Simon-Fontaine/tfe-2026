@@ -19,7 +19,7 @@ export default async function TeamDiscoveryPage({
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			<SettingsHeaderBar
-				backHref="/dashboard"
+				backHref="/dashboard/recruit"
 				icon={Search01Icon}
 				title="Find Teams"
 				subtitle="Browse teams and find one to join"

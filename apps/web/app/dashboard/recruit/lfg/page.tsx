@@ -20,7 +20,7 @@ export default async function LfgPage() {
 			<SettingsHeaderBar
 				backHref="/dashboard"
 				icon={UserSearch01Icon}
-				title="Looking for Group"
+				title="Recruit LFG"
 				subtitle="Find a team to join"
 			/>
 

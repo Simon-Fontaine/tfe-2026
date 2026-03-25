@@ -20,9 +20,9 @@ export default async function InvitesPage() {
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			<SettingsHeaderBar
-				backHref="/dashboard"
+				backHref="/dashboard/recruit"
 				icon={Mail01Icon}
-				title="Invites"
+				title="Recruit Inbox"
 				subtitle="Pending invitations to teams and organisations"
 			/>
 
@@ -33,7 +33,7 @@ export default async function InvitesPage() {
 						strokeWidth={1.5}
 						className="mb-4 size-10 text-muted-foreground/40"
 					/>
-					<p className="text-sm font-medium">No pending invites</p>
+					<p className="text-sm font-medium">Inbox is empty</p>
 					<p className="mt-1 text-xs text-muted-foreground">
 						When someone invites you to a team or organisation, it will appear here.
 					</p>
