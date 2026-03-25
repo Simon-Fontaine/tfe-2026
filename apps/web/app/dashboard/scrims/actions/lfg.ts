@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiDelete, apiPost } from "@/lib/api-client";
+import { apiRoutes, dashboardRoutes } from "@/lib/routes";
 
 function getRequiredString(formData: FormData, key: string): string | null {
 	const value = String(formData.get(key) ?? "").trim();
@@ -21,8 +22,8 @@ function revalidateLfgRoutes({
 	orgId?: string | null;
 	teamId?: string | null;
 } = {}) {
-	revalidatePath("/dashboard/recruit/lfg");
-	if (orgId && teamId) revalidatePath(`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`);
+	revalidatePath(dashboardRoutes.recruit.lfg);
+	if (orgId && teamId) revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
 }
 
 export async function createLfgPostAction(
@@ -34,7 +35,7 @@ export async function createLfgPostAction(
 	const orgId = getRequiredString(formData, "orgId");
 	if (!orgId) return missingFieldError("orgId");
 
-	const res = await apiPost<{ postId: string }>("/api/lfg", {
+	const res = await apiPost<{ postId: string }>(apiRoutes.lfg.root, {
 		teamId,
 		orgId,
 		rolesNeeded: formData.getAll("rolesNeeded") as string[],
@@ -58,7 +59,7 @@ export async function closeLfgPostAction(
 	const orgId = getRequiredString(formData, "orgId");
 	if (!orgId) return missingFieldError("orgId");
 
-	const res = await apiPost(`/api/lfg/${postId}/close`, {
+	const res = await apiPost(apiRoutes.lfg.close(postId), {
 		orgId,
 		postId,
 	});
@@ -75,7 +76,7 @@ export async function applyToLfgPostAction(
 	const postId = getRequiredString(formData, "postId");
 	if (!postId) return missingFieldError("postId");
 
-	const res = await apiPost(`/api/lfg/${postId}/apply`, {
+	const res = await apiPost(apiRoutes.lfg.apply(postId), {
 		postId,
 		message: formData.get("message") || undefined,
 	});
@@ -93,7 +94,7 @@ export async function withdrawApplicationAction(
 	if (!postId) return missingFieldError("postId");
 	const applicationId = getRequiredString(formData, "applicationId");
 	if (!applicationId) return missingFieldError("applicationId");
-	const res = await apiDelete(`/api/lfg/${postId}/applications/${applicationId}`);
+	const res = await apiDelete(apiRoutes.lfg.applicationById(postId, applicationId));
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
 	revalidateLfgRoutes();
@@ -113,7 +114,7 @@ export async function respondToApplicationAction(
 	const action = getRequiredString(formData, "action");
 	if (!action) return missingFieldError("action");
 
-	const res = await apiPost(`/api/lfg/${postId}/applications/${applicationId}/respond`, {
+	const res = await apiPost(apiRoutes.lfg.respondToApplication(postId, applicationId), {
 		applicationId,
 		orgId,
 		action,

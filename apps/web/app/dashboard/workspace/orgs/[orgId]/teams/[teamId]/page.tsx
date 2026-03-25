@@ -1,5 +1,6 @@
 import { ArrowLeft01Icon, Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { canManageOrg } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddPlayerDialog } from "@/components/teams/add-player-dialog";
@@ -14,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getLfgPostsForTeam, getTeamApplications } from "@/lib/data/lfg";
-import { getUserOrgRole } from "@/lib/data/organization";
-import { getTeamPendingInvites, getTeamWithRoster } from "@/lib/data/team";
+import { getUserOrgRole } from "@/lib/data/memberships";
+import { getTeamPendingInvites, getTeamWithRoster } from "@/lib/data/teams";
+import { dashboardRoutes } from "@/lib/routes";
 
 interface TeamDetailPageProps {
 	params: Promise<{ orgId: string; teamId: string }>;
@@ -34,7 +36,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 	}
 
 	const orgRole = await getUserOrgRole(team.organizationId, user.id);
-	const canManage = orgRole === "owner" || orgRole === "manager";
+	const canManage = canManageOrg(orgRole);
 
 	const [pendingInvites, applications, lfgPosts] = canManage
 		? await Promise.all([
@@ -49,7 +51,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			<Button asChild variant="ghost" size="sm" className="-ml-2">
-				<Link href={`/dashboard/workspace/orgs/${team.organizationId}`}>
+				<Link href={dashboardRoutes.workspace.orgById(team.organizationId)}>
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 					Back to org
 				</Link>

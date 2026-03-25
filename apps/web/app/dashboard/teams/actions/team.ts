@@ -7,7 +7,8 @@ import type { FormActionResult } from "@/hooks/use-form-action";
 import { toActionResult } from "@/lib/action-result";
 import { getServerSdk } from "@/lib/app-sdk";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getTeamWithRoster } from "@/lib/data/team";
+import { getTeamWithRoster } from "@/lib/data/teams";
+import { dashboardRoutes } from "@/lib/routes";
 
 async function getVerifiedTeamOrgId(teamId: string): Promise<string | null> {
 	const { user } = await getCurrentSession();
@@ -33,7 +34,7 @@ export async function createTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true, teamId: actionResult.data.teamId };
 }
 
@@ -56,8 +57,8 @@ export async function updateTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`);
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -77,8 +78,8 @@ export async function toggleRecruitingAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`);
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -98,7 +99,7 @@ export async function archiveTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -118,6 +119,6 @@ export async function deleteTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
-	redirect(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	redirect(dashboardRoutes.workspace.orgById(orgId));
 }

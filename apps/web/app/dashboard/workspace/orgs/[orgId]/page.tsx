@@ -1,5 +1,6 @@
 import { Add01Icon, ArrowLeft01Icon, UserAdd01Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { canDeleteOrg, canManageOrg } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteOrgDialog } from "@/components/orgs/delete-org-dialog";
@@ -14,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getOrgPendingInvites, getOrgWithTeams } from "@/lib/data/organization";
+import { getOrgPendingInvites, getOrgWithTeams } from "@/lib/data/orgs";
+import { dashboardRoutes } from "@/lib/routes";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -33,8 +35,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 	if (!org) notFound();
 
 	const myRole = org.members.find((m) => m.userId === user.id)?.role;
-	const canManage = myRole === "owner" || myRole === "manager";
-	const isOwner = myRole === "owner";
+	const canManage = canManageOrg(myRole);
+	const isOwner = canDeleteOrg(myRole);
 
 	const pendingInvites = canManage ? await getOrgPendingInvites(org.id, user.id) : [];
 
@@ -43,7 +45,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 			{/* Org header */}
 			<div className="flex items-start gap-4">
 				<Button asChild variant="ghost" size="sm" className="-ml-2 mt-0.5 shrink-0">
-					<Link href="/dashboard/workspace/orgs">
+					<Link href={dashboardRoutes.workspace.orgs}>
 						<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 						Workspace
 					</Link>

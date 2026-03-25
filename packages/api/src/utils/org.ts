@@ -1,3 +1,4 @@
+import { canManageOrg } from "@scrimflow/shared";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { organizationMemberTable, organizationTable } from "@/db/schema";
@@ -23,7 +24,7 @@ export async function getUserOrgRole(orgId: string, userId: string): Promise<Org
  */
 export async function verifyOrgManager(orgId: string, userId: string): Promise<boolean> {
 	const role = await getUserOrgRole(orgId, userId);
-	return role === "owner" || role === "manager";
+	return canManageOrg(role);
 }
 
 /**

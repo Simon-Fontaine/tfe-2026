@@ -9,6 +9,7 @@ import type {
 } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
+import { apiRoutes } from "@/lib/routes";
 
 export type {
 	OrgInviteSummary,
@@ -32,14 +33,14 @@ export async function getUserOrgRole(orgId: string, userId: string): Promise<Org
 // ─── Queries ───────────────────────────────────────────────────────────────────
 
 export const getOrgsForUser = cache(async (_userId: string): Promise<UserOrg[]> => {
-	const res = await apiGet<UserOrg[]>("/api/orgs");
+	const res = await apiGet<UserOrg[]>(apiRoutes.orgs.root);
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 });
 
 export const getOrgWithTeams = cache(
 	async (orgId: string, _userId: string): Promise<OrgWithTeams | null> => {
-		const res = await apiGet<OrgWithTeams>(`/api/orgs/${orgId}`);
+		const res = await apiGet<OrgWithTeams>(apiRoutes.orgs.byId(orgId));
 		if ("data" in res) return res.data;
 		if (res.status === 404) return null;
 		throw new Error(res.error);
@@ -47,7 +48,7 @@ export const getOrgWithTeams = cache(
 );
 
 export async function getPendingOrgInvitesForUser(_userId: string): Promise<OrgInviteSummary[]> {
-	const res = await apiGet<OrgInviteSummary[]>("/api/orgs/invites/received");
+	const res = await apiGet<OrgInviteSummary[]>(apiRoutes.orgs.invites.received);
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 }
@@ -56,7 +57,7 @@ export async function getOrgPendingInvites(
 	orgId: string,
 	_userId: string
 ): Promise<OrgPendingInvite[]> {
-	const res = await apiGet<OrgPendingInvite[]>(`/api/orgs/${orgId}/invites`);
+	const res = await apiGet<OrgPendingInvite[]>(apiRoutes.orgs.invites.pending(orgId));
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 }

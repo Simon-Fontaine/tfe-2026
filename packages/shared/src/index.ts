@@ -1,5 +1,7 @@
 export type { RateLimitRule as RateLimitRuleConfig } from "./config/rate-limits";
 export { rateLimits } from "./config/rate-limits";
+export * from "./permissions";
+export * from "./routes";
 export * from "./types";
 export * from "./validations/auth";
 export * from "./validations/lfg";
