@@ -1,11 +1,9 @@
 "use client";
 
-import { Search01Icon, UserIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { sendTeamInviteAction } from "@/app/dashboard/teams/[teamId]/actions/invites";
-import { searchUsersForTeamAction } from "@/app/dashboard/teams/[teamId]/actions/users";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
+import { UserSearchPicker } from "@/components/shared/user-search-picker";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -15,10 +13,9 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
-import type { UserSearchResult } from "@/lib/data/team";
+import { useUserSearch } from "@/hooks/use-user-search";
 import { cn } from "@/lib/utils";
 
 const OW2_ROLES = [
@@ -29,18 +26,6 @@ const OW2_ROLES = [
 
 type OW2Role = (typeof OW2_ROLES)[number]["value"];
 
-const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
-const RANK_LABELS: Record<string, string> = {
-	bronze: "Bronze",
-	silver: "Silver",
-	gold: "Gold",
-	platinum: "Platinum",
-	diamond: "Diamond",
-	master: "Master",
-	grandmaster: "Grandmaster",
-	champion: "Champion",
-};
-
 interface InvitePlayerDialogProps {
 	teamId: string;
 	orgId: string;
@@ -49,34 +34,28 @@ interface InvitePlayerDialogProps {
 
 export function InvitePlayerDialog({ teamId, orgId, children }: InvitePlayerDialogProps) {
 	const [open, setOpen] = useState(false);
-	const [query, setQuery] = useState("");
-	const [results, setResults] = useState<UserSearchResult[]>([]);
-	const [searching, setSearching] = useState(false);
-	const [selected, setSelected] = useState<UserSearchResult | null>(null);
 	const [roleInTeam, setRoleInTeam] = useState<OW2Role>("damage");
 	const pendingRef = useRef(false);
+	const {
+		query,
+		results,
+		searching,
+		selected,
+		updateQuery,
+		selectUser,
+		clearSelection,
+		reset: resetSearch,
+	} = useUserSearch({
+		excludeTeamId: teamId,
+		prefillFromSelection: (user) => {
+			if (user.primaryRole) setRoleInTeam(user.primaryRole);
+		},
+	});
 
 	const { state, submit, isPending } = useFormAction(sendTeamInviteAction, {
 		loadingMessage: "Sending invite…",
 		successMessage: "Invite sent",
 	});
-
-	useEffect(() => {
-		if (query.length < 2) {
-			setResults([]);
-			return;
-		}
-		setSearching(true);
-		const timer = setTimeout(async () => {
-			try {
-				const users = await searchUsersForTeamAction(query, teamId);
-				setResults(users);
-			} finally {
-				setSearching(false);
-			}
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [query, teamId]);
 
 	useEffect(() => {
 		if (state?.success && pendingRef.current) {
@@ -86,9 +65,7 @@ export function InvitePlayerDialog({ teamId, orgId, children }: InvitePlayerDial
 	}, [state]);
 
 	function reset() {
-		setQuery("");
-		setResults([]);
-		setSelected(null);
+		resetSearch();
 		setRoleInTeam("damage");
 	}
 
@@ -119,84 +96,18 @@ export function InvitePlayerDialog({ teamId, orgId, children }: InvitePlayerDial
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
-					<Field>
-						<FieldLabel>Search by display name</FieldLabel>
-						<div className="relative">
-							<HugeiconsIcon
-								icon={Search01Icon}
-								strokeWidth={2}
-								className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-							/>
-							<Input
-								placeholder="e.g. Hestia"
-								value={query}
-								onChange={(e) => {
-									setQuery(e.target.value);
-									setSelected(null);
-								}}
-								className="pl-8"
-							/>
-							{searching && (
-								<Spinner className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2" />
-							)}
-						</div>
-					</Field>
-
-					{results.length > 0 && !selected && (
-						<div className="max-h-48 divide-y overflow-y-auto border">
-							{results.map((u) => (
-								<button
-									key={u.id}
-									type="button"
-									onClick={() => {
-										setSelected(u);
-										setResults([]);
-										if (u.primaryRole) setRoleInTeam(u.primaryRole);
-									}}
-									className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted"
-								>
-									<Avatar className="size-7 shrink-0 overflow-hidden rounded-none after:rounded-none">
-										<AvatarImage src={u.avatarUrl ?? undefined} className="rounded-none" />
-										<AvatarFallback className="rounded-none text-[10px]">
-											<HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
-										</AvatarFallback>
-									</Avatar>
-									<div className="min-w-0">
-										<p className="truncate text-xs font-medium">{u.displayName}</p>
-										{(u.primaryRole || u.rank) && (
-											<p className="text-[10px] text-muted-foreground">
-												{u.primaryRole && ROLE_LABELS[u.primaryRole as keyof typeof ROLE_LABELS]}
-												{u.rank && ` · ${RANK_LABELS[u.rank] ?? u.rank}`}
-											</p>
-										)}
-									</div>
-								</button>
-							))}
-						</div>
-					)}
-
-					{query.length >= 2 && !searching && results.length === 0 && !selected && (
-						<p className="text-xs text-muted-foreground">No users found matching "{query}".</p>
-					)}
-
-					{selected && (
-						<div className="flex items-center gap-3 border bg-muted/40 px-3 py-2">
-							<Avatar className="size-7 shrink-0 overflow-hidden rounded-none after:rounded-none">
-								<AvatarImage src={selected.avatarUrl ?? undefined} className="rounded-none" />
-								<AvatarFallback className="rounded-none text-[10px]">
-									<HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
-								</AvatarFallback>
-							</Avatar>
-							<p className="flex-1 text-xs font-medium">{selected.displayName}</p>
-							<button
-								type="button"
-								onClick={() => setSelected(null)}
-								className="text-[10px] text-muted-foreground hover:text-foreground"
-							>
-								Change
-							</button>
-						</div>
-					)}
+					<UserSearchPicker
+						label="Search by display name"
+						placeholder="e.g. Hestia"
+						query={query}
+						searching={searching}
+						results={results}
+						selected={selected}
+						onQueryChange={updateQuery}
+						onSelect={selectUser}
+						onClearSelection={clearSelection}
+						renderUserMeta={renderOw2RoleRankMeta}
+					/>
 
 					<Field>
 						<FieldLabel>Role on team</FieldLabel>
