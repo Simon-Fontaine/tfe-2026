@@ -48,7 +48,6 @@ export async function updateTeamAction(
 	const sdk = getServerSdk();
 	const result = await sdk.teams.update({
 		teamId,
-		orgId,
 		name: String(formData.get("name") ?? ""),
 		tag: String(formData.get("tag") ?? ""),
 		description: formData.get("description")?.toString() || undefined,
@@ -72,7 +71,6 @@ export async function toggleRecruitingAction(
 	const sdk = getServerSdk();
 	const result = await sdk.teams.toggleRecruiting({
 		teamId,
-		orgId,
 	});
 
 	const actionResult = toActionResult(result);
@@ -93,12 +91,29 @@ export async function archiveTeamAction(
 	const sdk = getServerSdk();
 	const result = await sdk.teams.archive({
 		teamId,
-		orgId,
 	});
 
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	return { success: true };
+}
+
+export async function unarchiveTeamAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (!orgId) return { success: false, error: "Team not found" };
+	const sdk = getServerSdk();
+	const result = await sdk.teams.unarchive({ teamId });
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
 	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
@@ -113,7 +128,6 @@ export async function deleteTeamAction(
 	const sdk = getServerSdk();
 	const result = await sdk.teams.delete({
 		teamId,
-		orgId,
 	});
 
 	const actionResult = toActionResult(result);
@@ -121,4 +135,22 @@ export async function deleteTeamAction(
 
 	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	redirect(dashboardRoutes.workspace.orgById(orgId));
+}
+
+export async function leaveTeamAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (!orgId) return { success: false, error: "Team not found" };
+	const sdk = getServerSdk();
+	const result = await sdk.teams.leave({ teamId });
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	return { success: true };
 }

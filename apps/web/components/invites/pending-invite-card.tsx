@@ -65,6 +65,7 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 	const avatarUrl = props.type === "team" ? props.invite.teamAvatarUrl : props.invite.orgAvatarUrl;
 	const tag = props.type === "team" ? props.invite.teamTag : null;
 	const role = props.type === "team" ? props.invite.roleInTeam : props.invite.role;
+	const permissionRole = props.type === "team" ? props.invite.permissionRole : null;
 	const canRespond = canRespondToInvite(props.invite.status, props.invite.expiresAt);
 
 	return (
@@ -82,6 +83,11 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 					<Badge variant="outline" className="shrink-0 text-[10px]">
 						{ROLE_LABELS[role] ?? role}
 					</Badge>
+					{permissionRole === "admin" && (
+						<Badge variant="secondary" className="shrink-0 text-[10px]">
+							Admin access
+						</Badge>
+					)}
 					<Badge variant="secondary" className="shrink-0 text-[10px]">
 						{STATUS_LABELS[props.invite.status] ?? props.invite.status}
 					</Badge>

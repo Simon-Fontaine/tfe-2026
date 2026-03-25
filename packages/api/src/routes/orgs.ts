@@ -1,12 +1,16 @@
 import {
+	CreateOrgJoinRequestSchema,
 	CreateOrgSchema,
+	canAssignOrgRole,
 	DeleteOrgSchema,
 	InviteToOrgSchema,
 	RespondToOrgInviteSchema,
+	RespondToOrgJoinRequestSchema,
+	TransferOrgOwnershipSchema,
 	UpdateOrgMemberRoleSchema,
 	UpdateOrgSchema,
 } from "@scrimflow/shared";
-import { and, eq, gt } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -15,120 +19,24 @@ import {
 	organizationMemberTable,
 	organizationTable,
 	orgInviteTable,
+	orgJoinRequestTable,
 	teamRosterTable,
 	teamTable,
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
-import { ensureUniqueSlug, getUserOrgRole, nameToSlug, verifyOrgManager } from "@/utils/org";
+import { ensureUniqueSlug, getOrgPermissions, getUserOrgRole, nameToSlug } from "@/utils/org";
 
 const orgRoutes = new Hono<AuthEnv>();
 
-// GET / — List user's organizations
-orgRoutes.get("/", async (c) => {
-	const user = c.get("user");
+function getEffectiveInviteStatus(status: string, expiresAt: Date) {
+	return status === "pending" && expiresAt < new Date() ? "expired" : status;
+}
 
-	const rows = await db.query.organizationMemberTable.findMany({
-		where: eq(organizationMemberTable.userId, user.id),
-		with: {
-			organization: {
-				columns: {
-					id: true,
-					name: true,
-					slug: true,
-					avatarUrl: true,
-					description: true,
-				},
-				with: {
-					teams: {
-						columns: { id: true },
-						where: eq(teamTable.isArchived, false),
-					},
-				},
-			},
-		},
-	});
-
-	return c.json({
-		data: rows.map((row) => ({
-			id: row.organization.id,
-			name: row.organization.name,
-			slug: row.organization.slug,
-			avatarUrl: row.organization.avatarUrl,
-			description: row.organization.description ?? null,
-			role: row.role,
-			teamCount: row.organization.teams.length,
-		})),
-	});
-});
-
-// GET /invites/received — Pending org invites for the current user
-orgRoutes.get("/invites/received", async (c) => {
-	const user = c.get("user");
-	const now = new Date();
-
-	const rows = await db.query.orgInviteTable.findMany({
-		where: eq(orgInviteTable.inviteeUserId, user.id),
-		with: {
-			organization: {
-				columns: { id: true, name: true, avatarUrl: true },
-			},
-			inviter: { columns: { displayName: true } },
-		},
-		orderBy: (t, { desc }) => [desc(t.createdAt)],
-	});
-
-	return c.json({
-		data: rows.map((r) => ({
-			id: r.id,
-			organizationId: r.organization.id,
-			orgName: r.organization.name,
-			orgAvatarUrl: r.organization.avatarUrl,
-			inviterDisplayName: r.inviter.displayName,
-			role: r.role,
-			status: r.status === "pending" && r.expiresAt < now ? "expired" : r.status,
-			expiresAt: r.expiresAt,
-			createdAt: r.createdAt,
-			statusChangedAt: r.updatedAt,
-		})),
-	});
-});
-
-// POST / — Create organization
-orgRoutes.post("/", async (c) => {
-	const user = c.get("user");
-
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(CreateOrgSchema, body);
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const { name, description } = parsed.output;
-	const slug = await ensureUniqueSlug(nameToSlug(name));
-
-	const [org] = await db
-		.insert(organizationTable)
-		.values({ name, slug, description: description || null, ownerId: user.id })
-		.returning({ id: organizationTable.id });
-
-	await db.insert(organizationMemberTable).values({
-		organizationId: org.id,
-		userId: user.id,
-		role: "owner",
-	});
-
-	return c.json({ success: true, orgId: org.id });
-});
-
-// GET /:id — Get org detail with teams and members
-orgRoutes.get("/:id", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-
-	const membership = await getUserOrgRole(orgId, user.id);
-	if (!membership) return c.json({ error: "Not a member of this organisation." }, 403);
+async function getOrgWorkspaceDetail(orgId: string, userId: string) {
+	const permissions = await getOrgPermissions(orgId, userId);
+	if (!permissions.role) return null;
 
 	const org = await db.query.organizationTable.findFirst({
 		where: eq(organizationTable.id, orgId),
@@ -143,403 +51,240 @@ orgRoutes.get("/:id", async (c) => {
 		},
 		with: {
 			teams: {
-				where: eq(teamTable.isArchived, false),
 				columns: {
 					id: true,
 					name: true,
 					tag: true,
+					description: true,
 					avatarUrl: true,
 					teamSr: true,
+					matchesPlayed: true,
 					isRecruiting: true,
+					isArchived: true,
 				},
+				with: {
+					roster: {
+						columns: {
+							id: true,
+							userId: true,
+							permissionRole: true,
+							status: true,
+						},
+					},
+				},
+				orderBy: [asc(teamTable.name)],
 			},
 			members: {
 				with: {
 					user: {
-						columns: {
-							id: true,
-							displayName: true,
-							avatarUrl: true,
+						columns: { id: true, displayName: true, avatarUrl: true },
+					},
+				},
+				orderBy: [asc(organizationMemberTable.createdAt)],
+			},
+		},
+	});
+	if (!org) return null;
+
+	const [inviteRows, requestRows] = await Promise.all([
+		db.query.orgInviteTable.findMany({
+			where: eq(orgInviteTable.organizationId, orgId),
+			with: {
+				invitee: {
+					columns: { id: true, displayName: true, avatarUrl: true },
+				},
+			},
+			orderBy: [desc(orgInviteTable.createdAt)],
+		}),
+		db.query.orgJoinRequestTable.findMany({
+			where: eq(orgJoinRequestTable.organizationId, orgId),
+			with: {
+				requester: {
+					columns: { id: true, displayName: true, avatarUrl: true },
+					with: {
+						profile: {
+							columns: { primaryRole: true, rank: true },
 						},
 					},
 				},
 			},
-		},
+			orderBy: [desc(orgJoinRequestTable.createdAt)],
+		}),
+	]);
+
+	const orgAdminCount = org.members.filter(
+		(member) => member.role === "owner" || member.role === "manager"
+	).length;
+	const activeRosterCountsByUser = new Map<string, number>();
+
+	for (const team of org.teams) {
+		for (const rosterRow of team.roster) {
+			if (rosterRow.status === "inactive") continue;
+			activeRosterCountsByUser.set(
+				rosterRow.userId,
+				(activeRosterCountsByUser.get(rosterRow.userId) ?? 0) + 1
+			);
+		}
+	}
+
+	const teamSummaries = org.teams.map((team) => {
+		const teamAdminCount = new Set(
+			team.roster
+				.filter((row) => row.status !== "inactive" && row.permissionRole === "admin")
+				.map((row) => row.userId)
+		).size;
+
+		return {
+			id: team.id,
+			organizationId: org.id,
+			name: team.name,
+			tag: team.tag,
+			description: team.description ?? null,
+			avatarUrl: team.avatarUrl,
+			teamSr: team.teamSr,
+			matchesPlayed: team.matchesPlayed,
+			isRecruiting: team.isRecruiting,
+			isArchived: team.isArchived,
+			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
+			adminCount: teamAdminCount + orgAdminCount,
+		};
 	});
 
-	if (!org) return c.json({ error: "Organisation not found." }, 404);
-
-	return c.json({
-		data: {
-			id: org.id,
-			name: org.name,
-			slug: org.slug,
-			avatarUrl: org.avatarUrl,
-			bannerUrl: org.bannerUrl ?? null,
-			description: org.description ?? null,
-			ownerId: org.ownerId,
-			teams: org.teams,
-			members: org.members.map((m) => ({
-				id: m.id,
-				userId: m.user.id,
-				displayName: m.user.displayName,
-				avatarUrl: m.user.avatarUrl,
-				role: m.role,
+	return {
+		id: org.id,
+		name: org.name,
+		slug: org.slug,
+		avatarUrl: org.avatarUrl,
+		bannerUrl: org.bannerUrl ?? null,
+		description: org.description ?? null,
+		ownerId: org.ownerId,
+		currentUser: {
+			role: permissions.role,
+			canManage: permissions.canManage,
+			canDelete: permissions.canDelete,
+			canTransferOwnership: permissions.canTransferOwnership,
+			canLeave: permissions.canLeave,
+			canReviewRequests: permissions.canReviewRequests,
+			canManageMembers: permissions.canManageMembers,
+			canManageTeams: permissions.canManageTeams,
+		},
+		activeTeams: teamSummaries.filter((team) => !team.isArchived),
+		archivedTeams: teamSummaries.filter((team) => team.isArchived),
+		members: org.members.map((member) => ({
+			id: member.id,
+			userId: member.user.id,
+			displayName: member.user.displayName,
+			avatarUrl: member.user.avatarUrl,
+			role: member.role,
+			activeTeamCount: activeRosterCountsByUser.get(member.user.id) ?? 0,
+			joinedAt: member.createdAt,
+		})),
+		pendingInvites: inviteRows
+			.map((row) => ({
+				id: row.id,
+				inviteeUserId: row.invitee.id,
+				inviteeDisplayName: row.invitee.displayName,
+				inviteeAvatarUrl: row.invitee.avatarUrl,
+				role: row.role,
+				status: getEffectiveInviteStatus(row.status, row.expiresAt),
+				expiresAt: row.expiresAt,
+				createdAt: row.createdAt,
+				statusChangedAt: row.updatedAt,
+			}))
+			.filter((row) => row.status === "pending"),
+		pendingJoinRequests: requestRows
+			.filter((row) => row.status === "pending")
+			.map((row) => ({
+				id: row.id,
+				requesterUserId: row.requester.id,
+				requesterDisplayName: row.requester.displayName,
+				requesterAvatarUrl: row.requester.avatarUrl,
+				requesterPrimaryRole: row.requester.profile?.primaryRole ?? null,
+				requesterRank: row.requester.profile?.rank ?? null,
+				message: row.message ?? null,
+				status: row.status,
+				createdAt: row.createdAt,
+				statusChangedAt: row.updatedAt,
 			})),
-		},
-	});
-});
+	};
+}
 
-// GET /:id/invites — Pending invites for the org (manager/owner only)
-orgRoutes.get("/:id/invites", async (c) => {
+orgRoutes.get("/", async (c) => {
 	const user = c.get("user");
-	const orgId = c.req.param("id");
 
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager) return c.json({ data: [] });
-
-	const now = new Date();
-	const rows = await db.query.orgInviteTable.findMany({
-		where: and(
-			eq(orgInviteTable.organizationId, orgId),
-			eq(orgInviteTable.status, "pending"),
-			gt(orgInviteTable.expiresAt, now)
-		),
+	const memberships = await db.query.organizationMemberTable.findMany({
+		where: eq(organizationMemberTable.userId, user.id),
 		with: {
-			invitee: {
-				columns: { id: true, displayName: true, avatarUrl: true },
+			organization: {
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+					avatarUrl: true,
+					description: true,
+				},
+				with: {
+					teams: {
+						where: eq(teamTable.isArchived, false),
+						columns: { id: true },
+					},
+				},
 			},
 		},
-		orderBy: (t, { desc }) => [desc(t.createdAt)],
+		orderBy: [asc(organizationMemberTable.createdAt)],
 	});
 
 	return c.json({
-		data: rows.map((r) => ({
-			id: r.id,
-			inviteeUserId: r.invitee.id,
-			inviteeDisplayName: r.invitee.displayName,
-			inviteeAvatarUrl: r.invitee.avatarUrl,
-			role: r.role,
-			status: r.status === "pending" && r.expiresAt < now ? "expired" : r.status,
-			expiresAt: r.expiresAt,
-			createdAt: r.createdAt,
-			statusChangedAt: r.updatedAt,
+		data: memberships.map((membership) => ({
+			id: membership.organization.id,
+			name: membership.organization.name,
+			slug: membership.organization.slug,
+			avatarUrl: membership.organization.avatarUrl,
+			description: membership.organization.description ?? null,
+			role: membership.role,
+			teamCount: membership.organization.teams.length,
+			canManage: membership.role === "owner" || membership.role === "manager",
 		})),
 	});
 });
 
-// DELETE /:id/invites/:inviteId — Cancel org invite
-orgRoutes.delete("/:id/invites/:inviteId", async (c) => {
+orgRoutes.get("/invites/received", async (c) => {
 	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const inviteId = c.req.param("inviteId");
-
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager) return c.json({ error: "You do not have permission to cancel invites." }, 403);
-
-	const invite = await db.query.orgInviteTable.findFirst({
-		where: eq(orgInviteTable.id, inviteId),
-		columns: { id: true, organizationId: true, status: true, expiresAt: true },
-	});
-	if (!invite || invite.organizationId !== orgId)
-		return c.json({ error: "Invite not found." }, 404);
-
-	const effectiveStatus =
-		invite.status === "pending" && invite.expiresAt < new Date() ? "expired" : invite.status;
-	if (effectiveStatus !== "pending")
-		return c.json({ error: "Only pending invites can be cancelled." }, 400);
-
-	await db
-		.update(orgInviteTable)
-		.set({ status: "cancelled" })
-		.where(eq(orgInviteTable.id, inviteId));
-
-	return c.json({ success: true });
-});
-
-// POST /:id/invites/:inviteId/resend — Extend expiry for pending invite
-orgRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const inviteId = c.req.param("inviteId");
-
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager) return c.json({ error: "You do not have permission to resend invites." }, 403);
-
-	const invite = await db.query.orgInviteTable.findFirst({
-		where: eq(orgInviteTable.id, inviteId),
-		with: { organization: { columns: { name: true } } },
-		columns: {
-			id: true,
-			organizationId: true,
-			inviteeUserId: true,
-			role: true,
-			status: true,
-			expiresAt: true,
+	const rows = await db.query.orgInviteTable.findMany({
+		where: eq(orgInviteTable.inviteeUserId, user.id),
+		with: {
+			organization: {
+				columns: { id: true, name: true, avatarUrl: true },
+			},
+			inviter: { columns: { displayName: true } },
 		},
-	});
-	if (!invite || invite.organizationId !== orgId)
-		return c.json({ error: "Invite not found." }, 404);
-
-	const effectiveStatus =
-		invite.status === "pending" && invite.expiresAt < new Date() ? "expired" : invite.status;
-	if (effectiveStatus !== "pending")
-		return c.json({ error: "Only pending invites can be resent." }, 400);
-
-	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-	await db.update(orgInviteTable).set({ expiresAt }).where(eq(orgInviteTable.id, inviteId));
-
-	await createNotification({
-		userId: invite.inviteeUserId,
-		type: "org_invite_received",
-		title: `You've been invited to join ${invite.organization?.name ?? "an organisation"}`,
-		body: `You were invited as ${invite.role}.`,
-		referenceType: "org_invite",
+		orderBy: [desc(orgInviteTable.createdAt)],
 	});
 
-	return c.json({ success: true });
+	return c.json({
+		data: rows.map((row) => ({
+			id: row.id,
+			organizationId: row.organization.id,
+			orgName: row.organization.name,
+			orgAvatarUrl: row.organization.avatarUrl,
+			inviterDisplayName: row.inviter.displayName,
+			role: row.role,
+			status: getEffectiveInviteStatus(row.status, row.expiresAt),
+			expiresAt: row.expiresAt,
+			createdAt: row.createdAt,
+			statusChangedAt: row.updatedAt,
+		})),
+	});
 });
 
-// PATCH /:id — Update organization
-orgRoutes.patch("/:id", async (c) => {
-	const user = c.get("user");
-	const id = c.req.param("id");
-
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(UpdateOrgSchema, { ...body, orgId: id });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const { orgId, name, description } = parsed.output;
-
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager)
-		return c.json({ error: "You do not have permission to edit this organisation." }, 403);
-
-	await db
-		.update(organizationTable)
-		.set({ name, description: description || null })
-		.where(eq(organizationTable.id, orgId));
-
-	return c.json({ success: true });
-});
-
-// DELETE /:id — Delete organization (owner only)
-orgRoutes.delete("/:id", async (c) => {
-	const user = c.get("user");
-	const id = c.req.param("id");
-
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(DeleteOrgSchema, { ...body, orgId: id });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const { orgId, confirmName } = parsed.output;
-
-	const role = await getUserOrgRole(orgId, user.id);
-	if (role !== "owner") return c.json({ error: "Only the organisation owner can delete it." }, 403);
-
-	const org = await db.query.organizationTable.findFirst({
-		where: eq(organizationTable.id, orgId),
-		columns: { name: true },
-	});
-	if (!org) return c.json({ error: "Organisation not found." }, 404);
-	if (org.name !== confirmName) return c.json({ error: "Organisation name does not match." }, 400);
-
-	await db.delete(organizationTable).where(eq(organizationTable.id, orgId));
-
-	return c.json({ success: true });
-});
-
-// PATCH /:id/members/:userId/role — Update member role
-orgRoutes.patch("/:id/members/:userId/role", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const memberId = c.req.param("userId");
-
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(UpdateOrgMemberRoleSchema, { ...body, orgId, memberId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const { role } = parsed.output;
-
-	const actorRole = await getUserOrgRole(orgId, user.id);
-	if (actorRole !== "owner" && actorRole !== "manager")
-		return c.json({ error: "You do not have permission to manage members." }, 403);
-
-	if (actorRole === "manager" && (role === "owner" || role === "manager"))
-		return c.json({ error: "Managers can only assign coach, analyst, or player roles." }, 403);
-
-	const member = await db.query.organizationMemberTable.findFirst({
-		where: eq(organizationMemberTable.id, memberId),
-		columns: { userId: true, role: true, organizationId: true },
-	});
-	if (!member || member.organizationId !== orgId)
-		return c.json({ error: "Member not found." }, 404);
-	if (member.role === "owner") return c.json({ error: "The owner's role cannot be changed." }, 400);
-
-	await db
-		.update(organizationMemberTable)
-		.set({ role })
-		.where(eq(organizationMemberTable.id, memberId));
-
-	return c.json({ success: true });
-});
-
-// DELETE /:id/members/:userId — Remove member
-orgRoutes.delete("/:id/members/:userId", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const memberId = c.req.param("userId");
-
-	const actorRole = await getUserOrgRole(orgId, user.id);
-	if (actorRole !== "owner" && actorRole !== "manager")
-		return c.json({ error: "You do not have permission to remove members." }, 403);
-
-	const member = await db.query.organizationMemberTable.findFirst({
-		where: eq(organizationMemberTable.id, memberId),
-		columns: { userId: true, role: true, organizationId: true },
-	});
-	if (!member || member.organizationId !== orgId)
-		return c.json({ error: "Member not found." }, 404);
-	if (member.role === "owner") return c.json({ error: "The owner cannot be removed." }, 400);
-
-	// Mark all their team roster entries in this org as inactive
-	const orgTeams = await db.query.teamRosterTable.findMany({
-		where: eq(teamRosterTable.userId, member.userId),
-		with: { team: { columns: { organizationId: true } } },
-		columns: { id: true },
-	});
-	const rosterIds = orgTeams.filter((r) => r.team.organizationId === orgId).map((r) => r.id);
-
-	await db.transaction(async (tx) => {
-		for (const rosterId of rosterIds) {
-			await tx
-				.update(teamRosterTable)
-				.set({ status: "inactive", leftAt: new Date() })
-				.where(eq(teamRosterTable.id, rosterId));
-		}
-		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, memberId));
-	});
-
-	return c.json({ success: true });
-});
-
-// DELETE /:id/leave — Leave organization as current user
-orgRoutes.delete("/:id/leave", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-
-	const membership = await db.query.organizationMemberTable.findFirst({
-		where: and(
-			eq(organizationMemberTable.organizationId, orgId),
-			eq(organizationMemberTable.userId, user.id)
-		),
-		columns: { id: true, role: true },
-	});
-	if (!membership) return c.json({ error: "You are not a member of this organisation." }, 404);
-	if (membership.role === "owner")
-		return c.json({ error: "The owner must transfer ownership before leaving." }, 400);
-
-	await db.transaction(async (tx) => {
-		const rosterEntries = await tx.query.teamRosterTable.findMany({
-			where: eq(teamRosterTable.userId, user.id),
-			with: { team: { columns: { organizationId: true } } },
-			columns: { id: true },
-		});
-		const rosterIds = rosterEntries
-			.filter((entry) => entry.team.organizationId === orgId)
-			.map((entry) => entry.id);
-
-		for (const rosterId of rosterIds) {
-			await tx
-				.update(teamRosterTable)
-				.set({ status: "inactive", leftAt: new Date() })
-				.where(eq(teamRosterTable.id, rosterId));
-		}
-
-		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, membership.id));
-	});
-
-	return c.json({ success: true });
-});
-
-// POST /:id/invites — Invite to organization
-orgRoutes.post("/:id/invites", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(InviteToOrgSchema, { ...body, orgId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const { userId, role } = parsed.output;
-
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager) return c.json({ error: "You do not have permission to invite members." }, 403);
-
-	// Check not already a member
-	const existing = await db.query.organizationMemberTable.findFirst({
-		where: and(
-			eq(organizationMemberTable.organizationId, orgId),
-			eq(organizationMemberTable.userId, userId)
-		),
-		columns: { id: true },
-	});
-	if (existing) return c.json({ error: "This user is already a member of the organisation." }, 409);
-
-	// Check no pending invite
-	const existingInvite = await db.query.orgInviteTable.findFirst({
-		where: and(eq(orgInviteTable.organizationId, orgId), eq(orgInviteTable.inviteeUserId, userId)),
-		columns: { id: true, status: true },
-	});
-	if (existingInvite?.status === "pending")
-		return c.json({ error: "An invite is already pending for this user." }, 409);
-
-	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-	const org = await db.query.organizationTable.findFirst({
-		where: eq(organizationTable.id, orgId),
-		columns: { name: true },
-	});
-
-	await db.insert(orgInviteTable).values({
-		organizationId: orgId,
-		inviteeUserId: userId,
-		inviterUserId: user.id,
-		role,
-		expiresAt,
-	});
-
-	await createNotification({
-		userId,
-		type: "org_invite_received",
-		title: `You've been invited to join ${org?.name ?? "an organisation"}`,
-		body: `You were invited as ${role}.`,
-		referenceType: "org_invite",
-	});
-
-	return c.json({ success: true });
-});
-
-// POST /invites/:id/respond — Accept/decline org invite
 orgRoutes.post("/invites/:id/respond", async (c) => {
 	const user = c.get("user");
 	const inviteId = c.req.param("id");
-
 	const body = await c.req.json().catch(() => null);
 	if (!body) return c.json({ error: "Invalid request body." }, 400);
 
 	const parsed = v.safeParse(RespondToOrgInviteSchema, { ...body, inviteId });
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const { action } = parsed.output;
 
 	const invite = await db.query.orgInviteTable.findFirst({
 		where: eq(orgInviteTable.id, inviteId),
@@ -559,22 +304,23 @@ orgRoutes.post("/invites/:id/respond", async (c) => {
 		return c.json({ error: "This invite is no longer active." }, 400);
 	if (invite.expiresAt < new Date()) return c.json({ error: "This invite has expired." }, 400);
 
-	if (action === "accept") {
+	if (parsed.output.action === "accept") {
 		await db.transaction(async (tx) => {
-			const alreadyMember = await tx.query.organizationMemberTable.findFirst({
+			const membership = await tx.query.organizationMemberTable.findFirst({
 				where: and(
 					eq(organizationMemberTable.organizationId, invite.organizationId),
 					eq(organizationMemberTable.userId, user.id)
 				),
 				columns: { id: true },
 			});
-			if (!alreadyMember) {
+			if (!membership) {
 				await tx.insert(organizationMemberTable).values({
 					organizationId: invite.organizationId,
 					userId: user.id,
 					role: invite.role,
 				});
 			}
+
 			await tx
 				.update(orgInviteTable)
 				.set({ status: "accepted" })
@@ -585,6 +331,549 @@ orgRoutes.post("/invites/:id/respond", async (c) => {
 			.update(orgInviteTable)
 			.set({ status: "declined" })
 			.where(eq(orgInviteTable.id, inviteId));
+	}
+
+	return c.json({ success: true });
+});
+
+orgRoutes.post("/", async (c) => {
+	const user = c.get("user");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(CreateOrgSchema, body);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const slug = await ensureUniqueSlug(nameToSlug(parsed.output.name));
+	const [org] = await db
+		.insert(organizationTable)
+		.values({
+			name: parsed.output.name,
+			slug,
+			description: parsed.output.description || null,
+			ownerId: user.id,
+		})
+		.returning({ id: organizationTable.id });
+
+	await db.insert(organizationMemberTable).values({
+		organizationId: org.id,
+		userId: user.id,
+		role: "owner",
+	});
+
+	return c.json({ success: true, orgId: org.id });
+});
+
+orgRoutes.get("/:id", async (c) => {
+	const user = c.get("user");
+	const detail = await getOrgWorkspaceDetail(c.req.param("id"), user.id);
+	if (!detail) return c.json({ error: "Organisation not found or inaccessible." }, 404);
+	return c.json({ data: detail });
+});
+
+orgRoutes.patch("/:id", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(UpdateOrgSchema, { ...body, orgId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const permissions = await getOrgPermissions(orgId, user.id);
+	if (!permissions.canManage) {
+		return c.json({ error: "You do not have permission to edit this organisation." }, 403);
+	}
+
+	const slug = parsed.output.slug
+		? await ensureUniqueSlug(parsed.output.slug, orgId)
+		: await ensureUniqueSlug(nameToSlug(parsed.output.name), orgId);
+
+	await db
+		.update(organizationTable)
+		.set({
+			name: parsed.output.name,
+			slug,
+			description: parsed.output.description || null,
+		})
+		.where(eq(organizationTable.id, orgId));
+
+	return c.json({ success: true });
+});
+
+orgRoutes.post("/:id/ownership", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(TransferOrgOwnershipSchema, { ...body, orgId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const permissions = await getOrgPermissions(orgId, user.id);
+	if (!permissions.canTransferOwnership || !permissions.membership) {
+		return c.json({ error: "Only the org owner can transfer ownership." }, 403);
+	}
+
+	const target = await db.query.organizationMemberTable.findFirst({
+		where: eq(organizationMemberTable.id, parsed.output.memberId),
+		columns: { id: true, organizationId: true, role: true, userId: true },
+	});
+	if (!target || target.organizationId !== orgId)
+		return c.json({ error: "Target member not found." }, 404);
+
+	await db.transaction(async (tx) => {
+		await tx
+			.update(organizationMemberTable)
+			.set({ role: "manager" })
+			.where(eq(organizationMemberTable.id, permissions.membership.id));
+
+		await tx
+			.update(organizationMemberTable)
+			.set({ role: "owner" })
+			.where(eq(organizationMemberTable.id, target.id));
+
+		await tx
+			.update(organizationTable)
+			.set({ ownerId: target.userId })
+			.where(eq(organizationTable.id, orgId));
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.delete("/:id", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(DeleteOrgSchema, { ...body, orgId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const role = await getUserOrgRole(orgId, user.id);
+	if (role !== "owner") return c.json({ error: "Only the org owner can delete it." }, 403);
+
+	const org = await db.query.organizationTable.findFirst({
+		where: eq(organizationTable.id, orgId),
+		columns: { id: true, name: true },
+	});
+	if (!org) return c.json({ error: "Organisation not found." }, 404);
+	if (org.name !== parsed.output.confirmName) {
+		return c.json({ error: "Organisation name does not match." }, 400);
+	}
+
+	await db.delete(organizationTable).where(eq(organizationTable.id, orgId));
+	return c.json({ success: true });
+});
+
+orgRoutes.patch("/:id/members/:memberId/role", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const memberId = c.req.param("memberId");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(UpdateOrgMemberRoleSchema, { ...body, orgId, memberId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const actorRole = await getUserOrgRole(orgId, user.id);
+	if (!canAssignOrgRole(actorRole, parsed.output.role)) {
+		return c.json({ error: "You do not have permission to assign that role." }, 403);
+	}
+
+	const member = await db.query.organizationMemberTable.findFirst({
+		where: eq(organizationMemberTable.id, memberId),
+		columns: { id: true, organizationId: true, role: true },
+	});
+	if (!member || member.organizationId !== orgId)
+		return c.json({ error: "Member not found." }, 404);
+	if (member.role === "owner") return c.json({ error: "The owner's role cannot be changed." }, 400);
+	if (actorRole === "manager" && member.role === "manager") {
+		return c.json({ error: "Managers cannot change another manager's role." }, 403);
+	}
+
+	await db
+		.update(organizationMemberTable)
+		.set({ role: parsed.output.role })
+		.where(eq(organizationMemberTable.id, memberId));
+
+	return c.json({ success: true });
+});
+
+orgRoutes.delete("/:id/members/:memberId", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const memberId = c.req.param("memberId");
+
+	const actorRole = await getUserOrgRole(orgId, user.id);
+	if (actorRole !== "owner" && actorRole !== "manager") {
+		return c.json({ error: "You do not have permission to remove members." }, 403);
+	}
+
+	const member = await db.query.organizationMemberTable.findFirst({
+		where: eq(organizationMemberTable.id, memberId),
+		columns: { id: true, organizationId: true, role: true, userId: true },
+	});
+	if (!member || member.organizationId !== orgId)
+		return c.json({ error: "Member not found." }, 404);
+	if (member.role === "owner") return c.json({ error: "The owner cannot be removed." }, 400);
+	if (actorRole === "manager" && member.role === "manager") {
+		return c.json({ error: "Managers cannot remove another manager." }, 403);
+	}
+
+	const orgTeams = await db.query.teamRosterTable.findMany({
+		where: eq(teamRosterTable.userId, member.userId),
+		with: { team: { columns: { organizationId: true } } },
+		columns: { id: true },
+	});
+
+	await db.transaction(async (tx) => {
+		for (const rosterEntry of orgTeams.filter((row) => row.team.organizationId === orgId)) {
+			await tx
+				.update(teamRosterTable)
+				.set({ status: "inactive", leftAt: new Date() })
+				.where(eq(teamRosterTable.id, rosterEntry.id));
+		}
+
+		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, member.id));
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.delete("/:id/leave", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+
+	const membership = await db.query.organizationMemberTable.findFirst({
+		where: and(
+			eq(organizationMemberTable.organizationId, orgId),
+			eq(organizationMemberTable.userId, user.id)
+		),
+		columns: { id: true, role: true },
+	});
+	if (!membership) return c.json({ error: "You are not a member of this organisation." }, 404);
+	if (membership.role === "owner") {
+		return c.json({ error: "The owner must transfer ownership before leaving." }, 400);
+	}
+
+	const rosterEntries = await db.query.teamRosterTable.findMany({
+		where: eq(teamRosterTable.userId, user.id),
+		with: { team: { columns: { organizationId: true } } },
+		columns: { id: true },
+	});
+
+	await db.transaction(async (tx) => {
+		for (const rosterEntry of rosterEntries.filter((row) => row.team.organizationId === orgId)) {
+			await tx
+				.update(teamRosterTable)
+				.set({ status: "inactive", leftAt: new Date() })
+				.where(eq(teamRosterTable.id, rosterEntry.id));
+		}
+
+		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, membership.id));
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.get("/:id/invites", async (c) => {
+	const user = c.get("user");
+	const permissions = await getOrgPermissions(c.req.param("id"), user.id);
+	if (!permissions.canManage) return c.json({ data: [] });
+
+	const rows = await db.query.orgInviteTable.findMany({
+		where: eq(orgInviteTable.organizationId, c.req.param("id")),
+		with: {
+			invitee: {
+				columns: { id: true, displayName: true, avatarUrl: true },
+			},
+		},
+		orderBy: [desc(orgInviteTable.createdAt)],
+	});
+
+	return c.json({
+		data: rows
+			.map((row) => ({
+				id: row.id,
+				inviteeUserId: row.invitee.id,
+				inviteeDisplayName: row.invitee.displayName,
+				inviteeAvatarUrl: row.invitee.avatarUrl,
+				role: row.role,
+				status: getEffectiveInviteStatus(row.status, row.expiresAt),
+				expiresAt: row.expiresAt,
+				createdAt: row.createdAt,
+				statusChangedAt: row.updatedAt,
+			}))
+			.filter((row) => row.status === "pending"),
+	});
+});
+
+orgRoutes.post("/:id/invites", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(InviteToOrgSchema, { ...body, orgId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const actorRole = await getUserOrgRole(orgId, user.id);
+	if (!canAssignOrgRole(actorRole, parsed.output.role)) {
+		return c.json({ error: "You do not have permission to invite members with that role." }, 403);
+	}
+
+	const membership = await db.query.organizationMemberTable.findFirst({
+		where: and(
+			eq(organizationMemberTable.organizationId, orgId),
+			eq(organizationMemberTable.userId, parsed.output.userId)
+		),
+		columns: { id: true },
+	});
+	if (membership)
+		return c.json({ error: "This user is already a member of the organisation." }, 409);
+
+	const existingInvite = await db.query.orgInviteTable.findFirst({
+		where: and(
+			eq(orgInviteTable.organizationId, orgId),
+			eq(orgInviteTable.inviteeUserId, parsed.output.userId),
+			eq(orgInviteTable.status, "pending")
+		),
+		columns: { id: true, expiresAt: true },
+	});
+	if (existingInvite && existingInvite.expiresAt > new Date()) {
+		return c.json({ error: "An invite is already pending for this user." }, 409);
+	}
+
+	const org = await db.query.organizationTable.findFirst({
+		where: eq(organizationTable.id, orgId),
+		columns: { name: true },
+	});
+
+	await db.insert(orgInviteTable).values({
+		organizationId: orgId,
+		inviteeUserId: parsed.output.userId,
+		inviterUserId: user.id,
+		role: parsed.output.role,
+		expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+	});
+
+	await createNotification({
+		userId: parsed.output.userId,
+		type: "org_invite_received",
+		title: `You've been invited to join ${org?.name ?? "an organisation"}`,
+		body: `You were invited as ${parsed.output.role}.`,
+		referenceType: "org_invite",
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.delete("/:id/invites/:inviteId", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const inviteId = c.req.param("inviteId");
+
+	const permissions = await getOrgPermissions(orgId, user.id);
+	if (!permissions.canManage)
+		return c.json({ error: "You do not have permission to cancel invites." }, 403);
+
+	const invite = await db.query.orgInviteTable.findFirst({
+		where: eq(orgInviteTable.id, inviteId),
+		columns: { id: true, organizationId: true, status: true, expiresAt: true },
+	});
+	if (!invite || invite.organizationId !== orgId)
+		return c.json({ error: "Invite not found." }, 404);
+	if (getEffectiveInviteStatus(invite.status, invite.expiresAt) !== "pending") {
+		return c.json({ error: "Only pending invites can be cancelled." }, 400);
+	}
+
+	await db
+		.update(orgInviteTable)
+		.set({ status: "cancelled" })
+		.where(eq(orgInviteTable.id, inviteId));
+
+	return c.json({ success: true });
+});
+
+orgRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const inviteId = c.req.param("inviteId");
+
+	const permissions = await getOrgPermissions(orgId, user.id);
+	if (!permissions.canManage)
+		return c.json({ error: "You do not have permission to resend invites." }, 403);
+
+	const invite = await db.query.orgInviteTable.findFirst({
+		where: eq(orgInviteTable.id, inviteId),
+		with: { organization: { columns: { name: true } } },
+	});
+	if (!invite || invite.organizationId !== orgId)
+		return c.json({ error: "Invite not found." }, 404);
+	if (invite.status !== "pending")
+		return c.json({ error: "Only pending invites can be resent." }, 400);
+
+	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+	await db.update(orgInviteTable).set({ expiresAt }).where(eq(orgInviteTable.id, inviteId));
+
+	await createNotification({
+		userId: invite.inviteeUserId,
+		type: "org_invite_received",
+		title: `You've been invited to join ${invite.organization?.name ?? "an organisation"}`,
+		body: `You were invited as ${invite.role}.`,
+		referenceType: "org_invite",
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.get("/:id/requests", async (c) => {
+	const user = c.get("user");
+	const permissions = await getOrgPermissions(c.req.param("id"), user.id);
+	if (!permissions.canReviewRequests) return c.json({ data: [] });
+
+	const rows = await db.query.orgJoinRequestTable.findMany({
+		where: eq(orgJoinRequestTable.organizationId, c.req.param("id")),
+		with: {
+			requester: {
+				columns: { id: true, displayName: true, avatarUrl: true },
+				with: {
+					profile: {
+						columns: { primaryRole: true, rank: true },
+					},
+				},
+			},
+		},
+		orderBy: [desc(orgJoinRequestTable.createdAt)],
+	});
+
+	return c.json({
+		data: rows
+			.filter((row) => row.status === "pending")
+			.map((row) => ({
+				id: row.id,
+				requesterUserId: row.requester.id,
+				requesterDisplayName: row.requester.displayName,
+				requesterAvatarUrl: row.requester.avatarUrl,
+				requesterPrimaryRole: row.requester.profile?.primaryRole ?? null,
+				requesterRank: row.requester.profile?.rank ?? null,
+				message: row.message ?? null,
+				status: row.status,
+				createdAt: row.createdAt,
+				statusChangedAt: row.updatedAt,
+			})),
+	});
+});
+
+orgRoutes.post("/:id/requests", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(CreateOrgJoinRequestSchema, { ...body, orgId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const org = await db.query.organizationTable.findFirst({
+		where: eq(organizationTable.id, orgId),
+		columns: { id: true },
+	});
+	if (!org) return c.json({ error: "Organisation not found." }, 404);
+
+	const membership = await db.query.organizationMemberTable.findFirst({
+		where: and(
+			eq(organizationMemberTable.organizationId, orgId),
+			eq(organizationMemberTable.userId, user.id)
+		),
+		columns: { id: true },
+	});
+	if (membership) return c.json({ error: "You are already a member of this organisation." }, 409);
+
+	const existing = await db.query.orgJoinRequestTable.findFirst({
+		where: and(
+			eq(orgJoinRequestTable.organizationId, orgId),
+			eq(orgJoinRequestTable.requesterUserId, user.id),
+			eq(orgJoinRequestTable.status, "pending")
+		),
+		columns: { id: true },
+	});
+	if (existing) return c.json({ error: "You already have a pending org request." }, 409);
+
+	await db.insert(orgJoinRequestTable).values({
+		organizationId: orgId,
+		requesterUserId: user.id,
+		message: parsed.output.message ?? null,
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.post("/:id/requests/:requestId/respond", async (c) => {
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const requestId = c.req.param("requestId");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(RespondToOrgJoinRequestSchema, { ...body, requestId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const request = await db.query.orgJoinRequestTable.findFirst({
+		where: eq(orgJoinRequestTable.id, requestId),
+		columns: { id: true, organizationId: true, requesterUserId: true, status: true },
+	});
+	if (!request || request.organizationId !== orgId)
+		return c.json({ error: "Request not found." }, 404);
+	if (request.status !== "pending")
+		return c.json({ error: "This request is no longer active." }, 400);
+
+	if (parsed.output.action === "cancel") {
+		if (request.requesterUserId !== user.id) {
+			return c.json({ error: "Only the requester can cancel this request." }, 403);
+		}
+
+		await db
+			.update(orgJoinRequestTable)
+			.set({ status: "cancelled" })
+			.where(eq(orgJoinRequestTable.id, requestId));
+
+		return c.json({ success: true });
+	}
+
+	const permissions = await getOrgPermissions(orgId, user.id);
+	if (!permissions.canReviewRequests) {
+		return c.json({ error: "You do not have permission to review requests." }, 403);
+	}
+
+	if (parsed.output.action === "approve") {
+		await db.transaction(async (tx) => {
+			const membership = await tx.query.organizationMemberTable.findFirst({
+				where: and(
+					eq(organizationMemberTable.organizationId, orgId),
+					eq(organizationMemberTable.userId, request.requesterUserId)
+				),
+				columns: { id: true },
+			});
+			if (!membership) {
+				await tx.insert(organizationMemberTable).values({
+					organizationId: orgId,
+					userId: request.requesterUserId,
+					role: "player",
+				});
+			}
+
+			await tx
+				.update(orgJoinRequestTable)
+				.set({ status: "approved" })
+				.where(eq(orgJoinRequestTable.id, requestId));
+		});
+	} else {
+		await db
+			.update(orgJoinRequestTable)
+			.set({ status: "rejected" })
+			.where(eq(orgJoinRequestTable.id, requestId));
 	}
 
 	return c.json({ success: true });

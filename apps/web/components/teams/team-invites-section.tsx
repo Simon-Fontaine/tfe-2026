@@ -82,6 +82,11 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 							<Badge variant="outline" className="text-[10px]">
 								{ROLE_LABELS[invite.roleInTeam] ?? invite.roleInTeam}
 							</Badge>
+							{invite.permissionRole === "admin" && (
+								<Badge variant="secondary" className="text-[10px]">
+									Admin access
+								</Badge>
+							)}
 							<span className="text-[10px] text-muted-foreground">
 								{formatExpiry(invite.expiresAt)}
 							</span>

@@ -20,7 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 
 interface EditTeamDialogProps {
-	orgId: string;
 	teamId: string;
 	initialValues: {
 		name: string;
@@ -30,7 +29,7 @@ interface EditTeamDialogProps {
 	children: React.ReactNode;
 }
 
-export function EditTeamDialog({ orgId, teamId, initialValues, children }: EditTeamDialogProps) {
+export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDialogProps) {
 	const [open, setOpen] = useState(false);
 	const pendingRef = useRef(false);
 
@@ -42,7 +41,6 @@ export function EditTeamDialog({ orgId, teamId, initialValues, children }: EditT
 	const form = useForm<UpdateTeamInput>({
 		resolver: valibotResolver(UpdateTeamSchema),
 		defaultValues: {
-			orgId,
 			teamId,
 			name: initialValues.name,
 			tag: initialValues.tag,
@@ -60,7 +58,6 @@ export function EditTeamDialog({ orgId, teamId, initialValues, children }: EditT
 	function onSubmit(values: UpdateTeamInput) {
 		pendingRef.current = true;
 		const fd = new FormData();
-		fd.set("orgId", values.orgId);
 		fd.set("teamId", values.teamId);
 		fd.set("name", values.name);
 		fd.set("tag", values.tag);
@@ -75,7 +72,6 @@ export function EditTeamDialog({ orgId, teamId, initialValues, children }: EditT
 				setOpen(o);
 				if (o) {
 					form.reset({
-						orgId,
 						teamId,
 						name: initialValues.name,
 						tag: initialValues.tag,

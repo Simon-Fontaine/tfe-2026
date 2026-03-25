@@ -129,50 +129,9 @@ export interface HeadersGetter {
 export type OW2Role = "tank" | "damage" | "support";
 export type RosterStatus = "active" | "benched" | "trial" | "inactive";
 export type OrgRole = "owner" | "manager" | "coach" | "analyst" | "player";
-
-// ─── Team types ────────────────────────────────────────────────────────────
-
-export type RosterMember = {
-	id: string;
-	userId: string;
-	displayName: string;
-	avatarUrl: string | null;
-	primaryRole: OW2Role;
-	rank: string | null;
-	rankDivision: number | null;
-	roleInTeam: OW2Role;
-	status: RosterStatus;
-	joinedAt: IsoDateString;
-	leftAt: IsoDateString | null;
-	statusChangedAt: IsoDateString;
-};
-
-export type TeamWithRoster = {
-	id: string;
-	organizationId: string;
-	name: string;
-	tag: string;
-	description: string | null;
-	avatarUrl: string | null;
-	teamSr: number;
-	matchesPlayed: number;
-	isRecruiting: boolean;
-	roster: RosterMember[];
-};
-
-export type TeamPublicPreview = {
-	id: string;
-	organizationId: string;
-	name: string;
-	tag: string;
-	description: string | null;
-	avatarUrl: string | null;
-	teamSr: number;
-	matchesPlayed: number;
-	isRecruiting: boolean;
-	activeRosterCount: number;
-	hasOpenRolePost: boolean;
-};
+export type TeamPermissionRole = "admin" | "member";
+export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
+export type JoinRequestStatus = "pending" | "approved" | "rejected" | "withdrawn" | "cancelled";
 
 export type UserSearchResult = {
 	id: string;
@@ -182,7 +141,60 @@ export type UserSearchResult = {
 	rank: string | null;
 };
 
-export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
+// ─── Team types ────────────────────────────────────────────────────────────
+
+export type TeamPermissions = {
+	orgRole: OrgRole | null;
+	teamPermissionRole: TeamPermissionRole | null;
+	canManage: boolean;
+	canManageAdmins: boolean;
+	canManageRoster: boolean;
+	canManageInvites: boolean;
+	canManageRequests: boolean;
+	canManageSettings: boolean;
+	canLeave: boolean;
+};
+
+export type RosterMember = {
+	id: string;
+	userId: string;
+	displayName: string;
+	avatarUrl: string | null;
+	primaryRole: OW2Role;
+	rank: string | null;
+	rankDivision: number | null;
+	permissionRole: TeamPermissionRole;
+	roleInTeam: OW2Role;
+	status: RosterStatus;
+	joinedAt: IsoDateString;
+	leftAt: IsoDateString | null;
+	statusChangedAt: IsoDateString;
+};
+
+export type TeamSummary = {
+	id: string;
+	organizationId: string;
+	name: string;
+	tag: string;
+	description: string | null;
+	avatarUrl: string | null;
+	teamSr: number;
+	matchesPlayed: number;
+	isRecruiting: boolean;
+	isArchived: boolean;
+	activeRosterCount: number;
+	adminCount: number;
+};
+
+export type TeamAdminSummary = {
+	id: string;
+	userId: string;
+	displayName: string;
+	avatarUrl: string | null;
+	permissionRole: TeamPermissionRole;
+	orgRole: OrgRole | null;
+	source: "team" | "organization";
+};
 
 export type TeamInviteSummary = {
 	id: string;
@@ -192,6 +204,7 @@ export type TeamInviteSummary = {
 	teamAvatarUrl: string | null;
 	inviterDisplayName: string;
 	roleInTeam: OW2Role;
+	permissionRole: TeamPermissionRole;
 	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
@@ -204,13 +217,71 @@ export type TeamPendingInvite = {
 	inviteeDisplayName: string;
 	inviteeAvatarUrl: string | null;
 	roleInTeam: OW2Role;
+	permissionRole: TeamPermissionRole;
 	status: InviteLifecycleStatus;
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
 	statusChangedAt: IsoDateString;
 };
 
+export type TeamJoinRequestSummary = {
+	id: string;
+	requesterUserId: string;
+	requesterDisplayName: string;
+	requesterAvatarUrl: string | null;
+	requesterPrimaryRole: OW2Role | null;
+	requesterRank: string | null;
+	requestedRoleInTeam: OW2Role;
+	message: string | null;
+	status: JoinRequestStatus;
+	createdAt: IsoDateString;
+	statusChangedAt: IsoDateString;
+};
+
+export type TeamWorkspaceDetail = TeamSummary & {
+	organizationName: string;
+	organizationSlug: string;
+	currentUser: TeamPermissions;
+	roster: RosterMember[];
+	admins: TeamAdminSummary[];
+	pendingInvites: TeamPendingInvite[];
+	pendingJoinRequests: TeamJoinRequestSummary[];
+	applications: LfgApplicationSummary[];
+	lfgPosts: LfgPostSummary[];
+};
+
+export type TeamWithRoster = TeamWorkspaceDetail;
+
+export type TeamPublicPreview = {
+	id: string;
+	organizationId: string;
+	organizationName: string;
+	organizationSlug: string;
+	name: string;
+	tag: string;
+	description: string | null;
+	avatarUrl: string | null;
+	teamSr: number;
+	matchesPlayed: number;
+	isRecruiting: boolean;
+	isArchived: boolean;
+	activeRosterCount: number;
+	hasOpenRolePost: boolean;
+	hasPendingJoinRequest: boolean;
+};
+
 // ─── Organization types ────────────────────────────────────────────────────
+
+export type OrgPermissions = {
+	role: OrgRole | null;
+	canManage: boolean;
+	canDelete: boolean;
+	canTransferOwnership: boolean;
+	canLeave: boolean;
+	canReviewRequests: boolean;
+	canManageMembers: boolean;
+	canManageTeams: boolean;
+};
 
 export type UserOrg = {
 	id: string;
@@ -220,16 +291,10 @@ export type UserOrg = {
 	description: string | null;
 	role: OrgRole;
 	teamCount: number;
+	canManage: boolean;
 };
 
-export type OrgTeamSummary = {
-	id: string;
-	name: string;
-	tag: string;
-	avatarUrl: string | null;
-	teamSr: number;
-	isRecruiting: boolean;
-};
+export type OrgTeamSummary = TeamSummary;
 
 export type OrgMemberSummary = {
 	id: string;
@@ -237,40 +302,8 @@ export type OrgMemberSummary = {
 	displayName: string;
 	avatarUrl: string | null;
 	role: OrgRole;
-};
-
-export type OrgWithTeams = {
-	id: string;
-	name: string;
-	slug: string;
-	avatarUrl: string | null;
-	bannerUrl: string | null;
-	description: string | null;
-	ownerId: string;
-	teams: OrgTeamSummary[];
-	members: OrgMemberSummary[];
-};
-
-export type PublicOrgSummary = {
-	id: string;
-	slug: string;
-	name: string;
-	avatarUrl: string | null;
-	description: string | null;
-	teamCount: number;
-	activeRosterCount: number;
-};
-
-export type PublicOrgDetail = {
-	id: string;
-	slug: string;
-	name: string;
-	avatarUrl: string | null;
-	bannerUrl: string | null;
-	description: string | null;
-	teamCount: number;
-	activeRosterCount: number;
-	teams: OrgTeamSummary[];
+	activeTeamCount: number;
+	joinedAt: IsoDateString;
 };
 
 export type OrgInviteSummary = {
@@ -296,6 +329,60 @@ export type OrgPendingInvite = {
 	expiresAt: IsoDateString;
 	createdAt: IsoDateString;
 	statusChangedAt: IsoDateString;
+};
+
+export type OrgJoinRequestSummary = {
+	id: string;
+	requesterUserId: string;
+	requesterDisplayName: string;
+	requesterAvatarUrl: string | null;
+	requesterPrimaryRole: OW2Role | null;
+	requesterRank: string | null;
+	message: string | null;
+	status: JoinRequestStatus;
+	createdAt: IsoDateString;
+	statusChangedAt: IsoDateString;
+};
+
+export type OrgWorkspaceDetail = {
+	id: string;
+	name: string;
+	slug: string;
+	avatarUrl: string | null;
+	bannerUrl: string | null;
+	description: string | null;
+	ownerId: string;
+	currentUser: OrgPermissions;
+	activeTeams: OrgTeamSummary[];
+	archivedTeams: OrgTeamSummary[];
+	members: OrgMemberSummary[];
+	pendingInvites: OrgPendingInvite[];
+	pendingJoinRequests: OrgJoinRequestSummary[];
+};
+
+export type OrgWithTeams = OrgWorkspaceDetail;
+
+export type PublicOrgSummary = {
+	id: string;
+	slug: string;
+	name: string;
+	avatarUrl: string | null;
+	description: string | null;
+	teamCount: number;
+	activeRosterCount: number;
+};
+
+export type PublicOrgDetail = {
+	id: string;
+	slug: string;
+	name: string;
+	avatarUrl: string | null;
+	bannerUrl: string | null;
+	description: string | null;
+	teamCount: number;
+	activeRosterCount: number;
+	teams: OrgTeamSummary[];
+	hasPendingJoinRequest: boolean;
 };
 
 // ─── Discovery types ───────────────────────────────────────────────────────

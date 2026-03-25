@@ -19,7 +19,6 @@ const APPLICATION_ACTION_VALUES = ["accept", "reject"] as const;
 
 export const CreateLfgPostSchema = v.object({
 	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
-	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 	rolesNeeded: v.array(v.picklist(OW2_ROLE_VALUES, "Invalid role")),
 	minRank: v.optional(v.picklist(OW2_RANK_VALUES, "Invalid rank")),
 	maxRank: v.optional(v.picklist(OW2_RANK_VALUES, "Invalid rank")),
@@ -33,7 +32,6 @@ export type CreateLfgPostInput = v.InferOutput<typeof CreateLfgPostSchema>;
 
 export const CloseLfgPostSchema = v.object({
 	postId: v.pipe(v.string(), v.uuid("Invalid post ID")),
-	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 });
 
 export type CloseLfgPostInput = v.InferOutput<typeof CloseLfgPostSchema>;
@@ -49,7 +47,6 @@ export type ApplyToLfgPostInput = v.InferOutput<typeof ApplyToLfgPostSchema>;
 
 export const RespondToApplicationSchema = v.object({
 	applicationId: v.pipe(v.string(), v.uuid("Invalid application ID")),
-	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 	action: v.picklist(APPLICATION_ACTION_VALUES, "Please select an action"),
 	roleInTeam: v.optional(v.picklist(OW2_ROLE_VALUES, "Invalid role")),
 });

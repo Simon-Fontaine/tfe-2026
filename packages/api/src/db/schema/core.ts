@@ -18,6 +18,7 @@ import {
 	confirmationStatusEnum,
 	disputeResolutionEnum,
 	gameModeEnum,
+	joinRequestStatusEnum,
 	lfgApplicationStatusEnum,
 	lfgStatusEnum,
 	lfgTypeEnum,
@@ -32,6 +33,7 @@ import {
 	rosterStatusEnum,
 	scrimStatusEnum,
 	teamInviteStatusEnum,
+	teamMemberRoleEnum,
 } from "./enums";
 // ============================================================================
 // PLAYER PROFILE — Extends auth user with Overwatch 2-specific data
@@ -332,6 +334,7 @@ export const teamRosterTable = pgTable(
 
 		/** Role on this specific team. */
 		roleInTeam: ow2RoleEnum("role_in_team").notNull(),
+		permissionRole: teamMemberRoleEnum("permission_role").notNull().default("member"),
 		status: rosterStatusEnum("status").notNull().default("active"),
 
 		/** Join date, distinct from createdAt for transfer tracking. */
@@ -1003,6 +1006,7 @@ export const teamInviteTable = pgTable(
 
 		/** Role the invitee will join with. */
 		roleInTeam: ow2RoleEnum("role_in_team").notNull(),
+		permissionRole: teamMemberRoleEnum("permission_role").notNull().default("member"),
 
 		status: teamInviteStatusEnum("status").notNull().default("pending"),
 
@@ -1015,7 +1019,6 @@ export const teamInviteTable = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		uniqueIndex("team_invite_unique_idx").on(table.teamId, table.inviteeUserId),
 		index("team_invite_team_idx").on(table.teamId),
 		index("team_invite_invitee_idx").on(table.inviteeUserId),
 	]
@@ -1061,9 +1064,65 @@ export const orgInviteTable = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		uniqueIndex("org_invite_unique_idx").on(table.organizationId, table.inviteeUserId),
 		index("org_invite_org_idx").on(table.organizationId),
 		index("org_invite_invitee_idx").on(table.inviteeUserId),
+	]
+);
+
+// ============================================================================
+// ORG JOIN REQUESTS — Direct requests from users who want to join an org
+// ============================================================================
+
+export const orgJoinRequestTable = pgTable(
+	"org_join_request",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organizationTable.id, { onDelete: "cascade" }),
+		requesterUserId: uuid("requester_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		message: text("message"),
+		status: joinRequestStatusEnum("status").notNull().default("pending"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("org_join_request_org_idx").on(table.organizationId),
+		index("org_join_request_requester_idx").on(table.requesterUserId),
+	]
+);
+
+// ============================================================================
+// TEAM JOIN REQUESTS — Direct requests from users who want to join a team
+// ============================================================================
+
+export const teamJoinRequestTable = pgTable(
+	"team_join_request",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		teamId: uuid("team_id")
+			.notNull()
+			.references(() => teamTable.id, { onDelete: "cascade" }),
+		requesterUserId: uuid("requester_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		requestedRoleInTeam: ow2RoleEnum("requested_role_in_team").notNull(),
+		message: text("message"),
+		status: joinRequestStatusEnum("status").notNull().default("pending"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("team_join_request_team_idx").on(table.teamId),
+		index("team_join_request_requester_idx").on(table.requesterUserId),
 	]
 );
 

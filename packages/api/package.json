@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
+		"build": "bun --eval \"console.log('API uses Bun runtime directly; no separate build output required.')\"",
 		"start": "bun src/index.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",

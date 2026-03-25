@@ -6,6 +6,7 @@ import { useTransition } from "react";
 import {
 	removeRosterMemberAction,
 	updateRosterStatusAction,
+	updateTeamMemberPermissionAction,
 } from "@/app/dashboard/teams/[teamId]/actions/roster";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -50,10 +51,11 @@ const STATUS_OPTIONS: { value: RosterStatus; label: string }[] = [
 interface RosterRowProps {
 	member: RosterMember;
 	canManage: boolean;
+	canManageAdmins: boolean;
 	teamId: string;
 }
 
-function RosterRow({ member, canManage, teamId }: RosterRowProps) {
+function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProps) {
 	const [isPending, startTransition] = useTransition();
 
 	function changeStatus(status: RosterStatus) {
@@ -72,6 +74,16 @@ function RosterRow({ member, canManage, teamId }: RosterRowProps) {
 		fd.set("rosterId", member.id);
 		startTransition(() => {
 			void removeRosterMemberAction(null, fd);
+		});
+	}
+
+	function changePermissionRole(permissionRole: "admin" | "member") {
+		const fd = new FormData();
+		fd.set("teamId", teamId);
+		fd.set("memberId", member.id);
+		fd.set("permissionRole", permissionRole);
+		startTransition(() => {
+			void updateTeamMemberPermissionAction(null, fd);
 		});
 	}
 
@@ -101,6 +113,11 @@ function RosterRow({ member, canManage, teamId }: RosterRowProps) {
 			<Badge className={cn("text-[10px] shrink-0", STATUS_VARIANTS[member.status])}>
 				{member.status.charAt(0).toUpperCase() + member.status.slice(1)}
 			</Badge>
+			{member.permissionRole === "admin" && (
+				<Badge variant="outline" className="text-[10px] shrink-0">
+					Admin
+				</Badge>
+			)}
 
 			{canManage && (
 				<DropdownMenu>
@@ -123,6 +140,19 @@ function RosterRow({ member, canManage, teamId }: RosterRowProps) {
 								{opt.label}
 							</DropdownMenuItem>
 						))}
+						{canManageAdmins && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									className="text-xs"
+									onSelect={() =>
+										changePermissionRole(member.permissionRole === "admin" ? "member" : "admin")
+									}
+								>
+									{member.permissionRole === "admin" ? "Remove admin" : "Make admin"}
+								</DropdownMenuItem>
+							</>
+						)}
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							className="text-xs text-destructive focus:text-destructive"
@@ -140,11 +170,16 @@ function RosterRow({ member, canManage, teamId }: RosterRowProps) {
 interface RosterTableProps {
 	roster: RosterMember[];
 	canManage: boolean;
-	orgId: string;
+	canManageAdmins?: boolean;
 	teamId: string;
 }
 
-export function RosterTable({ roster, canManage, teamId }: RosterTableProps) {
+export function RosterTable({
+	roster,
+	canManage,
+	canManageAdmins = false,
+	teamId,
+}: RosterTableProps) {
 	const active = roster.filter((r) => r.status !== "inactive");
 	const inactive = roster.filter((r) => r.status === "inactive");
 
@@ -161,7 +196,13 @@ export function RosterTable({ roster, canManage, teamId }: RosterTableProps) {
 	return (
 		<div className="border divide-y">
 			{active.map((member) => (
-				<RosterRow key={member.id} member={member} canManage={canManage} teamId={teamId} />
+				<RosterRow
+					key={member.id}
+					member={member}
+					canManage={canManage}
+					canManageAdmins={canManageAdmins}
+					teamId={teamId}
+				/>
 			))}
 
 			{active.length > 0 && inactive.length > 0 && (
@@ -173,7 +214,13 @@ export function RosterTable({ roster, canManage, teamId }: RosterTableProps) {
 			)}
 
 			{inactive.map((member) => (
-				<RosterRow key={member.id} member={member} canManage={canManage} teamId={teamId} />
+				<RosterRow
+					key={member.id}
+					member={member}
+					canManage={canManage}
+					canManageAdmins={canManageAdmins}
+					teamId={teamId}
+				/>
 			))}
 		</div>
 	);

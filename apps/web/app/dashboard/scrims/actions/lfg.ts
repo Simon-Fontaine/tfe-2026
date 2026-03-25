@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiDelete, apiPost } from "@/lib/api-client";
+import { getCurrentSession } from "@/lib/auth/session";
+import { getTeamWithRoster } from "@/lib/data/teams";
 import { apiRoutes, dashboardRoutes } from "@/lib/routes";
 
 function getRequiredString(formData: FormData, key: string): string | null {
@@ -13,6 +15,14 @@ function getRequiredString(formData: FormData, key: string): string | null {
 
 function missingFieldError(key: string): FormActionResult {
 	return { error: "Missing required form data.", fieldErrors: { [key]: ["Required"] } };
+}
+
+async function getVerifiedTeamOrgId(teamId: string): Promise<string | null> {
+	const { user } = await getCurrentSession();
+	if (!user) return null;
+	const team = await getTeamWithRoster(teamId, user.id);
+	if (!team) return null;
+	return team.organizationId;
 }
 
 function revalidateLfgRoutes({
@@ -32,12 +42,10 @@ export async function createLfgPostAction(
 ): Promise<FormActionResult & { postId?: string }> {
 	const teamId = getRequiredString(formData, "teamId");
 	if (!teamId) return missingFieldError("teamId");
-	const orgId = getRequiredString(formData, "orgId");
-	if (!orgId) return missingFieldError("orgId");
+	const orgId = await getVerifiedTeamOrgId(teamId);
 
 	const res = await apiPost<{ postId: string }>(apiRoutes.lfg.root, {
 		teamId,
-		orgId,
 		rolesNeeded: formData.getAll("rolesNeeded") as string[],
 		minRank: formData.get("minRank") || undefined,
 		maxRank: formData.get("maxRank") || undefined,
@@ -56,16 +64,15 @@ export async function closeLfgPostAction(
 ): Promise<FormActionResult> {
 	const postId = getRequiredString(formData, "postId");
 	if (!postId) return missingFieldError("postId");
-	const orgId = getRequiredString(formData, "orgId");
-	if (!orgId) return missingFieldError("orgId");
+	const teamId = getRequiredString(formData, "teamId");
+	const orgId = teamId ? await getVerifiedTeamOrgId(teamId) : null;
 
 	const res = await apiPost(apiRoutes.lfg.close(postId), {
-		orgId,
 		postId,
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidateLfgRoutes({ orgId, teamId: getRequiredString(formData, "teamId") });
+	revalidateLfgRoutes({ orgId, teamId });
 	return { success: true };
 }
 
@@ -109,19 +116,19 @@ export async function respondToApplicationAction(
 	if (!postId) return missingFieldError("postId");
 	const applicationId = getRequiredString(formData, "applicationId");
 	if (!applicationId) return missingFieldError("applicationId");
-	const orgId = getRequiredString(formData, "orgId");
-	if (!orgId) return missingFieldError("orgId");
+	const teamId = getRequiredString(formData, "teamId");
+	if (!teamId) return missingFieldError("teamId");
+	const orgId = await getVerifiedTeamOrgId(teamId);
 	const action = getRequiredString(formData, "action");
 	if (!action) return missingFieldError("action");
 
 	const res = await apiPost(apiRoutes.lfg.respondToApplication(postId, applicationId), {
 		applicationId,
-		orgId,
 		action,
 		roleInTeam: formData.get("roleInTeam") || undefined,
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidateLfgRoutes({ orgId, teamId: getRequiredString(formData, "teamId") });
+	revalidateLfgRoutes({ orgId, teamId });
 	return { success: true };
 }

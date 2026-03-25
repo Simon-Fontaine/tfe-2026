@@ -30,17 +30,29 @@ const ROSTER_STATUSES = [
 	{ value: "benched", label: "Benched" },
 ] as const;
 
+const TEAM_PERMISSION_OPTIONS = [
+	{ value: "member", label: "Member access" },
+	{ value: "admin", label: "Admin access" },
+] as const;
+
+type TeamPermissionRole = (typeof TEAM_PERMISSION_OPTIONS)[number]["value"];
+
 interface AddPlayerDialogProps {
 	teamId: string;
-	orgId: string;
+	canManageAdmins?: boolean;
 	children: React.ReactNode;
 }
 
-export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProps) {
+export function AddPlayerDialog({
+	teamId,
+	canManageAdmins = false,
+	children,
+}: AddPlayerDialogProps) {
 	const pendingRef = useRef(false);
 	const [open, setOpen] = useState(false);
 	const [roleInTeam, setRoleInTeam] = useState<"tank" | "damage" | "support">("damage");
 	const [status, setStatus] = useState<"active" | "trial" | "benched">("active");
+	const [permissionRole, setPermissionRole] = useState<TeamPermissionRole>("member");
 	const {
 		query,
 		results,
@@ -73,6 +85,7 @@ export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProp
 		resetSearch();
 		setRoleInTeam("damage");
 		setStatus("active");
+		setPermissionRole("member");
 	}
 
 	function handleSubmit(e: React.FormEvent) {
@@ -81,10 +94,10 @@ export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProp
 		pendingRef.current = true;
 		const fd = new FormData();
 		fd.set("teamId", teamId);
-		fd.set("orgId", orgId);
 		fd.set("userId", selected.id);
 		fd.set("roleInTeam", roleInTeam);
 		fd.set("status", status);
+		if (canManageAdmins) fd.set("permissionRole", permissionRole);
 		submit(fd);
 	}
 
@@ -157,6 +170,29 @@ export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProp
 							))}
 						</div>
 					</Field>
+
+					{canManageAdmins && (
+						<Field>
+							<FieldLabel>Access level</FieldLabel>
+							<div className="flex gap-2">
+								{TEAM_PERMISSION_OPTIONS.map((option) => (
+									<button
+										key={option.value}
+										type="button"
+										data-selected={permissionRole === option.value}
+										onClick={() => setPermissionRole(option.value)}
+										className={cn(
+											"flex-1 border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+											"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+										)}
+									>
+										{option.label}
+									</button>
+								))}
+							</div>
+						</Field>
+					)}
 
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={!selected || isPending}>

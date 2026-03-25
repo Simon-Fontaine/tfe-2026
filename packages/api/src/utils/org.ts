@@ -1,35 +1,75 @@
-import { canManageOrg } from "@scrimflow/shared";
-import { and, eq } from "drizzle-orm";
+import {
+	canDeleteOrg,
+	canManageOrg,
+	canTransferOrgOwnership,
+	type OrgRole,
+} from "@scrimflow/shared";
+import { and, eq, ne } from "drizzle-orm";
+
 import { db } from "@/db";
 import { organizationMemberTable, organizationTable } from "@/db/schema";
 
-export type OrgRole = "owner" | "manager" | "coach" | "analyst" | "player";
+export type OrgMembership = {
+	id: string;
+	userId: string;
+	organizationId: string;
+	role: OrgRole;
+};
 
-/**
- * Returns the user's role in the given org, or null if not a member.
- */
-export async function getUserOrgRole(orgId: string, userId: string): Promise<OrgRole | null> {
+export async function getOrgMembership(
+	orgId: string,
+	userId: string
+): Promise<OrgMembership | null> {
 	const row = await db.query.organizationMemberTable.findFirst({
 		where: and(
 			eq(organizationMemberTable.organizationId, orgId),
 			eq(organizationMemberTable.userId, userId)
 		),
-		columns: { role: true },
+		columns: {
+			id: true,
+			userId: true,
+			organizationId: true,
+			role: true,
+		},
 	});
-	return row ? (row.role as OrgRole) : null;
+
+	return row
+		? {
+				id: row.id,
+				userId: row.userId,
+				organizationId: row.organizationId,
+				role: row.role as OrgRole,
+			}
+		: null;
 }
 
-/**
- * Checks whether a user has management-level access to an org (owner or manager).
- */
+export async function getUserOrgRole(orgId: string, userId: string): Promise<OrgRole | null> {
+	const membership = await getOrgMembership(orgId, userId);
+	return membership?.role ?? null;
+}
+
 export async function verifyOrgManager(orgId: string, userId: string): Promise<boolean> {
 	const role = await getUserOrgRole(orgId, userId);
 	return canManageOrg(role);
 }
 
-/**
- * Converts an org name into a URL-safe slug.
- */
+export async function getOrgPermissions(orgId: string, userId: string) {
+	const membership = await getOrgMembership(orgId, userId);
+	const role = membership?.role ?? null;
+
+	return {
+		membership,
+		role,
+		canManage: canManageOrg(role),
+		canDelete: canDeleteOrg(role),
+		canTransferOwnership: canTransferOrgOwnership(role),
+		canLeave: role !== "owner" && role !== null,
+		canReviewRequests: canManageOrg(role),
+		canManageMembers: canManageOrg(role),
+		canManageTeams: canManageOrg(role),
+	};
+}
+
 export function nameToSlug(name: string): string {
 	return (
 		name
@@ -39,12 +79,11 @@ export function nameToSlug(name: string): string {
 	);
 }
 
-/**
- * Ensures a slug is unique by appending a random suffix if needed.
- */
-export async function ensureUniqueSlug(base: string): Promise<string> {
+export async function ensureUniqueSlug(base: string, ignoreOrgId?: string): Promise<string> {
 	const existing = await db.query.organizationTable.findFirst({
-		where: eq(organizationTable.slug, base),
+		where: ignoreOrgId
+			? and(eq(organizationTable.slug, base), ne(organizationTable.id, ignoreOrgId))
+			: eq(organizationTable.slug, base),
 		columns: { id: true },
 	});
 	if (!existing) return base;
@@ -52,7 +91,9 @@ export async function ensureUniqueSlug(base: string): Promise<string> {
 	const suffix = Math.random().toString(36).substring(2, 6);
 	const candidate = `${base}-${suffix}`;
 	const conflict = await db.query.organizationTable.findFirst({
-		where: eq(organizationTable.slug, candidate),
+		where: ignoreOrgId
+			? and(eq(organizationTable.slug, candidate), ne(organizationTable.id, ignoreOrgId))
+			: eq(organizationTable.slug, candidate),
 		columns: { id: true },
 	});
 	return conflict ? `${candidate}-${Math.random().toString(36).substring(2, 6)}` : candidate;

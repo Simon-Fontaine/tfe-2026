@@ -5,7 +5,7 @@ import { type CreateTeamInput, CreateTeamSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { createTeamAction } from "@/app/dashboard/workspace/teams/actions/team";
+import { createTeamAction } from "@/app/dashboard/teams/actions/team";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,

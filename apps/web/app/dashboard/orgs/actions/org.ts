@@ -34,6 +34,7 @@ export async function updateOrgAction(
 	const result = await sdk.orgs.update({
 		orgId,
 		name: String(formData.get("name") ?? ""),
+		slug: formData.get("slug")?.toString() || undefined,
 		description: formData.get("description")?.toString() || undefined,
 	});
 
@@ -41,6 +42,25 @@ export async function updateOrgAction(
 	if (!("data" in actionResult)) return actionResult;
 
 	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	return { success: true };
+}
+
+export async function transferOrgOwnershipAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.transferOwnership({
+		orgId,
+		memberId: String(formData.get("memberId") ?? ""),
+	});
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidatePath(dashboardRoutes.workspace.orgs);
 	return { success: true };
 }
 
@@ -62,6 +82,21 @@ export async function deleteOrgAction(
 	redirect(dashboardRoutes.workspace.orgs);
 }
 
+export async function leaveOrgAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.leave({ orgId });
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(dashboardRoutes.workspace.orgs);
+	redirect(dashboardRoutes.workspace.orgs);
+}
+
 export async function updateOrgMemberRoleAction(
 	_prev: FormActionResult | null,
 	formData: FormData
@@ -72,6 +107,43 @@ export async function updateOrgMemberRoleAction(
 		orgId,
 		memberId: String(formData.get("memberId") ?? ""),
 		role: String(formData.get("role") ?? ""),
+	});
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	return { success: true };
+}
+
+export async function createOrgJoinRequestAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.requestToJoin({
+		orgId,
+		message: formData.get("message")?.toString() || undefined,
+	});
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(`/orgs/${orgId}`);
+	return { success: true };
+}
+
+export async function respondToOrgJoinRequestAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.respondToRequest({
+		orgId,
+		requestId: String(formData.get("requestId") ?? ""),
+		action: String(formData.get("action") ?? ""),
 	});
 
 	const actionResult = toActionResult(result);

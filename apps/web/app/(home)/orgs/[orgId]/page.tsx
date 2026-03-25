@@ -2,14 +2,21 @@ import { ArrowRight01Icon, GameController01Icon } from "@hugeicons/core-free-ico
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { RequestJoinOrgDialog } from "@/components/orgs/request-join-org-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { getPublicOrgByIdOrSlug } from "@/lib/data/organization";
+import { Button } from "@/components/ui/button";
+import { getCurrentSession } from "@/lib/auth/session";
+import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
 
 export default async function OrgProfilePage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { orgId } = await params;
 	const org = await getPublicOrgByIdOrSlug(orgId);
 	if (!org) notFound();
+
+	const { user } = await getCurrentSession();
+	const userOrgRole = user ? await getUserOrgRole(org.id, user.id).catch(() => null) : null;
+	const isMember = userOrgRole !== null;
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
@@ -33,6 +40,24 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						</p>
 					</div>
 				</div>
+			</div>
+
+			<div className="flex flex-wrap gap-2">
+				{user && !isMember && !org.hasPendingJoinRequest && (
+					<RequestJoinOrgDialog orgId={org.id}>
+						<Button size="sm">Request to join</Button>
+					</RequestJoinOrgDialog>
+				)}
+				{user && !isMember && org.hasPendingJoinRequest && (
+					<Button size="sm" disabled>
+						Request pending
+					</Button>
+				)}
+				{isMember && (
+					<Button asChild size="sm" variant="outline">
+						<Link href={`/dashboard/workspace/orgs/${org.id}`}>Open workspace</Link>
+					</Button>
+				)}
 			</div>
 
 			<div className="space-y-3">

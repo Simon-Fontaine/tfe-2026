@@ -1,5 +1,6 @@
 import type {
 	OrgInviteSummary,
+	OrgJoinRequestSummary,
 	OrgMemberSummary,
 	OrgPendingInvite,
 	OrgRole,
@@ -15,6 +16,7 @@ import { apiRoutes } from "@/lib/routes";
 
 export type {
 	OrgInviteSummary,
+	OrgJoinRequestSummary,
 	OrgMemberSummary,
 	OrgPendingInvite,
 	OrgRole,
@@ -29,9 +31,7 @@ export type {
 
 export async function getUserOrgRole(orgId: string, userId: string): Promise<OrgRole | null> {
 	const org = await getOrgWithTeams(orgId, userId);
-	if (!org) return null;
-	const member = org.members.find((m) => m.userId === userId);
-	return member?.role ?? null;
+	return org?.currentUser.role ?? null;
 }
 
 // ─── Queries ───────────────────────────────────────────────────────────────────

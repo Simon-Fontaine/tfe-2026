@@ -40,13 +40,17 @@ type EditableRole = "manager" | "coach" | "analyst" | "player";
 interface MemberActionsDropdownProps {
 	orgId: string;
 	member: OrgMemberSummary;
+	viewerRole: OrgMemberSummary["role"];
 }
 
-export function MemberActionsDropdown({ orgId, member }: MemberActionsDropdownProps) {
+export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActionsDropdownProps) {
 	const [editRoleOpen, setEditRoleOpen] = useState(false);
 	const [removeOpen, setRemoveOpen] = useState(false);
 	const [selectedRole, setSelectedRole] = useState<EditableRole>(
 		(member.role as EditableRole) ?? "player"
+	);
+	const editableRoles = ORG_ROLES.filter((role) =>
+		viewerRole === "owner" ? true : role.value !== "manager"
 	);
 
 	const roleForm = useFormAction(updateOrgMemberRoleAction, {
@@ -77,6 +81,7 @@ export function MemberActionsDropdown({ orgId, member }: MemberActionsDropdownPr
 	}
 
 	if (member.role === "owner") return null;
+	if (viewerRole === "manager" && member.role === "manager") return null;
 
 	return (
 		<>
@@ -106,7 +111,7 @@ export function MemberActionsDropdown({ orgId, member }: MemberActionsDropdownPr
 						<DialogTitle>Edit role — {member.displayName}</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-2 py-2">
-						{ORG_ROLES.map((r) => (
+						{editableRoles.map((r) => (
 							<button
 								key={r.value}
 								type="button"

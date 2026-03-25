@@ -3,9 +3,19 @@ import { and, asc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { organizationTable, teamRosterTable, teamTable } from "@/db/schema";
+import {
+	organizationMemberTable,
+	organizationTable,
+	orgJoinRequestTable,
+	teamRosterTable,
+	teamTable,
+} from "@/db/schema";
+import type { AuthEnv } from "@/middleware/auth";
+import { optionalAuth } from "@/middleware/auth";
 
-const publicOrgRoutes = new Hono();
+const publicOrgRoutes = new Hono<AuthEnv>();
+
+publicOrgRoutes.use("*", optionalAuth);
 
 publicOrgRoutes.get("/", async (c) => {
 	const rows = await db.query.organizationTable.findMany({
@@ -47,6 +57,7 @@ publicOrgRoutes.get("/", async (c) => {
 
 publicOrgRoutes.get("/:id", async (c) => {
 	const idOrSlug = c.req.param("id");
+	const user = c.get("user");
 
 	const org = await db.query.organizationTable.findFirst({
 		where: or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug)),
@@ -65,14 +76,16 @@ publicOrgRoutes.get("/:id", async (c) => {
 					id: true,
 					name: true,
 					tag: true,
+					description: true,
 					avatarUrl: true,
 					teamSr: true,
+					matchesPlayed: true,
 					isRecruiting: true,
+					isArchived: true,
 				},
 				with: {
 					roster: {
-						where: eq(teamRosterTable.status, "active"),
-						columns: { id: true },
+						columns: { id: true, userId: true, permissionRole: true, status: true },
 					},
 				},
 				orderBy: [asc(teamTable.name)],
@@ -82,6 +95,30 @@ publicOrgRoutes.get("/:id", async (c) => {
 
 	if (!org) return c.json({ error: "Organisation not found." }, 404);
 
+	const hasPendingJoinRequest = user
+		? Boolean(
+				await db.query.orgJoinRequestTable.findFirst({
+					where: and(
+						eq(orgJoinRequestTable.organizationId, org.id),
+						eq(orgJoinRequestTable.requesterUserId, user.id),
+						eq(orgJoinRequestTable.status, "pending")
+					),
+					columns: { id: true },
+				})
+			)
+		: false;
+	const isMember = user
+		? Boolean(
+				await db.query.organizationMemberTable.findFirst({
+					where: and(
+						eq(organizationMemberTable.organizationId, org.id),
+						eq(organizationMemberTable.userId, user.id)
+					),
+					columns: { id: true },
+				})
+			)
+		: false;
+
 	const data: PublicOrgDetail = {
 		id: org.id,
 		slug: org.slug,
@@ -90,15 +127,29 @@ publicOrgRoutes.get("/:id", async (c) => {
 		bannerUrl: org.bannerUrl ?? null,
 		description: org.description ?? null,
 		teamCount: org.teams.length,
-		activeRosterCount: org.teams.reduce((sum, team) => sum + team.roster.length, 0),
+		activeRosterCount: org.teams.reduce(
+			(sum, team) => sum + team.roster.filter((row) => row.status !== "inactive").length,
+			0
+		),
 		teams: org.teams.map((team) => ({
 			id: team.id,
+			organizationId: org.id,
 			name: team.name,
 			tag: team.tag,
+			description: team.description ?? null,
 			avatarUrl: team.avatarUrl,
 			teamSr: team.teamSr,
+			matchesPlayed: team.matchesPlayed,
 			isRecruiting: team.isRecruiting,
+			isArchived: team.isArchived,
+			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
+			adminCount: new Set(
+				team.roster
+					.filter((row) => row.status !== "inactive" && row.permissionRole === "admin")
+					.map((row) => row.userId)
+			).size,
 		})),
+		hasPendingJoinRequest: !isMember && hasPendingJoinRequest,
 	};
 
 	return c.json({ data });

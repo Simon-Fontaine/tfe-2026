@@ -3,18 +3,32 @@ export const apiRoutes = {
 		root: "/api/orgs",
 		byId: (orgId: string) => `/api/orgs/${orgId}`,
 		leave: (orgId: string) => `/api/orgs/${orgId}/leave`,
+		transferOwnership: (orgId: string) => `/api/orgs/${orgId}/ownership`,
 		publicRoot: "/api/public/orgs",
 		publicById: (orgIdOrSlug: string) => `/api/public/orgs/${orgIdOrSlug}`,
+		members: {
+			byId: (orgId: string, memberId: string) => `/api/orgs/${orgId}/members/${memberId}`,
+			role: (orgId: string, memberId: string) => `/api/orgs/${orgId}/members/${memberId}/role`,
+		},
 		invites: {
 			received: "/api/orgs/invites/received",
 			pending: (orgId: string) => `/api/orgs/${orgId}/invites`,
 			cancel: (orgId: string, inviteId: string) => `/api/orgs/${orgId}/invites/${inviteId}`,
 			resend: (orgId: string, inviteId: string) => `/api/orgs/${orgId}/invites/${inviteId}/resend`,
+			respond: (inviteId: string) => `/api/orgs/invites/${inviteId}/respond`,
+		},
+		requests: {
+			root: (orgId: string) => `/api/orgs/${orgId}/requests`,
+			respond: (orgId: string, requestId: string) =>
+				`/api/orgs/${orgId}/requests/${requestId}/respond`,
 		},
 	},
 	teams: {
 		root: "/api/teams",
 		byId: (teamId: string) => `/api/teams/${teamId}`,
+		admins: (teamId: string) => `/api/teams/${teamId}/admins`,
+		memberRole: (teamId: string, memberId: string) =>
+			`/api/teams/${teamId}/members/${memberId}/role`,
 		unarchive: (teamId: string) => `/api/teams/${teamId}/unarchive`,
 		leave: (teamId: string) => `/api/teams/${teamId}/leave`,
 		publicById: (teamId: string) => `/api/public/teams/${teamId}`,
@@ -25,6 +39,11 @@ export const apiRoutes = {
 			cancel: (teamId: string, inviteId: string) => `/api/teams/${teamId}/invites/${inviteId}`,
 			resend: (teamId: string, inviteId: string) =>
 				`/api/teams/${teamId}/invites/${inviteId}/resend`,
+		},
+		requests: {
+			root: (teamId: string) => `/api/teams/${teamId}/requests`,
+			respond: (teamId: string, requestId: string) =>
+				`/api/teams/${teamId}/requests/${requestId}/respond`,
 		},
 		roster: {
 			root: (teamId: string) => `/api/teams/${teamId}/roster`,
@@ -57,7 +76,7 @@ export const dashboardRoutes = {
 	recruit: {
 		lfg: "/dashboard/recruit/lfg",
 		invitations: "/dashboard/recruit/invitations",
-		teams: "/dashboard/teams",
+		applications: "/dashboard/recruit/applications",
 	},
 	me: {
 		schedule: "/dashboard/me/schedule",

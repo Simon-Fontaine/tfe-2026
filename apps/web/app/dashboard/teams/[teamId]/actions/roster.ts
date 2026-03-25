@@ -25,10 +25,10 @@ export async function addPlayerAction(
 	if (!orgId) return { success: false, error: "Team not found" };
 	const res = await apiPost(apiRoutes.teams.roster.root(teamId), {
 		teamId,
-		orgId,
 		userId: String(formData.get("userId") ?? ""),
 		roleInTeam: String(formData.get("roleInTeam") ?? ""),
 		status: String(formData.get("status") ?? ""),
+		permissionRole: formData.get("permissionRole")?.toString() || undefined,
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
@@ -44,6 +44,40 @@ export async function updateRosterStatusAction(
 	const rosterId = String(formData.get("rosterId") ?? "");
 	const res = await apiPatch(apiRoutes.teams.roster.byId(teamId, rosterId), {
 		status: String(formData.get("status") ?? ""),
+	});
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (orgId) revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	return { success: true };
+}
+
+export async function updateTeamMemberAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const memberId = String(formData.get("memberId") ?? formData.get("rosterId") ?? "");
+	const res = await apiPatch(apiRoutes.teams.roster.byId(teamId, memberId), {
+		status: formData.get("status")?.toString() || undefined,
+		roleInTeam: formData.get("roleInTeam")?.toString() || undefined,
+		permissionRole: formData.get("permissionRole")?.toString() || undefined,
+	});
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (orgId) revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	return { success: true };
+}
+
+export async function updateTeamMemberPermissionAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const memberId = String(formData.get("memberId") ?? "");
+	const res = await apiPatch(apiRoutes.teams.memberRole(teamId, memberId), {
+		permissionRole: String(formData.get("permissionRole") ?? ""),
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 

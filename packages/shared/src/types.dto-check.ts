@@ -4,11 +4,16 @@ import type {
 	LfgPostSummary,
 	NotificationSummary,
 	OrgInviteSummary,
+	OrgJoinRequestSummary,
 	OrgPendingInvite,
+	OrgWorkspaceDetail,
 	RosterMember,
 	Session,
+	TeamAdminSummary,
 	TeamInviteSummary,
+	TeamJoinRequestSummary,
 	TeamPendingInvite,
+	TeamWorkspaceDetail,
 	UserApplicationSummary,
 } from "./types";
 
@@ -32,8 +37,13 @@ type _TeamInviteSummaryNoDate = AssertNoDate<ContainsDate<TeamInviteSummary>>;
 type _TeamPendingInviteNoDate = AssertNoDate<ContainsDate<TeamPendingInvite>>;
 type _OrgInviteSummaryNoDate = AssertNoDate<ContainsDate<OrgInviteSummary>>;
 type _OrgPendingInviteNoDate = AssertNoDate<ContainsDate<OrgPendingInvite>>;
+type _OrgJoinRequestSummaryNoDate = AssertNoDate<ContainsDate<OrgJoinRequestSummary>>;
+type _OrgWorkspaceDetailNoDate = AssertNoDate<ContainsDate<OrgWorkspaceDetail>>;
 type _LfgPostSummaryNoDate = AssertNoDate<ContainsDate<LfgPostSummary>>;
 type _LfgApplicationSummaryNoDate = AssertNoDate<ContainsDate<LfgApplicationSummary>>;
 type _UserApplicationSummaryNoDate = AssertNoDate<ContainsDate<UserApplicationSummary>>;
 type _NotificationSummaryNoDate = AssertNoDate<ContainsDate<NotificationSummary>>;
 type _AvailabilityRowNoDate = AssertNoDate<ContainsDate<AvailabilityRow>>;
+type _TeamAdminSummaryNoDate = AssertNoDate<ContainsDate<TeamAdminSummary>>;
+type _TeamJoinRequestSummaryNoDate = AssertNoDate<ContainsDate<TeamJoinRequestSummary>>;
+type _TeamWorkspaceDetailNoDate = AssertNoDate<ContainsDate<TeamWorkspaceDetail>>;

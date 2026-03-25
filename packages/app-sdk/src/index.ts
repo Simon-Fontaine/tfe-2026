@@ -12,10 +12,18 @@ export type {
 	InviteOrgMemberInput,
 	RemoveOrgMemberInput,
 	RespondOrgInviteInput,
+	TransferOrgOwnershipInput,
 	UpdateOrgInput,
 	UpdateOrgMemberRoleInput,
 } from "./services/orgs";
-export type { CreateTeamInput, TeamOrgInput, UpdateTeamInput } from "./services/teams";
+export type {
+	CreateTeamInput,
+	InviteToTeamInput,
+	ManageTeamInviteInput,
+	TeamScopedInput,
+	UpdateTeamInput,
+	UpdateTeamMemberInput,
+} from "./services/teams";
 export type {
 	AuthTokenStrategy,
 	FieldErrors,

@@ -24,10 +24,10 @@ export async function sendTeamInviteAction(
 	const orgId = await getVerifiedTeamOrgId(teamId);
 	if (!orgId) return { success: false, error: "Team not found" };
 	const res = await apiPost(apiRoutes.teams.invites.pending(teamId), {
-		orgId,
 		teamId,
 		userId: String(formData.get("userId") ?? ""),
 		roleInTeam: String(formData.get("roleInTeam") ?? ""),
+		permissionRole: formData.get("permissionRole")?.toString() || undefined,
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
@@ -59,7 +59,8 @@ export async function respondToTeamInviteAction(
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
 	revalidatePath(dashboardRoutes.recruit.invitations);
-	revalidatePath(dashboardRoutes.recruit.teams);
+	revalidatePath(dashboardRoutes.recruit.applications);
+	revalidatePath(dashboardRoutes.workspace.orgs);
 	return { success: true };
 }
 
@@ -71,6 +72,35 @@ export async function resendTeamInviteAction(
 	const teamId = String(formData.get("teamId") ?? "");
 	const res = await apiPost(apiRoutes.teams.invites.resend(teamId, inviteId));
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (orgId) revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	return { success: true };
+}
+
+export async function createTeamJoinRequestAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const res = await apiPost(apiRoutes.teams.requests.root(teamId), {
+		requestedRoleInTeam: String(formData.get("requestedRoleInTeam") ?? ""),
+		message: formData.get("message")?.toString() || undefined,
+	});
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+	return { success: true };
+}
+
+export async function respondToTeamJoinRequestAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const requestId = String(formData.get("requestId") ?? "");
+	const res = await apiPost(apiRoutes.teams.requests.respond(teamId, requestId), {
+		action: String(formData.get("action") ?? ""),
+	});
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
 	const orgId = await getVerifiedTeamOrgId(teamId);
 	if (orgId) revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
 	return { success: true };

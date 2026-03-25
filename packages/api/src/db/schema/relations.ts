@@ -16,6 +16,7 @@ import {
 	organizationMemberTable,
 	organizationTable,
 	orgInviteTable,
+	orgJoinRequestTable,
 	playerHeroTable,
 	playerMapTable,
 	playerProfileTable,
@@ -27,6 +28,7 @@ import {
 	sessionTable,
 	srHistoryTable,
 	teamInviteTable,
+	teamJoinRequestTable,
 	teamRosterTable,
 	teamTable,
 	userDeviceTable,
@@ -60,6 +62,8 @@ export const userRelations = relations(userTable, ({ one, many }) => ({
 	sentTeamInvites: many(teamInviteTable, { relationName: "inviterTeamInvites" }),
 	receivedOrgInvites: many(orgInviteTable, { relationName: "inviteeOrgInvites" }),
 	sentOrgInvites: many(orgInviteTable, { relationName: "inviterOrgInvites" }),
+	orgJoinRequests: many(orgJoinRequestTable, { relationName: "requesterOrgJoinRequests" }),
+	teamJoinRequests: many(teamJoinRequestTable, { relationName: "requesterTeamJoinRequests" }),
 }));
 
 export const sessionRelations = relations(sessionTable, ({ one }) => ({
@@ -88,6 +92,7 @@ export const organizationRelations = relations(organizationTable, ({ one, many }
 	members: many(organizationMemberTable),
 	teams: many(teamTable),
 	orgInvites: many(orgInviteTable),
+	joinRequests: many(orgJoinRequestTable),
 }));
 
 export const organizationMemberRelations = relations(organizationMemberTable, ({ one }) => ({
@@ -114,6 +119,7 @@ export const teamRelations = relations(teamTable, ({ one, many }) => ({
 	lfgPosts: many(lfgPostTable),
 	chatChannels: many(chatChannelTable, { relationName: "teamChatChannels" }),
 	invites: many(teamInviteTable),
+	joinRequests: many(teamJoinRequestTable),
 }));
 
 export const teamRosterRelations = relations(teamRosterTable, ({ one }) => ({
@@ -416,5 +422,29 @@ export const orgInviteRelations = relations(orgInviteTable, ({ one }) => ({
 		fields: [orgInviteTable.inviterUserId],
 		references: [userTable.id],
 		relationName: "inviterOrgInvites",
+	}),
+}));
+
+export const orgJoinRequestRelations = relations(orgJoinRequestTable, ({ one }) => ({
+	organization: one(organizationTable, {
+		fields: [orgJoinRequestTable.organizationId],
+		references: [organizationTable.id],
+	}),
+	requester: one(userTable, {
+		fields: [orgJoinRequestTable.requesterUserId],
+		references: [userTable.id],
+		relationName: "requesterOrgJoinRequests",
+	}),
+}));
+
+export const teamJoinRequestRelations = relations(teamJoinRequestTable, ({ one }) => ({
+	team: one(teamTable, {
+		fields: [teamJoinRequestTable.teamId],
+		references: [teamTable.id],
+	}),
+	requester: one(userTable, {
+		fields: [teamJoinRequestTable.requesterUserId],
+		references: [userTable.id],
+		relationName: "requesterTeamJoinRequests",
 	}),
 }));

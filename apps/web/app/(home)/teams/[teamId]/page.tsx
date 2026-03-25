@@ -2,6 +2,7 @@ import { ArrowRight01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { RequestJoinTeamDialog } from "@/components/teams/request-join-team-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 		? await getUserOrgRole(team.organizationId, user.id).catch(() => null)
 		: null;
 	const canManageInDashboard = userOrgRole === "owner" || userOrgRole === "manager";
+	const isOrgMember = userOrgRole !== null;
 
 	return (
 		<div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">
@@ -72,10 +74,22 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 							No openings yet
 						</Button>
 					)}
-					{canManageInDashboard && (
+					{user && !isOrgMember && !team.hasPendingJoinRequest && (
+						<RequestJoinTeamDialog teamId={team.id}>
+							<Button size="sm" variant="outline">
+								Request to join
+							</Button>
+						</RequestJoinTeamDialog>
+					)}
+					{user && !isOrgMember && team.hasPendingJoinRequest && (
+						<Button size="sm" variant="outline" disabled>
+							Request pending
+						</Button>
+					)}
+					{isOrgMember && (
 						<Button asChild size="sm" variant="outline">
 							<Link href={`/dashboard/workspace/orgs/${team.organizationId}/teams/${team.id}`}>
-								Manage in dashboard
+								{canManageInDashboard ? "Manage in dashboard" : "Open workspace"}
 							</Link>
 						</Button>
 					)}

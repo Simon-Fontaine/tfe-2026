@@ -85,6 +85,9 @@ export const orgRoleEnum = pgEnum("org_role", ["owner", "manager", "coach", "ana
 /** Roster slot status — tracks whether a player is actively competing. */
 export const rosterStatusEnum = pgEnum("roster_status", ["active", "benched", "trial", "inactive"]);
 
+/** Team-local permission level layered on top of gameplay role/status. */
+export const teamMemberRoleEnum = pgEnum("team_member_role", ["admin", "member"]);
+
 /** OCR async job lifecycle. */
 export const ocrJobStatusEnum = pgEnum("ocr_job_status", [
 	"queued",
@@ -148,6 +151,15 @@ export const orgInviteStatusEnum = pgEnum("org_invite_status", [
 	"accepted",
 	"declined",
 	"expired",
+	"cancelled",
+]);
+
+/** Shared lifecycle for org/team join requests. */
+export const joinRequestStatusEnum = pgEnum("join_request_status", [
+	"pending",
+	"approved",
+	"rejected",
+	"withdrawn",
 	"cancelled",
 ]);
 

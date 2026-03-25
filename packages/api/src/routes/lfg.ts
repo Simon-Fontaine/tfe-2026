@@ -18,8 +18,7 @@ import {
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
-import { verifyOrgManager } from "@/utils/org";
-import { isUserOnTeam, verifyTeamBelongsToOrg } from "@/utils/team";
+import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
 
 const lfgRoutes = new Hono<AuthEnv>();
 
@@ -125,20 +124,10 @@ lfgRoutes.post("/", async (c) => {
 	const parsed = v.safeParse(CreateLfgPostSchema, body);
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
-	const {
-		teamId,
-		orgId,
-		rolesNeeded: roles,
-		minRank,
-		maxRank,
-		description,
-		region,
-	} = parsed.output;
-	const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
-	if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
-
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager)
+	const { teamId, rolesNeeded: roles, minRank, maxRank, description, region } = parsed.output;
+	const access = await getTeamAccessContext(teamId, user.id);
+	if (!access) return c.json({ error: "Team not found." }, 404);
+	if (!access.canManageTeam)
 		return c.json({ error: "You do not have permission to post on behalf of this team." }, 403);
 
 	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -171,18 +160,18 @@ lfgRoutes.post("/:id/close", async (c) => {
 	const parsed = v.safeParse(CloseLfgPostSchema, { ...body, postId: c.req.param("id") });
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
-	const { postId, orgId } = parsed.output;
+	const { postId } = parsed.output;
 	const post = await db.query.lfgPostTable.findFirst({
 		where: eq(lfgPostTable.id, postId),
-		with: { team: { columns: { organizationId: true } } },
+		with: { team: { columns: { id: true } } },
 		columns: { id: true, teamId: true },
 	});
 	if (!post) return c.json({ error: "Post not found." }, 404);
-	if (!post.teamId || post.team?.organizationId !== orgId)
-		return c.json({ error: "Post does not belong to this organisation." }, 404);
+	if (!post.teamId) return c.json({ error: "Post is not associated with a team." }, 400);
 
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager) return c.json({ error: "You do not have permission to close this post." }, 403);
+	const access = await getTeamAccessContext(post.teamId, user.id);
+	if (!access || !access.canManageTeam)
+		return c.json({ error: "You do not have permission to close this post." }, 403);
 
 	await db.update(lfgPostTable).set({ status: "closed" }).where(eq(lfgPostTable.id, postId));
 
@@ -277,11 +266,7 @@ lfgRoutes.post("/:id/applications/:appId/respond", async (c) => {
 	const parsed = v.safeParse(RespondToApplicationSchema, { ...body, applicationId });
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
-	const { orgId, action, roleInTeam } = parsed.output;
-
-	const isManager = await verifyOrgManager(orgId, user.id);
-	if (!isManager)
-		return c.json({ error: "You do not have permission to respond to applications." }, 403);
+	const { action, roleInTeam } = parsed.output;
 
 	const app = await db.query.lfgApplicationTable.findFirst({
 		where: eq(lfgApplicationTable.id, applicationId),
@@ -297,9 +282,9 @@ lfgRoutes.post("/:id/applications/:appId/respond", async (c) => {
 		return c.json({ error: "The associated post is no longer open." }, 400);
 	if (!app.post.teamId) return c.json({ error: "No team associated with this post." }, 400);
 
-	const belongsToOrg = await verifyTeamBelongsToOrg(app.post.teamId, orgId);
-	if (!belongsToOrg)
-		return c.json({ error: "Application does not belong to this organisation." }, 404);
+	const access = await getTeamAccessContext(app.post.teamId, user.id);
+	if (!access || !access.canManageTeam)
+		return c.json({ error: "You do not have permission to respond to applications." }, 403);
 
 	if (action === "accept") {
 		const postTeamId = app.post.teamId;
@@ -320,6 +305,7 @@ lfgRoutes.post("/:id/applications/:appId/respond", async (c) => {
 					.set({
 						status: "trial",
 						roleInTeam: role as "tank" | "damage" | "support",
+						permissionRole: "member",
 						leftAt: null,
 						joinedAt: new Date(),
 					})
@@ -329,6 +315,7 @@ lfgRoutes.post("/:id/applications/:appId/respond", async (c) => {
 					teamId: postTeamId,
 					userId: app.applicantUserId,
 					roleInTeam: role as "tank" | "damage" | "support",
+					permissionRole: "member",
 					status: "trial",
 					joinedAt: new Date(),
 				});
@@ -336,14 +323,14 @@ lfgRoutes.post("/:id/applications/:appId/respond", async (c) => {
 
 			const orgMember = await tx.query.organizationMemberTable.findFirst({
 				where: and(
-					eq(organizationMemberTable.organizationId, orgId),
+					eq(organizationMemberTable.organizationId, access.organizationId),
 					eq(organizationMemberTable.userId, app.applicantUserId)
 				),
 				columns: { id: true },
 			});
 			if (!orgMember) {
 				await tx.insert(organizationMemberTable).values({
-					organizationId: orgId,
+					organizationId: access.organizationId,
 					userId: app.applicantUserId,
 					role: "player",
 				});

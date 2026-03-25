@@ -3,9 +3,11 @@ import type {
 	RosterMember,
 	RosterStatus,
 	TeamInviteSummary,
+	TeamJoinRequestSummary,
 	TeamPendingInvite,
 	TeamPublicPreview,
 	TeamWithRoster,
+	TeamWorkspaceDetail,
 	UserSearchResult,
 } from "@scrimflow/shared";
 import { cache } from "react";
@@ -16,10 +18,12 @@ export type {
 	OW2Role,
 	RosterMember,
 	RosterStatus,
+	TeamJoinRequestSummary,
 	TeamInviteSummary,
 	TeamPendingInvite,
 	TeamPublicPreview,
 	TeamWithRoster,
+	TeamWorkspaceDetail,
 	UserSearchResult,
 };
 

@@ -6,19 +6,17 @@ import { useFormAction } from "@/hooks/use-form-action";
 import { cn } from "@/lib/utils";
 
 interface RecruitingToggleProps {
-	orgId: string;
 	teamId: string;
 	isRecruiting: boolean;
 }
 
-export function RecruitingToggle({ orgId, teamId, isRecruiting }: RecruitingToggleProps) {
+export function RecruitingToggle({ teamId, isRecruiting }: RecruitingToggleProps) {
 	const { submit, isPending } = useFormAction(toggleRecruitingAction, {
 		successMessage: isRecruiting ? "Recruiting disabled" : "Recruiting enabled",
 	});
 
 	function handleToggle() {
 		const fd = new FormData();
-		fd.set("orgId", orgId);
 		fd.set("teamId", teamId);
 		submit(fd);
 	}
