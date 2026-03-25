@@ -20,7 +20,7 @@ export function TeamDiscoveryFilters({ recruitingFilter }: TeamDiscoveryFiltersP
 			} else {
 				params.set("recruiting", String(recruiting));
 			}
-			router.replace(`/dashboard/recruit/lfg?${params.toString()}`);
+			router.replace(`/teams${params.toString() ? `?${params.toString()}` : ""}`);
 		},
 		[router, searchParams]
 	);

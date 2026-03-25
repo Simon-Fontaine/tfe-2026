@@ -251,6 +251,28 @@ export type OrgWithTeams = {
 	members: OrgMemberSummary[];
 };
 
+export type PublicOrgSummary = {
+	id: string;
+	slug: string;
+	name: string;
+	avatarUrl: string | null;
+	description: string | null;
+	teamCount: number;
+	activeRosterCount: number;
+};
+
+export type PublicOrgDetail = {
+	id: string;
+	slug: string;
+	name: string;
+	avatarUrl: string | null;
+	bannerUrl: string | null;
+	description: string | null;
+	teamCount: number;
+	activeRosterCount: number;
+	teams: OrgTeamSummary[];
+};
+
 export type OrgInviteSummary = {
 	id: string;
 	organizationId: string;

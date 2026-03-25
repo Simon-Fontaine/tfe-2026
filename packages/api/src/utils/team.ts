@@ -39,6 +39,14 @@ export async function getOrgIdForTeam(teamId: string): Promise<string | null> {
 	return team?.organizationId ?? null;
 }
 
+export async function verifyTeamBelongsToOrg(teamId: string, orgId: string): Promise<boolean> {
+	const team = await db.query.teamTable.findFirst({
+		where: and(eq(teamTable.id, teamId), eq(teamTable.organizationId, orgId)),
+		columns: { id: true },
+	});
+	return Boolean(team);
+}
+
 /**
  * Gets the organization ID and team ID from a roster entry.
  */

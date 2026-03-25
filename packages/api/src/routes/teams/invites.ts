@@ -9,6 +9,7 @@ import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
 import { verifyOrgManager } from "@/utils/org";
+import { verifyTeamBelongsToOrg } from "@/utils/team";
 
 const teamInviteRoutes = new Hono<AuthEnv>();
 
@@ -209,8 +210,10 @@ export function createTeamIdInviteRoutes() {
 				inviteeDisplayName: r.invitee.displayName,
 				inviteeAvatarUrl: r.invitee.avatarUrl,
 				roleInTeam: r.roleInTeam,
+				status: "pending" as const,
 				expiresAt: r.expiresAt,
 				createdAt: r.createdAt,
+				statusChangedAt: r.updatedAt,
 			})),
 		});
 	});
@@ -226,6 +229,8 @@ export function createTeamIdInviteRoutes() {
 		if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 		const { orgId, teamId, userId, roleInTeam } = parsed.output;
+		const belongsToOrg = await verifyTeamBelongsToOrg(teamId, orgId);
+		if (!belongsToOrg) return c.json({ error: "Team does not belong to this organisation." }, 404);
 
 		const isManager = await verifyOrgManager(orgId, user.id);
 		if (!isManager) return c.json({ error: "You do not have permission to invite players." }, 403);
@@ -280,6 +285,7 @@ export function createTeamIdInviteRoutes() {
 	routes.delete("/:inviteId", async (c) => {
 		const user = c.get("user");
 		const inviteId = c.req.param("inviteId");
+		const teamId = c.req.param("id") as string;
 
 		const invite = await db.query.teamInviteTable.findFirst({
 			where: eq(teamInviteTable.id, inviteId),
@@ -287,6 +293,8 @@ export function createTeamIdInviteRoutes() {
 			columns: { id: true, status: true, teamId: true },
 		});
 		if (!invite) return c.json({ error: "Invite not found." }, 404);
+		if (invite.teamId !== teamId)
+			return c.json({ error: "Invite does not belong to this team." }, 404);
 		if (invite.status !== "pending")
 			return c.json({ error: "This invite is no longer active." }, 400);
 
@@ -306,13 +314,23 @@ export function createTeamIdInviteRoutes() {
 	routes.post("/:inviteId/resend", async (c) => {
 		const user = c.get("user");
 		const inviteId = c.req.param("inviteId");
+		const teamId = c.req.param("id") as string;
 
 		const invite = await db.query.teamInviteTable.findFirst({
 			where: eq(teamInviteTable.id, inviteId),
 			with: { team: { columns: { organizationId: true, name: true } } },
-			columns: { id: true, inviteeUserId: true, roleInTeam: true, status: true, expiresAt: true },
+			columns: {
+				id: true,
+				teamId: true,
+				inviteeUserId: true,
+				roleInTeam: true,
+				status: true,
+				expiresAt: true,
+			},
 		});
 		if (!invite) return c.json({ error: "Invite not found." }, 404);
+		if (invite.teamId !== teamId)
+			return c.json({ error: "Invite does not belong to this team." }, 404);
 
 		const isManager = await verifyOrgManager(invite.team.organizationId, user.id);
 		if (!isManager)

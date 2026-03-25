@@ -2,6 +2,9 @@ export const apiRoutes = {
 	orgs: {
 		root: "/api/orgs",
 		byId: (orgId: string) => `/api/orgs/${orgId}`,
+		leave: (orgId: string) => `/api/orgs/${orgId}/leave`,
+		publicRoot: "/api/public/orgs",
+		publicById: (orgIdOrSlug: string) => `/api/public/orgs/${orgIdOrSlug}`,
 		invites: {
 			received: "/api/orgs/invites/received",
 			pending: (orgId: string) => `/api/orgs/${orgId}/invites`,
@@ -12,6 +15,8 @@ export const apiRoutes = {
 	teams: {
 		root: "/api/teams",
 		byId: (teamId: string) => `/api/teams/${teamId}`,
+		unarchive: (teamId: string) => `/api/teams/${teamId}/unarchive`,
+		leave: (teamId: string) => `/api/teams/${teamId}/leave`,
 		publicById: (teamId: string) => `/api/public/teams/${teamId}`,
 		invites: {
 			received: "/api/teams/invites/received",

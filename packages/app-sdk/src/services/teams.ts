@@ -17,6 +17,7 @@ export type UpdateTeamInput = {
 };
 
 export type TeamOrgInput = { teamId: string; orgId: string };
+export type TeamScopedInput = { teamId: string };
 
 export class TeamsService {
 	constructor(private readonly transport: Transport) {}
@@ -46,9 +47,19 @@ export class TeamsService {
 		});
 	}
 
+	unarchive(input: TeamOrgInput): Promise<SdkResult<MutationSuccess>> {
+		return this.transport.post<MutationSuccess>(`/api/teams/${input.teamId}/unarchive`, {
+			orgId: input.orgId,
+		});
+	}
+
 	delete(input: TeamOrgInput): Promise<SdkResult<MutationSuccess>> {
 		return this.transport.delete<MutationSuccess>(`/api/teams/${input.teamId}`, {
 			orgId: input.orgId,
 		});
+	}
+
+	leave(input: TeamScopedInput): Promise<SdkResult<MutationSuccess>> {
+		return this.transport.delete<MutationSuccess>(`/api/teams/${input.teamId}/leave`);
 	}
 }
