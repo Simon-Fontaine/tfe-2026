@@ -1,7 +1,10 @@
 "use client";
 
-import { respondToOrgInviteAction } from "@/app/dashboard/orgs/actions/org";
-import { respondToTeamInviteAction } from "@/app/dashboard/teams/[teamId]/actions/invites";
+import { canRespondToInvite } from "@scrimflow/shared";
+import {
+	respondToOrgInviteAction,
+	respondToTeamInviteAction,
+} from "@/app/dashboard/invites/actions/mutations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,8 +65,7 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 	const avatarUrl = props.type === "team" ? props.invite.teamAvatarUrl : props.invite.orgAvatarUrl;
 	const tag = props.type === "team" ? props.invite.teamTag : null;
 	const role = props.type === "team" ? props.invite.roleInTeam : props.invite.role;
-	const canRespond =
-		props.invite.status === "pending" && new Date(props.invite.expiresAt) > new Date();
+	const canRespond = canRespondToInvite(props.invite.status, props.invite.expiresAt);
 
 	return (
 		<div className="flex items-center gap-3 border p-4">

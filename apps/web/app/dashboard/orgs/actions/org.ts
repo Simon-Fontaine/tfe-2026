@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { toActionResult } from "@/lib/action-result";
 import { getServerSdk } from "@/lib/app-sdk";
+import { dashboardRoutes } from "@/lib/routes";
 
 export async function createOrgAction(
 	_prev: FormActionResult | null,
@@ -20,7 +21,7 @@ export async function createOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/workspace/orgs");
+	revalidatePath(dashboardRoutes.workspace.orgs);
 	return { success: true, orgId: actionResult.data.orgId };
 }
 
@@ -39,7 +40,7 @@ export async function updateOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -57,8 +58,8 @@ export async function deleteOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/workspace/orgs");
-	redirect("/dashboard/workspace/orgs");
+	revalidatePath(dashboardRoutes.workspace.orgs);
+	redirect(dashboardRoutes.workspace.orgs);
 }
 
 export async function updateOrgMemberRoleAction(
@@ -76,7 +77,7 @@ export async function updateOrgMemberRoleAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -94,7 +95,7 @@ export async function removeOrgMemberAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -113,7 +114,7 @@ export async function inviteToOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -130,8 +131,8 @@ export async function respondToOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/recruit/invitations");
-	revalidatePath("/dashboard/workspace/orgs");
+	revalidatePath(dashboardRoutes.recruit.invitations);
+	revalidatePath(dashboardRoutes.workspace.orgs);
 	return { success: true };
 }
 
@@ -147,7 +148,7 @@ export async function cancelOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
 
@@ -163,6 +164,6 @@ export async function resendOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
 	return { success: true };
 }
