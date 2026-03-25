@@ -4,6 +4,7 @@ import { Search01Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { addPlayerAction } from "@/app/dashboard/teams/[teamId]/actions/roster";
+import { searchUsersForTeamAction } from "@/app/dashboard/teams/[teamId]/actions/users";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,11 +63,8 @@ export function AddPlayerDialog({ teamId, orgId, children }: AddPlayerDialogProp
 		setSearching(true);
 		const timer = setTimeout(async () => {
 			try {
-				const res = await fetch(
-					`/api/users/search?q=${encodeURIComponent(query)}&excludeTeamId=${teamId}`
-				);
-				const data = await res.json();
-				setResults(data.users ?? []);
+				const users = await searchUsersForTeamAction(query, teamId);
+				setResults(users);
 			} finally {
 				setSearching(false);
 			}
