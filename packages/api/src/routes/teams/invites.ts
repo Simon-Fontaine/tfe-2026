@@ -18,11 +18,7 @@ teamInviteRoutes.get("/received", async (c) => {
 	const now = new Date();
 
 	const rows = await db.query.teamInviteTable.findMany({
-		where: and(
-			eq(teamInviteTable.inviteeUserId, user.id),
-			eq(teamInviteTable.status, "pending"),
-			gt(teamInviteTable.expiresAt, now)
-		),
+		where: eq(teamInviteTable.inviteeUserId, user.id),
 		with: {
 			team: {
 				columns: { id: true, name: true, tag: true, avatarUrl: true },
@@ -41,8 +37,10 @@ teamInviteRoutes.get("/received", async (c) => {
 			teamAvatarUrl: r.team.avatarUrl,
 			inviterDisplayName: r.inviter.displayName,
 			roleInTeam: r.roleInTeam,
+			status: r.status === "pending" && r.expiresAt < now ? "expired" : r.status,
 			expiresAt: r.expiresAt,
 			createdAt: r.createdAt,
+			statusChangedAt: r.updatedAt,
 		})),
 	});
 });
@@ -300,6 +298,41 @@ export function createTeamIdInviteRoutes() {
 			.update(teamInviteTable)
 			.set({ status: "cancelled" })
 			.where(eq(teamInviteTable.id, inviteId));
+
+		return c.json({ success: true });
+	});
+
+	// POST /:inviteId/resend — Extend expiry for pending invite
+	routes.post("/:inviteId/resend", async (c) => {
+		const user = c.get("user");
+		const inviteId = c.req.param("inviteId");
+
+		const invite = await db.query.teamInviteTable.findFirst({
+			where: eq(teamInviteTable.id, inviteId),
+			with: { team: { columns: { organizationId: true, name: true } } },
+			columns: { id: true, inviteeUserId: true, roleInTeam: true, status: true, expiresAt: true },
+		});
+		if (!invite) return c.json({ error: "Invite not found." }, 404);
+
+		const isManager = await verifyOrgManager(invite.team.organizationId, user.id);
+		if (!isManager)
+			return c.json({ error: "You do not have permission to resend this invite." }, 403);
+
+		const effectiveStatus =
+			invite.status === "pending" && invite.expiresAt < new Date() ? "expired" : invite.status;
+		if (effectiveStatus !== "pending")
+			return c.json({ error: "Only pending invites can be resent." }, 400);
+
+		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+		await db.update(teamInviteTable).set({ expiresAt }).where(eq(teamInviteTable.id, inviteId));
+
+		await createNotification({
+			userId: invite.inviteeUserId,
+			type: "team_invite_received",
+			title: `You've been invited to join ${invite.team.name}`,
+			body: `You were invited as ${invite.roleInTeam}.`,
+			referenceType: "team_invite",
+		});
 
 		return c.json({ success: true });
 	});

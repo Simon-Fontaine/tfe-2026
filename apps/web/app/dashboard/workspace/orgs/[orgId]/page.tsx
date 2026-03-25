@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { DeleteOrgDialog } from "@/components/orgs/delete-org-dialog";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { MemberActionsDropdown } from "@/components/orgs/member-actions-dropdown";
+import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getOrgWithTeams } from "@/lib/data/organization";
+import { getOrgPendingInvites, getOrgWithTeams } from "@/lib/data/organization";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -34,6 +35,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 	const myRole = org.members.find((m) => m.userId === user.id)?.role;
 	const canManage = myRole === "owner" || myRole === "manager";
 	const isOwner = myRole === "owner";
+
+	const pendingInvites = canManage ? await getOrgPendingInvites(org.id, user.id) : [];
 
 	return (
 		<div className="space-y-6">
@@ -149,6 +152,22 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					))}
 				</CardContent>
 			</Card>
+
+			{canManage && (
+				<>
+					<Separator />
+
+					<div className="space-y-3">
+						<p className="text-sm font-medium">
+							Pending invites{" "}
+							<span className="ml-1 font-normal text-xs text-muted-foreground">
+								{pendingInvites.length}
+							</span>
+						</p>
+						<OrgPendingInvitesSection orgId={org.id} invites={pendingInvites} />
+					</div>
+				</>
+			)}
 		</div>
 	);
 }

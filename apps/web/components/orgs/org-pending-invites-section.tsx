@@ -1,48 +1,50 @@
 "use client";
 
-import {
-	cancelTeamInviteAction,
-	resendTeamInviteAction,
-} from "@/app/dashboard/teams/[teamId]/actions/invites";
+import { cancelOrgInviteAction, resendOrgInviteAction } from "@/app/dashboard/orgs/actions/org";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
-import type { TeamPendingInvite } from "@/lib/data/team";
+import type { OrgPendingInvite } from "@/lib/data/organization";
 
-interface TeamInvitesSectionProps {
-	teamId: string;
-	invites: TeamPendingInvite[];
+interface OrgPendingInvitesSectionProps {
+	orgId: string;
+	invites: OrgPendingInvite[];
 }
 
 const ROLE_LABELS: Record<string, string> = {
-	tank: "Tank",
-	damage: "DPS",
-	support: "Support",
+	owner: "Owner",
+	manager: "Manager",
+	coach: "Coach",
+	analyst: "Analyst",
+	player: "Player",
 };
 
 function formatExpiry(iso: string): string {
 	const date = new Date(iso);
-	const days = Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+	const ms = date.getTime() - Date.now();
+	if (ms <= 0) return "Expired";
+	const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
 	return days <= 1 ? "Expires soon" : `Expires in ${days}d`;
 }
 
-function InviteActions({ teamId, inviteId }: { teamId: string; inviteId: string }) {
-	const cancelForm = useFormAction(cancelTeamInviteAction, { successMessage: "Invite cancelled" });
-	const resendForm = useFormAction(resendTeamInviteAction, { successMessage: "Invite resent" });
+function ManageInviteButtons({ orgId, inviteId }: { orgId: string; inviteId: string }) {
+	const cancelForm = useFormAction(cancelOrgInviteAction, { successMessage: "Invite cancelled" });
+	const resendForm = useFormAction(resendOrgInviteAction, { successMessage: "Invite resent" });
+
 	const isPending = cancelForm.isPending || resendForm.isPending;
 
 	function submitCancel() {
 		const fd = new FormData();
-		fd.set("teamId", teamId);
+		fd.set("orgId", orgId);
 		fd.set("inviteId", inviteId);
 		cancelForm.submit(fd);
 	}
 
 	function submitResend() {
 		const fd = new FormData();
-		fd.set("teamId", teamId);
+		fd.set("orgId", orgId);
 		fd.set("inviteId", inviteId);
 		resendForm.submit(fd);
 	}
@@ -61,7 +63,7 @@ function InviteActions({ teamId, inviteId }: { teamId: string; inviteId: string 
 	);
 }
 
-export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps) {
+export function OrgPendingInvitesSection({ orgId, invites }: OrgPendingInvitesSectionProps) {
 	if (invites.length === 0) {
 		return <p className="text-xs text-muted-foreground">No pending invites.</p>;
 	}
@@ -80,14 +82,14 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 						<p className="truncate text-xs font-medium">{invite.inviteeDisplayName}</p>
 						<div className="mt-0.5 flex items-center gap-2">
 							<Badge variant="outline" className="text-[10px]">
-								{ROLE_LABELS[invite.roleInTeam] ?? invite.roleInTeam}
+								{ROLE_LABELS[invite.role] ?? invite.role}
 							</Badge>
 							<span className="text-[10px] text-muted-foreground">
 								{formatExpiry(invite.expiresAt)}
 							</span>
 						</div>
 					</div>
-					<InviteActions teamId={teamId} inviteId={invite.id} />
+					<ManageInviteButtons orgId={orgId} inviteId={invite.id} />
 				</div>
 			))}
 		</div>

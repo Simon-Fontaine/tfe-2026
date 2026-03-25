@@ -289,6 +289,8 @@ teamRoutes.get("/:id", async (c) => {
 				roleInTeam: row.roleInTeam,
 				status: row.status,
 				joinedAt: row.joinedAt,
+				leftAt: row.leftAt,
+				statusChangedAt: row.updatedAt,
 			})),
 		},
 	});

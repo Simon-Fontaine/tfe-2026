@@ -144,7 +144,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 								{pendingInvites.length}
 							</span>
 						</p>
-						<TeamInvitesSection invites={pendingInvites} />
+						<TeamInvitesSection teamId={teamId} invites={pendingInvites} />
 					</div>
 
 					<Separator />

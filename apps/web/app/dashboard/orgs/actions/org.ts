@@ -130,7 +130,39 @@ export async function respondToOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath("/dashboard/invitations");
+	revalidatePath("/dashboard/recruit/inbox");
 	revalidatePath("/dashboard/orgs");
+	return { success: true };
+}
+
+export async function cancelOrgInviteAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const inviteId = String(formData.get("inviteId") ?? "");
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.cancelInvite({ orgId, inviteId });
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
+	return { success: true };
+}
+
+export async function resendOrgInviteAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const inviteId = String(formData.get("inviteId") ?? "");
+	const sdk = getServerSdk();
+	const result = await sdk.orgs.resendInvite({ orgId, inviteId });
+
+	const actionResult = toActionResult(result);
+	if (!("data" in actionResult)) return actionResult;
+
+	revalidatePath(`/dashboard/workspace/orgs/${orgId}`);
 	return { success: true };
 }

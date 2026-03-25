@@ -25,14 +25,21 @@ const ROLE_LABELS: Record<string, string> = {
 	player: "Player",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+	pending: "Pending",
+	accepted: "Accepted",
+	declined: "Declined",
+	expired: "Expired",
+	cancelled: "Cancelled",
+};
+
 function formatExpiry(iso: string): string {
 	const date = new Date(iso);
 	const days = Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-	return days <= 1 ? "Expires soon" : `Expires in ${days}d`;
+	return days <= 0 ? "Expired" : days <= 1 ? "Expires soon" : `Expires in ${days}d`;
 }
 
 export function PendingInviteCard(props: PendingInviteCardProps) {
-	// Both hooks must be called unconditionally; the correct one is selected below.
 	const teamForm = useFormAction(respondToTeamInviteAction, {
 		loadingMessage: "Processing…",
 		successMessage: "Invite response sent",
@@ -55,6 +62,8 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 	const avatarUrl = props.type === "team" ? props.invite.teamAvatarUrl : props.invite.orgAvatarUrl;
 	const tag = props.type === "team" ? props.invite.teamTag : null;
 	const role = props.type === "team" ? props.invite.roleInTeam : props.invite.role;
+	const canRespond =
+		props.invite.status === "pending" && new Date(props.invite.expiresAt) > new Date();
 
 	return (
 		<div className="flex items-center gap-3 border p-4">
@@ -66,10 +75,13 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 			</Avatar>
 
 			<div className="min-w-0 flex-1">
-				<div className="flex items-baseline gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					<p className="truncate text-sm font-semibold">{tag ? `[${tag}] ${name}` : name}</p>
 					<Badge variant="outline" className="shrink-0 text-[10px]">
 						{ROLE_LABELS[role] ?? role}
+					</Badge>
+					<Badge variant="secondary" className="shrink-0 text-[10px]">
+						{STATUS_LABELS[props.invite.status] ?? props.invite.status}
 					</Badge>
 				</div>
 				<p className="mt-0.5 text-xs text-muted-foreground">
@@ -77,15 +89,24 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 				</p>
 			</div>
 
-			<div className="flex shrink-0 gap-2">
-				<Button size="sm" onClick={() => respond("accept")} disabled={isPending}>
-					{isPending && <Spinner className="mr-1.5" />}
-					Accept
-				</Button>
-				<Button size="sm" variant="outline" onClick={() => respond("decline")} disabled={isPending}>
-					Decline
-				</Button>
-			</div>
+			{canRespond ? (
+				<div className="flex shrink-0 gap-2">
+					<Button size="sm" onClick={() => respond("accept")} disabled={isPending}>
+						{isPending && <Spinner className="mr-1.5" />}
+						Accept
+					</Button>
+					<Button
+						size="sm"
+						variant="outline"
+						onClick={() => respond("decline")}
+						disabled={isPending}
+					>
+						Decline
+					</Button>
+				</div>
+			) : (
+				<span className="text-xs text-muted-foreground">No action</span>
+			)}
 		</div>
 	);
 }
