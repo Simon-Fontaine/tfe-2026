@@ -11,8 +11,43 @@ const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const BANNER_MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const AVATAR_BUCKET = process.env.S3_BUCKET_AVATARS ?? "avatars";
 const BANNER_BUCKET = process.env.S3_BUCKET_BANNERS ?? "banners";
+const ENTITY_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const ENTITY_BANNER_MAX_BYTES = 4 * 1024 * 1024;
 
 const uploadRoutes = new Hono<AuthEnv>();
+
+const ENTITY_UPLOAD_KIND = {
+	"org-avatar": { bucket: AVATAR_BUCKET, maxBytes: ENTITY_AVATAR_MAX_BYTES },
+	"org-banner": { bucket: BANNER_BUCKET, maxBytes: ENTITY_BANNER_MAX_BYTES },
+	"team-avatar": { bucket: AVATAR_BUCKET, maxBytes: ENTITY_AVATAR_MAX_BYTES },
+	"team-banner": { bucket: BANNER_BUCKET, maxBytes: ENTITY_BANNER_MAX_BYTES },
+} as const;
+
+uploadRoutes.post("/assets", async (c) => {
+	const user = c.get("user");
+	const body = await c.req.parseBody();
+	const file = body.file;
+	const kind = body.kind;
+	if (!(file instanceof File)) return c.json({ error: "No file provided." }, 400);
+	if (typeof kind !== "string" || !(kind in ENTITY_UPLOAD_KIND)) {
+		return c.json({ error: "Invalid upload kind." }, 400);
+	}
+
+	if (!ALLOWED_TYPES.includes(file.type))
+		return c.json({ error: "Only JPEG, PNG and WebP images are allowed." }, 400);
+
+	const uploadConfig = ENTITY_UPLOAD_KIND[kind as keyof typeof ENTITY_UPLOAD_KIND];
+	if (file.size > uploadConfig.maxBytes) {
+		return c.json({ error: "File is too large for this image type." }, 400);
+	}
+
+	const arrayBuffer = await file.arrayBuffer();
+	const buffer = Buffer.from(arrayBuffer);
+	const key = `${user.id}/assets/${kind}/${Date.now()}`;
+	const url = await uploadFile(uploadConfig.bucket, key, buffer, file.type);
+
+	return c.json({ url });
+});
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 

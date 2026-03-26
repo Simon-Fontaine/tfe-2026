@@ -7,6 +7,7 @@ export type CreateTeamInput = {
 	tag: string;
 	description?: string;
 	avatarUrl?: string;
+	bannerUrl?: string;
 };
 
 export type UpdateTeamInput = {
@@ -15,6 +16,7 @@ export type UpdateTeamInput = {
 	tag: string;
 	description?: string;
 	avatarUrl?: string;
+	bannerUrl?: string;
 };
 
 export type TeamScopedInput = { teamId: string };
@@ -63,6 +65,7 @@ export class TeamsService {
 			tag: input.tag,
 			description: input.description,
 			avatarUrl: input.avatarUrl,
+			bannerUrl: input.bannerUrl,
 		});
 	}
 

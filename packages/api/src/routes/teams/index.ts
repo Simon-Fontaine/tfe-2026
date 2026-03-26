@@ -153,10 +153,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 			getPendingResponses(teamId),
 			getRecruitmentConversationsForUser(userId),
 			db.query.organizationMemberTable.findMany({
-				where: and(
-					eq(organizationMemberTable.organizationId, team.organizationId),
-					eq(organizationMemberTable.memberType, "staff")
-				),
+				where: eq(organizationMemberTable.organizationId, team.organizationId),
 				with: {
 					user: { columns: { id: true, displayName: true, avatarUrl: true } },
 				},
@@ -214,6 +211,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		tag: team.tag,
 		description: team.description ?? null,
 		avatarUrl: team.avatarUrl,
+		bannerUrl: team.bannerUrl ?? null,
 		teamSr: team.teamSr,
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
@@ -412,6 +410,7 @@ teamRoutes.get("/", async (c) => {
 			tag: team.tag,
 			description: team.description ?? null,
 			avatarUrl: team.avatarUrl,
+			bannerUrl: team.bannerUrl ?? null,
 			teamSr: team.teamSr,
 			isRecruiting: team.isRecruiting,
 			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
@@ -443,6 +442,7 @@ teamRoutes.post("/", async (c) => {
 			tag: parsed.output.tag.toUpperCase(),
 			description: parsed.output.description || null,
 			avatarUrl: parsed.output.avatarUrl || null,
+			bannerUrl: parsed.output.bannerUrl || null,
 		})
 		.returning({ id: teamTable.id });
 
@@ -477,6 +477,7 @@ teamRoutes.patch("/:id", async (c) => {
 			tag: parsed.output.tag.toUpperCase(),
 			description: parsed.output.description || null,
 			avatarUrl: parsed.output.avatarUrl || null,
+			bannerUrl: parsed.output.bannerUrl || null,
 		})
 		.where(eq(teamTable.id, teamId));
 

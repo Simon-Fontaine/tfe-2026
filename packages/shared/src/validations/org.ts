@@ -136,6 +136,7 @@ export const CreateTeamSchema = v.object({
 	),
 	description: optionalDescription,
 	avatarUrl: optionalUrl,
+	bannerUrl: optionalUrl,
 });
 
 export type CreateTeamInput = v.InferOutput<typeof CreateTeamSchema>;
@@ -157,6 +158,7 @@ export const UpdateTeamSchema = v.object({
 	),
 	description: optionalDescription,
 	avatarUrl: optionalUrl,
+	bannerUrl: optionalUrl,
 });
 
 export type UpdateTeamInput = v.InferOutput<typeof UpdateTeamSchema>;

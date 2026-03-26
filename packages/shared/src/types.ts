@@ -195,6 +195,7 @@ export type TeamSummary = {
 	tag: string;
 	description: string | null;
 	avatarUrl: string | null;
+	bannerUrl: string | null;
 	teamSr: number;
 	matchesPlayed: number;
 	isRecruiting: boolean;
@@ -289,6 +290,7 @@ export type TeamPublicPreview = {
 	tag: string;
 	description: string | null;
 	avatarUrl: string | null;
+	bannerUrl: string | null;
 	teamSr: number;
 	matchesPlayed: number;
 	isRecruiting: boolean;

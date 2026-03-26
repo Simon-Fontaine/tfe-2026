@@ -7,6 +7,7 @@ import {
 	updateOrgAction,
 } from "@/app/dashboard/workspace/orgs/actions/org";
 import { DeleteOrgDialog } from "@/components/orgs/delete-org-dialog";
+import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -91,12 +92,22 @@ export function OrgSettingsPanel({ org }: OrgSettingsPanelProps) {
 							/>
 						</Field>
 						<Field>
-							<FieldLabel>Avatar URL</FieldLabel>
-							<Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} />
+							<EntityImageUploadField
+								label="Org avatar"
+								kind="org-avatar"
+								value={avatarUrl}
+								onChange={setAvatarUrl}
+								helperText="Square image recommended · max 2 MB"
+							/>
 						</Field>
 						<Field>
-							<FieldLabel>Banner URL</FieldLabel>
-							<Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} />
+							<EntityImageUploadField
+								label="Org banner"
+								kind="org-banner"
+								value={bannerUrl}
+								onChange={setBannerUrl}
+								helperText="Wide image recommended · max 4 MB"
+							/>
 						</Field>
 						<Button type="submit" size="sm" disabled={updateForm.isPending}>
 							{updateForm.isPending && <Spinner className="mr-1.5" />}

@@ -292,6 +292,7 @@ export const teamTable = pgTable(
 		tag: text("tag").notNull(), // short clan tag, e.g. "TL"
 		description: text("description"),
 		avatarUrl: text("avatar_url"),
+		bannerUrl: text("banner_url"),
 
 		/** Composite team SR for matchmaking. */
 		teamSr: integer("team_sr").notNull().default(1500),

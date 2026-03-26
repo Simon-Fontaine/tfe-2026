@@ -46,6 +46,7 @@ function toOrgTeamSummary(
 		tag: string;
 		description: string | null;
 		avatarUrl: string | null;
+		bannerUrl: string | null;
 		teamSr: number;
 		matchesPlayed: number;
 		isRecruiting: boolean;
@@ -69,6 +70,7 @@ function toOrgTeamSummary(
 		tag: team.tag,
 		description: team.description ?? null,
 		avatarUrl: team.avatarUrl,
+		bannerUrl: team.bannerUrl ?? null,
 		teamSr: team.teamSr,
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
@@ -102,6 +104,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 					tag: true,
 					description: true,
 					avatarUrl: true,
+					bannerUrl: true,
 					teamSr: true,
 					matchesPlayed: true,
 					isRecruiting: true,

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { createOrgAction } from "@/app/dashboard/workspace/orgs/actions/org";
+import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -98,21 +99,20 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 						<FieldError errors={[form.formState.errors.description]} />
 					</Field>
 
-					<Field>
-						<FieldLabel htmlFor="org-avatar">
-							Avatar URL <span className="font-normal text-muted-foreground/70">(optional)</span>
-						</FieldLabel>
-						<Input id="org-avatar" placeholder="https://…" {...form.register("avatarUrl")} />
-						<FieldError errors={[form.formState.errors.avatarUrl]} />
-					</Field>
-
-					<Field>
-						<FieldLabel htmlFor="org-banner">
-							Banner URL <span className="font-normal text-muted-foreground/70">(optional)</span>
-						</FieldLabel>
-						<Input id="org-banner" placeholder="https://…" {...form.register("bannerUrl")} />
-						<FieldError errors={[form.formState.errors.bannerUrl]} />
-					</Field>
+					<EntityImageUploadField
+						label="Org avatar"
+						kind="org-avatar"
+						value={form.watch("avatarUrl") ?? ""}
+						onChange={(value) => form.setValue("avatarUrl", value)}
+						helperText="Square image recommended · max 2 MB"
+					/>
+					<EntityImageUploadField
+						label="Org banner"
+						kind="org-banner"
+						value={form.watch("bannerUrl") ?? ""}
+						onChange={(value) => form.setValue("bannerUrl", value)}
+						helperText="Wide image recommended · max 4 MB"
+					/>
 
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={isPending}>
