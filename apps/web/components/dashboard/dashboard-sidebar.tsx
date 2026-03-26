@@ -4,8 +4,11 @@ import {
 	ArrowUpDownIcon,
 	BubbleChatIcon,
 	Home01Icon,
+	Settings01Icon,
 	Sword03Icon,
+	UserAdd01Icon,
 	UserGroupIcon,
+	UserSearch01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -39,14 +42,13 @@ interface DashboardSidebarProps {
 	contextTeams: SwitcherTeam[];
 }
 
-function useActiveContext(pathname: string, teams: SwitcherTeam[]) {
+function useActiveContext(pathname: string) {
 	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
 	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
-	const activeOrgId = orgMatch?.[1] ?? null;
-	const activeTeamId = teamMatch?.[2] ?? null;
-	const activeTeam = activeTeamId ? teams.find((t) => t.id === activeTeamId) : null;
-
-	return { activeOrgId, activeTeamId, activeTeam };
+	return {
+		activeOrgId: orgMatch?.[1] ?? null,
+		activeTeamId: teamMatch?.[2] ?? null,
+	};
 }
 
 export function DashboardSidebar({
@@ -57,18 +59,39 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const initials = getUserInitials(user.displayName);
-	const { activeOrgId, activeTeamId, activeTeam } = useActiveContext(pathname, contextTeams);
+	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
 
 	const contextGroups =
 		activeTeamId && activeOrgId
 			? [
 					{
-						label: activeTeam ? `[${activeTeam.tag}] ${activeTeam.name}` : "Team",
+						label: "Team",
 						links: [
 							{
 								label: "Overview",
 								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}`,
 								icon: Home01Icon,
+								exact: true,
+							},
+							{
+								label: "Players",
+								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/players`,
+								icon: UserGroupIcon,
+							},
+							{
+								label: "Staff",
+								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/staff`,
+								icon: UserAdd01Icon,
+							},
+							{
+								label: "Posts",
+								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/posts`,
+								icon: UserSearch01Icon,
+							},
+							{
+								label: "Settings",
+								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/settings`,
+								icon: Settings01Icon,
 							},
 						],
 					},
@@ -92,6 +115,27 @@ export function DashboardSidebar({
 									label: "Overview",
 									href: `/dashboard/c/org/${activeOrgId}`,
 									icon: Home01Icon,
+									exact: true,
+								},
+								{
+									label: "Teams",
+									href: `/dashboard/c/org/${activeOrgId}/teams`,
+									icon: Sword03Icon,
+								},
+								{
+									label: "Members",
+									href: `/dashboard/c/org/${activeOrgId}/members`,
+									icon: UserGroupIcon,
+								},
+								{
+									label: "Posts",
+									href: `/dashboard/c/org/${activeOrgId}/posts`,
+									icon: UserSearch01Icon,
+								},
+								{
+									label: "Settings",
+									href: `/dashboard/c/org/${activeOrgId}/settings`,
+									icon: Settings01Icon,
 								},
 							],
 						},
@@ -100,7 +144,6 @@ export function DashboardSidebar({
 
 	return (
 		<Sidebar collapsible="icon">
-			{/* ── Header: link back to home ─────────────────────── */}
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
@@ -126,7 +169,6 @@ export function DashboardSidebar({
 				</SidebarMenu>
 			</SidebarHeader>
 
-			{/* ── Content: nav groups ────────────────────────────── */}
 			<SidebarContent>
 				{contextGroups.map((group, i) => (
 					<SidebarGroup key={group.label ?? i}>
@@ -134,10 +176,10 @@ export function DashboardSidebar({
 						<SidebarGroupContent>
 							<SidebarMenu>
 								{group.links.map((link) => {
-									const isActive =
-										link.href === "/dashboard"
-											? pathname === "/dashboard"
-											: pathname.startsWith(link.href);
+									const isExact = "exact" in link && link.exact;
+									const isActive = isExact
+										? pathname === link.href
+										: pathname.startsWith(link.href);
 									return (
 										<SidebarMenuItem key={link.href}>
 											<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
@@ -177,7 +219,6 @@ export function DashboardSidebar({
 				</SidebarGroup>
 			</SidebarContent>
 
-			{/* ── Footer: notification bell + user menu ─────────── */}
 			<SidebarFooter>
 				<SidebarMenu>
 					<SidebarMenuItem>

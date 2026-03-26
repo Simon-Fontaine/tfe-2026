@@ -126,6 +126,16 @@ export const dashboardRoutes = {
 	},
 	context: {
 		orgById: (orgId: string) => `/dashboard/c/org/${orgId}`,
+		orgTeams: (orgId: string) => `/dashboard/c/org/${orgId}/teams`,
+		orgMembers: (orgId: string) => `/dashboard/c/org/${orgId}/members`,
+		orgPosts: (orgId: string) => `/dashboard/c/org/${orgId}/posts`,
+		orgSettings: (orgId: string) => `/dashboard/c/org/${orgId}/settings`,
 		teamById: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}`,
+		teamPlayers: (orgId: string, teamId: string) =>
+			`/dashboard/c/org/${orgId}/team/${teamId}/players`,
+		teamStaff: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}/staff`,
+		teamPosts: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}/posts`,
+		teamSettings: (orgId: string, teamId: string) =>
+			`/dashboard/c/org/${orgId}/team/${teamId}/settings`,
 	},
 } as const;

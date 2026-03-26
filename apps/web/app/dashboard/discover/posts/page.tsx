@@ -1,11 +1,10 @@
-import { Add01Icon, UserSearch01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { RecruitmentPostFormDialog } from "@/components/recruit/recruitment-post-form-dialog";
 import { RecruitmentSentResponsesPanel } from "@/components/recruit/recruitment-sent-responses-panel";
-import { SettingsHeaderBar } from "@/components/settings/settings-header-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -54,20 +53,12 @@ export default async function RecruitPostsPage({ searchParams }: RecruitPostsPag
 	);
 
 	return (
-		<div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-6 sm:px-6">
-			<SettingsHeaderBar
-				backHref="/dashboard"
-				icon={UserSearch01Icon}
-				title="Recruit Posts"
-				subtitle="Publish, manage, and browse LFT, LFP, LFR, and LFS posts"
-			/>
-
-			<div className="flex flex-wrap items-center justify-between gap-3 border p-4">
+		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium">Recruiting is now posts-first</p>
-					<p className="mt-1 text-xs text-muted-foreground">
-						Create posts for yourself, a team, or an organisation and manage every response from one
-						place.
+					<h1 className="text-lg font-bold">Recruit Posts</h1>
+					<p className="text-xs text-muted-foreground">
+						Publish, manage, and browse LFT, LFP, LFR, and LFS posts
 					</p>
 				</div>
 				<RecruitmentPostFormDialog ownerOptions={entityOptions}>

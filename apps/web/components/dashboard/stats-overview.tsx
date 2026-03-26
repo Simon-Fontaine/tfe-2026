@@ -10,11 +10,9 @@ interface StatCardProps {
 function StatCard({ label, value, footnote }: StatCardProps) {
 	return (
 		<Card>
-			<CardContent className="pt-5">
-				<p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-					{label}
-				</p>
-				<p className="mt-1 text-2xl font-bold">{value}</p>
+			<CardContent className="pt-4">
+				<p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+				<p className="mt-1 text-2xl font-semibold">{value}</p>
 				<p className="mt-1 text-[10px] text-muted-foreground">{footnote}</p>
 			</CardContent>
 		</Card>

@@ -12,20 +12,46 @@ interface DashboardHeaderProps {
 	teams: SwitcherTeam[];
 }
 
+const SUB_PAGE_LABELS: Record<string, string> = {
+	teams: "Teams",
+	members: "Members",
+	posts: "Posts",
+	settings: "Settings",
+	players: "Players",
+	staff: "Staff",
+};
+
 function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTeam[]) {
 	const crumbs: { label: string; href?: string }[] = [];
 
-	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
-	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
+	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)(?:\/(\w+))?/);
+	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)(?:\/(\w+))?$/);
 
 	if (teamMatch) {
-		const org = orgs.find((o) => o.id === teamMatch[1]);
-		const team = teams.find((t) => t.id === teamMatch[2]);
-		if (org) crumbs.push({ label: org.name, href: `/dashboard/c/org/${org.id}` });
-		if (team) crumbs.push({ label: `[${team.tag}] ${team.name}` });
+		const [, orgId, teamId, subPage] = teamMatch;
+		const org = orgs.find((o) => o.id === orgId);
+		const team = teams.find((t) => t.id === teamId);
+		if (org) crumbs.push({ label: org.name, href: `/dashboard/c/org/${orgId}` });
+		if (team) {
+			const teamLabel = `[${team.tag}] ${team.name}`;
+			if (subPage && SUB_PAGE_LABELS[subPage]) {
+				crumbs.push({ label: teamLabel, href: `/dashboard/c/org/${orgId}/team/${teamId}` });
+				crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
+			} else {
+				crumbs.push({ label: teamLabel });
+			}
+		}
 	} else if (orgMatch) {
-		const org = orgs.find((o) => o.id === orgMatch[1]);
-		if (org) crumbs.push({ label: org.name });
+		const [, orgId, subPage] = orgMatch;
+		const org = orgs.find((o) => o.id === orgId);
+		if (org) {
+			if (subPage && SUB_PAGE_LABELS[subPage]) {
+				crumbs.push({ label: org.name, href: `/dashboard/c/org/${orgId}` });
+				crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
+			} else {
+				crumbs.push({ label: org.name });
+			}
+		}
 	} else if (pathname.startsWith("/dashboard/organizations")) {
 		crumbs.push({ label: "Organizations" });
 	} else if (pathname.startsWith("/dashboard/personal/settings")) {
