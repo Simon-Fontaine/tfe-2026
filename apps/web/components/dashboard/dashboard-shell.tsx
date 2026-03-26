@@ -1,8 +1,9 @@
 "use client";
 
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
 import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
+import { DashboardHeader } from "./dashboard-header";
 import { DashboardSidebar } from "./dashboard-sidebar";
 
 interface DashboardShellProps {
@@ -29,9 +30,7 @@ export function DashboardShell({
 				contextTeams={contextTeams}
 			/>
 			<SidebarInset>
-				<header className="sticky top-0 z-10 flex h-12 shrink-0 items-center border-b bg-background px-3">
-					<SidebarTrigger />
-				</header>
+				<DashboardHeader orgs={contextOrgs} teams={contextTeams} />
 				{children}
 			</SidebarInset>
 		</SidebarProvider>

@@ -2,7 +2,6 @@ import { Add01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CreateOrgDialog } from "@/components/orgs/create-org-dialog";
 import { OrgCard } from "@/components/orgs/org-card";
-import { SettingsHeaderBar } from "@/components/settings/settings-header-bar";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgsForUser } from "@/lib/data/organization";
@@ -14,16 +13,10 @@ export default async function WorkspaceOrgsPage() {
 	const orgs = await getOrgsForUser(user.id);
 
 	return (
-		<div className="space-y-6">
-			<SettingsHeaderBar
-				backHref="/dashboard"
-				icon={UserGroupIcon}
-				title="Workspace"
-				subtitle="Manage your workspace organisations and team operations"
-			/>
+		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium">Workspace organisations</p>
+					<h1 className="text-lg font-bold">Organizations</h1>
 					<p className="text-xs text-muted-foreground">
 						{orgs.length === 0
 							? "Create an organisation to get started"
@@ -41,7 +34,7 @@ export default async function WorkspaceOrgsPage() {
 			{orgs.length === 0 ? (
 				<div className="flex flex-col items-center justify-center border border-dashed px-6 py-16 text-center">
 					<HugeiconsIcon
-						icon={Add01Icon}
+						icon={UserGroupIcon}
 						strokeWidth={1.5}
 						className="mb-4 size-10 text-muted-foreground/40"
 					/>

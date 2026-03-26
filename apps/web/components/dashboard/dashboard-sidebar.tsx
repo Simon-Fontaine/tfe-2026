@@ -4,11 +4,8 @@ import {
 	ArrowUpDownIcon,
 	BubbleChatIcon,
 	Home01Icon,
-	Mail01Icon,
-	Settings01Icon,
 	Sword03Icon,
 	UserGroupIcon,
-	UserSearch01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -42,6 +39,16 @@ interface DashboardSidebarProps {
 	contextTeams: SwitcherTeam[];
 }
 
+function useActiveContext(pathname: string, teams: SwitcherTeam[]) {
+	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
+	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
+	const activeOrgId = orgMatch?.[1] ?? null;
+	const activeTeamId = teamMatch?.[2] ?? null;
+	const activeTeam = activeTeamId ? teams.find((t) => t.id === activeTeamId) : null;
+
+	return { activeOrgId, activeTeamId, activeTeam };
+}
+
 export function DashboardSidebar({
 	user,
 	unreadCount,
@@ -50,36 +57,28 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const initials = getUserInitials(user.displayName);
-	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
-	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
-	const activeOrgId = orgMatch?.[1] ?? null;
-	const activeTeamId = teamMatch?.[2] ?? null;
+	const { activeOrgId, activeTeamId, activeTeam } = useActiveContext(pathname, contextTeams);
 
 	const contextGroups =
 		activeTeamId && activeOrgId
 			? [
 					{
-						label: "Team",
+						label: activeTeam ? `[${activeTeam.tag}] ${activeTeam.name}` : "Team",
 						links: [
 							{
 								label: "Overview",
 								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}`,
 								icon: Home01Icon,
 							},
+						],
+					},
+					{
+						label: "Organization",
+						links: [
 							{
-								label: "Posts",
-								href: "/dashboard/discover/posts",
-								icon: UserSearch01Icon,
-							},
-							{
-								label: "Conversations",
-								href: "/dashboard/discover/conversations",
-								icon: Mail01Icon,
-							},
-							{
-								label: "Settings",
-								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}`,
-								icon: Settings01Icon,
+								label: "Back to org",
+								href: `/dashboard/c/org/${activeOrgId}`,
+								icon: UserGroupIcon,
 							},
 						],
 					},
@@ -89,13 +88,10 @@ export function DashboardSidebar({
 						{
 							label: "Organization",
 							links: [
-								{ label: "Overview", href: `/dashboard/c/org/${activeOrgId}`, icon: Home01Icon },
-								{ label: "Members", href: `/dashboard/c/org/${activeOrgId}`, icon: UserGroupIcon },
-								{ label: "Posts", href: "/dashboard/discover/posts", icon: UserSearch01Icon },
 								{
-									label: "Settings",
+									label: "Overview",
 									href: `/dashboard/c/org/${activeOrgId}`,
-									icon: Settings01Icon,
+									icon: Home01Icon,
 								},
 							],
 						},
