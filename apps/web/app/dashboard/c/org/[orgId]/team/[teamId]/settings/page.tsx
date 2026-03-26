@@ -1,5 +1,9 @@
+import { LockIcon } from "@hugeicons/core-free-icons";
 import { notFound } from "next/navigation";
 
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getTeamWithRoster } from "@/lib/data/teams";
@@ -18,24 +22,25 @@ export default async function TeamSettingsPage({ params }: TeamSettingsPageProps
 
 	if (!team.currentUser.canManage && !team.currentUser.canLeave) {
 		return (
-			<div className="border border-dashed px-6 py-10 text-center">
-				<p className="text-sm font-medium">No access</p>
-				<p className="mt-1 text-xs text-muted-foreground">
-					You don&apos;t have permission to manage this team&apos;s settings.
-				</p>
-			</div>
+			<PageContainer>
+				<PageHeader title="Settings" />
+				<EmptyStateBlock
+					icon={LockIcon}
+					title="No access"
+					description="You don't have permission to manage this team's settings."
+					variant="card"
+				/>
+			</PageContainer>
 		);
 	}
 
 	return (
-		<>
-			<div>
-				<h1 className="text-lg font-bold">Settings</h1>
-				<p className="text-xs text-muted-foreground">
-					Manage team profile, recruiting status, and danger zone actions.
-				</p>
-			</div>
+		<PageContainer>
+			<PageHeader
+				title="Settings"
+				description="Manage team profile, recruiting status, and danger zone actions."
+			/>
 			<TeamSettingsPanel team={team} />
-		</>
+		</PageContainer>
 	);
 }

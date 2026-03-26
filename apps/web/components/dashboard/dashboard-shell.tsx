@@ -23,14 +23,14 @@ export function DashboardShell({
 }: DashboardShellProps) {
 	return (
 		<SidebarProvider>
-			<DashboardSidebar
-				user={user}
-				unreadCount={unreadCount}
-				contextOrgs={contextOrgs}
-				contextTeams={contextTeams}
-			/>
+			<DashboardSidebar contextOrgs={contextOrgs} contextTeams={contextTeams} />
 			<SidebarInset>
-				<DashboardHeader orgs={contextOrgs} teams={contextTeams} />
+				<DashboardHeader
+					orgs={contextOrgs}
+					teams={contextTeams}
+					user={user}
+					unreadCount={unreadCount}
+				/>
 				{children}
 			</SidebarInset>
 		</SidebarProvider>

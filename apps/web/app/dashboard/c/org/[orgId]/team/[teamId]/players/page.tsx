@@ -2,6 +2,8 @@ import { Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { AddPlayerDialog } from "@/components/teams/add-player-dialog";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { RosterTable } from "@/components/teams/roster-table";
@@ -25,41 +27,39 @@ export default async function TeamPlayersPage({ params }: TeamPlayersPageProps) 
 	const canManageAdmins = team.currentUser.canManageAdmins;
 
 	return (
-		<>
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-lg font-bold">Players</h1>
-					<p className="text-xs text-muted-foreground">
-						Manage rostered players, their roles, and delegated admin access.
-					</p>
-				</div>
-				{canManage && (
-					<div className="flex gap-2">
-						<InvitePlayerDialog
-							teamId={team.id}
-							canManageAdmins={canManageAdmins}
-							defaultMemberType="player"
-							title="Invite player"
-						>
-							<Button size="sm" variant="outline">
-								<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-								Invite
-							</Button>
-						</InvitePlayerDialog>
-						<AddPlayerDialog
-							teamId={team.id}
-							canManageAdmins={canManageAdmins}
-							defaultMemberType="player"
-							title="Add player"
-						>
-							<Button size="sm">
-								<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-								Add player
-							</Button>
-						</AddPlayerDialog>
-					</div>
-				)}
-			</div>
+		<PageContainer>
+			<PageHeader
+				title="Players"
+				description="Manage rostered players, their roles, and delegated admin access."
+				actions={
+					canManage ? (
+						<>
+							<InvitePlayerDialog
+								teamId={team.id}
+								canManageAdmins={canManageAdmins}
+								defaultMemberType="player"
+								title="Invite player"
+							>
+								<Button size="sm" variant="outline">
+									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									Invite
+								</Button>
+							</InvitePlayerDialog>
+							<AddPlayerDialog
+								teamId={team.id}
+								canManageAdmins={canManageAdmins}
+								defaultMemberType="player"
+								title="Add player"
+							>
+								<Button size="sm">
+									<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									Add player
+								</Button>
+							</AddPlayerDialog>
+						</>
+					) : undefined
+				}
+			/>
 			<RosterTable
 				roster={team.players}
 				canManage={canManage}
@@ -67,6 +67,6 @@ export default async function TeamPlayersPage({ params }: TeamPlayersPageProps) 
 				teamId={team.id}
 				emptyLabel="No players on this team yet."
 			/>
-		</>
+		</PageContainer>
 	);
 }

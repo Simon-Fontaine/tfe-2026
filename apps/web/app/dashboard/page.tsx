@@ -1,4 +1,6 @@
 import { GettingStartedSection } from "@/components/dashboard/getting-started-section";
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { ProfileSummaryCard } from "@/components/dashboard/profile-summary-card";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -15,11 +17,8 @@ export default async function DashboardPage() {
 	]);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-			<div>
-				<h1 className="text-lg font-bold">Dashboard</h1>
-				<p className="text-xs text-muted-foreground">Welcome back, {user.displayName}</p>
-			</div>
+		<PageContainer>
+			<PageHeader title="Dashboard" description={`Welcome back, ${user.displayName}`} />
 
 			<StatsOverview stats={stats} />
 
@@ -29,6 +28,6 @@ export default async function DashboardPage() {
 				</div>
 				{profile && <ProfileSummaryCard profile={profile} />}
 			</div>
-		</div>
+		</PageContainer>
 	);
 }

@@ -2,9 +2,13 @@ import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { PageSection } from "@/components/dashboard/page-section";
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { RecruitmentPostFormDialog } from "@/components/recruit/recruitment-post-form-dialog";
 import { RecruitmentSentResponsesPanel } from "@/components/recruit/recruitment-sent-responses-panel";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -53,21 +57,19 @@ export default async function RecruitPostsPage({ searchParams }: RecruitPostsPag
 	);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-lg font-bold">Recruit Posts</h1>
-					<p className="text-xs text-muted-foreground">
-						Publish, manage, and browse LFT, LFP, LFR, and LFS posts
-					</p>
-				</div>
-				<RecruitmentPostFormDialog ownerOptions={entityOptions}>
-					<Button size="sm">
-						<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-						New post
-					</Button>
-				</RecruitmentPostFormDialog>
-			</div>
+		<PageContainer>
+			<PageHeader
+				title="Recruit Posts"
+				description="Publish, manage, and browse LFT, LFP, LFR, and LFS posts"
+				actions={
+					<RecruitmentPostFormDialog ownerOptions={entityOptions}>
+						<Button size="sm">
+							<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+							New post
+						</Button>
+					</RecruitmentPostFormDialog>
+				}
+			/>
 
 			<div className="flex flex-wrap gap-2">
 				{CATEGORY_FILTERS.map((filter) => (
@@ -86,21 +88,16 @@ export default async function RecruitPostsPage({ searchParams }: RecruitPostsPag
 				))}
 			</div>
 
-			<section className="space-y-4">
-				<div>
-					<h2 className="text-sm font-semibold">My posts</h2>
-					<p className="text-xs text-muted-foreground">
-						Review responses, edit details, and close or delete openings you manage.
-					</p>
-				</div>
-
+			<PageSection
+				title="My posts"
+				description="Review responses, edit details, and close or delete openings you manage."
+			>
 				{myPosts.length === 0 ? (
-					<div className="border border-dashed px-6 py-10 text-center">
-						<p className="text-sm font-medium">No recruiting posts yet</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Publish your first post to replace the old Discord recruiting flow.
-						</p>
-					</div>
+					<EmptyStateBlock
+						title="No recruiting posts yet"
+						description="Publish your first post to replace the old Discord recruiting flow."
+						variant="card"
+					/>
 				) : (
 					<div className="space-y-4">
 						{myPosts.map((post) => (
@@ -116,33 +113,25 @@ export default async function RecruitPostsPage({ searchParams }: RecruitPostsPag
 						))}
 					</div>
 				)}
-			</section>
+			</PageSection>
 
-			<section className="space-y-4">
-				<div>
-					<h2 className="text-sm font-semibold">My responses</h2>
-					<p className="text-xs text-muted-foreground">
-						Track every application or contact thread you have already started.
-					</p>
-				</div>
+			<PageSection
+				title="My responses"
+				description="Track every application or contact thread you have already started."
+			>
 				<RecruitmentSentResponsesPanel responses={myResponses} />
-			</section>
+			</PageSection>
 
-			<section className="space-y-4">
-				<div>
-					<h2 className="text-sm font-semibold">Discover posts</h2>
-					<p className="text-xs text-muted-foreground">
-						Browse live recruiting posts across players, teams, and organisations.
-					</p>
-				</div>
-
+			<PageSection
+				title="Discover posts"
+				description="Browse live recruiting posts across players, teams, and organisations."
+			>
 				{discoverPosts.length === 0 ? (
-					<div className="border border-dashed px-6 py-10 text-center">
-						<p className="text-sm font-medium">No posts match this filter</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Try a different category filter or create a post of your own.
-						</p>
-					</div>
+					<EmptyStateBlock
+						title="No posts match this filter"
+						description="Try a different category filter or create a post of your own."
+						variant="card"
+					/>
 				) : (
 					<div className="space-y-4">
 						{discoverPosts.map((post) => (
@@ -155,7 +144,7 @@ export default async function RecruitPostsPage({ searchParams }: RecruitPostsPag
 						))}
 					</div>
 				)}
-			</section>
-		</div>
+			</PageSection>
+		</PageContainer>
 	);
 }

@@ -1,7 +1,10 @@
 import { Add01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { CreateOrgDialog } from "@/components/orgs/create-org-dialog";
 import { OrgCard } from "@/components/orgs/org-card";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgsForUser } from "@/lib/data/organization";
@@ -13,41 +16,31 @@ export default async function WorkspaceOrgsPage() {
 	const orgs = await getOrgsForUser(user.id);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-lg font-bold">Organizations</h1>
-					<p className="text-xs text-muted-foreground">
-						{orgs.length === 0
-							? "Create an organisation to get started"
-							: `${orgs.length} organisation${orgs.length === 1 ? "" : "s"}`}
-					</p>
-				</div>
-				<CreateOrgDialog>
-					<Button size="sm">
-						<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-						New organisation
-					</Button>
-				</CreateOrgDialog>
-			</div>
-
-			{orgs.length === 0 ? (
-				<div className="flex flex-col items-center justify-center border border-dashed px-6 py-16 text-center">
-					<HugeiconsIcon
-						icon={UserGroupIcon}
-						strokeWidth={1.5}
-						className="mb-4 size-10 text-muted-foreground/40"
-					/>
-					<p className="text-sm font-medium">No organisations yet</p>
-					<p className="mt-1 text-xs text-muted-foreground">
-						Create one to manage your teams and start scheduling scrims.
-					</p>
+		<PageContainer>
+			<PageHeader
+				title="Organizations"
+				description={
+					orgs.length === 0
+						? "Create an organisation to get started"
+						: `${orgs.length} organisation${orgs.length === 1 ? "" : "s"}`
+				}
+				actions={
 					<CreateOrgDialog>
-						<Button size="sm" className="mt-4">
-							Create organisation
+						<Button size="sm">
+							<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+							New organisation
 						</Button>
 					</CreateOrgDialog>
-				</div>
+				}
+			/>
+
+			{orgs.length === 0 ? (
+				<EmptyStateBlock
+					icon={UserGroupIcon}
+					title="No organisations yet"
+					description="Create one to manage your teams and start scheduling scrims."
+					variant="card"
+				/>
 			) : (
 				<div className="grid gap-3 sm:grid-cols-2">
 					{orgs.map((org) => (
@@ -55,6 +48,6 @@ export default async function WorkspaceOrgsPage() {
 					))}
 				</div>
 			)}
-		</div>
+		</PageContainer>
 	);
 }

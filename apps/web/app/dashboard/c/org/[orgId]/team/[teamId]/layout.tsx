@@ -16,5 +16,5 @@ export default async function TeamLayout({
 	const team = await getTeamWithRoster(teamId, user.id);
 	if (!team || team.organizationId !== orgId) notFound();
 
-	return <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">{children}</div>;
+	return <>{children}</>;
 }

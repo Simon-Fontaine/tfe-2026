@@ -2,13 +2,15 @@ import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { PageSection } from "@/components/dashboard/page-section";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { MemberActionsDropdown } from "@/components/orgs/member-actions-dropdown";
 import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 
@@ -29,29 +31,24 @@ export default async function OrgMembersPage({ params }: { params: Promise<{ org
 	const canManage = org.currentUser.canManage;
 
 	return (
-		<>
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-lg font-bold">Members</h1>
-					<p className="text-xs text-muted-foreground">
-						{org.members.length} member{org.members.length === 1 ? "" : "s"} in {org.name}
-					</p>
-				</div>
-				{canManage && (
-					<InviteMemberDialog orgId={org.id}>
-						<Button size="sm">
-							<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-							Invite member
-						</Button>
-					</InviteMemberDialog>
-				)}
-			</div>
+		<PageContainer>
+			<PageHeader
+				title="Members"
+				description={`${org.members.length} member${org.members.length === 1 ? "" : "s"} in ${org.name}`}
+				actions={
+					canManage ? (
+						<InviteMemberDialog orgId={org.id}>
+							<Button size="sm">
+								<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+								Invite member
+							</Button>
+						</InviteMemberDialog>
+					) : undefined
+				}
+			/>
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-sm">Active members</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-2">
+			<PageSection title="Active members">
+				<div className="space-y-2">
 					{org.members.map((member) => (
 						<div key={member.id} className="flex items-center gap-3 border px-3 py-3">
 							<Avatar className="size-8 overflow-hidden rounded-none after:rounded-none">
@@ -83,19 +80,14 @@ export default async function OrgMembersPage({ params }: { params: Promise<{ org
 							)}
 						</div>
 					))}
-				</CardContent>
-			</Card>
+				</div>
+			</PageSection>
 
 			{org.pendingInvites.length > 0 && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm">Pending invites</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<OrgPendingInvitesSection orgId={org.id} invites={org.pendingInvites} />
-					</CardContent>
-				</Card>
+				<PageSection title="Pending invites">
+					<OrgPendingInvitesSection orgId={org.id} invites={org.pendingInvites} />
+				</PageSection>
 			)}
-		</>
+		</PageContainer>
 	);
 }

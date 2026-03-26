@@ -1,6 +1,10 @@
 import Link from "next/link";
 
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { PageSection } from "@/components/dashboard/page-section";
 import { RecruitmentThreadPanel } from "@/components/recruit/recruitment-thread-panel";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getRecruitmentConversations, getRecruitmentThread } from "@/lib/data/recruit";
@@ -23,21 +27,20 @@ export default async function RecruitConversationsPage({
 	const thread = selectedThreadId ? await getRecruitmentThread(selectedThreadId) : null;
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-			<div>
-				<h1 className="text-lg font-bold">Recruit Conversations</h1>
-				<p className="text-xs text-muted-foreground">Manage every recruiting thread in one inbox</p>
-			</div>
+		<PageContainer>
+			<PageHeader
+				title="Recruit Conversations"
+				description="Manage every recruiting thread in one inbox"
+			/>
 
 			<div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-				<div className="space-y-3">
-					<h2 className="text-sm font-semibold">Threads</h2>
+				<PageSection title="Threads">
 					{conversations.length === 0 ? (
-						<div className="flex min-h-[240px] items-center justify-center border border-dashed px-6 text-center">
-							<p className="text-sm text-muted-foreground">
-								No conversations yet. Respond to a post to create the first thread.
-							</p>
-						</div>
+						<EmptyStateBlock
+							title="No conversations yet"
+							description="Respond to a post to create the first thread."
+							variant="card"
+						/>
 					) : (
 						<div className="space-y-2">
 							{conversations.map((conversation) => {
@@ -71,10 +74,10 @@ export default async function RecruitConversationsPage({
 							})}
 						</div>
 					)}
-				</div>
+				</PageSection>
 
 				<RecruitmentThreadPanel thread={thread} currentUserId={user.id} />
 			</div>
-		</div>
+		</PageContainer>
 	);
 }
