@@ -46,7 +46,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 			pendingRef.current = false;
 			openRef.current = false;
 			const orgId = (state as { orgId?: string }).orgId;
-			if (orgId) router.push(`/dashboard/workspace/orgs/${orgId}`);
+			if (orgId) router.push(`/dashboard/c/org/${orgId}`);
 		}
 	}, [state, router]);
 

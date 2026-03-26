@@ -75,29 +75,33 @@ export const siteConfig: SiteConfig = {
 				links: [{ label: "Dashboard", href: "/dashboard", icon: Home01Icon }],
 			},
 			{
-				label: "Workspace",
-				links: [{ label: "Orgs", href: "/dashboard/workspace/orgs", icon: UserGroupIcon }],
+				label: "Personal",
+				links: [
+					{ label: "Profile", href: "/dashboard/personal/profile", icon: UserCircle02Icon },
+					{ label: "Schedule", href: "/dashboard/personal/schedule", icon: Calendar03Icon },
+					{
+						label: "Notifications",
+						href: "/dashboard/personal/notifications",
+						icon: Mail01Icon,
+					},
+					{ label: "Settings", href: "/dashboard/personal/settings/account", icon: Settings01Icon },
+				],
 			},
 			{
-				label: "Recruit",
+				label: "Discover",
 				links: [
-					{ label: "Posts", href: "/dashboard/recruit/posts", icon: UserSearch01Icon },
+					{ label: "Posts", href: "/dashboard/discover/posts", icon: UserSearch01Icon },
 					{
 						label: "Conversations",
-						href: "/dashboard/recruit/conversations",
+						href: "/dashboard/discover/conversations",
 						icon: UserCircle02Icon,
 					},
-					{ label: "Invitations", href: "/dashboard/recruit/invitations", icon: Mail01Icon },
+					{ label: "Invitations", href: "/dashboard/discover/invitations", icon: Mail01Icon },
 				],
 			},
 			{
-				label: "Me",
-				links: [
-					{ label: "Profile", href: "/dashboard/me/profile", icon: UserCircle02Icon },
-					{ label: "Schedule", href: "/dashboard/me/schedule", icon: Calendar03Icon },
-					{ label: "Notifications", href: "/dashboard/me/notifications", icon: Mail01Icon },
-					{ label: "Settings", href: "/dashboard/me/settings", icon: Settings01Icon },
-				],
+				label: "Workspace",
+				links: [{ label: "Organizations", href: "/dashboard/organizations", icon: UserGroupIcon }],
 			},
 		],
 	},

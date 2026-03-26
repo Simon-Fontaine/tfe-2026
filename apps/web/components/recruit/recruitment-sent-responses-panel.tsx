@@ -64,7 +64,7 @@ function SentResponseCard({ response }: { response: RecruitmentResponseSummary }
 			<div className="flex flex-wrap gap-2">
 				{response.threadId && (
 					<Button asChild size="sm" variant="outline">
-						<Link href={`${dashboardRoutes.recruit.conversations}?thread=${response.threadId}`}>
+						<Link href={`${dashboardRoutes.discover.conversations}?thread=${response.threadId}`}>
 							Open conversation
 						</Link>
 					</Button>

@@ -106,20 +106,26 @@ export const apiRoutes = {
 
 export const dashboardRoutes = {
 	home: "/dashboard",
-	workspace: {
-		orgs: "/dashboard/workspace/orgs",
-		orgById: (orgId: string) => `/dashboard/workspace/orgs/${orgId}`,
-		teamById: (orgId: string, teamId: string) =>
-			`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`,
+	organizations: "/dashboard/organizations",
+	personal: {
+		root: "/dashboard/personal",
+		profile: "/dashboard/personal/profile",
+		schedule: "/dashboard/personal/schedule",
+		notifications: "/dashboard/personal/notifications",
+		settings: {
+			root: "/dashboard/personal/settings",
+			account: "/dashboard/personal/settings/account",
+			security: "/dashboard/personal/settings/security",
+		},
 	},
-	recruit: {
-		posts: "/dashboard/recruit/posts",
-		conversations: "/dashboard/recruit/conversations",
-		invitations: "/dashboard/recruit/invitations",
-		lfg: "/dashboard/recruit/posts",
-		applications: "/dashboard/recruit/conversations",
+	discover: {
+		root: "/dashboard/discover",
+		posts: "/dashboard/discover/posts",
+		conversations: "/dashboard/discover/conversations",
+		invitations: "/dashboard/discover/invitations",
 	},
-	me: {
-		schedule: "/dashboard/me/schedule",
+	context: {
+		orgById: (orgId: string) => `/dashboard/c/org/${orgId}`,
+		teamById: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}`,
 	},
 } as const;

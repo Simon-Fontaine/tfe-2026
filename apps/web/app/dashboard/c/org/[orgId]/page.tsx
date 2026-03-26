@@ -49,7 +49,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 	return (
 		<div className="space-y-6">
 			<Button asChild variant="ghost" size="sm" className="-ml-2 mt-0.5">
-				<Link href={dashboardRoutes.workspace.orgs}>
+				<Link href={dashboardRoutes.organizations}>
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 					Workspace
 				</Link>
@@ -302,7 +302,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 									{org.conversations.map((conversation) => (
 										<Link
 											key={conversation.threadId}
-											href={`${dashboardRoutes.recruit.conversations}?thread=${conversation.threadId}`}
+											href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
 											className="block border px-4 py-3 transition-colors hover:bg-muted/50"
 										>
 											<p className="text-sm font-medium">{conversation.counterpartLabel}</p>

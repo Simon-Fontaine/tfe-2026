@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowUpDownIcon, BubbleChatIcon, Sword03Icon } from "@hugeicons/core-free-icons";
+import {
+	ArrowUpDownIcon,
+	BubbleChatIcon,
+	Home01Icon,
+	Mail01Icon,
+	Settings01Icon,
+	Sword03Icon,
+	UserGroupIcon,
+	UserSearch01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,17 +31,76 @@ import {
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
+import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
 
 const COMING_SOON_LINKS = [{ label: "Chat", icon: BubbleChatIcon, href: "/dashboard/chat" }];
 
 interface DashboardSidebarProps {
 	user: SessionUser;
 	unreadCount: number;
+	contextOrgs: SwitcherOrg[];
+	contextTeams: SwitcherTeam[];
 }
 
-export function DashboardSidebar({ user, unreadCount }: DashboardSidebarProps) {
+export function DashboardSidebar({
+	user,
+	unreadCount,
+	contextOrgs,
+	contextTeams,
+}: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const initials = getUserInitials(user.displayName);
+	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
+	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
+	const activeOrgId = orgMatch?.[1] ?? null;
+	const activeTeamId = teamMatch?.[2] ?? null;
+
+	const contextGroups =
+		activeTeamId && activeOrgId
+			? [
+					{
+						label: "Team",
+						links: [
+							{
+								label: "Overview",
+								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}`,
+								icon: Home01Icon,
+							},
+							{
+								label: "Posts",
+								href: "/dashboard/discover/posts",
+								icon: UserSearch01Icon,
+							},
+							{
+								label: "Conversations",
+								href: "/dashboard/discover/conversations",
+								icon: Mail01Icon,
+							},
+							{
+								label: "Settings",
+								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}`,
+								icon: Settings01Icon,
+							},
+						],
+					},
+				]
+			: activeOrgId
+				? [
+						{
+							label: "Organization",
+							links: [
+								{ label: "Overview", href: `/dashboard/c/org/${activeOrgId}`, icon: Home01Icon },
+								{ label: "Members", href: `/dashboard/c/org/${activeOrgId}`, icon: UserGroupIcon },
+								{ label: "Posts", href: "/dashboard/discover/posts", icon: UserSearch01Icon },
+								{
+									label: "Settings",
+									href: `/dashboard/c/org/${activeOrgId}`,
+									icon: Settings01Icon,
+								},
+							],
+						},
+					]
+				: siteConfig.nav.dashboard;
 
 	return (
 		<Sidebar collapsible="icon">
@@ -56,12 +124,15 @@ export function DashboardSidebar({ user, unreadCount }: DashboardSidebarProps) {
 							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
+					<SidebarMenuItem>
+						<ContextSwitcher orgs={contextOrgs} teams={contextTeams} />
+					</SidebarMenuItem>
 				</SidebarMenu>
 			</SidebarHeader>
 
 			{/* ── Content: nav groups ────────────────────────────── */}
 			<SidebarContent>
-				{siteConfig.nav.dashboard.map((group, i) => (
+				{contextGroups.map((group, i) => (
 					<SidebarGroup key={group.label ?? i}>
 						{group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
 						<SidebarGroupContent>

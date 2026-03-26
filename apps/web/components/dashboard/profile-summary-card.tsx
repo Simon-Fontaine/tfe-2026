@@ -33,7 +33,7 @@ export function ProfileSummaryCard({ profile }: ProfileSummaryCardProps) {
 				<CardTitle>Player profile</CardTitle>
 				<CardAction>
 					<Button asChild variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs">
-						<Link href="/dashboard/me/profile">
+						<Link href="/dashboard/personal/profile">
 							<HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-3" />
 							Edit
 						</Link>

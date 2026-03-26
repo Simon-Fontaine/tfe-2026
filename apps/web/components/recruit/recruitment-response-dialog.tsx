@@ -49,7 +49,7 @@ export function RecruitmentResponseDialog({
 			setOpen(false);
 			setMessage("");
 			if ("threadId" in state && state.threadId) {
-				router.push(`${dashboardRoutes.recruit.conversations}?thread=${state.threadId}`);
+				router.push(`${dashboardRoutes.discover.conversations}?thread=${state.threadId}`);
 			}
 		}
 	}, [router, state]);

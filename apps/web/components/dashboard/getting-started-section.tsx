@@ -90,7 +90,7 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 					title="Complete your profile"
 					description="Add your BattleTag, rank, hero pool and availability to attract the right teams."
 					ctaLabel="Set up"
-					ctaHref="/dashboard/me/profile"
+					ctaHref="/dashboard/personal/profile"
 					done={profileDone}
 				/>
 				<ChecklistCard
@@ -98,14 +98,14 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 					title="Create or join an organisation"
 					description="Organisations manage one or more teams and handle scrim invitations."
 					ctaLabel="Open Workspace"
-					ctaHref="/dashboard/workspace/orgs"
+					ctaHref="/dashboard/organizations"
 				/>
 				<ChecklistCard
 					icon={Search01Icon}
 					title="Find a team"
 					description="Browse recruiting posts or publish your own availability to connect with the right team."
 					ctaLabel="Open Recruit"
-					ctaHref="/dashboard/recruit/posts"
+					ctaHref="/dashboard/discover/posts"
 				/>
 			</CardContent>
 		</Card>

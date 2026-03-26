@@ -56,8 +56,8 @@ async function revalidateRecruitPaths(input: {
 	orgId?: string;
 	playerUsername?: string;
 }) {
-	revalidatePath(dashboardRoutes.recruit.posts);
-	revalidatePath(dashboardRoutes.recruit.conversations);
+	revalidatePath(dashboardRoutes.discover.posts);
+	revalidatePath(dashboardRoutes.discover.conversations);
 	revalidatePath("/posts");
 	revalidatePath("/players");
 
@@ -67,8 +67,8 @@ async function revalidateRecruitPaths(input: {
 		revalidatePath(`/teams/${input.teamId}`);
 		const orgId = input.orgId ?? (await getVerifiedTeamOrgId(input.teamId));
 		if (orgId) {
-			revalidatePath(dashboardRoutes.workspace.teamById(orgId, input.teamId));
-			revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+			revalidatePath(dashboardRoutes.context.teamById(orgId, input.teamId));
+			revalidatePath(dashboardRoutes.context.orgById(orgId));
 			const slug = await getOrgSlug(orgId);
 			if (slug) revalidatePath(`/orgs/${slug}`);
 		}
@@ -76,7 +76,7 @@ async function revalidateRecruitPaths(input: {
 	}
 
 	if (input.orgId) {
-		revalidatePath(dashboardRoutes.workspace.orgById(input.orgId));
+		revalidatePath(dashboardRoutes.context.orgById(input.orgId));
 		const slug = await getOrgSlug(input.orgId);
 		if (slug) revalidatePath(`/orgs/${slug}`);
 	}
@@ -279,6 +279,6 @@ export async function sendRecruitmentMessageAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.recruit.conversations);
+	revalidatePath(dashboardRoutes.discover.conversations);
 	return { success: true };
 }

@@ -53,8 +53,8 @@ export default async function InvitesPage({ searchParams }: InvitesPageProps) {
 						key={status}
 						href={
 							status === "all"
-								? "/dashboard/recruit/invitations"
-								: `/dashboard/recruit/invitations?status=${status}`
+								? "/dashboard/discover/invitations"
+								: `/dashboard/discover/invitations?status=${status}`
 						}
 					>
 						<Badge variant={filter === status ? "default" : "outline"} className="capitalize">
