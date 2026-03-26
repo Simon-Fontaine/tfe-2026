@@ -1,25 +1,15 @@
-import { Add01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
-import { MemberActionsDropdown } from "@/components/orgs/member-actions-dropdown";
-import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
-import { OrgSettingsPanel } from "@/components/orgs/org-settings-panel";
-import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
-import { RecruitmentPostFormDialog } from "@/components/recruit/recruitment-post-form-dialog";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
-import { getRecruitmentResponsesForPost } from "@/lib/data/recruit";
-import { dashboardRoutes } from "@/lib/routes";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -27,7 +17,7 @@ const ROLE_LABELS: Record<string, string> = {
 	member: "Member",
 };
 
-export default async function OrgDetailPage({ params }: { params: Promise<{ orgId: string }> }) {
+export default async function OrgOverviewPage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { user } = await getCurrentSession();
 	if (!user) return null;
 
@@ -38,16 +28,9 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 	const canManage = org.currentUser.canManage;
 	const totalTeams = org.activeTeams.length + org.archivedTeams.length;
 	const openPostCount = org.ownedPosts.filter((post) => post.status === "open").length;
-	const responsesByPost = new Map(
-		await Promise.all(
-			org.ownedPosts.map(
-				async (post) => [post.id, await getRecruitmentResponsesForPost(post.id)] as const
-			)
-		)
-	);
 
 	return (
-		<div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+		<>
 			{/* Org header */}
 			<div className="flex items-center gap-4">
 				<Avatar className="size-14 overflow-hidden rounded-none after:rounded-none">
@@ -70,270 +53,61 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 				</div>
 			</div>
 
-			{/* Tabs */}
-			<Tabs defaultValue="overview" className="space-y-4">
-				<TabsList variant="line">
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="teams">Teams</TabsTrigger>
-					<TabsTrigger value="members">Members</TabsTrigger>
-					<TabsTrigger value="posts">Posts</TabsTrigger>
-					<TabsTrigger value="conversations">Conversations</TabsTrigger>
-					<TabsTrigger value="invitations">Invitations</TabsTrigger>
-					{(canManage || org.currentUser.canLeave || org.currentUser.canDelete) && (
-						<TabsTrigger value="settings">Settings</TabsTrigger>
+			{/* Stats */}
+			<div className="grid gap-3 sm:grid-cols-4">
+				<Card>
+					<CardContent className="pt-4">
+						<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Teams</p>
+						<p className="mt-1 text-2xl font-semibold">{totalTeams}</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="pt-4">
+						<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Members</p>
+						<p className="mt-1 text-2xl font-semibold">{org.members.length}</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="pt-4">
+						<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Open posts</p>
+						<p className="mt-1 text-2xl font-semibold">{openPostCount}</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="pt-4">
+						<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+							Conversations
+						</p>
+						<p className="mt-1 text-2xl font-semibold">{org.conversations.length}</p>
+					</CardContent>
+				</Card>
+			</div>
+
+			{/* Active teams */}
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between pb-3">
+					<CardTitle className="text-sm">Active teams</CardTitle>
+					{canManage && (
+						<CreateTeamDialog orgId={org.id}>
+							<Button size="sm" variant="outline">
+								<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+								New team
+							</Button>
+						</CreateTeamDialog>
 					)}
-				</TabsList>
-
-				{/* Overview */}
-				<TabsContent value="overview" className="space-y-4">
-					<div className="grid gap-3 sm:grid-cols-4">
-						<Card>
-							<CardContent className="pt-4">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Teams</p>
-								<p className="mt-1 text-2xl font-semibold">{totalTeams}</p>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardContent className="pt-4">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Members</p>
-								<p className="mt-1 text-2xl font-semibold">{org.members.length}</p>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardContent className="pt-4">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-									Open posts
-								</p>
-								<p className="mt-1 text-2xl font-semibold">{openPostCount}</p>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardContent className="pt-4">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-									Conversations
-								</p>
-								<p className="mt-1 text-2xl font-semibold">{org.conversations.length}</p>
-							</CardContent>
-						</Card>
-					</div>
-
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between pb-3">
-							<CardTitle className="text-sm">Active teams</CardTitle>
-							{canManage && (
-								<CreateTeamDialog orgId={org.id}>
-									<Button size="sm" variant="outline">
-										<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-										New team
-									</Button>
-								</CreateTeamDialog>
-							)}
-						</CardHeader>
-						<CardContent>
-							{org.activeTeams.length === 0 ? (
-								<p className="text-xs text-muted-foreground">No active teams yet.</p>
-							) : (
-								<div className="grid gap-3 sm:grid-cols-2">
-									{org.activeTeams.map((team) => (
-										<TeamCard key={team.id} team={team} orgId={org.id} />
-									))}
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</TabsContent>
-
-				{/* Teams */}
-				<TabsContent value="teams" className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-sm font-medium">Teams</p>
-							<p className="text-xs text-muted-foreground">
-								Manage active and archived rosters from the same organisation workspace.
-							</p>
-						</div>
-						{canManage && (
-							<CreateTeamDialog orgId={org.id}>
-								<Button size="sm">
-									<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									New team
-								</Button>
-							</CreateTeamDialog>
-						)}
-					</div>
-
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Active teams</CardTitle>
-						</CardHeader>
-						<CardContent>
-							{org.activeTeams.length === 0 ? (
-								<p className="text-xs text-muted-foreground">No active teams.</p>
-							) : (
-								<div className="grid gap-3 sm:grid-cols-2">
-									{org.activeTeams.map((team) => (
-										<TeamCard key={team.id} team={team} orgId={org.id} />
-									))}
-								</div>
-							)}
-						</CardContent>
-					</Card>
-
-					{org.archivedTeams.length > 0 && (
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-sm">Archived teams</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="grid gap-3 sm:grid-cols-2">
-									{org.archivedTeams.map((team) => (
-										<TeamCard key={team.id} team={team} orgId={org.id} />
-									))}
-								</div>
-							</CardContent>
-						</Card>
-					)}
-				</TabsContent>
-
-				{/* Members */}
-				<TabsContent value="members" className="space-y-4">
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between pb-3">
-							<CardTitle className="text-sm">Members</CardTitle>
-							{canManage && (
-								<InviteMemberDialog orgId={org.id}>
-									<Button size="sm" variant="outline">
-										<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-										Invite member
-									</Button>
-								</InviteMemberDialog>
-							)}
-						</CardHeader>
-						<CardContent className="space-y-2">
-							{org.members.map((member) => (
-								<div key={member.id} className="flex items-center gap-3 border px-3 py-3">
-									<Avatar className="size-8 overflow-hidden rounded-none after:rounded-none">
-										<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
-										<AvatarFallback className="rounded-none text-[10px] font-bold">
-											{member.displayName.slice(0, 2).toUpperCase()}
-										</AvatarFallback>
-									</Avatar>
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-xs font-medium">{member.displayName}</p>
-										<p className="text-[11px] text-muted-foreground">
-											{member.memberType === "staff"
-												? (member.staffRole ?? "staff")
-												: (member.gameRole ?? "player")}
-											{" · "}
-											{member.activeTeamCount} active team
-											{member.activeTeamCount === 1 ? "" : "s"}
-										</p>
-									</div>
-									<Badge variant="secondary" className="text-[10px]">
-										{ROLE_LABELS[member.role] ?? member.role}
-									</Badge>
-									{canManage && member.userId !== user.id && (
-										<MemberActionsDropdown
-											orgId={org.id}
-											member={member}
-											viewerRole={org.currentUser.role ?? "member"}
-										/>
-									)}
-								</div>
-							))}
-						</CardContent>
-					</Card>
-				</TabsContent>
-
-				{/* Posts */}
-				<TabsContent value="posts" className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-sm font-medium">Organisation posts</p>
-							<p className="text-xs text-muted-foreground">
-								Publish staff openings or other organisation-owned recruiting needs.
-							</p>
-						</div>
-						{canManage && (
-							<RecruitmentPostFormDialog fixedOwnerType="organization" fixedOrganizationId={org.id}>
-								<Button size="sm">
-									<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									New post
-								</Button>
-							</RecruitmentPostFormDialog>
-						)}
-					</div>
-
-					{org.ownedPosts.length === 0 ? (
-						<div className="border border-dashed px-6 py-10 text-center">
-							<p className="text-sm font-medium">No organisation posts yet</p>
-							<p className="mt-1 text-xs text-muted-foreground">
-								Post staff openings here instead of relying on Discord channels.
-							</p>
-						</div>
+				</CardHeader>
+				<CardContent>
+					{org.activeTeams.length === 0 ? (
+						<p className="text-xs text-muted-foreground">No active teams yet.</p>
 					) : (
-						<div className="space-y-4">
-							{org.ownedPosts.map((post) => (
-								<RecruitmentPostCard
-									key={post.id}
-									post={post}
-									currentUserId={user.id}
-									responses={responsesByPost.get(post.id) ?? []}
-									organizationId={org.id}
-								/>
+						<div className="grid gap-3 sm:grid-cols-2">
+							{org.activeTeams.map((team) => (
+								<TeamCard key={team.id} team={team} orgId={org.id} />
 							))}
 						</div>
 					)}
-				</TabsContent>
-
-				{/* Conversations */}
-				<TabsContent value="conversations" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Recruit conversations</CardTitle>
-						</CardHeader>
-						<CardContent>
-							{org.conversations.length === 0 ? (
-								<p className="text-xs text-muted-foreground">
-									No recruiting conversations have started for this organisation yet.
-								</p>
-							) : (
-								<div className="space-y-2">
-									{org.conversations.map((conversation) => (
-										<Link
-											key={conversation.threadId}
-											href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
-											className="block border px-4 py-3 transition-colors hover:bg-muted/50"
-										>
-											<p className="text-sm font-medium">{conversation.counterpartLabel}</p>
-											<p className="mt-1 text-xs text-muted-foreground">{conversation.postTitle}</p>
-										</Link>
-									))}
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</TabsContent>
-
-				{/* Invitations */}
-				<TabsContent value="invitations" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Pending invites</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<OrgPendingInvitesSection orgId={org.id} invites={org.pendingInvites} />
-						</CardContent>
-					</Card>
-				</TabsContent>
-
-				{/* Settings */}
-				{(canManage || org.currentUser.canLeave || org.currentUser.canDelete) && (
-					<TabsContent value="settings">
-						<OrgSettingsPanel org={org} />
-					</TabsContent>
-				)}
-			</Tabs>
-		</div>
+				</CardContent>
+			</Card>
+		</>
 	);
 }

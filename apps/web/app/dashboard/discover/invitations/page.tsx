@@ -2,7 +2,6 @@ import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { PendingInviteCard } from "@/components/invites/pending-invite-card";
-import { SettingsHeaderBar } from "@/components/settings/settings-header-bar";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPendingOrgInvitesForUser } from "@/lib/data/organization";
@@ -40,12 +39,12 @@ export default async function InvitesPage({ searchParams }: InvitesPageProps) {
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-			<SettingsHeaderBar
-				backHref="/dashboard"
-				icon={Mail01Icon}
-				title="Recruit Invitations"
-				subtitle="Invite lifecycle: pending, accepted, declined, expired"
-			/>
+			<div>
+				<h1 className="text-lg font-bold">Invitations</h1>
+				<p className="text-xs text-muted-foreground">
+					Invite lifecycle: pending, accepted, declined, expired
+				</p>
+			</div>
 
 			<div className="flex flex-wrap items-center gap-2">
 				{INVITE_STATUS_FILTERS.map((status) => (

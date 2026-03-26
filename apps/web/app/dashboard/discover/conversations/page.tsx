@@ -1,8 +1,6 @@
-import { Message01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 
 import { RecruitmentThreadPanel } from "@/components/recruit/recruitment-thread-panel";
-import { SettingsHeaderBar } from "@/components/settings/settings-header-bar";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getRecruitmentConversations, getRecruitmentThread } from "@/lib/data/recruit";
@@ -25,13 +23,11 @@ export default async function RecruitConversationsPage({
 	const thread = selectedThreadId ? await getRecruitmentThread(selectedThreadId) : null;
 
 	return (
-		<div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
-			<SettingsHeaderBar
-				backHref="/dashboard"
-				icon={Message01Icon}
-				title="Recruit Conversations"
-				subtitle="Manage every recruiting thread in one inbox"
-			/>
+		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+			<div>
+				<h1 className="text-lg font-bold">Recruit Conversations</h1>
+				<p className="text-xs text-muted-foreground">Manage every recruiting thread in one inbox</p>
+			</div>
 
 			<div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
 				<div className="space-y-3">
