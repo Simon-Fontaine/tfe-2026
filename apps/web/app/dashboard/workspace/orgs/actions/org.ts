@@ -7,6 +7,14 @@ import { toActionResult } from "@/lib/action-result";
 import { getServerSdk } from "@/lib/app-sdk";
 import { dashboardRoutes } from "@/lib/routes";
 
+function revalidateOrg(orgId: string) {
+	revalidatePath(dashboardRoutes.context.orgById(orgId));
+}
+
+function revalidateInvitations() {
+	revalidatePath(dashboardRoutes.discover.invitations);
+}
+
 export async function createOrgAction(
 	_prev: FormActionResult | null,
 	formData: FormData
@@ -22,7 +30,7 @@ export async function createOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgs);
+	revalidatePath(dashboardRoutes.organizations);
 	return { success: true, orgId: actionResult.data.orgId };
 }
 
@@ -44,7 +52,7 @@ export async function updateOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrg(orgId);
 	return { success: true };
 }
 
@@ -62,8 +70,8 @@ export async function transferOrgOwnershipAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
-	revalidatePath(dashboardRoutes.workspace.orgs);
+	revalidateOrg(orgId);
+	revalidatePath(dashboardRoutes.organizations);
 	return { success: true };
 }
 
@@ -81,8 +89,8 @@ export async function deleteOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgs);
-	redirect(dashboardRoutes.workspace.orgs);
+	revalidatePath(dashboardRoutes.organizations);
+	redirect(dashboardRoutes.organizations);
 }
 
 export async function leaveOrgAction(
@@ -96,8 +104,8 @@ export async function leaveOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgs);
-	redirect(dashboardRoutes.workspace.orgs);
+	revalidatePath(dashboardRoutes.organizations);
+	redirect(dashboardRoutes.organizations);
 }
 
 export async function updateOrgMemberRoleAction(
@@ -127,7 +135,7 @@ export async function updateOrgMemberRoleAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrg(orgId);
 	return { success: true };
 }
 
@@ -145,7 +153,7 @@ export async function removeOrgMemberAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrg(orgId);
 	return { success: true };
 }
 
@@ -176,7 +184,7 @@ export async function inviteToOrgAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrg(orgId);
 	return { success: true };
 }
 
@@ -193,8 +201,8 @@ export async function respondToOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.recruit.invitations);
-	revalidatePath(dashboardRoutes.workspace.orgs);
+	revalidateInvitations();
+	revalidatePath(dashboardRoutes.organizations);
 	return { success: true };
 }
 
@@ -210,7 +218,7 @@ export async function cancelOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrg(orgId);
 	return { success: true };
 }
 
@@ -226,6 +234,6 @@ export async function resendOrgInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrg(orgId);
 	return { success: true };
 }

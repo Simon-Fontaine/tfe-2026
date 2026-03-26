@@ -47,7 +47,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 	return (
 		<div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
 			<Button asChild variant="ghost" size="sm" className="-ml-2">
-				<Link href={dashboardRoutes.workspace.orgById(team.organizationId)}>
+				<Link href={dashboardRoutes.context.orgById(team.organizationId)}>
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
 					Back to org
 				</Link>
@@ -306,7 +306,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 									{team.conversations.map((conversation) => (
 										<Link
 											key={conversation.threadId}
-											href={`${dashboardRoutes.recruit.conversations}?thread=${conversation.threadId}`}
+											href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
 											className="block border px-4 py-3 transition-colors hover:bg-muted/50"
 										>
 											<p className="text-sm font-medium">{conversation.counterpartLabel}</p>

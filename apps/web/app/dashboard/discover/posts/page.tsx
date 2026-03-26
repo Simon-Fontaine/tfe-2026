@@ -84,8 +84,8 @@ export default async function RecruitPostsPage({ searchParams }: RecruitPostsPag
 						key={filter}
 						href={
 							filter === "all"
-								? dashboardRoutes.recruit.posts
-								: `${dashboardRoutes.recruit.posts}?category=${filter}`
+								? dashboardRoutes.discover.posts
+								: `${dashboardRoutes.discover.posts}?category=${filter}`
 						}
 					>
 						<Badge variant={category === filter ? "default" : "outline"} className="capitalize">

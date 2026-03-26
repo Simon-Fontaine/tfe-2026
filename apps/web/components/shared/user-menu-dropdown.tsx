@@ -122,13 +122,13 @@ export function UserMenuDropdown({
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/me/profile">
+						<Link href="/dashboard/personal/profile">
 							<HugeiconsIcon icon={UserCircle02Icon} strokeWidth={2} />
 							Profile
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/me/settings">
+						<Link href="/dashboard/personal/settings/account">
 							<HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
 							Settings
 						</Link>

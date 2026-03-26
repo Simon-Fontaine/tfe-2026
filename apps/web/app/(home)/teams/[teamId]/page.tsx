@@ -77,7 +77,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 					</Button>
 					{isOrgMember && (
 						<Button asChild size="sm" variant="outline">
-							<Link href={`/dashboard/workspace/orgs/${team.organizationId}/teams/${team.id}`}>
+							<Link href={`/dashboard/c/org/${team.organizationId}/team/${team.id}`}>
 								{canManageInDashboard ? "Manage in dashboard" : "Open workspace"}
 							</Link>
 						</Button>

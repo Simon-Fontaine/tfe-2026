@@ -21,6 +21,18 @@ async function getVerifiedTeamOrgId(teamId: string): Promise<string | null> {
 	return team.organizationId;
 }
 
+function revalidateOrgWorkspace(orgId: string) {
+	revalidatePath(dashboardRoutes.context.orgById(orgId));
+}
+
+function revalidateTeamWorkspace(orgId: string, teamId: string) {
+	revalidatePath(dashboardRoutes.context.teamById(orgId, teamId));
+}
+
+function revalidateInvitations() {
+	revalidatePath(dashboardRoutes.discover.invitations);
+}
+
 function getTeamMemberFields(formData: FormData) {
 	const explicitMemberType = formData.get("memberType")?.toString();
 	const rawGameRole =
@@ -63,7 +75,7 @@ export async function createTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrgWorkspace(orgId);
 	return { success: true, teamId: actionResult.data.teamId };
 }
 
@@ -88,8 +100,8 @@ export async function updateTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateTeamWorkspace(orgId, teamId);
+	revalidateOrgWorkspace(orgId);
 	revalidatePath(`/teams/${teamId}`);
 	return { success: true };
 }
@@ -108,8 +120,8 @@ export async function toggleRecruitingAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateTeamWorkspace(orgId, teamId);
+	revalidateOrgWorkspace(orgId);
 	revalidatePath(`/teams/${teamId}`);
 	return { success: true };
 }
@@ -128,7 +140,7 @@ export async function archiveTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrgWorkspace(orgId);
 	revalidatePath(`/teams/${teamId}`);
 	return { success: true };
 }
@@ -147,8 +159,8 @@ export async function unarchiveTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateTeamWorkspace(orgId, teamId);
+	revalidateOrgWorkspace(orgId);
 	revalidatePath(`/teams/${teamId}`);
 	return { success: true };
 }
@@ -167,8 +179,8 @@ export async function deleteTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
-	redirect(dashboardRoutes.workspace.orgById(orgId));
+	revalidateOrgWorkspace(orgId);
+	redirect(dashboardRoutes.context.orgById(orgId));
 }
 
 export async function leaveTeamAction(
@@ -185,8 +197,8 @@ export async function leaveTeamAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateTeamWorkspace(orgId, teamId);
+	revalidateOrgWorkspace(orgId);
 	revalidatePath(`/teams/${teamId}`);
 	return { success: true };
 }
@@ -215,8 +227,8 @@ export async function addPlayerAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateTeamWorkspace(orgId, teamId);
+	revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -239,7 +251,7 @@ export async function updateRosterStatusAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidateTeamWorkspace(orgId, teamId);
 	return { success: true };
 }
 
@@ -257,7 +269,6 @@ export async function updateTeamMemberAction(
 	const result = await sdk.teams.updateMember({
 		teamId,
 		memberId,
-		memberType: fields.memberType,
 		roleInTeam: fields.roleInTeam,
 		gameRole: fields.gameRole,
 		staffRole: fields.staffRole,
@@ -268,7 +279,7 @@ export async function updateTeamMemberAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidateTeamWorkspace(orgId, teamId);
 	return { success: true };
 }
 
@@ -291,7 +302,7 @@ export async function updateTeamMemberPermissionAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidateTeamWorkspace(orgId, teamId);
 	return { success: true };
 }
 
@@ -310,8 +321,8 @@ export async function removeRosterMemberAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
-	revalidatePath(dashboardRoutes.workspace.orgById(orgId));
+	revalidateTeamWorkspace(orgId, teamId);
+	revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -338,7 +349,7 @@ export async function sendTeamInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidateTeamWorkspace(orgId, teamId);
 	return { success: true };
 }
 
@@ -357,7 +368,7 @@ export async function cancelTeamInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidateTeamWorkspace(orgId, teamId);
 	return { success: true };
 }
 
@@ -374,8 +385,8 @@ export async function respondToTeamInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.recruit.invitations);
-	revalidatePath(dashboardRoutes.workspace.orgs);
+	revalidateInvitations();
+	revalidatePath(dashboardRoutes.organizations);
 	return { success: true };
 }
 
@@ -394,6 +405,6 @@ export async function resendTeamInviteAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.workspace.teamById(orgId, teamId));
+	revalidateTeamWorkspace(orgId, teamId);
 	return { success: true };
 }

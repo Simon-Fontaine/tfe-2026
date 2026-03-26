@@ -49,7 +49,7 @@ export default async function RecruitConversationsPage({
 								return (
 									<Link
 										key={conversation.threadId}
-										href={`${dashboardRoutes.recruit.conversations}?thread=${conversation.threadId}`}
+										href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
 										className={`block border p-3 transition-colors hover:bg-muted/50 ${
 											isSelected ? "border-primary bg-primary/5" : ""
 										}`}

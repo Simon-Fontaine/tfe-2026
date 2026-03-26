@@ -44,7 +44,7 @@ export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
 		if (state?.success && pendingRef.current) {
 			pendingRef.current = false;
 			const teamId = (state as { teamId?: string }).teamId;
-			if (teamId) router.push(`/dashboard/workspace/orgs/${orgId}/teams/${teamId}`);
+			if (teamId) router.push(`/dashboard/c/org/${orgId}/team/${teamId}`);
 		}
 	}, [state, router, orgId]);
 

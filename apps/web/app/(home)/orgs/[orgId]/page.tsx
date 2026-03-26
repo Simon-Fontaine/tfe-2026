@@ -54,7 +54,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				</Button>
 				{isMember && (
 					<Button asChild size="sm" variant="outline">
-						<Link href={`/dashboard/workspace/orgs/${org.id}`}>Open workspace</Link>
+						<Link href={`/dashboard/c/org/${org.id}`}>Open workspace</Link>
 					</Button>
 				)}
 			</div>
