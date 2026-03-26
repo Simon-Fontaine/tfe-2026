@@ -1,4 +1,4 @@
-import { Add01Icon, ArrowLeft01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -47,14 +47,8 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 	);
 
 	return (
-		<div className="space-y-6">
-			<Button asChild variant="ghost" size="sm" className="-ml-2 mt-0.5">
-				<Link href={dashboardRoutes.organizations}>
-					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
-					Workspace
-				</Link>
-			</Button>
-
+		<div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+			{/* Org header */}
 			<div className="flex items-center gap-4">
 				<Avatar className="size-14 overflow-hidden rounded-none after:rounded-none">
 					<AvatarImage src={org.avatarUrl ?? undefined} className="rounded-none" />
@@ -63,22 +57,20 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					</AvatarFallback>
 				</Avatar>
 				<div className="min-w-0 flex-1">
-					<h1 className="text-lg font-bold">{org.name}</h1>
-					<p className="text-xs text-muted-foreground">/{org.slug}</p>
-					{org.description && (
-						<p className="mt-1 text-sm text-muted-foreground">{org.description}</p>
-					)}
-					<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-						<span>{totalTeams} teams</span>
-						<span>{org.members.length} members</span>
-						<span>{openPostCount} open posts</span>
+					<div className="flex items-center gap-2">
+						<h1 className="text-lg font-bold">{org.name}</h1>
 						<Badge variant="outline" className="text-[10px]">
 							{ROLE_LABELS[org.currentUser.role ?? "member"] ?? org.currentUser.role}
 						</Badge>
 					</div>
+					<p className="text-xs text-muted-foreground">/{org.slug}</p>
+					{org.description && (
+						<p className="mt-1 text-sm text-muted-foreground">{org.description}</p>
+					)}
 				</div>
 			</div>
 
+			{/* Tabs */}
 			<Tabs defaultValue="overview" className="space-y-4">
 				<TabsList variant="line">
 					<TabsTrigger value="overview">Overview</TabsTrigger>
@@ -92,34 +84,38 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					)}
 				</TabsList>
 
+				{/* Overview */}
 				<TabsContent value="overview" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Overview</CardTitle>
-						</CardHeader>
-						<CardContent className="grid gap-3 sm:grid-cols-4">
-							<div className="border p-4">
+					<div className="grid gap-3 sm:grid-cols-4">
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Teams</p>
-								<p className="mt-2 text-2xl font-semibold">{totalTeams}</p>
-							</div>
-							<div className="border p-4">
+								<p className="mt-1 text-2xl font-semibold">{totalTeams}</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Members</p>
-								<p className="mt-2 text-2xl font-semibold">{org.members.length}</p>
-							</div>
-							<div className="border p-4">
+								<p className="mt-1 text-2xl font-semibold">{org.members.length}</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
 									Open posts
 								</p>
-								<p className="mt-2 text-2xl font-semibold">{openPostCount}</p>
-							</div>
-							<div className="border p-4">
+								<p className="mt-1 text-2xl font-semibold">{openPostCount}</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
 									Conversations
 								</p>
-								<p className="mt-2 text-2xl font-semibold">{org.conversations.length}</p>
-							</div>
-						</CardContent>
-					</Card>
+								<p className="mt-1 text-2xl font-semibold">{org.conversations.length}</p>
+							</CardContent>
+						</Card>
+					</div>
 
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -147,6 +143,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					</Card>
 				</TabsContent>
 
+				{/* Teams */}
 				<TabsContent value="teams" className="space-y-4">
 					<div className="flex items-center justify-between">
 						<div>
@@ -198,6 +195,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					)}
 				</TabsContent>
 
+				{/* Members */}
 				<TabsContent value="members" className="space-y-4">
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -247,6 +245,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					</Card>
 				</TabsContent>
 
+				{/* Posts */}
 				<TabsContent value="posts" className="space-y-4">
 					<div className="flex items-center justify-between">
 						<div>
@@ -287,6 +286,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					)}
 				</TabsContent>
 
+				{/* Conversations */}
 				<TabsContent value="conversations" className="space-y-4">
 					<Card>
 						<CardHeader>
@@ -315,6 +315,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					</Card>
 				</TabsContent>
 
+				{/* Invitations */}
 				<TabsContent value="invitations" className="space-y-4">
 					<Card>
 						<CardHeader>
@@ -326,6 +327,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
 					</Card>
 				</TabsContent>
 
+				{/* Settings */}
 				{(canManage || org.currentUser.canLeave || org.currentUser.canDelete) && (
 					<TabsContent value="settings">
 						<OrgSettingsPanel org={org} />

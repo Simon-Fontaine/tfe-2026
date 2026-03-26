@@ -317,6 +317,12 @@ export type OrgPermissions = {
 	canReviewRequests: boolean;
 };
 
+export type UserOrgTeamSummary = {
+	id: string;
+	name: string;
+	tag: string;
+};
+
 export type UserOrg = {
 	id: string;
 	name: string;
@@ -327,6 +333,7 @@ export type UserOrg = {
 	teamCount: number;
 	openPostCount: number;
 	canManage: boolean;
+	teams: UserOrgTeamSummary[];
 };
 
 export type OrgTeamSummary = TeamSummary;

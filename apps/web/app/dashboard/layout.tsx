@@ -4,7 +4,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getUnreadNotificationCount } from "@/lib/data/notifications";
-import { getOrgsForUser, getOrgWithTeams } from "@/lib/data/organization";
+import { getOrgsForUser } from "@/lib/data/organization";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const { session, user } = await getCurrentSession();
@@ -19,18 +19,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
 	const unreadCount = await getUnreadNotificationCount(user.id);
 	const orgs = await getOrgsForUser(user.id);
-	const orgDetails = await Promise.all(orgs.map((org) => getOrgWithTeams(org.id, user.id)));
+
 	const contextOrgs = orgs.map((org) => ({ id: org.id, name: org.name }));
-	const contextTeams = orgDetails
+	const contextTeams = orgs
 		.flatMap((org) =>
-			org
-				? [...org.activeTeams, ...org.archivedTeams].map((team) => ({
-						id: team.id,
-						name: team.name,
-						tag: team.tag,
-						organizationId: org.id,
-					}))
-				: []
+			org.teams.map((team) => ({
+				id: team.id,
+				name: team.name,
+				tag: team.tag,
+				organizationId: org.id,
+				organizationName: org.name,
+			}))
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));
 

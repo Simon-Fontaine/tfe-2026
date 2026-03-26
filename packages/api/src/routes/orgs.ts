@@ -253,7 +253,7 @@ orgRoutes.get("/", async (c) => {
 				with: {
 					teams: {
 						where: eq(teamTable.isArchived, false),
-						columns: { id: true },
+						columns: { id: true, name: true, tag: true },
 					},
 					lfgPosts: {
 						where: eq(lfgPostTable.status, "open"),
@@ -276,6 +276,11 @@ orgRoutes.get("/", async (c) => {
 			teamCount: membership.organization.teams.length,
 			openPostCount: membership.organization.lfgPosts.length,
 			canManage: membership.role === "owner" || membership.role === "admin",
+			teams: membership.organization.teams.map((t) => ({
+				id: t.id,
+				name: t.name,
+				tag: t.tag,
+			})),
 		})),
 	});
 });

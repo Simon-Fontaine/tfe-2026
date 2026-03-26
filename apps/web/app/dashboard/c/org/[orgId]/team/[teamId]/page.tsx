@@ -1,4 +1,4 @@
-import { Add01Icon, ArrowLeft01Icon, Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -46,15 +46,9 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 
 	return (
 		<div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
-			<Button asChild variant="ghost" size="sm" className="-ml-2">
-				<Link href={dashboardRoutes.context.orgById(team.organizationId)}>
-					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1 size-4" />
-					Back to org
-				</Link>
-			</Button>
-
+			{/* Team header */}
 			<div className="flex items-start gap-4">
-				<Avatar className="size-12 overflow-hidden rounded-none after:rounded-none">
+				<Avatar className="size-14 overflow-hidden rounded-none after:rounded-none">
 					<AvatarImage src={team.avatarUrl ?? undefined} className="rounded-none" />
 					<AvatarFallback className="rounded-none text-sm font-bold">{team.tag}</AvatarFallback>
 				</Avatar>
@@ -67,6 +61,11 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 								Archived
 							</Badge>
 						)}
+						{team.isRecruiting && (
+							<Badge variant="secondary" className="text-[10px] text-green-600">
+								Recruiting
+							</Badge>
+						)}
 					</div>
 					<p className="text-xs text-muted-foreground">
 						SR {team.teamSr} · {team.matchesPlayed} scrims played
@@ -77,6 +76,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 				</div>
 			</div>
 
+			{/* Tabs */}
 			<Tabs defaultValue="overview" className="space-y-4">
 				<TabsList variant="line">
 					<TabsTrigger value="overview">Overview</TabsTrigger>
@@ -90,32 +90,36 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					)}
 				</TabsList>
 
+				{/* Overview */}
 				<TabsContent value="overview" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Team overview</CardTitle>
-						</CardHeader>
-						<CardContent className="grid gap-3 sm:grid-cols-4">
-							<div className="border p-4">
+					<div className="grid gap-3 sm:grid-cols-4">
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Players</p>
-								<p className="mt-2 text-2xl font-semibold">{team.players.length}</p>
-							</div>
-							<div className="border p-4">
+								<p className="mt-1 text-2xl font-semibold">{team.players.length}</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Staff</p>
-								<p className="mt-2 text-2xl font-semibold">{team.staff.length}</p>
-							</div>
-							<div className="border p-4">
+								<p className="mt-1 text-2xl font-semibold">{team.staff.length}</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Invites</p>
-								<p className="mt-2 text-2xl font-semibold">{team.pendingInvites.length}</p>
-							</div>
-							<div className="border p-4">
+								<p className="mt-1 text-2xl font-semibold">{team.pendingInvites.length}</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardContent className="pt-4">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">
 									Open posts
 								</p>
-								<p className="mt-2 text-2xl font-semibold">{openPostCount}</p>
-							</div>
-						</CardContent>
-					</Card>
+								<p className="mt-1 text-2xl font-semibold">{openPostCount}</p>
+							</CardContent>
+						</Card>
+					</div>
 
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -162,6 +166,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					</Card>
 				</TabsContent>
 
+				{/* Players */}
 				<TabsContent value="players" className="space-y-4">
 					<div className="flex items-center justify-between">
 						<div>
@@ -206,6 +211,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					/>
 				</TabsContent>
 
+				{/* Staff */}
 				<TabsContent value="staff" className="space-y-4">
 					<div className="flex items-center justify-between">
 						<div>
@@ -250,6 +256,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					/>
 				</TabsContent>
 
+				{/* Posts */}
 				<TabsContent value="posts" className="space-y-4">
 					<div className="flex items-center justify-between">
 						<div>
@@ -291,6 +298,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					)}
 				</TabsContent>
 
+				{/* Conversations */}
 				<TabsContent value="conversations" className="space-y-4">
 					<Card>
 						<CardHeader>
@@ -319,6 +327,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					</Card>
 				</TabsContent>
 
+				{/* Invitations */}
 				<TabsContent value="invitations" className="space-y-4">
 					<Card>
 						<CardHeader>
@@ -330,6 +339,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
 					</Card>
 				</TabsContent>
 
+				{/* Settings */}
 				{(canManage || team.currentUser.canLeave) && (
 					<TabsContent value="settings">
 						<TeamSettingsPanel team={team} />
