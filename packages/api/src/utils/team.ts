@@ -37,6 +37,7 @@ export async function getTeamById(teamId: string) {
 			tag: true,
 			description: true,
 			avatarUrl: true,
+			bannerUrl: true,
 			teamSr: true,
 			matchesPlayed: true,
 			isRecruiting: true,

@@ -57,6 +57,7 @@ export async function createTeamAction(
 		tag: String(formData.get("tag") ?? ""),
 		description: formData.get("description")?.toString() || undefined,
 		avatarUrl: formData.get("avatarUrl")?.toString() || undefined,
+		bannerUrl: formData.get("bannerUrl")?.toString() || undefined,
 	});
 
 	const actionResult = toActionResult(result);
@@ -81,6 +82,7 @@ export async function updateTeamAction(
 		tag: String(formData.get("tag") ?? ""),
 		description: formData.get("description")?.toString() || undefined,
 		avatarUrl: formData.get("avatarUrl")?.toString() || undefined,
+		bannerUrl: formData.get("bannerUrl")?.toString() || undefined,
 	});
 
 	const actionResult = toActionResult(result);

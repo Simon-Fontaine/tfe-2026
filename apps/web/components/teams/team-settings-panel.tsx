@@ -77,6 +77,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 								tag: team.tag,
 								description: team.description,
 								avatarUrl: team.avatarUrl,
+								bannerUrl: team.bannerUrl,
 							}}
 						>
 							<Button size="sm" variant="outline">

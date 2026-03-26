@@ -5,6 +5,7 @@ import { type UpdateTeamInput, UpdateTeamSchema } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { updateTeamAction } from "@/app/dashboard/workspace/orgs/actions/team";
+import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -26,6 +27,7 @@ interface EditTeamDialogProps {
 		tag: string;
 		description: string | null;
 		avatarUrl?: string | null;
+		bannerUrl?: string | null;
 	};
 	children: React.ReactNode;
 }
@@ -47,6 +49,7 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 			tag: initialValues.tag,
 			description: initialValues.description ?? "",
 			avatarUrl: initialValues.avatarUrl ?? "",
+			bannerUrl: initialValues.bannerUrl ?? "",
 		},
 	});
 
@@ -65,6 +68,7 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 		fd.set("tag", values.tag);
 		if (values.description) fd.set("description", values.description);
 		if (values.avatarUrl) fd.set("avatarUrl", values.avatarUrl);
+		if (values.bannerUrl) fd.set("bannerUrl", values.bannerUrl);
 		submit(fd);
 	}
 
@@ -80,6 +84,7 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 						tag: initialValues.tag,
 						description: initialValues.description ?? "",
 						avatarUrl: initialValues.avatarUrl ?? "",
+						bannerUrl: initialValues.bannerUrl ?? "",
 					});
 				}
 			}}
@@ -128,13 +133,20 @@ export function EditTeamDialog({ teamId, initialValues, children }: EditTeamDial
 						<FieldError errors={[form.formState.errors.description]} />
 					</Field>
 
-					<Field>
-						<FieldLabel htmlFor="team-avatar">
-							Avatar URL <span className="font-normal text-muted-foreground/70">(optional)</span>
-						</FieldLabel>
-						<Input id="team-avatar" placeholder="https://…" {...form.register("avatarUrl")} />
-						<FieldError errors={[form.formState.errors.avatarUrl]} />
-					</Field>
+					<EntityImageUploadField
+						label="Team avatar"
+						kind="team-avatar"
+						value={form.watch("avatarUrl") ?? ""}
+						onChange={(value) => form.setValue("avatarUrl", value)}
+						helperText="Square image recommended · max 2 MB"
+					/>
+					<EntityImageUploadField
+						label="Team banner"
+						kind="team-banner"
+						value={form.watch("bannerUrl") ?? ""}
+						onChange={(value) => form.setValue("bannerUrl", value)}
+						helperText="Wide image recommended · max 4 MB"
+					/>
 
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={isPending}>
