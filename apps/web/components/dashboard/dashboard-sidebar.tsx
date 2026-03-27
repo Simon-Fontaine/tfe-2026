@@ -20,13 +20,12 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
-	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { dashboardRoutes } from "@/lib/routes";
-import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
+import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
 
 interface DashboardSidebarProps {
 	contextOrgs: SwitcherOrg[];
@@ -42,7 +41,7 @@ function useActiveContext(pathname: string) {
 	};
 }
 
-export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebarProps) {
+export function DashboardSidebar(_: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
 
@@ -201,31 +200,6 @@ export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebar
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarHeader>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" asChild tooltip="Scrimflow home">
-							<Link href="/">
-								<div className="flex size-8 items-center justify-center border bg-primary/10">
-									<HugeiconsIcon
-										icon={Sword03Icon}
-										strokeWidth={2}
-										className="size-4 text-primary"
-									/>
-								</div>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-semibold">Scrimflow</span>
-									<span className="truncate text-xs text-muted-foreground">Overwatch 2</span>
-								</div>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-					<SidebarMenuItem>
-						<ContextSwitcher orgs={contextOrgs} teams={contextTeams} />
-					</SidebarMenuItem>
-				</SidebarMenu>
-			</SidebarHeader>
-
 			<SidebarContent>
 				{contextGroups.map((group, i) => (
 					<SidebarGroup key={group.label ?? i}>

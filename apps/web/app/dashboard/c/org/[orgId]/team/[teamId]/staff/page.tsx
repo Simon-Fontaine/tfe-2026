@@ -51,7 +51,8 @@ export default async function TeamStaffPage({ params }: TeamStaffPageProps) {
 				canManage={canManage}
 				canManageAdmins={canManageAdmins}
 				teamId={team.id}
-				emptyLabel="No staff members on this team yet."
+				emptyLabel="No staff members on this team yet"
+				emptyDescription="Invite coaches, analysts, or managers to build out the staff group."
 			/>
 		</PageContainer>
 	);

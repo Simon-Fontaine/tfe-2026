@@ -1,6 +1,7 @@
 import { GameController01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getPublicOrgs } from "@/lib/data/organization";
 
@@ -20,12 +21,12 @@ export default async function OrgsDirectoryPage() {
 				</div>
 
 				{orgs.length === 0 ? (
-					<div className="flex flex-col items-center justify-center border border-dashed p-6 py-16 text-center">
-						<p className="text-sm font-bold">No public organizations yet</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Check back later as teams publish their workspace profile.
-						</p>
-					</div>
+					<EmptyStateBlock
+						icon={UserGroupIcon}
+						title="No public organizations yet"
+						description="Check back later as teams publish their workspace profile."
+						variant="page"
+					/>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{orgs.map((org) => (

@@ -45,6 +45,8 @@ export interface SwitcherTeam {
 interface ContextSwitcherProps {
 	orgs: SwitcherOrg[];
 	teams: SwitcherTeam[];
+	placement?: "header" | "sidebar";
+	className?: string;
 }
 
 function getActiveContext(pathname: string) {
@@ -91,7 +93,12 @@ function getActiveIcon(
 	return UserCircle02Icon;
 }
 
-export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
+export function ContextSwitcher({
+	orgs,
+	teams,
+	placement = "sidebar",
+	className,
+}: ContextSwitcherProps) {
 	const pathname = usePathname();
 	const { activeOrgId, activeTeamId, isWorkspaceIndex, isPersonal } = getActiveContext(pathname);
 	const label = getActiveLabel(activeOrgId, activeTeamId, isWorkspaceIndex, orgs, teams);
@@ -115,33 +122,43 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 		<>
 			<DropdownMenu open={open} onOpenChange={setOpen}>
 				<DropdownMenuTrigger asChild>
-					<SidebarMenuButton
-						size="lg"
-						tooltip="Switch workspace"
-						className="bg-sidebar-accent/50 ring-1 ring-sidebar-border data-[state=open]:bg-sidebar-accent"
-						aria-label={`Current workspace: ${label}`}
-					>
-						<div className="flex size-6 shrink-0 items-center justify-center bg-primary/10">
-							<HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5 text-primary" />
-						</div>
-						<div className="grid flex-1 text-left leading-tight">
-							<span className="truncate text-sm font-semibold">{label}</span>
-							<span className="truncate text-[11px] text-muted-foreground">
-								{activeTeamId
-									? "Team workspace"
-									: activeOrgId
-										? "Organization workspace"
-										: isWorkspaceIndex
-											? "Workspace directory"
-											: "Personal workspace"}
-							</span>
-						</div>
-						<HugeiconsIcon
-							icon={ArrowDown01Icon}
-							strokeWidth={2}
-							className="ml-auto size-4 opacity-50"
-						/>
-					</SidebarMenuButton>
+					{placement === "sidebar" ? (
+						<SidebarMenuButton
+							size="lg"
+							tooltip="Switch workspace"
+							className={cn(
+								"bg-sidebar-accent/50 ring-1 ring-sidebar-border data-[state=open]:bg-sidebar-accent",
+								className
+							)}
+							aria-label={`Current workspace: ${label}`}
+						>
+							<ContextSwitcherTriggerContent
+								label={label}
+								icon={icon}
+								activeOrgId={activeOrgId}
+								activeTeamId={activeTeamId}
+								isWorkspaceIndex={isWorkspaceIndex}
+								textClassName="text-sm"
+								metaClassName="text-[11px]"
+							/>
+						</SidebarMenuButton>
+					) : (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className={cn("min-w-0 justify-start gap-2 px-2.5", className)}
+							aria-label={`Current workspace: ${label}`}
+						>
+							<ContextSwitcherTriggerContent
+								label={label}
+								icon={icon}
+								activeOrgId={activeOrgId}
+								activeTeamId={activeTeamId}
+								isWorkspaceIndex={isWorkspaceIndex}
+							/>
+						</Button>
+					)}
 				</DropdownMenuTrigger>
 
 				<DropdownMenuContent
@@ -239,6 +256,49 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 					onOpenChange={setCreateTeamOpen}
 				/>
 			) : null}
+		</>
+	);
+}
+
+function ContextSwitcherTriggerContent({
+	label,
+	icon,
+	activeOrgId,
+	activeTeamId,
+	isWorkspaceIndex,
+	textClassName,
+	metaClassName,
+}: {
+	label: string;
+	icon: typeof UserCircle02Icon;
+	activeOrgId: string | null;
+	activeTeamId: string | null;
+	isWorkspaceIndex: boolean;
+	textClassName?: string;
+	metaClassName?: string;
+}) {
+	return (
+		<>
+			<div className="flex size-6 shrink-0 items-center justify-center bg-primary/10">
+				<HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5 text-primary" />
+			</div>
+			<div className="grid min-w-0 flex-1 text-left leading-tight">
+				<span className={cn("truncate font-semibold", textClassName)}>{label}</span>
+				<span className={cn("truncate text-muted-foreground", metaClassName)}>
+					{activeTeamId
+						? "Team workspace"
+						: activeOrgId
+							? "Organization workspace"
+							: isWorkspaceIndex
+								? "Workspace directory"
+								: "Personal workspace"}
+				</span>
+			</div>
+			<HugeiconsIcon
+				icon={ArrowDown01Icon}
+				strokeWidth={2}
+				className="ml-auto size-4 shrink-0 opacity-50"
+			/>
 		</>
 	);
 }

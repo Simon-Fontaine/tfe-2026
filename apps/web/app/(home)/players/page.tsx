@@ -1,7 +1,6 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,19 +28,12 @@ export default async function PlayersDirectoryPage() {
 				</div>
 
 				{players.length === 0 ? (
-					<div className="flex flex-col items-center justify-center border border-dashed p-6 py-16 text-center">
-						<div className="mb-4 flex size-10 items-center justify-center border bg-primary/10">
-							<HugeiconsIcon
-								icon={UserSearch01Icon}
-								strokeWidth={2}
-								className="size-5 text-primary"
-							/>
-						</div>
-						<p className="text-sm font-bold">No public player posts yet</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Check the posts hub or come back later as more players publish availability.
-						</p>
-					</div>
+					<EmptyStateBlock
+						icon={UserSearch01Icon}
+						title="No public player posts yet"
+						description="Check the posts hub or come back later as more players publish availability."
+						variant="page"
+					/>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{players.map((player) => (

@@ -1,8 +1,8 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -64,17 +64,12 @@ export default async function PublicPostsPage({ searchParams }: PublicPostsPageP
 				</div>
 
 				{posts.length === 0 ? (
-					<div className="flex flex-col items-center justify-center border border-dashed px-6 py-16 text-center">
-						<HugeiconsIcon
-							icon={UserSearch01Icon}
-							strokeWidth={1.5}
-							className="mb-4 size-10 text-muted-foreground/40"
-						/>
-						<p className="text-sm font-medium">No public posts match this filter</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Check another category or create a recruiting post from the dashboard.
-						</p>
-					</div>
+					<EmptyStateBlock
+						icon={UserSearch01Icon}
+						title="No public posts match this filter"
+						description="Check another category or create a recruiting post from the dashboard."
+						variant="page"
+					/>
 				) : (
 					<div className="space-y-4">
 						{posts.map((post) => (

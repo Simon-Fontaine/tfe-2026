@@ -3,13 +3,15 @@
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
+import { useState } from "react";
 import {
 	archiveTeamAction,
 	deleteTeamAction,
 	leaveTeamAction,
 	unarchiveTeamAction,
+	updateTeamAction,
 } from "@/app/dashboard/workspace/orgs/actions/team";
-import { EditTeamDialog } from "@/components/teams/edit-team-dialog";
+import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { RecruitingToggle } from "@/components/teams/recruiting-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +22,10 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { TeamWithRoster } from "@/lib/data/team";
 import { dashboardRoutes } from "@/lib/routes";
@@ -33,6 +38,15 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 	const canManageSettings = team.currentUser.canManageSettings;
 	const canManageLifecycle =
 		team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin";
+	const [name, setName] = useState(team.name);
+	const [tag, setTag] = useState(team.tag);
+	const [description, setDescription] = useState(team.description ?? "");
+	const [avatarUrl, setAvatarUrl] = useState(team.avatarUrl ?? "");
+	const [bannerUrl, setBannerUrl] = useState(team.bannerUrl ?? "");
+	const updateForm = useFormAction(updateTeamAction, {
+		loadingMessage: "Saving team settings…",
+		successMessage: "Team updated",
+	});
 	const archiveForm = useFormAction(archiveTeamAction, {
 		loadingMessage: "Archiving team…",
 		successMessage: "Team archived",
@@ -73,49 +87,82 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 		leaveForm.submit(fd);
 	}
 
+	function submitSettings(e: React.FormEvent) {
+		e.preventDefault();
+		const fd = new FormData();
+		fd.set("teamId", team.id);
+		fd.set("name", name);
+		fd.set("tag", tag);
+		fd.set("description", description);
+		fd.set("avatarUrl", avatarUrl);
+		fd.set("bannerUrl", bannerUrl);
+		updateForm.submit(fd);
+	}
+
 	return (
 		<div className="space-y-4">
 			{canManageSettings && (
 				<Card>
 					<CardHeader>
-						<CardAction>
-							<EditTeamDialog
-								teamId={team.id}
-								initialValues={{
-									name: team.name,
-									tag: team.tag,
-									description: team.description,
-									avatarUrl: team.avatarUrl,
-									bannerUrl: team.bannerUrl,
-								}}
-							>
-								<Button size="sm">Edit profile</Button>
-							</EditTeamDialog>
-						</CardAction>
 						<CardTitle className="text-sm">Profile</CardTitle>
 						<CardDescription>
-							Update the team name, tag, description, and media from this dedicated settings page.
+							Update the team name, tag, description, and media from this settings page.
 						</CardDescription>
 					</CardHeader>
-					<CardContent className="space-y-2">
-						<div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-							<div className="border px-3 py-2">
-								<p className="font-medium text-foreground">Name</p>
-								<p>{team.name}</p>
+					<CardContent>
+						<form onSubmit={submitSettings} className="flex flex-col gap-4">
+							<FieldGroup>
+								<Field>
+									<FieldLabel>Name</FieldLabel>
+									<Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+								</Field>
+								<Field>
+									<FieldLabel>Tag</FieldLabel>
+									<Input
+										value={tag}
+										onChange={(e) => setTag(e.target.value.toUpperCase())}
+										maxLength={5}
+										className="font-mono uppercase"
+									/>
+									<FieldDescription>
+										Used across roster, posts, and the public team profile.
+									</FieldDescription>
+								</Field>
+								<Field>
+									<FieldLabel>Description</FieldLabel>
+									<Textarea
+										value={description}
+										onChange={(e) => setDescription(e.target.value)}
+										rows={4}
+										maxLength={280}
+									/>
+								</Field>
+								<EntityImageUploadField
+									label="Team avatar"
+									kind="team-avatar"
+									value={avatarUrl}
+									onChange={setAvatarUrl}
+									helperText="Square image recommended · max 2 MB"
+								/>
+								<EntityImageUploadField
+									label="Team banner"
+									kind="team-banner"
+									value={bannerUrl}
+									onChange={setBannerUrl}
+									helperText="Wide image recommended · max 4 MB"
+								/>
+							</FieldGroup>
+							{updateForm.state?.error ? <FieldError>{updateForm.state.error}</FieldError> : null}
+							<div className="flex flex-wrap items-center gap-2">
+								<Button type="submit" size="sm" disabled={updateForm.isPending}>
+									{updateForm.isPending && <Spinner className="mr-1.5" />}
+									Save changes
+								</Button>
+								<p className="text-xs text-muted-foreground">
+									Changes update both the workspace and public team profile.
+								</p>
 							</div>
-							<div className="border px-3 py-2">
-								<p className="font-medium text-foreground">Tag</p>
-								<p>{team.tag}</p>
-							</div>
-						</div>
-						{team.description ? (
-							<div className="border px-3 py-2">
-								<p className="font-medium text-foreground">Description</p>
-								<p className="text-muted-foreground">{team.description}</p>
-							</div>
-						) : (
-							<p className="text-xs text-muted-foreground">No team description has been set yet.</p>
-						)}
+						</form>
 					</CardContent>
 				</Card>
 			)}

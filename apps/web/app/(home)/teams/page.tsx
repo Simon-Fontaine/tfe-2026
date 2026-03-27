@@ -1,3 +1,5 @@
+import { GameController01Icon } from "@hugeicons/core-free-icons";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamDiscoveryCard } from "@/components/teams/discovery/team-discovery-card";
 import { TeamDiscoveryFilters } from "@/components/teams/discovery/team-discovery-filters";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
@@ -27,12 +29,12 @@ export default async function TeamsDirectoryPage({ searchParams }: TeamsDirector
 				<TeamDiscoveryFilters recruitingFilter={recruitingFilter} />
 
 				{teams.length === 0 ? (
-					<div className="flex flex-col items-center justify-center border border-dashed p-6 py-16 text-center">
-						<p className="text-sm font-bold">No teams matched this filter</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Try changing filters or check back as new teams are published.
-						</p>
-					</div>
+					<EmptyStateBlock
+						icon={GameController01Icon}
+						title="No teams matched this filter"
+						description="Try changing filters or check back as new teams are published."
+						variant="page"
+					/>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{teams.map((team) => (

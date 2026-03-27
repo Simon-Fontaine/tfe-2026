@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,12 +68,12 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 					</p>
 				</div>
 				{org.openPosts.length === 0 ? (
-					<div className="border border-dashed px-6 py-10 text-center">
-						<p className="text-sm font-medium">No open organisation posts right now</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Explore team posts below or browse the full public posts hub.
-						</p>
-					</div>
+					<EmptyStateBlock
+						icon={GameController01Icon}
+						title="No open organisation posts right now"
+						description="Explore team posts below or browse the full public posts hub."
+						variant="card"
+					/>
 				) : (
 					<div className="space-y-4">
 						{org.openPosts.map((post) => (
@@ -90,7 +91,12 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 			<div className="space-y-3">
 				<h2 className="text-sm font-semibold">Teams</h2>
 				{org.teams.length === 0 ? (
-					<p className="text-xs text-muted-foreground">No public teams yet.</p>
+					<EmptyStateBlock
+						icon={GameController01Icon}
+						title="No public teams yet"
+						description="This organisation has not published any teams yet."
+						variant="card"
+					/>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2">
 						{org.teams.map((team) => (

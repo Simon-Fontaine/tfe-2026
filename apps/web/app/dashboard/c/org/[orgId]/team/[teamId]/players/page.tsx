@@ -51,7 +51,8 @@ export default async function TeamPlayersPage({ params }: TeamPlayersPageProps) 
 				canManage={canManage}
 				canManageAdmins={canManageAdmins}
 				teamId={team.id}
-				emptyLabel="No players on this team yet."
+				emptyLabel="No players on this team yet"
+				emptyDescription="Invite players to start building the roster."
 			/>
 		</PageContainer>
 	);
