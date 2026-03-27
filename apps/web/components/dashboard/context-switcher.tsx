@@ -126,7 +126,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 							<SidebarMenuButton
 								size="lg"
 								tooltip="Switch workspace"
-								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+								className="gap-3 px-2.5 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 								aria-label={`Current workspace: ${label}`}
 							>
 								<ContextSwitcherTriggerContent
@@ -262,7 +262,7 @@ function ContextSwitcherTriggerContent({
 			<div className="flex size-8 shrink-0 items-center justify-center bg-primary/10">
 				<HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5 text-primary" />
 			</div>
-			<div className="grid min-w-0 flex-1 text-left leading-tight">
+			<div className="grid min-w-0 flex-1 gap-0.5 text-left leading-tight">
 				<span className={cn("truncate text-sm font-medium", textClassName)}>{label}</span>
 				<span className={cn("truncate text-xs text-muted-foreground", metaClassName)}>
 					{activeTeamId

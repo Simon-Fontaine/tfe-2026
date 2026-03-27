@@ -132,12 +132,12 @@ export function DashboardHeader({ orgs, teams, unreadCount }: DashboardHeaderPro
 	const crumbs = useBreadcrumbs(pathname, orgs, teams);
 
 	return (
-		<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3">
-			<div className="flex min-w-0 flex-1 items-center gap-2">
-				<SidebarTrigger className="md:hidden" />
+		<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+			<div className="flex min-w-0 flex-1 items-center gap-2 px-4">
+				<SidebarTrigger className="-ml-1" />
 				{crumbs.length > 0 && (
 					<>
-						<Separator orientation="vertical" className="h-4" />
+						<Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
 						<Breadcrumb className="min-w-0">
 							<BreadcrumbList className="min-w-0">
 								{crumbs.map((crumb, i) => (
@@ -162,7 +162,9 @@ export function DashboardHeader({ orgs, teams, unreadCount }: DashboardHeaderPro
 				)}
 			</div>
 
-			<HeaderActions unreadCount={unreadCount} />
+			<div className="px-4">
+				<HeaderActions unreadCount={unreadCount} />
+			</div>
 		</header>
 	);
 }
