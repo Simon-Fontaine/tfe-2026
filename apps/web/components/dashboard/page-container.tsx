@@ -16,7 +16,7 @@ export function PageContainer({ children, maxWidth = "5xl", className }: PageCon
 	return (
 		<div
 			className={cn(
-				"mx-auto w-full space-y-6 px-4 py-6 sm:px-6",
+				"mx-auto w-full space-y-8 px-4 py-8 sm:px-6",
 				maxWidthClasses[maxWidth],
 				className
 			)}

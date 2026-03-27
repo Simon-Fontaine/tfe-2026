@@ -1,10 +1,9 @@
-import { Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/dashboard/page-container";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { AddPlayerDialog } from "@/components/teams/add-player-dialog";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { RosterTable } from "@/components/teams/roster-table";
 import { Button } from "@/components/ui/button";
@@ -30,33 +29,20 @@ export default async function TeamStaffPage({ params }: TeamStaffPageProps) {
 		<PageContainer>
 			<PageHeader
 				title="Staff"
-				description="Manage coaches, analysts, and managers through the same team membership model."
+				description="Manage coaches, analysts, and managers through the invite-based team membership model."
 				actions={
 					canManage ? (
-						<>
-							<InvitePlayerDialog
-								teamId={team.id}
-								canManageAdmins={canManageAdmins}
-								defaultMemberType="staff"
-								title="Invite staff"
-							>
-								<Button size="sm" variant="outline">
-									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Invite
-								</Button>
-							</InvitePlayerDialog>
-							<AddPlayerDialog
-								teamId={team.id}
-								canManageAdmins={canManageAdmins}
-								defaultMemberType="staff"
-								title="Add staff"
-							>
-								<Button size="sm">
-									<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Add staff
-								</Button>
-							</AddPlayerDialog>
-						</>
+						<InvitePlayerDialog
+							teamId={team.id}
+							canManageAdmins={canManageAdmins}
+							defaultMemberType="staff"
+							title="Invite staff"
+						>
+							<Button size="sm">
+								<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+								Invite staff
+							</Button>
+						</InvitePlayerDialog>
 					) : undefined
 				}
 			/>
@@ -65,7 +51,8 @@ export default async function TeamStaffPage({ params }: TeamStaffPageProps) {
 				canManage={canManage}
 				canManageAdmins={canManageAdmins}
 				teamId={team.id}
-				emptyLabel="No staff members on this team yet."
+				emptyLabel="No staff members on this team yet"
+				emptyDescription="Invite coaches, analysts, or managers to build out the staff group."
 			/>
 		</PageContainer>
 	);

@@ -3,16 +3,17 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/dashboard/page-container";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { PageSection } from "@/components/dashboard/page-section";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
+import { TeamInvitesSection } from "@/components/teams/team-invites-section";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getTeamWithRoster } from "@/lib/data/teams";
 
-interface TeamSettingsPageProps {
+interface TeamInvitesPageProps {
 	params: Promise<{ orgId: string; teamId: string }>;
 }
 
-export default async function TeamSettingsPage({ params }: TeamSettingsPageProps) {
+export default async function TeamInvitesPage({ params }: TeamInvitesPageProps) {
 	const { user } = await getCurrentSession();
 	if (!user) return null;
 
@@ -20,27 +21,22 @@ export default async function TeamSettingsPage({ params }: TeamSettingsPageProps
 	const team = await getTeamWithRoster(teamId, user.id);
 	if (!team || team.organizationId !== orgId) notFound();
 
-	if (!team.currentUser.canManage && !team.currentUser.canLeave) {
-		return (
-			<PageContainer>
-				<PageHeader title="Settings" />
+	return (
+		<PageContainer>
+			<PageHeader title="Invites" description={`Pending team invites for ${team.name}.`} />
+
+			{!team.currentUser.canManageInvites ? (
 				<EmptyStateBlock
 					icon={LockIcon}
 					title="No access"
-					description="You don't have permission to manage this team's settings."
+					description="You do not have permission to manage team invites."
 					variant="card"
 				/>
-			</PageContainer>
-		);
-	}
-
-	return (
-		<PageContainer>
-			<PageHeader
-				title="Settings"
-				description="Manage team profile, recruiting, membership policy, and workspace lifecycle actions."
-			/>
-			<TeamSettingsPanel team={team} />
+			) : (
+				<PageSection title="Pending invites">
+					<TeamInvitesSection teamId={team.id} invites={team.pendingInvites} />
+				</PageSection>
+			)}
 		</PageContainer>
 	);
 }

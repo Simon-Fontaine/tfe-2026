@@ -4,7 +4,6 @@ import { PageContainer } from "@/components/dashboard/page-container";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PageSection } from "@/components/dashboard/page-section";
 import { StatsGrid } from "@/components/dashboard/stats-grid";
-import { RecruitingToggle } from "@/components/teams/recruiting-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -22,7 +21,6 @@ export default async function TeamOverviewPage({ params }: TeamOverviewPageProps
 	const team = await getTeamWithRoster(teamId, user.id);
 	if (!team || team.organizationId !== orgId) notFound();
 
-	const canManage = team.currentUser.canManage;
 	const openPostCount = team.ownedPosts.filter((post) => post.status === "open").length;
 
 	return (
@@ -57,16 +55,6 @@ export default async function TeamOverviewPage({ params }: TeamOverviewPageProps
 					{ label: "Open posts", value: openPostCount },
 				]}
 			/>
-
-			<PageSection title="Recruiting">
-				{canManage ? (
-					<RecruitingToggle teamId={team.id} isRecruiting={team.isRecruiting} />
-				) : (
-					<Badge variant={team.isRecruiting ? "secondary" : "outline"}>
-						{team.isRecruiting ? "Recruiting" : "Not recruiting"}
-					</Badge>
-				)}
-			</PageSection>
 
 			<PageSection title="Team admins">
 				<div className="space-y-2">

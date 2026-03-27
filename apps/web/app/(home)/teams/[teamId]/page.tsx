@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,12 +94,12 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 					</p>
 				</div>
 				{team.posts.length === 0 ? (
-					<div className="border border-dashed px-6 py-10 text-center">
-						<p className="text-sm font-medium">No open posts right now</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Check back later or browse other public recruiting posts.
-						</p>
-					</div>
+					<EmptyStateBlock
+						icon={UserGroupIcon}
+						title="No open posts right now"
+						description="Check back later or browse other public recruiting posts."
+						variant="card"
+					/>
 				) : (
 					<div className="space-y-4">
 						{team.posts.map((post) => (

@@ -1,9 +1,11 @@
 "use client";
 
+import { Mail01Icon } from "@hugeicons/core-free-icons";
 import type { RecruitmentThread } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 
 import { sendRecruitmentMessageAction } from "@/app/dashboard/recruit/actions/recruit";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -34,11 +36,12 @@ export function RecruitmentThreadPanel({ thread, currentUserId }: RecruitmentThr
 
 	if (!thread) {
 		return (
-			<div className="flex min-h-[320px] items-center justify-center border border-dashed px-6 text-center">
-				<p className="text-sm text-muted-foreground">
-					Select a conversation to review the thread and send messages.
-				</p>
-			</div>
+			<EmptyStateBlock
+				icon={Mail01Icon}
+				title="No conversation selected"
+				description="Select a conversation to review the thread and send messages."
+				variant="card"
+			/>
 		);
 	}
 
@@ -49,6 +52,9 @@ export function RecruitmentThreadPanel({ thread, currentUserId }: RecruitmentThr
 		pendingRef.current = true;
 		const fd = new FormData();
 		fd.set("threadId", activeThread.id);
+		if (activeThread.post.teamId) fd.set("teamId", activeThread.post.teamId);
+		if (activeThread.post.organizationId)
+			fd.set("organizationId", activeThread.post.organizationId);
 		fd.set("content", content);
 		submit(fd);
 	}

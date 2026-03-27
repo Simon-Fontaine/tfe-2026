@@ -23,10 +23,22 @@ async function getVerifiedTeamOrgId(teamId: string): Promise<string | null> {
 
 function revalidateOrgWorkspace(orgId: string) {
 	revalidatePath(dashboardRoutes.context.orgById(orgId));
+	revalidatePath(dashboardRoutes.context.orgTeams(orgId));
+	revalidatePath(dashboardRoutes.context.orgMembers(orgId));
+	revalidatePath(dashboardRoutes.context.orgPosts(orgId));
+	revalidatePath(dashboardRoutes.context.orgConversations(orgId));
+	revalidatePath(dashboardRoutes.context.orgInvites(orgId));
+	revalidatePath(dashboardRoutes.context.orgSettings(orgId));
 }
 
 function revalidateTeamWorkspace(orgId: string, teamId: string) {
 	revalidatePath(dashboardRoutes.context.teamById(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamPlayers(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamStaff(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamPosts(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamConversations(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamInvites(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamSettings(orgId, teamId));
 }
 
 function revalidateInvitations() {
@@ -200,35 +212,6 @@ export async function leaveTeamAction(
 	revalidateTeamWorkspace(orgId, teamId);
 	revalidateOrgWorkspace(orgId);
 	revalidatePath(`/teams/${teamId}`);
-	return { success: true };
-}
-
-export async function addPlayerAction(
-	_prev: FormActionResult | null,
-	formData: FormData
-): Promise<FormActionResult> {
-	const teamId = String(formData.get("teamId") ?? "");
-	const orgId = await getVerifiedTeamOrgId(teamId);
-	if (!orgId) return { success: false, error: "Team not found" };
-
-	const sdk = getServerSdk();
-	const fields = getTeamMemberFields(formData);
-	const result = await sdk.teams.addMember({
-		teamId,
-		userId: String(formData.get("userId") ?? ""),
-		memberType: fields.memberType,
-		roleInTeam: fields.roleInTeam,
-		gameRole: fields.gameRole,
-		staffRole: fields.staffRole,
-		status: fields.status ?? "active",
-		permissionRole: fields.permissionRole,
-	});
-
-	const actionResult = toActionResult(result);
-	if (!("data" in actionResult)) return actionResult;
-
-	revalidateTeamWorkspace(orgId, teamId);
-	revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 

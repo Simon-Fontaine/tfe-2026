@@ -1,10 +1,16 @@
 "use client";
 
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { UserMenuUser } from "@/components/shared/user-menu-dropdown";
+import { Fragment } from "react";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
@@ -13,7 +19,6 @@ import { HeaderActions } from "./header-actions";
 interface DashboardHeaderProps {
 	orgs: SwitcherOrg[];
 	teams: SwitcherTeam[];
-	user: UserMenuUser;
 	unreadCount: number;
 }
 
@@ -31,6 +36,7 @@ const SUB_PAGE_LABELS: Record<string, string> = {
 	security: "Security",
 	conversations: "Conversations",
 	invitations: "Invitations",
+	invites: "Invites",
 };
 
 function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTeam[]) {
@@ -121,50 +127,44 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	return crumbs;
 }
 
-export function DashboardHeader({ orgs, teams, user, unreadCount }: DashboardHeaderProps) {
+export function DashboardHeader({ orgs, teams, unreadCount }: DashboardHeaderProps) {
 	const pathname = usePathname();
 	const crumbs = useBreadcrumbs(pathname, orgs, teams);
 
 	return (
-		<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3">
-			{/* Left zone */}
-			<div className="flex min-w-0 flex-1 items-center gap-2">
-				<SidebarTrigger />
+		<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+			<div className="flex min-w-0 flex-1 items-center gap-2 px-4">
+				<SidebarTrigger className="-ml-1" />
 				{crumbs.length > 0 && (
 					<>
-						<Separator orientation="vertical" className="mx-1 h-4" />
-						<nav
-							aria-label="Breadcrumb"
-							className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground"
-						>
-							{crumbs.map((crumb, i) => (
-								<span key={crumb.label} className="flex items-center gap-1">
-									{i > 0 && (
-										<HugeiconsIcon
-											icon={ArrowRight01Icon}
-											strokeWidth={2}
-											className="size-3 shrink-0"
-										/>
-									)}
-									{crumb.href ? (
-										<Link
-											href={crumb.href}
-											className="truncate transition-colors hover:text-foreground"
-										>
-											{crumb.label}
-										</Link>
-									) : (
-										<span className="truncate font-medium text-foreground">{crumb.label}</span>
-									)}
-								</span>
-							))}
-						</nav>
+						<Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+						<Breadcrumb className="min-w-0">
+							<BreadcrumbList className="min-w-0">
+								{crumbs.map((crumb, i) => (
+									<Fragment key={`${crumb.label}-${crumb.href ?? i}`}>
+										{i > 0 ? <BreadcrumbSeparator /> : null}
+										<BreadcrumbItem>
+											{crumb.href ? (
+												<BreadcrumbLink asChild>
+													<Link href={crumb.href} className="truncate">
+														{crumb.label}
+													</Link>
+												</BreadcrumbLink>
+											) : (
+												<BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
+											)}
+										</BreadcrumbItem>
+									</Fragment>
+								))}
+							</BreadcrumbList>
+						</Breadcrumb>
 					</>
 				)}
 			</div>
 
-			{/* Right zone */}
-			<HeaderActions user={user} unreadCount={unreadCount} />
+			<div className="px-4">
+				<HeaderActions unreadCount={unreadCount} />
+			</div>
 		</header>
 	);
 }

@@ -1,5 +1,4 @@
 import {
-	AddPlayerSchema,
 	ArchiveTeamSchema,
 	CreateTeamSchema,
 	DeleteTeamSchema,
@@ -641,52 +640,13 @@ teamRoutes.delete("/:id/leave", async (c) => {
 teamRoutes.post("/:id/roster", async (c) => {
 	const user = c.get("user");
 	const teamId = c.req.param("id");
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	const parsed = v.safeParse(AddPlayerSchema, { ...body, teamId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const access = await getTeamAccessContext(teamId, user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
 	if (!access.canManageTeam)
 		return c.json({ error: "You do not have permission to manage this roster." }, 403);
-	if (
-		parsed.output.permissionRole === "admin" &&
-		access.orgRole !== "owner" &&
-		access.orgRole !== "admin"
-	) {
-		return c.json({ error: "Only org admins can grant team admin access." }, 403);
-	}
 
-	const normalized = normalizeMemberFields({
-		memberType: parsed.output.memberType ?? null,
-		staffRole: parsed.output.staffRole ?? null,
-		gameRole: parsed.output.gameRole ?? parsed.output.roleInTeam ?? null,
-	});
-
-	await db.transaction(async (tx) => {
-		await ensureOrganizationMembership(tx, {
-			organizationId: access.organizationId,
-			userId: parsed.output.userId,
-			role: "member",
-			memberType: normalized.memberType,
-			staffRole: normalized.staffRole,
-			gameRole: normalized.gameRole,
-		});
-
-		await ensureTeamMembership(tx, {
-			teamId,
-			userId: parsed.output.userId,
-			memberType: normalized.memberType,
-			staffRole: normalized.staffRole,
-			gameRole: normalized.gameRole,
-			permissionRole: parsed.output.permissionRole ?? "member",
-			status: parsed.output.status,
-		});
-	});
-
-	return c.json({ success: true });
+	return c.json({ error: "Direct roster adds are disabled. Send a team invite instead." }, 409);
 });
 
 teamRoutes.patch("/:id/roster/:memberId", async (c) => {

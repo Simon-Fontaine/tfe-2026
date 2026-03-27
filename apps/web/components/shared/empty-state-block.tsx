@@ -5,6 +5,14 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateBlockProps {
@@ -24,9 +32,9 @@ interface EmptyStateBlockProps {
 }
 
 const variantClasses = {
-	inline: "py-8",
-	card: "rounded-lg border border-dashed p-8",
-	page: "py-16",
+	inline: "p-8",
+	card: "p-8",
+	page: "p-10",
 } as const;
 
 export function EmptyStateBlock({
@@ -41,36 +49,37 @@ export function EmptyStateBlock({
 	variant = "inline",
 }: EmptyStateBlockProps) {
 	return (
-		<div
-			className={cn(
-				"flex flex-col items-center justify-center gap-2 text-center text-muted-foreground",
-				variantClasses[variant]
-			)}
-		>
-			<div className="flex size-10 items-center justify-center rounded-full bg-muted">
-				<HugeiconsIcon icon={icon} strokeWidth={2} className="size-5 opacity-60" />
-			</div>
-			<p className="text-sm font-medium text-foreground">{title}</p>
-			{description && <p className="max-w-[42ch] text-xs">{description}</p>}
+		<Empty className={cn("border bg-background", variantClasses[variant])}>
+			<EmptyHeader>
+				<EmptyMedia variant="icon">
+					<HugeiconsIcon icon={icon} strokeWidth={2} className="opacity-60" />
+				</EmptyMedia>
+				<EmptyTitle>{title}</EmptyTitle>
+				{description ? (
+					<EmptyDescription className="max-w-[42ch]">{description}</EmptyDescription>
+				) : null}
+			</EmptyHeader>
 			{(actionLabel || secondaryActionLabel) && (
-				<div className="mt-1 flex items-center gap-2">
-					{actionLabel && actionHref && (
-						<Button type="button" variant="outline" size="sm" asChild>
-							<Link href={actionHref}>{actionLabel}</Link>
-						</Button>
-					)}
-					{actionLabel && onAction && !actionHref && (
-						<Button type="button" variant="outline" size="sm" onClick={onAction}>
-							{actionLabel}
-						</Button>
-					)}
-					{secondaryActionLabel && onSecondaryAction && (
-						<Button type="button" variant="ghost" size="sm" onClick={onSecondaryAction}>
-							{secondaryActionLabel}
-						</Button>
-					)}
-				</div>
+				<EmptyContent>
+					<div className="flex items-center gap-2">
+						{actionLabel && actionHref && (
+							<Button type="button" size="sm" asChild>
+								<Link href={actionHref}>{actionLabel}</Link>
+							</Button>
+						)}
+						{actionLabel && onAction && !actionHref && (
+							<Button type="button" size="sm" onClick={onAction}>
+								{actionLabel}
+							</Button>
+						)}
+						{secondaryActionLabel && onSecondaryAction && (
+							<Button type="button" variant="ghost" size="sm" onClick={onSecondaryAction}>
+								{secondaryActionLabel}
+							</Button>
+						)}
+					</div>
+				</EmptyContent>
 			)}
-		</div>
+		</Empty>
 	);
 }

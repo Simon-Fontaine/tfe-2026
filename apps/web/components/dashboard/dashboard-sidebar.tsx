@@ -15,8 +15,15 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+	getUserInitials,
+	UserMenuDropdown,
+	type UserMenuUser,
+} from "@/components/shared/user-menu-dropdown";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
@@ -24,11 +31,15 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarSeparator,
+	SidebarRail,
+	useSidebar,
 } from "@/components/ui/sidebar";
+import type { SessionUser } from "@/lib/auth/session";
+import { dashboardRoutes } from "@/lib/routes";
 import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
 
 interface DashboardSidebarProps {
+	user: SessionUser;
 	contextOrgs: SwitcherOrg[];
 	contextTeams: SwitcherTeam[];
 }
@@ -42,13 +53,7 @@ function useActiveContext(pathname: string) {
 	};
 }
 
-const DISCOVER_LINKS = [
-	{ label: "Posts", href: "/dashboard/discover/posts", icon: UserSearch01Icon },
-	{ label: "Conversations", href: "/dashboard/discover/conversations", icon: Mail01Icon },
-	{ label: "Invitations", href: "/dashboard/discover/invitations", icon: UserAdd01Icon },
-];
-
-export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
 
@@ -60,39 +65,39 @@ export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebar
 						links: [
 							{
 								label: "Overview",
-								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}`,
+								href: dashboardRoutes.context.teamById(activeOrgId, activeTeamId),
 								icon: Home01Icon,
 								exact: true,
 							},
 							{
 								label: "Players",
-								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/players`,
+								href: dashboardRoutes.context.teamPlayers(activeOrgId, activeTeamId),
 								icon: UserGroupIcon,
 							},
 							{
 								label: "Staff",
-								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/staff`,
+								href: dashboardRoutes.context.teamStaff(activeOrgId, activeTeamId),
 								icon: UserAdd01Icon,
 							},
 							{
 								label: "Posts",
-								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/posts`,
+								href: dashboardRoutes.context.teamPosts(activeOrgId, activeTeamId),
 								icon: UserSearch01Icon,
 							},
 							{
-								label: "Settings",
-								href: `/dashboard/c/org/${activeOrgId}/team/${activeTeamId}/settings`,
-								icon: Settings01Icon,
+								label: "Conversations",
+								href: dashboardRoutes.context.teamConversations(activeOrgId, activeTeamId),
+								icon: Mail01Icon,
 							},
-						],
-					},
-					{
-						label: "Organization",
-						links: [
 							{
-								label: "Back to org",
-								href: `/dashboard/c/org/${activeOrgId}`,
-								icon: UserGroupIcon,
+								label: "Invites",
+								href: dashboardRoutes.context.teamInvites(activeOrgId, activeTeamId),
+								icon: UserAdd01Icon,
+							},
+							{
+								label: "Settings",
+								href: dashboardRoutes.context.teamSettings(activeOrgId, activeTeamId),
+								icon: Settings01Icon,
 							},
 						],
 					},
@@ -104,28 +109,38 @@ export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebar
 							links: [
 								{
 									label: "Overview",
-									href: `/dashboard/c/org/${activeOrgId}`,
+									href: dashboardRoutes.context.orgById(activeOrgId),
 									icon: Home01Icon,
 									exact: true,
 								},
 								{
 									label: "Teams",
-									href: `/dashboard/c/org/${activeOrgId}/teams`,
+									href: dashboardRoutes.context.orgTeams(activeOrgId),
 									icon: Sword03Icon,
 								},
 								{
 									label: "Members",
-									href: `/dashboard/c/org/${activeOrgId}/members`,
+									href: dashboardRoutes.context.orgMembers(activeOrgId),
 									icon: UserGroupIcon,
 								},
 								{
 									label: "Posts",
-									href: `/dashboard/c/org/${activeOrgId}/posts`,
+									href: dashboardRoutes.context.orgPosts(activeOrgId),
 									icon: UserSearch01Icon,
 								},
 								{
+									label: "Conversations",
+									href: dashboardRoutes.context.orgConversations(activeOrgId),
+									icon: Mail01Icon,
+								},
+								{
+									label: "Invites",
+									href: dashboardRoutes.context.orgInvites(activeOrgId),
+									icon: UserAdd01Icon,
+								},
+								{
 									label: "Settings",
-									href: `/dashboard/c/org/${activeOrgId}/settings`,
+									href: dashboardRoutes.context.orgSettings(activeOrgId),
 									icon: Settings01Icon,
 								},
 							],
@@ -133,29 +148,64 @@ export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebar
 					]
 				: [
 						{
-							links: [{ label: "Dashboard", href: "/dashboard", icon: Home01Icon, exact: true }],
+							links: [
+								{
+									label: "Dashboard",
+									href: dashboardRoutes.home,
+									icon: Home01Icon,
+									exact: true,
+								},
+							],
 						},
 						{
 							label: "Personal",
 							links: [
-								{ label: "Profile", href: "/dashboard/personal/profile", icon: UserCircle02Icon },
-								{ label: "Schedule", href: "/dashboard/personal/schedule", icon: Calendar03Icon },
+								{
+									label: "Profile",
+									href: dashboardRoutes.personal.profile,
+									icon: UserCircle02Icon,
+								},
+								{
+									label: "Schedule",
+									href: dashboardRoutes.personal.schedule,
+									icon: Calendar03Icon,
+								},
 								{
 									label: "Notifications",
-									href: "/dashboard/personal/notifications",
+									href: dashboardRoutes.personal.notifications,
 									icon: Mail01Icon,
 								},
 								{
 									label: "Settings",
-									href: "/dashboard/personal/settings/account",
+									href: dashboardRoutes.personal.settings.account,
 									icon: Settings01Icon,
+								},
+							],
+						},
+						{
+							label: "Discover",
+							links: [
+								{ label: "Posts", href: dashboardRoutes.discover.posts, icon: UserSearch01Icon },
+								{
+									label: "Conversations",
+									href: dashboardRoutes.discover.conversations,
+									icon: Mail01Icon,
+								},
+								{
+									label: "Invitations",
+									href: dashboardRoutes.discover.invitations,
+									icon: UserAdd01Icon,
 								},
 							],
 						},
 						{
 							label: "Workspace",
 							links: [
-								{ label: "Organizations", href: "/dashboard/organizations", icon: UserGroupIcon },
+								{
+									label: "Organizations",
+									href: dashboardRoutes.organizations,
+									icon: UserGroupIcon,
+								},
 							],
 						},
 					];
@@ -163,30 +213,8 @@ export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebar
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" asChild tooltip="Scrimflow home">
-							<Link href="/">
-								<div className="flex size-8 items-center justify-center border bg-primary/10">
-									<HugeiconsIcon
-										icon={Sword03Icon}
-										strokeWidth={2}
-										className="size-4 text-primary"
-									/>
-								</div>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-semibold">Scrimflow</span>
-									<span className="truncate text-xs text-muted-foreground">Overwatch 2</span>
-								</div>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-					<SidebarMenuItem>
-						<ContextSwitcher orgs={contextOrgs} teams={contextTeams} />
-					</SidebarMenuItem>
-				</SidebarMenu>
+				<ContextSwitcher orgs={contextOrgs} teams={contextTeams} />
 			</SidebarHeader>
-
 			<SidebarContent>
 				{contextGroups.map((group, i) => (
 					<SidebarGroup key={group.label ?? i}>
@@ -213,34 +241,44 @@ export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebar
 						</SidebarGroupContent>
 					</SidebarGroup>
 				))}
-
-				{/* Discover section — always visible regardless of context */}
-				{(activeOrgId || activeTeamId) && (
-					<>
-						<SidebarSeparator />
-						<SidebarGroup>
-							<SidebarGroupLabel>Discover</SidebarGroupLabel>
-							<SidebarGroupContent>
-								<SidebarMenu>
-									{DISCOVER_LINKS.map((link) => {
-										const isActive = pathname.startsWith(link.href);
-										return (
-											<SidebarMenuItem key={link.href}>
-												<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
-													<Link href={link.href}>
-														<HugeiconsIcon icon={link.icon} strokeWidth={2} />
-														{link.label}
-													</Link>
-												</SidebarMenuButton>
-											</SidebarMenuItem>
-										);
-									})}
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
-					</>
-				)}
 			</SidebarContent>
+			<SidebarFooter>
+				<SidebarUserNav user={user} />
+			</SidebarFooter>
+			<SidebarRail />
 		</Sidebar>
+	);
+}
+
+function SidebarUserNav({ user }: { user: UserMenuUser }) {
+	const { isMobile } = useSidebar();
+	const initials = getUserInitials(user.displayName);
+
+	return (
+		<SidebarMenu>
+			<SidebarMenuItem>
+				<UserMenuDropdown
+					user={user}
+					align="start"
+					side={isMobile ? "bottom" : "right"}
+					sideOffset={4}
+				>
+					<SidebarMenuButton
+						size="lg"
+						className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+						aria-label="User menu"
+					>
+						<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage className="rounded-none" src={user.avatarUrl ?? undefined} />
+							<AvatarFallback className="rounded-none text-xs">{initials}</AvatarFallback>
+						</Avatar>
+						<div className="grid min-w-0 flex-1 text-left leading-tight">
+							<span className="truncate text-sm font-medium">{user.displayName}</span>
+							<span className="truncate text-xs text-muted-foreground">{user.email}</span>
+						</div>
+					</SidebarMenuButton>
+				</UserMenuDropdown>
+			</SidebarMenuItem>
+		</SidebarMenu>
 	);
 }

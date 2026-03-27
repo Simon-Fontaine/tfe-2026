@@ -1,0 +1,96 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { PageSection } from "@/components/dashboard/page-section";
+import { RecruitmentThreadPanel } from "@/components/recruit/recruitment-thread-panel";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { Badge } from "@/components/ui/badge";
+import { getCurrentSession } from "@/lib/auth/session";
+import { getOrgWithTeams } from "@/lib/data/orgs";
+import { getRecruitmentConversations, getRecruitmentThread } from "@/lib/data/recruit";
+import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
+import { dashboardRoutes } from "@/lib/routes";
+
+interface OrgConversationsPageProps {
+	params: Promise<{ orgId: string }>;
+	searchParams: Promise<{ thread?: string }>;
+}
+
+export default async function OrgConversationsPage({
+	params,
+	searchParams,
+}: OrgConversationsPageProps) {
+	const { user } = await getCurrentSession();
+	if (!user) return null;
+
+	const { orgId } = await params;
+	const org = await getOrgWithTeams(orgId, user.id);
+	if (!org) notFound();
+
+	const { thread: threadParam } = await searchParams;
+	const conversations = (await getRecruitmentConversations()).filter(
+		(conversation) => conversation.organizationId === org.id
+	);
+	const selectedThreadId = conversations.some(
+		(conversation) => conversation.threadId === threadParam
+	)
+		? threadParam
+		: (conversations[0]?.threadId ?? null);
+	const thread = selectedThreadId ? await getRecruitmentThread(selectedThreadId) : null;
+	const activeThread =
+		thread && thread.post.organizationId === org.id && thread.post.teamId === null ? thread : null;
+
+	return (
+		<PageContainer>
+			<PageHeader title="Conversations" description={`Recruiting threads for ${org.name}.`} />
+
+			<div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+				<PageSection title="Threads">
+					{conversations.length === 0 ? (
+						<EmptyStateBlock
+							title="No organisation conversations yet"
+							description="Responses to organisation posts will appear here."
+							variant="card"
+						/>
+					) : (
+						<div className="space-y-2">
+							{conversations.map((conversation) => {
+								const isSelected = conversation.threadId === selectedThreadId;
+								return (
+									<Link
+										key={conversation.threadId}
+										href={`${dashboardRoutes.context.orgConversations(org.id)}?thread=${conversation.threadId}`}
+										className={`block border p-3 transition-colors hover:bg-muted/50 ${
+											isSelected ? "border-primary bg-primary/5" : ""
+										}`}
+									>
+										<div className="flex flex-wrap items-center gap-2">
+											<p className="truncate text-sm font-medium">
+												{conversation.counterpartLabel}
+											</p>
+											<Badge variant="secondary" className="text-[10px]">
+												{RECRUITMENT_CATEGORY_LABELS[conversation.postCategory]}
+											</Badge>
+										</div>
+										<p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+											{conversation.postTitle}
+										</p>
+										{conversation.lastMessagePreview && (
+											<p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+												{conversation.lastMessagePreview}
+											</p>
+										)}
+									</Link>
+								);
+							})}
+						</div>
+					)}
+				</PageSection>
+
+				<RecruitmentThreadPanel thread={activeThread} currentUserId={user.id} />
+			</div>
+		</PageContainer>
+	);
+}

@@ -71,7 +71,7 @@
 	--chart-3: oklch(0.646 0.222 41.116);
 	--chart-4: oklch(0.553 0.195 38.402);
 	--chart-5: oklch(0.47 0.157 37.304);
-	--radius: 0.625rem;
+	--radius: 0;
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.145 0 0);
 	--sidebar-primary: oklch(0.646 0.222 41.116);
@@ -119,6 +119,12 @@
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
+	}
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: global sharp-corner rule is intentional */
+		border-radius: 0 !important;
 	}
 	body {
 		@apply bg-background text-foreground;

@@ -9,6 +9,7 @@ import {
 	updateTeamMemberAction,
 	updateTeamMemberPermissionAction,
 } from "@/app/dashboard/workspace/orgs/actions/team";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -241,6 +242,7 @@ interface RosterTableProps {
 	canManageAdmins?: boolean;
 	teamId: string;
 	emptyLabel?: string;
+	emptyDescription?: string;
 }
 
 export function RosterTable({
@@ -248,16 +250,20 @@ export function RosterTable({
 	canManage,
 	canManageAdmins = false,
 	teamId,
-	emptyLabel = "No members yet. Add your first member to get started.",
+	emptyLabel = "No members yet",
+	emptyDescription = "Use team invites to bring players and staff into this roster.",
 }: RosterTableProps) {
 	const active = roster.filter((r) => r.status !== "inactive");
 	const inactive = roster.filter((r) => r.status === "inactive");
 
 	if (roster.length === 0) {
 		return (
-			<div className="flex items-center justify-center border border-dashed px-6 py-10 text-center">
-				<p className="text-xs text-muted-foreground">{emptyLabel}</p>
-			</div>
+			<EmptyStateBlock
+				icon={UserIcon}
+				title={emptyLabel}
+				description={emptyDescription}
+				variant="card"
+			/>
 		);
 	}
 

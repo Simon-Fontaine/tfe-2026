@@ -27,16 +27,19 @@ interface RecruitmentResponsesPanelProps {
 	responses: RecruitmentResponseSummary[];
 	teamId?: string;
 	organizationId?: string;
+	conversationHrefBase?: string;
 }
 
 function RecruitmentResponseCard({
 	response,
 	teamId,
 	organizationId,
+	conversationHrefBase,
 }: {
 	response: RecruitmentResponseSummary;
 	teamId?: string;
 	organizationId?: string;
+	conversationHrefBase?: string;
 }) {
 	const [staffRole, setStaffRole] = useState<"coach" | "analyst" | "manager" | "staff">("staff");
 	const [gameRole, setGameRole] = useState<"tank" | "damage" | "support">(
@@ -150,7 +153,11 @@ function RecruitmentResponseCard({
 				<div className="ml-auto flex flex-wrap gap-2">
 					{response.threadId && (
 						<Button asChild size="sm" variant="outline">
-							<Link href={`${dashboardRoutes.discover.conversations}?thread=${response.threadId}`}>
+							<Link
+								href={`${
+									conversationHrefBase ?? dashboardRoutes.discover.conversations
+								}?thread=${response.threadId}`}
+							>
 								Open conversation
 							</Link>
 						</Button>
@@ -181,6 +188,7 @@ export function RecruitmentResponsesPanel({
 	responses,
 	teamId,
 	organizationId,
+	conversationHrefBase,
 }: RecruitmentResponsesPanelProps) {
 	if (responses.length === 0) {
 		return <p className="text-xs text-muted-foreground">No responses yet.</p>;
@@ -194,6 +202,7 @@ export function RecruitmentResponsesPanel({
 					response={response}
 					teamId={teamId}
 					organizationId={organizationId}
+					conversationHrefBase={conversationHrefBase}
 				/>
 			))}
 		</div>

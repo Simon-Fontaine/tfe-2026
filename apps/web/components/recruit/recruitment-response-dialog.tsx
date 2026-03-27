@@ -25,12 +25,14 @@ import { cn } from "@/lib/utils";
 interface RecruitmentResponseDialogProps {
 	post: RecruitmentPostSummary;
 	entityOptions?: RecruitEntityOption[];
+	conversationHrefBase?: string;
 	children?: React.ReactNode;
 }
 
 export function RecruitmentResponseDialog({
 	post,
 	entityOptions = [],
+	conversationHrefBase,
 	children,
 }: RecruitmentResponseDialogProps) {
 	const router = useRouter();
@@ -49,16 +51,20 @@ export function RecruitmentResponseDialog({
 			setOpen(false);
 			setMessage("");
 			if ("threadId" in state && state.threadId) {
-				router.push(`${dashboardRoutes.discover.conversations}?thread=${state.threadId}`);
+				router.push(
+					`${conversationHrefBase ?? dashboardRoutes.discover.conversations}?thread=${state.threadId}`
+				);
 			}
 		}
-	}, [router, state]);
+	}, [conversationHrefBase, router, state]);
 
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		pendingRef.current = true;
 		const fd = new FormData();
 		fd.set("postId", post.id);
+		if (post.teamId) fd.set("teamId", post.teamId);
+		if (post.organizationId) fd.set("organizationId", post.organizationId);
 		if (message.trim()) fd.set("message", message.trim());
 		if (post.ownerType === "player") {
 			const [senderType, senderId] = senderChoice.split(":");

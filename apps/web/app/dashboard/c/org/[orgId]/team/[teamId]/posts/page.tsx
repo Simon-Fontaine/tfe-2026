@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getRecruitmentResponsesForPost } from "@/lib/data/recruit";
 import { getTeamWithRoster } from "@/lib/data/teams";
+import { dashboardRoutes } from "@/lib/routes";
 
 interface TeamPostsPageProps {
 	params: Promise<{ orgId: string; teamId: string }>;
@@ -66,6 +67,7 @@ export default async function TeamPostsPage({ params }: TeamPostsPageProps) {
 							responses={responsesByPost.get(post.id) ?? []}
 							teamId={team.id}
 							organizationId={team.organizationId}
+							conversationHrefBase={dashboardRoutes.context.teamConversations(orgId, team.id)}
 						/>
 					))}
 				</div>

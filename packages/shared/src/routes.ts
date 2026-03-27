@@ -129,12 +129,18 @@ export const dashboardRoutes = {
 		orgTeams: (orgId: string) => `/dashboard/c/org/${orgId}/teams`,
 		orgMembers: (orgId: string) => `/dashboard/c/org/${orgId}/members`,
 		orgPosts: (orgId: string) => `/dashboard/c/org/${orgId}/posts`,
+		orgConversations: (orgId: string) => `/dashboard/c/org/${orgId}/conversations`,
+		orgInvites: (orgId: string) => `/dashboard/c/org/${orgId}/invites`,
 		orgSettings: (orgId: string) => `/dashboard/c/org/${orgId}/settings`,
 		teamById: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}`,
 		teamPlayers: (orgId: string, teamId: string) =>
 			`/dashboard/c/org/${orgId}/team/${teamId}/players`,
 		teamStaff: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}/staff`,
 		teamPosts: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}/posts`,
+		teamConversations: (orgId: string, teamId: string) =>
+			`/dashboard/c/org/${orgId}/team/${teamId}/conversations`,
+		teamInvites: (orgId: string, teamId: string) =>
+			`/dashboard/c/org/${orgId}/team/${teamId}/invites`,
 		teamSettings: (orgId: string, teamId: string) =>
 			`/dashboard/c/org/${orgId}/team/${teamId}/settings`,
 	},

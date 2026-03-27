@@ -15,6 +15,13 @@
 			"when": 1774466332527,
 			"tag": "0001_oval_swarm",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1774558254525,
+			"tag": "0002_sudden_odin",
+			"breakpoints": true
 		}
 	]
 }

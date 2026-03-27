@@ -176,21 +176,6 @@ export const TeamMemberScopedSchema = v.object({
 
 export type TeamMemberScopedInput = v.InferOutput<typeof TeamMemberScopedSchema>;
 
-// ─── Team members ─────────────────────────────────────────────────────────────
-
-export const AddPlayerSchema = v.object({
-	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
-	userId: v.pipe(v.string(), v.uuid("Invalid user ID")),
-	memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
-	roleInTeam: optionalGameRole,
-	gameRole: optionalGameRole,
-	staffRole: optionalStaffRole,
-	status: v.picklist(ROSTER_STATUS_VALUES, "Please select a status"),
-	permissionRole: optionalPermissionRole,
-});
-
-export type AddPlayerInput = v.InferOutput<typeof AddPlayerSchema>;
-
 export const UpdateTeamMemberSchema = v.pipe(
 	v.object({
 		teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
