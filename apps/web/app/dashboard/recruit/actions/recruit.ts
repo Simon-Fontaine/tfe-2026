@@ -1,6 +1,14 @@
 "use server";
 
+import {
+	type CreateRecruitmentPostInput,
+	CreateRecruitmentPostSchema,
+	type RecruitmentOwnerType,
+	type UpdateRecruitmentPostInput,
+	UpdateRecruitmentPostSchema,
+} from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
+import * as v from "valibot";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { toActionResult } from "@/lib/action-result";
@@ -34,6 +42,132 @@ function getGameRoles(formData: FormData) {
 			(value): value is "tank" | "damage" | "support" =>
 				value === "tank" || value === "damage" || value === "support"
 		);
+}
+
+function pushFieldError(
+	fieldErrors: Partial<Record<string, string[]>>,
+	field: string,
+	message: string
+) {
+	fieldErrors[field] = [...(fieldErrors[field] ?? []), message];
+}
+
+function mergeFieldErrors(
+	target: Partial<Record<string, string[]>>,
+	source: Partial<Record<string, string[]>>
+) {
+	for (const [field, messages] of Object.entries(source)) {
+		if (!messages?.length) continue;
+		target[field] = [...(target[field] ?? []), ...messages];
+	}
+}
+
+function collectFieldErrors(
+	issues: Array<{
+		message: string;
+		path?: Array<{ key?: unknown }>;
+	}>
+) {
+	const fieldErrors: Partial<Record<string, string[]>> = {};
+
+	for (const issue of issues) {
+		const path = issue.path ?? [];
+		const field =
+			path.findLast((entry) => typeof entry.key === "string")?.key ??
+			path.find((entry) => typeof entry.key === "string")?.key ??
+			"form";
+
+		pushFieldError(fieldErrors, typeof field === "string" ? field : "form", issue.message);
+	}
+
+	return fieldErrors;
+}
+
+function validateRecruitmentPostRules(input: {
+	category: "lft" | "lfp" | "lfr" | "lfs";
+	ownerType: RecruitmentOwnerType;
+	memberType: "player" | "staff";
+	teamId?: string;
+	organizationId?: string;
+}) {
+	const fieldErrors: Partial<Record<string, string[]>> = {};
+
+	if (input.ownerType === "team" && !input.teamId) {
+		pushFieldError(fieldErrors, "teamId", "Select a team to publish this post.");
+	}
+
+	if (input.ownerType === "organization" && !input.organizationId) {
+		pushFieldError(fieldErrors, "organizationId", "Select an organisation to publish this post.");
+	}
+
+	if (input.category === "lft" && input.ownerType !== "player") {
+		pushFieldError(fieldErrors, "category", "LFT posts must be created by an individual player.");
+	}
+
+	if ((input.category === "lfp" || input.category === "lfr") && input.ownerType !== "team") {
+		pushFieldError(
+			fieldErrors,
+			"category",
+			"LFP and LFR posts must be created on behalf of a team."
+		);
+	}
+
+	if (input.category === "lfs" && input.memberType !== "staff") {
+		pushFieldError(fieldErrors, "memberType", "LFS posts must target staff roles.");
+	}
+
+	if ((input.category === "lfp" || input.category === "lfr") && input.memberType !== "player") {
+		pushFieldError(fieldErrors, "memberType", "LFP and LFR posts must target players.");
+	}
+
+	return fieldErrors;
+}
+
+function validateRecruitmentNumericFields(input: { minSrRaw: string; maxSrRaw: string }) {
+	const fieldErrors: Partial<Record<string, string[]>> = {};
+
+	if (input.minSrRaw && !Number.isFinite(Number(input.minSrRaw))) {
+		pushFieldError(fieldErrors, "minSr", "Minimum SR must be a number.");
+	}
+
+	if (input.maxSrRaw && !Number.isFinite(Number(input.maxSrRaw))) {
+		pushFieldError(fieldErrors, "maxSr", "Maximum SR must be a number.");
+	}
+
+	return fieldErrors;
+}
+
+function validateCreateRecruitmentPostInput(input: CreateRecruitmentPostInput) {
+	const fieldErrors = validateRecruitmentPostRules(input);
+	const parsed = v.safeParse(CreateRecruitmentPostSchema, input);
+
+	if (!parsed.success) {
+		mergeFieldErrors(fieldErrors, collectFieldErrors(parsed.issues));
+	}
+
+	return fieldErrors;
+}
+
+function validateUpdateRecruitmentPostInput(
+	input: UpdateRecruitmentPostInput,
+	ownerType: RecruitmentOwnerType
+) {
+	const fieldErrors = validateRecruitmentPostRules({
+		category: input.category as "lft" | "lfp" | "lfr" | "lfs",
+		ownerType,
+		memberType: input.memberType as "player" | "staff",
+	});
+	const parsed = v.safeParse(UpdateRecruitmentPostSchema, input);
+
+	if (!parsed.success) {
+		mergeFieldErrors(fieldErrors, collectFieldErrors(parsed.issues));
+	}
+
+	return fieldErrors;
+}
+
+function hasFieldErrors(fieldErrors: Partial<Record<string, string[]>>) {
+	return Object.keys(fieldErrors).length > 0;
 }
 
 async function getVerifiedTeamOrgId(teamId: string): Promise<string | null> {
@@ -103,8 +237,9 @@ export async function createRecruitmentPostAction(
 		(getOptionalString(formData, "memberType") as "player" | "staff" | undefined) ?? "player";
 	const teamId = getOptionalString(formData, "teamId");
 	const organizationId = getOptionalString(formData, "organizationId");
-
-	const result = await sdk.recruit.createPost({
+	const minSrRaw = getString(formData, "minSr");
+	const maxSrRaw = getString(formData, "maxSr");
+	const input: CreateRecruitmentPostInput = {
 		category: getString(formData, "category") as "lft" | "lfp" | "lfr" | "lfs",
 		ownerType,
 		title: getString(formData, "title"),
@@ -125,7 +260,12 @@ export async function createRecruitmentPostAction(
 		expiresAt: getOptionalString(formData, "expiresAt"),
 		teamId,
 		organizationId,
-	});
+	};
+	const fieldErrors = validateCreateRecruitmentPostInput(input);
+	mergeFieldErrors(fieldErrors, validateRecruitmentNumericFields({ minSrRaw, maxSrRaw }));
+	if (hasFieldErrors(fieldErrors)) return { fieldErrors };
+
+	const result = await sdk.recruit.createPost(input);
 
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
@@ -146,8 +286,11 @@ export async function updateRecruitmentPostAction(
 	const postId = getString(formData, "postId");
 	const teamId = getOptionalString(formData, "teamId");
 	const orgId = getOptionalString(formData, "organizationId");
-
-	const result = await sdk.recruit.updatePost({
+	const minSrRaw = getString(formData, "minSr");
+	const maxSrRaw = getString(formData, "maxSr");
+	const ownerType =
+		(getOptionalString(formData, "ownerType") as RecruitmentOwnerType | undefined) ?? "player";
+	const input: UpdateRecruitmentPostInput = {
 		postId,
 		category: getOptionalString(formData, "category") as "lft" | "lfp" | "lfr" | "lfs" | undefined,
 		status: getOptionalString(formData, "status") as
@@ -172,7 +315,12 @@ export async function updateRecruitmentPostAction(
 		maxSr: getOptionalNumber(formData, "maxSr"),
 		region: getOptionalString(formData, "region"),
 		expiresAt: getOptionalString(formData, "expiresAt"),
-	});
+	};
+	const fieldErrors = validateUpdateRecruitmentPostInput(input, ownerType);
+	mergeFieldErrors(fieldErrors, validateRecruitmentNumericFields({ minSrRaw, maxSrRaw }));
+	if (hasFieldErrors(fieldErrors)) return { fieldErrors };
+
+	const result = await sdk.recruit.updatePost(input);
 
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;

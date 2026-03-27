@@ -69,7 +69,7 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ or
 				actions={
 					canManage ? (
 						<CreateTeamDialog orgId={org.id}>
-							<Button size="sm" variant="outline">
+							<Button size="sm">
 								<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 								New team
 							</Button>
