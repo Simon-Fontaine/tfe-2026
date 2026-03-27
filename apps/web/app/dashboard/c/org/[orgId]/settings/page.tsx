@@ -1,6 +1,10 @@
+import { LockIcon } from "@hugeicons/core-free-icons";
 import { notFound } from "next/navigation";
 
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { OrgSettingsPanel } from "@/components/orgs/org-settings-panel";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 
@@ -14,24 +18,25 @@ export default async function OrgSettingsPage({ params }: { params: Promise<{ or
 
 	if (!org.currentUser.canManage && !org.currentUser.canLeave && !org.currentUser.canDelete) {
 		return (
-			<div className="border border-dashed px-6 py-10 text-center">
-				<p className="text-sm font-medium">No access</p>
-				<p className="mt-1 text-xs text-muted-foreground">
-					You don&apos;t have permission to manage this organisation&apos;s settings.
-				</p>
-			</div>
+			<PageContainer>
+				<PageHeader title="Settings" />
+				<EmptyStateBlock
+					icon={LockIcon}
+					title="No access"
+					description="You don't have permission to manage this organisation's settings."
+					variant="card"
+				/>
+			</PageContainer>
 		);
 	}
 
 	return (
-		<>
-			<div>
-				<h1 className="text-lg font-bold">Settings</h1>
-				<p className="text-xs text-muted-foreground">
-					Manage organisation profile, ownership, and danger zone actions.
-				</p>
-			</div>
+		<PageContainer>
+			<PageHeader
+				title="Settings"
+				description="Manage organisation profile, ownership, and danger zone actions."
+			/>
 			<OrgSettingsPanel org={org} />
-		</>
+		</PageContainer>
 	);
 }

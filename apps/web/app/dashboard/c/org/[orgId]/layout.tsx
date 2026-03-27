@@ -16,5 +16,5 @@ export default async function OrgLayout({
 	const org = await getOrgWithTeams(orgId, user.id);
 	if (!org) notFound();
 
-	return <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">{children}</div>;
+	return <>{children}</>;
 }

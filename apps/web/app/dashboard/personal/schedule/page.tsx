@@ -1,3 +1,5 @@
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { ScheduleGrid } from "@/components/schedule/schedule-grid";
 import { ScheduleNoTeams } from "@/components/schedule/schedule-no-teams";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -15,12 +17,27 @@ export default async function SchedulePage({
 	const teams = await getActiveTeamsForUser(user.id);
 
 	if (teams.length === 0) {
-		return <ScheduleNoTeams />;
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Schedule"
+					description="Set your recurring availability and one-off dates for scrim scheduling"
+				/>
+				<ScheduleNoTeams />
+			</PageContainer>
+		);
 	}
 
-	// Use the URL param if it resolves to one of the user's teams, otherwise default to first.
 	const activeTeam = teams.find((t) => t.id === team) ?? teams[0];
 	const availability = await getPlayerAvailability(user.id, activeTeam.id);
 
-	return <ScheduleGrid availability={availability} teams={teams} activeTeam={activeTeam} />;
+	return (
+		<PageContainer>
+			<PageHeader
+				title="Schedule"
+				description="Set your recurring availability and one-off dates for scrim scheduling"
+			/>
+			<ScheduleGrid availability={availability} teams={teams} activeTeam={activeTeam} />
+		</PageContainer>
+	);
 }

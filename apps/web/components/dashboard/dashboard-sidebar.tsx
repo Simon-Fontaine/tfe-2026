@@ -1,25 +1,22 @@
 "use client";
 
 import {
-	ArrowUpDownIcon,
-	BubbleChatIcon,
+	Calendar03Icon,
 	Home01Icon,
+	Mail01Icon,
 	Settings01Icon,
 	Sword03Icon,
 	UserAdd01Icon,
+	UserCircle02Icon,
 	UserGroupIcon,
 	UserSearch01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NotificationBell } from "@/components/notifications/notification-bell";
-import { getUserInitials, UserMenuDropdown } from "@/components/shared/user-menu-dropdown";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	Sidebar,
 	SidebarContent,
-	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
@@ -29,15 +26,9 @@ import {
 	SidebarMenuItem,
 	SidebarSeparator,
 } from "@/components/ui/sidebar";
-import type { SessionUser } from "@/lib/auth/session";
-import { siteConfig } from "@/lib/config/site";
 import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
 
-const COMING_SOON_LINKS = [{ label: "Chat", icon: BubbleChatIcon, href: "/dashboard/chat" }];
-
 interface DashboardSidebarProps {
-	user: SessionUser;
-	unreadCount: number;
 	contextOrgs: SwitcherOrg[];
 	contextTeams: SwitcherTeam[];
 }
@@ -51,14 +42,14 @@ function useActiveContext(pathname: string) {
 	};
 }
 
-export function DashboardSidebar({
-	user,
-	unreadCount,
-	contextOrgs,
-	contextTeams,
-}: DashboardSidebarProps) {
+const DISCOVER_LINKS = [
+	{ label: "Posts", href: "/dashboard/discover/posts", icon: UserSearch01Icon },
+	{ label: "Conversations", href: "/dashboard/discover/conversations", icon: Mail01Icon },
+	{ label: "Invitations", href: "/dashboard/discover/invitations", icon: UserAdd01Icon },
+];
+
+export function DashboardSidebar({ contextOrgs, contextTeams }: DashboardSidebarProps) {
 	const pathname = usePathname();
-	const initials = getUserInitials(user.displayName);
 	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
 
 	const contextGroups =
@@ -140,7 +131,34 @@ export function DashboardSidebar({
 							],
 						},
 					]
-				: siteConfig.nav.dashboard;
+				: [
+						{
+							links: [{ label: "Dashboard", href: "/dashboard", icon: Home01Icon, exact: true }],
+						},
+						{
+							label: "Personal",
+							links: [
+								{ label: "Profile", href: "/dashboard/personal/profile", icon: UserCircle02Icon },
+								{ label: "Schedule", href: "/dashboard/personal/schedule", icon: Calendar03Icon },
+								{
+									label: "Notifications",
+									href: "/dashboard/personal/notifications",
+									icon: Mail01Icon,
+								},
+								{
+									label: "Settings",
+									href: "/dashboard/personal/settings/account",
+									icon: Settings01Icon,
+								},
+							],
+						},
+						{
+							label: "Workspace",
+							links: [
+								{ label: "Organizations", href: "/dashboard/organizations", icon: UserGroupIcon },
+							],
+						},
+					];
 
 	return (
 		<Sidebar collapsible="icon">
@@ -196,63 +214,33 @@ export function DashboardSidebar({
 					</SidebarGroup>
 				))}
 
-				<SidebarSeparator />
-
-				<SidebarGroup>
-					<SidebarGroupLabel>Coming soon</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							{COMING_SOON_LINKS.map((link) => (
-								<SidebarMenuItem key={link.href}>
-									<SidebarMenuButton
-										disabled
-										className="cursor-default opacity-40"
-										tooltip={link.label}
-									>
-										<HugeiconsIcon icon={link.icon} strokeWidth={2} />
-										<span>{link.label}</span>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
+				{/* Discover section — always visible regardless of context */}
+				{(activeOrgId || activeTeamId) && (
+					<>
+						<SidebarSeparator />
+						<SidebarGroup>
+							<SidebarGroupLabel>Discover</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									{DISCOVER_LINKS.map((link) => {
+										const isActive = pathname.startsWith(link.href);
+										return (
+											<SidebarMenuItem key={link.href}>
+												<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
+													<Link href={link.href}>
+														<HugeiconsIcon icon={link.icon} strokeWidth={2} />
+														{link.label}
+													</Link>
+												</SidebarMenuButton>
+											</SidebarMenuItem>
+										);
+									})}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					</>
+				)}
 			</SidebarContent>
-
-			<SidebarFooter>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<div className="px-2 py-1">
-							<NotificationBell unreadCount={unreadCount} />
-						</div>
-					</SidebarMenuItem>
-					<SidebarMenuItem>
-						<UserMenuDropdown
-							user={user}
-							contentClassName="w-[--radix-dropdown-menu-trigger-width] min-w-56"
-							side="bottom"
-							align="end"
-							sideOffset={4}
-						>
-							<SidebarMenuButton
-								size="lg"
-								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-								tooltip={user.displayName}
-							>
-								<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
-									<AvatarImage className="rounded-none" src={user.avatarUrl ?? undefined} />
-									<AvatarFallback className="rounded-none text-xs">{initials}</AvatarFallback>
-								</Avatar>
-								<div className="grid flex-1 text-left text-xs leading-tight">
-									<span className="truncate font-semibold">{user.displayName}</span>
-									<span className="truncate text-[10px] text-muted-foreground">{user.email}</span>
-								</div>
-								<HugeiconsIcon icon={ArrowUpDownIcon} strokeWidth={2} className="ml-auto" />
-							</SidebarMenuButton>
-						</UserMenuDropdown>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			</SidebarFooter>
 		</Sidebar>
 	);
 }

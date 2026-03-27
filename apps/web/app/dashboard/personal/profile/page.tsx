@@ -1,3 +1,5 @@
+import { PageContainer } from "@/components/dashboard/page-container";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { AvatarUploadSection } from "@/components/profile/avatar-upload-section";
 import { BannerUploadSection } from "@/components/profile/banner-upload-section";
 import { BasicInfoSection } from "@/components/profile/basic-info-section";
@@ -17,7 +19,7 @@ type UserInfo = {
 
 export default async function ProfilePage() {
 	const { user } = await getCurrentSession();
-	if (!user) return null; // layout guard ensures this never happens
+	if (!user) return null;
 	const userId = user.id;
 
 	const [profile, userInfoRes, heroes] = await Promise.all([
@@ -29,15 +31,21 @@ export default async function ProfilePage() {
 	const userRow = "data" in userInfoRes ? userInfoRes.data : null;
 
 	return (
-		<div className="space-y-8">
-			<BannerUploadSection bannerUrl={userRow?.bannerUrl ?? null} />
-			<AvatarUploadSection avatarUrl={userRow?.avatarUrl ?? null} />
-			<BasicInfoSection
-				displayName={userRow?.displayName ?? ""}
-				bio={userRow?.bio ?? ""}
-				socialLinks={userRow?.socialLinks ?? {}}
+		<PageContainer>
+			<PageHeader
+				title="Your profile"
+				description="Manage your player profile, roles and hero pool"
 			/>
-			{profile && <GameProfileSection profile={profile} heroes={heroes} />}
-		</div>
+			<div className="space-y-8">
+				<BannerUploadSection bannerUrl={userRow?.bannerUrl ?? null} />
+				<AvatarUploadSection avatarUrl={userRow?.avatarUrl ?? null} />
+				<BasicInfoSection
+					displayName={userRow?.displayName ?? ""}
+					bio={userRow?.bio ?? ""}
+					socialLinks={userRow?.socialLinks ?? {}}
+				/>
+				{profile && <GameProfileSection profile={profile} heroes={heroes} />}
+			</div>
+		</PageContainer>
 	);
 }
