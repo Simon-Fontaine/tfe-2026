@@ -68,7 +68,11 @@ async function revalidateRecruitPaths(input: {
 		const orgId = input.orgId ?? (await getVerifiedTeamOrgId(input.teamId));
 		if (orgId) {
 			revalidatePath(dashboardRoutes.context.teamById(orgId, input.teamId));
+			revalidatePath(dashboardRoutes.context.teamPosts(orgId, input.teamId));
+			revalidatePath(dashboardRoutes.context.teamConversations(orgId, input.teamId));
 			revalidatePath(dashboardRoutes.context.orgById(orgId));
+			revalidatePath(dashboardRoutes.context.orgPosts(orgId));
+			revalidatePath(dashboardRoutes.context.orgConversations(orgId));
 			const slug = await getOrgSlug(orgId);
 			if (slug) revalidatePath(`/orgs/${slug}`);
 		}
@@ -77,6 +81,8 @@ async function revalidateRecruitPaths(input: {
 
 	if (input.orgId) {
 		revalidatePath(dashboardRoutes.context.orgById(input.orgId));
+		revalidatePath(dashboardRoutes.context.orgPosts(input.orgId));
+		revalidatePath(dashboardRoutes.context.orgConversations(input.orgId));
 		const slug = await getOrgSlug(input.orgId);
 		if (slug) revalidatePath(`/orgs/${slug}`);
 	}
@@ -216,7 +222,10 @@ export async function respondToRecruitmentPostAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	await revalidateRecruitPaths({});
+	await revalidateRecruitPaths({
+		teamId: getOptionalString(formData, "teamId"),
+		orgId: getOptionalString(formData, "organizationId"),
+	});
 	return {
 		success: true,
 		threadId: actionResult.data.threadId,
@@ -234,7 +243,10 @@ export async function withdrawRecruitmentResponseAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	await revalidateRecruitPaths({});
+	await revalidateRecruitPaths({
+		teamId: getOptionalString(formData, "teamId"),
+		orgId: getOptionalString(formData, "organizationId"),
+	});
 	return { success: true };
 }
 
@@ -279,6 +291,9 @@ export async function sendRecruitmentMessageAction(
 	const actionResult = toActionResult(result);
 	if (!("data" in actionResult)) return actionResult;
 
-	revalidatePath(dashboardRoutes.discover.conversations);
+	await revalidateRecruitPaths({
+		teamId: getOptionalString(formData, "teamId"),
+		orgId: getOptionalString(formData, "organizationId"),
+	});
 	return { success: true };
 }

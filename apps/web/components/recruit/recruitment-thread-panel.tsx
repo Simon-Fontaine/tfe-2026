@@ -49,6 +49,9 @@ export function RecruitmentThreadPanel({ thread, currentUserId }: RecruitmentThr
 		pendingRef.current = true;
 		const fd = new FormData();
 		fd.set("threadId", activeThread.id);
+		if (activeThread.post.teamId) fd.set("teamId", activeThread.post.teamId);
+		if (activeThread.post.organizationId)
+			fd.set("organizationId", activeThread.post.organizationId);
 		fd.set("content", content);
 		submit(fd);
 	}

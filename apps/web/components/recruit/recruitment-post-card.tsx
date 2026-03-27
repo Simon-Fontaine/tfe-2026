@@ -41,6 +41,7 @@ interface RecruitmentPostCardProps {
 	responses?: RecruitmentResponseSummary[];
 	teamId?: string;
 	organizationId?: string;
+	conversationHrefBase?: string;
 }
 
 export function RecruitmentPostCard({
@@ -50,6 +51,7 @@ export function RecruitmentPostCard({
 	responses,
 	teamId,
 	organizationId,
+	conversationHrefBase,
 }: RecruitmentPostCardProps) {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const deleteForm = useFormAction(deleteRecruitmentPostAction, {
@@ -135,7 +137,11 @@ export function RecruitmentPostCard({
 
 				<div className="flex flex-wrap gap-2">
 					{canRespond ? (
-						<RecruitmentResponseDialog post={post} entityOptions={entityOptions}>
+						<RecruitmentResponseDialog
+							post={post}
+							entityOptions={entityOptions}
+							conversationHrefBase={conversationHrefBase}
+						>
 							<Button size="sm">{getPostResponseLabel(post)}</Button>
 						</RecruitmentResponseDialog>
 					) : null}
@@ -185,6 +191,7 @@ export function RecruitmentPostCard({
 							responses={responses}
 							teamId={teamId ?? post.teamId ?? undefined}
 							organizationId={organizationId ?? post.organizationId ?? undefined}
+							conversationHrefBase={conversationHrefBase}
 						/>
 					</div>
 				)}

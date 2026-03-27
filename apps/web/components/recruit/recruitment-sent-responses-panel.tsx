@@ -14,9 +14,16 @@ import { dashboardRoutes } from "@/lib/routes";
 
 interface RecruitmentSentResponsesPanelProps {
 	responses: RecruitmentResponseSummary[];
+	conversationHrefBase?: string;
 }
 
-function SentResponseCard({ response }: { response: RecruitmentResponseSummary }) {
+function SentResponseCard({
+	response,
+	conversationHrefBase,
+}: {
+	response: RecruitmentResponseSummary;
+	conversationHrefBase?: string;
+}) {
 	const { submit, isPending } = useFormAction(withdrawRecruitmentResponseAction, {
 		loadingMessage: "Withdrawing response…",
 		successMessage: "Response withdrawn",
@@ -64,7 +71,11 @@ function SentResponseCard({ response }: { response: RecruitmentResponseSummary }
 			<div className="flex flex-wrap gap-2">
 				{response.threadId && (
 					<Button asChild size="sm" variant="outline">
-						<Link href={`${dashboardRoutes.discover.conversations}?thread=${response.threadId}`}>
+						<Link
+							href={`${
+								conversationHrefBase ?? dashboardRoutes.discover.conversations
+							}?thread=${response.threadId}`}
+						>
 							Open conversation
 						</Link>
 					</Button>
@@ -80,7 +91,10 @@ function SentResponseCard({ response }: { response: RecruitmentResponseSummary }
 	);
 }
 
-export function RecruitmentSentResponsesPanel({ responses }: RecruitmentSentResponsesPanelProps) {
+export function RecruitmentSentResponsesPanel({
+	responses,
+	conversationHrefBase,
+}: RecruitmentSentResponsesPanelProps) {
 	if (responses.length === 0) {
 		return <p className="text-xs text-muted-foreground">You have not sent any responses yet.</p>;
 	}
@@ -88,7 +102,11 @@ export function RecruitmentSentResponsesPanel({ responses }: RecruitmentSentResp
 	return (
 		<div className="space-y-3">
 			{responses.map((response) => (
-				<SentResponseCard key={response.id} response={response} />
+				<SentResponseCard
+					key={response.id}
+					response={response}
+					conversationHrefBase={conversationHrefBase}
+				/>
 			))}
 		</div>
 	);

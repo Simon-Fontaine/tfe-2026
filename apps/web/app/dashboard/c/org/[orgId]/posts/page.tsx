@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 import { getRecruitmentResponsesForPost } from "@/lib/data/recruit";
+import { dashboardRoutes } from "@/lib/routes";
 
 export default async function OrgPostsPage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { user } = await getCurrentSession();
@@ -61,6 +62,7 @@ export default async function OrgPostsPage({ params }: { params: Promise<{ orgId
 							currentUserId={user.id}
 							responses={responsesByPost.get(post.id) ?? []}
 							organizationId={org.id}
+							conversationHrefBase={dashboardRoutes.context.orgConversations(org.id)}
 						/>
 					))}
 				</div>

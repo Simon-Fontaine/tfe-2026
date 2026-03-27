@@ -23,10 +23,22 @@ async function getVerifiedTeamOrgId(teamId: string): Promise<string | null> {
 
 function revalidateOrgWorkspace(orgId: string) {
 	revalidatePath(dashboardRoutes.context.orgById(orgId));
+	revalidatePath(dashboardRoutes.context.orgTeams(orgId));
+	revalidatePath(dashboardRoutes.context.orgMembers(orgId));
+	revalidatePath(dashboardRoutes.context.orgPosts(orgId));
+	revalidatePath(dashboardRoutes.context.orgConversations(orgId));
+	revalidatePath(dashboardRoutes.context.orgInvites(orgId));
+	revalidatePath(dashboardRoutes.context.orgSettings(orgId));
 }
 
 function revalidateTeamWorkspace(orgId: string, teamId: string) {
 	revalidatePath(dashboardRoutes.context.teamById(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamPlayers(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamStaff(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamPosts(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamConversations(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamInvites(orgId, teamId));
+	revalidatePath(dashboardRoutes.context.teamSettings(orgId, teamId));
 }
 
 function revalidateInvitations() {

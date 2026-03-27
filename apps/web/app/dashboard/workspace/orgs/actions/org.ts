@@ -9,6 +9,12 @@ import { dashboardRoutes } from "@/lib/routes";
 
 function revalidateOrg(orgId: string) {
 	revalidatePath(dashboardRoutes.context.orgById(orgId));
+	revalidatePath(dashboardRoutes.context.orgTeams(orgId));
+	revalidatePath(dashboardRoutes.context.orgMembers(orgId));
+	revalidatePath(dashboardRoutes.context.orgPosts(orgId));
+	revalidatePath(dashboardRoutes.context.orgConversations(orgId));
+	revalidatePath(dashboardRoutes.context.orgInvites(orgId));
+	revalidatePath(dashboardRoutes.context.orgSettings(orgId));
 }
 
 function revalidateInvitations() {
