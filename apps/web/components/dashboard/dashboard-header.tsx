@@ -31,6 +31,7 @@ const SUB_PAGE_LABELS: Record<string, string> = {
 	security: "Security",
 	conversations: "Conversations",
 	invitations: "Invitations",
+	invites: "Invites",
 };
 
 function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTeam[]) {

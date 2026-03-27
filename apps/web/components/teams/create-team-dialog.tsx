@@ -23,10 +23,12 @@ import { useFormAction } from "@/hooks/use-form-action";
 
 interface CreateTeamDialogProps {
 	orgId: string;
-	children: React.ReactNode;
+	children?: React.ReactNode;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
+export function CreateTeamDialog({ orgId, children, open, onOpenChange }: CreateTeamDialogProps) {
 	const router = useRouter();
 	const pendingRef = useRef(false);
 
@@ -62,12 +64,14 @@ export function CreateTeamDialog({ orgId, children }: CreateTeamDialogProps) {
 
 	return (
 		<Dialog
-			onOpenChange={(open) => {
-				if (open)
+			open={open}
+			onOpenChange={(nextOpen) => {
+				onOpenChange?.(nextOpen);
+				if (nextOpen)
 					form.reset({ orgId, name: "", tag: "", description: "", avatarUrl: "", bannerUrl: "" });
 			}}
 		>
-			<DialogTrigger asChild>{children}</DialogTrigger>
+			{children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>Create team</DialogTitle>

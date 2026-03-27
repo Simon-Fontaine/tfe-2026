@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	const unreadCount = await getUnreadNotificationCount(user.id);
 	const orgs = await getOrgsForUser(user.id);
 
-	const contextOrgs = orgs.map((org) => ({ id: org.id, name: org.name }));
+	const contextOrgs = orgs.map((org) => ({ id: org.id, name: org.name, canManage: org.canManage }));
 	const contextTeams = orgs
 		.flatMap((org) =>
 			org.teams.map((team) => ({
