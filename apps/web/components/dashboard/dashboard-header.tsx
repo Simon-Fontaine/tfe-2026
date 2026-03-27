@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
-import type { UserMenuUser } from "@/components/shared/user-menu-dropdown";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -14,13 +13,12 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
+import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
 import { HeaderActions } from "./header-actions";
 
 interface DashboardHeaderProps {
 	orgs: SwitcherOrg[];
 	teams: SwitcherTeam[];
-	user: UserMenuUser;
 	unreadCount: number;
 }
 
@@ -129,7 +127,7 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	return crumbs;
 }
 
-export function DashboardHeader({ orgs, teams, user, unreadCount }: DashboardHeaderProps) {
+export function DashboardHeader({ orgs, teams, unreadCount }: DashboardHeaderProps) {
 	const pathname = usePathname();
 	const crumbs = useBreadcrumbs(pathname, orgs, teams);
 
@@ -137,15 +135,9 @@ export function DashboardHeader({ orgs, teams, user, unreadCount }: DashboardHea
 		<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3">
 			<div className="flex min-w-0 flex-1 items-center gap-2">
 				<SidebarTrigger className="md:hidden" />
-				<ContextSwitcher
-					orgs={orgs}
-					teams={teams}
-					placement="header"
-					className="min-w-0 max-w-[15rem] sm:max-w-[18rem] md:max-w-[22rem]"
-				/>
 				{crumbs.length > 0 && (
 					<>
-						<Separator orientation="vertical" className="mx-1 h-4" />
+						<Separator orientation="vertical" className="h-4" />
 						<Breadcrumb className="min-w-0">
 							<BreadcrumbList className="min-w-0">
 								{crumbs.map((crumb, i) => (
@@ -170,7 +162,7 @@ export function DashboardHeader({ orgs, teams, user, unreadCount }: DashboardHea
 				)}
 			</div>
 
-			<HeaderActions user={user} unreadCount={unreadCount} />
+			<HeaderActions unreadCount={unreadCount} />
 		</header>
 	);
 }

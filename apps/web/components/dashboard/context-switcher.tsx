@@ -24,7 +24,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenuButton } from "@/components/ui/sidebar";
+import {
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	useSidebar,
+} from "@/components/ui/sidebar";
 import { dashboardRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -45,8 +50,6 @@ export interface SwitcherTeam {
 interface ContextSwitcherProps {
 	orgs: SwitcherOrg[];
 	teams: SwitcherTeam[];
-	placement?: "header" | "sidebar";
-	className?: string;
 }
 
 function getActiveContext(pathname: string) {
@@ -93,14 +96,10 @@ function getActiveIcon(
 	return UserCircle02Icon;
 }
 
-export function ContextSwitcher({
-	orgs,
-	teams,
-	placement = "sidebar",
-	className,
-}: ContextSwitcherProps) {
+export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 	const pathname = usePathname();
 	const { activeOrgId, activeTeamId, isWorkspaceIndex, isPersonal } = getActiveContext(pathname);
+	const { isMobile } = useSidebar();
 	const label = getActiveLabel(activeOrgId, activeTeamId, isWorkspaceIndex, orgs, teams);
 	const icon = getActiveIcon(activeOrgId, activeTeamId, isWorkspaceIndex);
 	const [open, setOpen] = useState(false);
@@ -120,134 +119,115 @@ export function ContextSwitcher({
 
 	return (
 		<>
-			<DropdownMenu open={open} onOpenChange={setOpen}>
-				<DropdownMenuTrigger asChild>
-					{placement === "sidebar" ? (
-						<SidebarMenuButton
-							size="lg"
-							tooltip="Switch workspace"
-							className={cn(
-								"bg-sidebar-accent/50 ring-1 ring-sidebar-border data-[state=open]:bg-sidebar-accent",
-								className
-							)}
-							aria-label={`Current workspace: ${label}`}
-						>
-							<ContextSwitcherTriggerContent
-								label={label}
-								icon={icon}
-								activeOrgId={activeOrgId}
-								activeTeamId={activeTeamId}
-								isWorkspaceIndex={isWorkspaceIndex}
-								textClassName="text-sm"
-								metaClassName="text-[11px]"
-							/>
-						</SidebarMenuButton>
-					) : (
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className={cn("min-w-0 justify-start gap-2 px-2.5", className)}
-							aria-label={`Current workspace: ${label}`}
-						>
-							<ContextSwitcherTriggerContent
-								label={label}
-								icon={icon}
-								activeOrgId={activeOrgId}
-								activeTeamId={activeTeamId}
-								isWorkspaceIndex={isWorkspaceIndex}
-							/>
-						</Button>
-					)}
-				</DropdownMenuTrigger>
-
-				<DropdownMenuContent
-					className="w-80 min-w-80 p-1"
-					align="start"
-					side="right"
-					sideOffset={8}
-				>
-					<DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
-
-					<DropdownMenuGroup>
-						<ContextDropdownItem
-							href={dashboardRoutes.home}
-							icon={Home01Icon}
-							label="Personal"
-							description="Profile, schedule, and discover"
-							isActive={isPersonal}
-							onSelect={() => setOpen(false)}
-						/>
-					</DropdownMenuGroup>
-
-					{orgs.length > 0 ? <DropdownMenuSeparator /> : null}
-
-					<div className="max-h-96 overflow-y-auto">
-						{orgs.map((org, index) => {
-							const orgTeams = teamsByOrg.get(org.id) ?? [];
-							return (
-								<div key={org.id}>
-									<DropdownMenuLabel className="pb-1">{org.name}</DropdownMenuLabel>
-									<DropdownMenuGroup>
-										<ContextDropdownItem
-											href={dashboardRoutes.context.orgById(org.id)}
-											icon={UserGroupIcon}
-											label="Organization"
-											description="Overview, members, posts, and settings"
-											isActive={activeOrgId === org.id && !activeTeamId}
-											onSelect={() => setOpen(false)}
-										/>
-										{orgTeams.map((team) => (
-											<ContextDropdownItem
-												key={team.id}
-												href={dashboardRoutes.context.teamById(org.id, team.id)}
-												icon={Sword03Icon}
-												label={team.name}
-												description={`[${team.tag}] ${team.organizationName}`}
-												isActive={activeTeamId === team.id}
-												onSelect={() => setOpen(false)}
-												indented
-											/>
-										))}
-									</DropdownMenuGroup>
-									{index < orgs.length - 1 ? <DropdownMenuSeparator /> : null}
-								</div>
-							);
-						})}
-					</div>
-
-					<DropdownMenuSeparator />
-					<div className="p-1">
-						{activeOrg?.canManage ? (
-							<Button
-								type="button"
-								size="sm"
-								className="w-full justify-start"
-								onClick={() => {
-									setOpen(false);
-									setCreateTeamOpen(true);
-								}}
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<DropdownMenu open={open} onOpenChange={setOpen}>
+						<DropdownMenuTrigger asChild>
+							<SidebarMenuButton
+								size="lg"
+								tooltip="Switch workspace"
+								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+								aria-label={`Current workspace: ${label}`}
 							>
-								<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
-								Add team
-							</Button>
-						) : (
-							<Button
-								asChild
-								type="button"
-								size="sm"
-								variant="outline"
-								className="w-full justify-start"
-							>
-								<Link href={dashboardRoutes.organizations} onClick={() => setOpen(false)}>
-									<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-4" />
-									Organizations
-								</Link>
-							</Button>
-						)}
-					</div>
-				</DropdownMenuContent>
-			</DropdownMenu>
+								<ContextSwitcherTriggerContent
+									label={label}
+									icon={icon}
+									activeOrgId={activeOrgId}
+									activeTeamId={activeTeamId}
+									isWorkspaceIndex={isWorkspaceIndex}
+								/>
+							</SidebarMenuButton>
+						</DropdownMenuTrigger>
+
+						<DropdownMenuContent
+							className="w-(--radix-dropdown-menu-trigger-width) min-w-80 p-1"
+							align="start"
+							side={isMobile ? "bottom" : "right"}
+							sideOffset={4}
+						>
+							<DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
+
+							<DropdownMenuGroup>
+								<ContextDropdownItem
+									href={dashboardRoutes.home}
+									icon={Home01Icon}
+									label="Personal"
+									description="Profile, schedule, and discover"
+									isActive={isPersonal}
+									onSelect={() => setOpen(false)}
+								/>
+							</DropdownMenuGroup>
+
+							{orgs.length > 0 ? <DropdownMenuSeparator /> : null}
+
+							<div className="max-h-96 overflow-y-auto">
+								{orgs.map((org, index) => {
+									const orgTeams = teamsByOrg.get(org.id) ?? [];
+									return (
+										<div key={org.id}>
+											<DropdownMenuLabel className="pb-1">{org.name}</DropdownMenuLabel>
+											<DropdownMenuGroup>
+												<ContextDropdownItem
+													href={dashboardRoutes.context.orgById(org.id)}
+													icon={UserGroupIcon}
+													label="Organization"
+													description="Overview, members, posts, and settings"
+													isActive={activeOrgId === org.id && !activeTeamId}
+													onSelect={() => setOpen(false)}
+												/>
+												{orgTeams.map((team) => (
+													<ContextDropdownItem
+														key={team.id}
+														href={dashboardRoutes.context.teamById(org.id, team.id)}
+														icon={Sword03Icon}
+														label={team.name}
+														description={`[${team.tag}] ${team.organizationName}`}
+														isActive={activeTeamId === team.id}
+														onSelect={() => setOpen(false)}
+														indented
+													/>
+												))}
+											</DropdownMenuGroup>
+											{index < orgs.length - 1 ? <DropdownMenuSeparator /> : null}
+										</div>
+									);
+								})}
+							</div>
+
+							<DropdownMenuSeparator />
+							<div className="p-1">
+								{activeOrg?.canManage ? (
+									<Button
+										type="button"
+										size="sm"
+										className="w-full justify-start"
+										onClick={() => {
+											setOpen(false);
+											setCreateTeamOpen(true);
+										}}
+									>
+										<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+										Add team
+									</Button>
+								) : (
+									<Button
+										asChild
+										type="button"
+										size="sm"
+										variant="outline"
+										className="w-full justify-start"
+									>
+										<Link href={dashboardRoutes.organizations} onClick={() => setOpen(false)}>
+											<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-4" />
+											Organizations
+										</Link>
+									</Button>
+								)}
+							</div>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</SidebarMenuItem>
+			</SidebarMenu>
 
 			{activeOrg ? (
 				<CreateTeamDialog
@@ -279,12 +259,12 @@ function ContextSwitcherTriggerContent({
 }) {
 	return (
 		<>
-			<div className="flex size-6 shrink-0 items-center justify-center bg-primary/10">
+			<div className="flex size-8 shrink-0 items-center justify-center bg-primary/10">
 				<HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5 text-primary" />
 			</div>
 			<div className="grid min-w-0 flex-1 text-left leading-tight">
-				<span className={cn("truncate font-semibold", textClassName)}>{label}</span>
-				<span className={cn("truncate text-muted-foreground", metaClassName)}>
+				<span className={cn("truncate text-sm font-medium", textClassName)}>{label}</span>
+				<span className={cn("truncate text-xs text-muted-foreground", metaClassName)}>
 					{activeTeamId
 						? "Team workspace"
 						: activeOrgId

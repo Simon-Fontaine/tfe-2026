@@ -15,19 +15,31 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+	getUserInitials,
+	UserMenuDropdown,
+	type UserMenuUser,
+} from "@/components/shared/user-menu-dropdown";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
+	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarRail,
+	useSidebar,
 } from "@/components/ui/sidebar";
+import type { SessionUser } from "@/lib/auth/session";
 import { dashboardRoutes } from "@/lib/routes";
-import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
+import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
 
 interface DashboardSidebarProps {
+	user: SessionUser;
 	contextOrgs: SwitcherOrg[];
 	contextTeams: SwitcherTeam[];
 }
@@ -41,7 +53,7 @@ function useActiveContext(pathname: string) {
 	};
 }
 
-export function DashboardSidebar(_: DashboardSidebarProps) {
+export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardSidebarProps) {
 	const pathname = usePathname();
 	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
 
@@ -200,6 +212,9 @@ export function DashboardSidebar(_: DashboardSidebarProps) {
 
 	return (
 		<Sidebar collapsible="icon">
+			<SidebarHeader>
+				<ContextSwitcher orgs={contextOrgs} teams={contextTeams} />
+			</SidebarHeader>
 			<SidebarContent>
 				{contextGroups.map((group, i) => (
 					<SidebarGroup key={group.label ?? i}>
@@ -227,6 +242,43 @@ export function DashboardSidebar(_: DashboardSidebarProps) {
 					</SidebarGroup>
 				))}
 			</SidebarContent>
+			<SidebarFooter>
+				<SidebarUserNav user={user} />
+			</SidebarFooter>
+			<SidebarRail />
 		</Sidebar>
+	);
+}
+
+function SidebarUserNav({ user }: { user: UserMenuUser }) {
+	const { isMobile } = useSidebar();
+	const initials = getUserInitials(user.displayName);
+
+	return (
+		<SidebarMenu>
+			<SidebarMenuItem>
+				<UserMenuDropdown
+					user={user}
+					align="start"
+					side={isMobile ? "bottom" : "right"}
+					sideOffset={4}
+				>
+					<SidebarMenuButton
+						size="lg"
+						className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+						aria-label="User menu"
+					>
+						<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage className="rounded-none" src={user.avatarUrl ?? undefined} />
+							<AvatarFallback className="rounded-none text-xs">{initials}</AvatarFallback>
+						</Avatar>
+						<div className="grid min-w-0 flex-1 text-left leading-tight">
+							<span className="truncate text-sm font-medium">{user.displayName}</span>
+							<span className="truncate text-xs text-muted-foreground">{user.email}</span>
+						</div>
+					</SidebarMenuButton>
+				</UserMenuDropdown>
+			</SidebarMenuItem>
+		</SidebarMenu>
 	);
 }
