@@ -38,7 +38,7 @@ export default async function TeamSettingsPage({ params }: TeamSettingsPageProps
 		<PageContainer>
 			<PageHeader
 				title="Settings"
-				description="Manage team profile, recruiting status, and danger zone actions."
+				description="Manage team profile, recruiting, membership policy, and workspace lifecycle actions."
 			/>
 			<TeamSettingsPanel team={team} />
 		</PageContainer>

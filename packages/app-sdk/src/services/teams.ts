@@ -20,16 +20,6 @@ export type UpdateTeamInput = {
 };
 
 export type TeamScopedInput = { teamId: string };
-export type AddTeamMemberInput = {
-	teamId: string;
-	userId: string;
-	memberType?: "player" | "staff";
-	roleInTeam?: string;
-	gameRole?: string;
-	staffRole?: string;
-	status: string;
-	permissionRole?: string;
-};
 export type UpdateTeamMemberInput = {
 	teamId: string;
 	memberId: string;
@@ -87,18 +77,6 @@ export class TeamsService {
 
 	leave(input: TeamScopedInput): Promise<SdkResult<MutationSuccess>> {
 		return this.transport.delete<MutationSuccess>(`/api/teams/${input.teamId}/leave`);
-	}
-
-	addMember(input: AddTeamMemberInput): Promise<SdkResult<MutationSuccess>> {
-		return this.transport.post<MutationSuccess>(`/api/teams/${input.teamId}/roster`, {
-			userId: input.userId,
-			memberType: input.memberType,
-			roleInTeam: input.roleInTeam,
-			gameRole: input.gameRole,
-			staffRole: input.staffRole,
-			status: input.status,
-			permissionRole: input.permissionRole,
-		});
 	}
 
 	updateMember(input: UpdateTeamMemberInput): Promise<SdkResult<MutationSuccess>> {

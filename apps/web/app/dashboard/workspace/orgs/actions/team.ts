@@ -215,35 +215,6 @@ export async function leaveTeamAction(
 	return { success: true };
 }
 
-export async function addPlayerAction(
-	_prev: FormActionResult | null,
-	formData: FormData
-): Promise<FormActionResult> {
-	const teamId = String(formData.get("teamId") ?? "");
-	const orgId = await getVerifiedTeamOrgId(teamId);
-	if (!orgId) return { success: false, error: "Team not found" };
-
-	const sdk = getServerSdk();
-	const fields = getTeamMemberFields(formData);
-	const result = await sdk.teams.addMember({
-		teamId,
-		userId: String(formData.get("userId") ?? ""),
-		memberType: fields.memberType,
-		roleInTeam: fields.roleInTeam,
-		gameRole: fields.gameRole,
-		staffRole: fields.staffRole,
-		status: fields.status ?? "active",
-		permissionRole: fields.permissionRole,
-	});
-
-	const actionResult = toActionResult(result);
-	if (!("data" in actionResult)) return actionResult;
-
-	revalidateTeamWorkspace(orgId, teamId);
-	revalidateOrgWorkspace(orgId);
-	return { success: true };
-}
-
 export async function updateRosterStatusAction(
 	_prev: FormActionResult | null,
 	formData: FormData

@@ -31,14 +31,14 @@ export function RecruitingToggle({ teamId, isRecruiting }: RecruitingToggleProps
 				onClick={handleToggle}
 				disabled={isPending}
 				className={cn(
-					"relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+					"relative inline-flex h-5 w-10 shrink-0 cursor-pointer items-center border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
 					isRecruiting ? "bg-primary" : "bg-muted-foreground/30"
 				)}
 			>
 				<span
 					className={cn(
-						"pointer-events-none block size-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-						isRecruiting ? "translate-x-4" : "translate-x-0"
+						"pointer-events-none block size-4 bg-background shadow-lg ring-0 transition-transform",
+						isRecruiting ? "translate-x-5" : "translate-x-0"
 					)}
 				/>
 			</button>
