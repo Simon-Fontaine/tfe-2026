@@ -1,10 +1,16 @@
 "use client";
 
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { UserMenuUser } from "@/components/shared/user-menu-dropdown";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
@@ -134,32 +140,24 @@ export function DashboardHeader({ orgs, teams, user, unreadCount }: DashboardHea
 				{crumbs.length > 0 && (
 					<>
 						<Separator orientation="vertical" className="mx-1 h-4" />
-						<nav
-							aria-label="Breadcrumb"
-							className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground"
-						>
-							{crumbs.map((crumb, i) => (
-								<span key={crumb.label} className="flex items-center gap-1">
-									{i > 0 && (
-										<HugeiconsIcon
-											icon={ArrowRight01Icon}
-											strokeWidth={2}
-											className="size-3 shrink-0"
-										/>
-									)}
-									{crumb.href ? (
-										<Link
-											href={crumb.href}
-											className="truncate transition-colors hover:text-foreground"
-										>
-											{crumb.label}
-										</Link>
-									) : (
-										<span className="truncate font-medium text-foreground">{crumb.label}</span>
-									)}
-								</span>
-							))}
-						</nav>
+						<Breadcrumb className="min-w-0">
+							<BreadcrumbList className="min-w-0">
+								{crumbs.map((crumb, i) => (
+									<BreadcrumbItem key={`${crumb.label}-${crumb.href ?? i}`}>
+										{i > 0 ? <BreadcrumbSeparator /> : null}
+										{crumb.href ? (
+											<BreadcrumbLink asChild>
+												<Link href={crumb.href} className="truncate">
+													{crumb.label}
+												</Link>
+											</BreadcrumbLink>
+										) : (
+											<BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
+										)}
+									</BreadcrumbItem>
+								))}
+							</BreadcrumbList>
+						</Breadcrumb>
 					</>
 				)}
 			</div>

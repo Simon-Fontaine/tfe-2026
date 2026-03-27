@@ -25,7 +25,7 @@ interface EmptyStateBlockProps {
 
 const variantClasses = {
 	inline: "py-8",
-	card: "rounded-lg border border-dashed p-8",
+	card: "border border-dashed p-8",
 	page: "py-16",
 } as const;
 
@@ -47,7 +47,7 @@ export function EmptyStateBlock({
 				variantClasses[variant]
 			)}
 		>
-			<div className="flex size-10 items-center justify-center rounded-full bg-muted">
+			<div className="flex size-10 items-center justify-center border bg-muted">
 				<HugeiconsIcon icon={icon} strokeWidth={2} className="size-5 opacity-60" />
 			</div>
 			<p className="text-sm font-medium text-foreground">{title}</p>
@@ -55,12 +55,12 @@ export function EmptyStateBlock({
 			{(actionLabel || secondaryActionLabel) && (
 				<div className="mt-1 flex items-center gap-2">
 					{actionLabel && actionHref && (
-						<Button type="button" variant="outline" size="sm" asChild>
+						<Button type="button" size="sm" asChild>
 							<Link href={actionHref}>{actionLabel}</Link>
 						</Button>
 					)}
 					{actionLabel && onAction && !actionHref && (
-						<Button type="button" variant="outline" size="sm" onClick={onAction}>
+						<Button type="button" size="sm" onClick={onAction}>
 							{actionLabel}
 						</Button>
 					)}
