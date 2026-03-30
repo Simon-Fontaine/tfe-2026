@@ -45,11 +45,11 @@ interface DashboardSidebarProps {
 }
 
 function useActiveContext(pathname: string) {
-	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
-	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
+	const teamMatch = pathname.match(/^\/dashboard\/teams\/([^/]+)/);
+	const orgMatch = pathname.match(/^\/dashboard\/orgs\/([^/]+)/);
 	return {
 		activeOrgId: orgMatch?.[1] ?? null,
-		activeTeamId: teamMatch?.[2] ?? null,
+		activeTeamId: teamMatch?.[1] ?? null,
 	};
 }
 
@@ -62,48 +62,91 @@ export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardS
 	const canManageOrg = activeOrg?.canManage ?? false;
 	const canManageTeam = activeTeam?.canManage ?? false;
 
-	const contextGroups =
-		activeTeamId && activeOrgId
+	const contextGroups = activeTeamId
+		? [
+				{
+					label: "Team",
+					links: [
+						{
+							label: "Overview",
+							href: dashboardRoutes.teams.byId(activeTeamId),
+							icon: Home01Icon,
+							exact: true,
+						},
+						{
+							label: "Roster",
+							href: dashboardRoutes.teams.roster(activeTeamId),
+							icon: UserGroupIcon,
+						},
+						{
+							label: "Schedule",
+							href: dashboardRoutes.teams.schedule(activeTeamId),
+							icon: Calendar03Icon,
+						},
+						{
+							label: "Posts",
+							href: dashboardRoutes.teams.recruitingPosts(activeTeamId),
+							icon: UserSearch01Icon,
+						},
+						{
+							label: "Conversations",
+							href: dashboardRoutes.teams.recruitingConversations(activeTeamId),
+							icon: Mail01Icon,
+						},
+						...(canManageTeam
+							? [
+									{
+										label: "Invites",
+										href: dashboardRoutes.teams.invites(activeTeamId),
+										icon: UserAdd01Icon,
+									},
+									{
+										label: "Settings",
+										href: dashboardRoutes.teams.settings(activeTeamId),
+										icon: Settings01Icon,
+									},
+								]
+							: []),
+					],
+				},
+			]
+		: activeOrgId
 			? [
 					{
-						label: "Team",
+						label: "Organization",
 						links: [
 							{
 								label: "Overview",
-								href: dashboardRoutes.context.teamById(activeOrgId, activeTeamId),
+								href: dashboardRoutes.orgs.byId(activeOrgId),
 								icon: Home01Icon,
 								exact: true,
 							},
+							{ label: "Teams", href: dashboardRoutes.orgs.teams(activeOrgId), icon: Sword03Icon },
 							{
-								label: "Players",
-								href: dashboardRoutes.context.teamPlayers(activeOrgId, activeTeamId),
+								label: "Members",
+								href: dashboardRoutes.orgs.members(activeOrgId),
 								icon: UserGroupIcon,
 							},
 							{
-								label: "Staff",
-								href: dashboardRoutes.context.teamStaff(activeOrgId, activeTeamId),
-								icon: UserAdd01Icon,
-							},
-							{
 								label: "Posts",
-								href: dashboardRoutes.context.teamPosts(activeOrgId, activeTeamId),
+								href: dashboardRoutes.orgs.recruitingPosts(activeOrgId),
 								icon: UserSearch01Icon,
 							},
 							{
 								label: "Conversations",
-								href: dashboardRoutes.context.teamConversations(activeOrgId, activeTeamId),
+								href: dashboardRoutes.orgs.recruitingConversations(activeOrgId),
 								icon: Mail01Icon,
 							},
-							...(canManageTeam
+							...(canManageOrg
 								? [
 										{
 											label: "Invites",
-											href: dashboardRoutes.context.teamInvites(activeOrgId, activeTeamId),
+											href: dashboardRoutes.orgs.invites(activeOrgId),
 											icon: UserAdd01Icon,
 										},
 										{
 											label: "Settings",
-											href: dashboardRoutes.context.teamSettings(activeOrgId, activeTeamId),
+											href: dashboardRoutes.orgs.settings(activeOrgId),
 											icon: Settings01Icon,
 										},
 									]
@@ -111,117 +154,51 @@ export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardS
 						],
 					},
 				]
-			: activeOrgId
-				? [
-						{
-							label: "Organization",
-							links: [
-								{
-									label: "Overview",
-									href: dashboardRoutes.context.orgById(activeOrgId),
-									icon: Home01Icon,
-									exact: true,
-								},
-								{
-									label: "Teams",
-									href: dashboardRoutes.context.orgTeams(activeOrgId),
-									icon: Sword03Icon,
-								},
-								{
-									label: "Members",
-									href: dashboardRoutes.context.orgMembers(activeOrgId),
-									icon: UserGroupIcon,
-								},
-								{
-									label: "Posts",
-									href: dashboardRoutes.context.orgPosts(activeOrgId),
-									icon: UserSearch01Icon,
-								},
-								{
-									label: "Conversations",
-									href: dashboardRoutes.context.orgConversations(activeOrgId),
-									icon: Mail01Icon,
-								},
-								...(canManageOrg
-									? [
-											{
-												label: "Invites",
-												href: dashboardRoutes.context.orgInvites(activeOrgId),
-												icon: UserAdd01Icon,
-											},
-											{
-												label: "Settings",
-												href: dashboardRoutes.context.orgSettings(activeOrgId),
-												icon: Settings01Icon,
-											},
-										]
-									: []),
-							],
-						},
-					]
-				: [
-						{
-							links: [
-								{
-									label: "Dashboard",
-									href: dashboardRoutes.home,
-									icon: Home01Icon,
-									exact: true,
-								},
-							],
-						},
-						{
-							label: "Personal",
-							links: [
-								{
-									label: "Profile",
-									href: dashboardRoutes.personal.profile,
-									icon: UserCircle02Icon,
-								},
-								{
-									label: "Schedule",
-									href: dashboardRoutes.personal.schedule,
-									icon: Calendar03Icon,
-								},
-								{
-									label: "Notifications",
-									href: dashboardRoutes.personal.notifications,
-									icon: Mail01Icon,
-								},
-								{
-									label: "Settings",
-									href: dashboardRoutes.personal.settings.account,
-									icon: Settings01Icon,
-								},
-							],
-						},
-						{
-							label: "Discover",
-							links: [
-								{ label: "Posts", href: dashboardRoutes.discover.posts, icon: UserSearch01Icon },
-								{
-									label: "Conversations",
-									href: dashboardRoutes.discover.conversations,
-									icon: Mail01Icon,
-								},
-								{
-									label: "Invitations",
-									href: dashboardRoutes.discover.invitations,
-									icon: UserAdd01Icon,
-								},
-							],
-						},
-						{
-							label: "Workspace",
-							links: [
-								{
-									label: "Organizations",
-									href: dashboardRoutes.organizations,
-									icon: UserGroupIcon,
-								},
-							],
-						},
-					];
+			: [
+					{
+						links: [
+							{ label: "Dashboard", href: dashboardRoutes.home, icon: Home01Icon, exact: true },
+						],
+					},
+					{
+						label: "Personal",
+						links: [
+							{ label: "Profile", href: dashboardRoutes.personal.profile, icon: UserCircle02Icon },
+							{
+								label: "Notifications",
+								href: dashboardRoutes.personal.notifications,
+								icon: Mail01Icon,
+							},
+							{
+								label: "Invitations",
+								href: dashboardRoutes.personal.invitations,
+								icon: UserAdd01Icon,
+							},
+							{
+								label: "Settings",
+								href: dashboardRoutes.personal.settings.account,
+								icon: Settings01Icon,
+							},
+						],
+					},
+					{
+						label: "Recruiting",
+						links: [
+							{ label: "Posts", href: dashboardRoutes.discover.posts, icon: UserSearch01Icon },
+							{
+								label: "Conversations",
+								href: dashboardRoutes.discover.conversations,
+								icon: Mail01Icon,
+							},
+						],
+					},
+					{
+						label: "Workspace",
+						links: [
+							{ label: "Organizations", href: dashboardRoutes.organizations, icon: UserGroupIcon },
+						],
+					},
+				];
 
 	return (
 		<Sidebar collapsible="icon">

@@ -16,7 +16,7 @@ export function HeaderActions({ unreadCount }: HeaderActionsProps) {
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<Button variant="ghost" size="icon-sm" asChild>
-						<Link href="/dashboard/personal/notifications" className="relative">
+						<Link href="/dashboard/notifications" className="relative">
 							<HugeiconsIcon icon={Notification01Icon} strokeWidth={2} className="size-4" />
 							{unreadCount > 0 && (
 								<span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold leading-none text-primary-foreground">

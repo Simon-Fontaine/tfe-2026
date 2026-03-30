@@ -9,7 +9,7 @@ interface NotificationBellProps {
 export function NotificationBell({ unreadCount }: NotificationBellProps) {
 	return (
 		<Link
-			href="/dashboard/personal/notifications"
+			href="/dashboard/notifications"
 			className="relative inline-flex size-8 items-center justify-center rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 		>
 			<HugeiconsIcon icon={Notification01Icon} strokeWidth={2} className="size-4" />

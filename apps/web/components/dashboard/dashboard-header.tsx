@@ -27,32 +27,32 @@ const SUB_PAGE_LABELS: Record<string, string> = {
 	members: "Members",
 	posts: "Posts",
 	settings: "Settings",
-	players: "Players",
-	staff: "Staff",
 	profile: "Profile",
-	schedule: "Schedule",
 	notifications: "Notifications",
 	account: "Account",
 	security: "Security",
 	conversations: "Conversations",
 	invitations: "Invitations",
 	invites: "Invites",
+	roster: "Roster",
+	recruiting: "Recruiting",
+	activity: "Activity",
+	orgs: "Organizations",
+	schedule: "Schedule",
 };
 
 function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTeam[]) {
 	const crumbs: { label: string; href?: string }[] = [];
 
 	// Team context: org > team > sub-page
-	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)(?:\/(\w+))?/);
+	const teamMatch = pathname.match(/^\/dashboard\/teams\/([^/]+)(?:\/(\w+))?/);
 	if (teamMatch) {
-		const [, orgId, teamId, subPage] = teamMatch;
-		const org = orgs.find((o) => o.id === orgId);
+		const [, teamId, subPage] = teamMatch;
 		const team = teams.find((t) => t.id === teamId);
-		if (org) crumbs.push({ label: org.name, href: `/dashboard/c/org/${orgId}` });
 		if (team) {
 			const teamLabel = `[${team.tag}] ${team.name}`;
 			if (subPage && SUB_PAGE_LABELS[subPage]) {
-				crumbs.push({ label: teamLabel, href: `/dashboard/c/org/${orgId}/team/${teamId}` });
+				crumbs.push({ label: teamLabel, href: `/dashboard/teams/${teamId}` });
 				crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
 			} else {
 				crumbs.push({ label: teamLabel });
@@ -62,13 +62,13 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	}
 
 	// Org context: org > sub-page
-	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)(?:\/(\w+))?$/);
+	const orgMatch = pathname.match(/^\/dashboard\/orgs\/([^/]+)(?:\/(\w+))?$/);
 	if (orgMatch) {
 		const [, orgId, subPage] = orgMatch;
 		const org = orgs.find((o) => o.id === orgId);
 		if (org) {
 			if (subPage && SUB_PAGE_LABELS[subPage]) {
-				crumbs.push({ label: org.name, href: `/dashboard/c/org/${orgId}` });
+				crumbs.push({ label: org.name, href: `/dashboard/orgs/${orgId}` });
 				crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
 			} else {
 				crumbs.push({ label: org.name });
@@ -78,11 +78,11 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	}
 
 	// Personal settings: Settings > Account/Security
-	const settingsMatch = pathname.match(/^\/dashboard\/personal\/settings(?:\/(\w+))?/);
+	const settingsMatch = pathname.match(/^\/dashboard\/settings(?:\/(\w+))?/);
 	if (settingsMatch) {
 		const [, subPage] = settingsMatch;
 		if (subPage && SUB_PAGE_LABELS[subPage]) {
-			crumbs.push({ label: "Settings", href: "/dashboard/personal/settings/account" });
+			crumbs.push({ label: "Settings", href: "/dashboard/settings/account" });
 			crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
 		} else {
 			crumbs.push({ label: "Settings" });
@@ -91,11 +91,11 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	}
 
 	// Discover: Discover > Posts/Conversations/Invitations
-	const discoverMatch = pathname.match(/^\/dashboard\/discover(?:\/(\w+))?/);
+	const discoverMatch = pathname.match(/^\/dashboard\/recruiting(?:\/(\w+))?/);
 	if (discoverMatch) {
 		const [, subPage] = discoverMatch;
 		if (subPage && SUB_PAGE_LABELS[subPage]) {
-			crumbs.push({ label: "Discover", href: "/dashboard/discover/posts" });
+			crumbs.push({ label: "Discover", href: "/dashboard/recruiting/posts" });
 			crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
 		} else {
 			crumbs.push({ label: "Discover" });
@@ -104,7 +104,7 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	}
 
 	// Personal sub-pages
-	const personalMatch = pathname.match(/^\/dashboard\/personal\/(\w+)/);
+	const personalMatch = pathname.match(/^\/dashboard\/(profile|notifications|invitations)/);
 	if (personalMatch) {
 		const [, page] = personalMatch;
 		if (SUB_PAGE_LABELS[page]) {
@@ -114,7 +114,7 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 	}
 
 	// Organizations list
-	if (pathname.startsWith("/dashboard/organizations")) {
+	if (pathname.startsWith("/dashboard/orgs")) {
 		crumbs.push({ label: "Organizations" });
 		return crumbs;
 	}

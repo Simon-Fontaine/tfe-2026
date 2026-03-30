@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-	{ label: "Account", href: "/dashboard/personal/settings/account" },
-	{ label: "Security", href: "/dashboard/personal/settings/security" },
+	{ label: "Account", href: "/dashboard/settings/account" },
+	{ label: "Security", href: "/dashboard/settings/security" },
 ] as const;
 
 export function SettingsSubNav() {
@@ -16,8 +16,8 @@ export function SettingsSubNav() {
 		<nav className="mb-6 flex gap-1 border-b" aria-label="Settings sections">
 			{TABS.map((tab) => {
 				const isActive =
-					tab.href === "/dashboard/personal/settings/account"
-						? pathname === "/dashboard/personal/settings/account"
+					tab.href === "/dashboard/settings/account"
+						? pathname === "/dashboard/settings/account"
 						: pathname.startsWith(tab.href);
 
 				return (

@@ -51,7 +51,7 @@ export function WeeklyGrid({ recurring, teamId }: WeeklyGridProps) {
 												</Badge>
 											)}
 											<div className="absolute right-0.5 top-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-												<DeleteButton id={row.id} />
+												<DeleteButton id={row.id} teamId={teamId} />
 											</div>
 										</div>
 									))}

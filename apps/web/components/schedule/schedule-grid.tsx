@@ -24,7 +24,7 @@ export function ScheduleGrid({ availability, teams, activeTeam }: ScheduleGridPr
 					{teams.map((team) => (
 						<Link
 							key={team.id}
-							href={`/dashboard/personal/schedule?team=${team.id}`}
+							href={`/dashboard/teams/${team.id}/schedule`}
 							className={cn(
 								"border px-3 py-1 text-xs font-medium transition-colors hover:bg-muted",
 								activeTeam.id === team.id

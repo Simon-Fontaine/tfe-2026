@@ -22,7 +22,7 @@ export async function addAvailabilityAction(
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath(`/dashboard/personal/schedule?team=${teamId}`);
+	revalidatePath(`/dashboard/teams/${teamId}/schedule`);
 	return { success: true };
 }
 
@@ -31,9 +31,11 @@ export async function deleteAvailabilityAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const id = String(formData.get("id") ?? "");
+	const teamId = String(formData.get("teamId") ?? "");
 	const res = await apiDelete(`/api/schedule/availability/${id}`);
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	revalidatePath("/dashboard/personal/schedule");
+	if (teamId) revalidatePath(`/dashboard/teams/${teamId}/schedule`);
+	revalidatePath("/dashboard");
 	return { success: true };
 }

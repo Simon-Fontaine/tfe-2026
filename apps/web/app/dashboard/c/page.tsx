@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function ContextRootPage() {
-	redirect("/dashboard/organizations");
+	redirect("/dashboard/orgs");
 }

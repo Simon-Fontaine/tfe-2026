@@ -54,7 +54,7 @@ export default async function PublicPostsPage({ searchParams }: PublicPostsPageP
 						</p>
 					</div>
 					<Button asChild size="sm">
-						<Link href={user ? "/dashboard/discover/posts" : "/auth?step=login"}>
+						<Link href={user ? "/dashboard/recruiting/posts" : "/auth?step=login"}>
 							{user ? "Open dashboard recruiting" : "Sign in to respond"}
 						</Link>
 					</Button>

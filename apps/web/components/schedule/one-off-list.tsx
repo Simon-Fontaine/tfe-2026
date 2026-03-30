@@ -54,7 +54,7 @@ export function OneOffList({ oneOffs, teamId }: OneOffListProps) {
 											{row.startTime} – {row.endTime} · {row.timezone}
 										</p>
 									</div>
-									<DeleteButton id={row.id} />
+									<DeleteButton id={row.id} teamId={teamId} />
 								</div>
 							))}
 						</div>

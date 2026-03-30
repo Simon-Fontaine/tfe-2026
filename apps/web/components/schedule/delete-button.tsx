@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
 
-export function DeleteButton({ id }: { id: string }) {
+export function DeleteButton({ id, teamId }: { id: string; teamId: string }) {
 	const { formAction, submit, isPending } = useFormAction(deleteAvailabilityAction);
 
 	return (
@@ -17,10 +17,12 @@ export function DeleteButton({ id }: { id: string }) {
 				e.preventDefault();
 				const fd = new FormData(e.currentTarget);
 				fd.set("id", id);
+				fd.set("teamId", teamId);
 				submit(fd);
 			}}
 		>
 			<input type="hidden" name="id" value={id} />
+			<input type="hidden" name="teamId" value={teamId} />
 			<Button
 				type="submit"
 				variant="ghost"

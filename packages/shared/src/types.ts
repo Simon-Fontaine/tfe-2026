@@ -656,6 +656,7 @@ export type PlayerStats = {
 
 export type AvailabilityRow = {
 	id: string;
+	userId: string;
 	teamId: string;
 	dayOfWeek: number | null;
 	specificDate: IsoDateString | null;
@@ -669,6 +670,25 @@ export type UserTeam = {
 	id: string;
 	name: string;
 	tag: string;
+};
+
+export type TeamScheduleMember = {
+	userId: string;
+	displayName: string;
+	avatarUrl: string | null;
+	memberType: MemberType;
+	permissionRole: TeamPermissionRole;
+	status: RosterStatus;
+	gameRole: OW2Role | null;
+	staffRole: StaffRole | null;
+};
+
+export type TeamSchedule = {
+	teamId: string;
+	teamName: string;
+	teamTag: string;
+	members: TeamScheduleMember[];
+	availability: AvailabilityRow[];
 };
 
 // ─── Public player types ───────────────────────────────────────────────────

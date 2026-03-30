@@ -18,7 +18,7 @@ interface OrgCardProps {
 export function OrgCard({ org }: OrgCardProps) {
 	return (
 		<Link
-			href={`/dashboard/c/org/${org.id}`}
+			href={`/dashboard/orgs/${org.id}`}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 rounded-none overflow-hidden after:rounded-none shrink-0">
