@@ -1,4 +1,5 @@
 import { AuthService } from "./services/auth";
+import { ChatService } from "./services/chat";
 import { OrgsService } from "./services/orgs";
 import { RecruitService } from "./services/recruit";
 import { TeamsService } from "./services/teams";
@@ -9,6 +10,7 @@ export function createAppSdk(config: SdkClientConfig) {
 	const transport = new Transport(config);
 	return {
 		auth: new AuthService(transport),
+		chat: new ChatService(transport),
 		orgs: new OrgsService(transport),
 		recruit: new RecruitService(transport),
 		teams: new TeamsService(transport),

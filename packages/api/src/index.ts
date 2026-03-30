@@ -4,6 +4,7 @@ import { requireAuth } from "@/middleware/auth";
 import { errorHandler } from "@/middleware/error-handler";
 import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
+import { chatRoutes } from "@/routes/chat";
 import { heroRoutes } from "@/routes/heroes";
 import { notificationRoutes } from "@/routes/notifications";
 import { onboardingRoutes } from "@/routes/onboarding";
@@ -62,6 +63,9 @@ app.route("/api/schedule", scheduleRoutes);
 
 app.use("/api/notifications/*", requireAuth);
 app.route("/api/notifications", notificationRoutes);
+
+app.use("/api/chat/*", requireAuth);
+app.route("/api/chat", chatRoutes);
 
 app.use("/api/uploads/*", requireAuth);
 app.route("/api/uploads", uploadRoutes);
