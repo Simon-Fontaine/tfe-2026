@@ -1,4 +1,11 @@
 import { GameController01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+	title: "Organizations",
+	description: "Discover Overwatch 2 esports organizations on Scrimflow.",
+};
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";

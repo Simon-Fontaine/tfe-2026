@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+
+export const metadata: Metadata = {
+	title: "About",
+	description:
+		"Scrimflow helps Overwatch 2 teams run day-to-day operations from a shared workspace.",
+};
 
 export default function AboutPage() {
 	return (
@@ -7,8 +14,9 @@ export default function AboutPage() {
 			description="Scrimflow helps Overwatch 2 teams run day-to-day operations: roster management, recruiting, and schedule coordination from a shared workspace."
 		>
 			<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-				Profiles, recruiting, and scrim discovery routes are being assembled to support end-to-end
-				team workflows.
+				The platform provides organization and team workspaces, player profiles, recruitment posts
+				with conversations, availability tracking, and scrim scheduling — all built around the
+				Overwatch 2 competitive ecosystem.
 			</p>
 		</PublicPageShell>
 	);

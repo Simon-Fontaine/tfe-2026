@@ -62,7 +62,7 @@ async function listPosts(params: {
 			params.organizationId ? eq(lfgPostTable.organizationId, params.organizationId) : undefined
 		),
 		with: {
-			user: { columns: { id: true, displayName: true, avatarUrl: true } },
+			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 			applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -119,7 +119,7 @@ postsRoutes.get("/:id", async (c) => {
 	const post = await db.query.lfgPostTable.findFirst({
 		where: eq(lfgPostTable.id, c.req.param("id")),
 		with: {
-			user: { columns: { id: true, displayName: true, avatarUrl: true } },
+			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 			applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -157,13 +157,13 @@ postsRoutes.get("/:id/responses", async (c) => {
 				columns: { id: true, type: true, title: true },
 			},
 			applicant: {
-				columns: { id: true, displayName: true, avatarUrl: true },
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
 				with: {
 					profile: { columns: { primaryRole: true, rank: true } },
 				},
 			},
 			applicantTeam: { columns: { id: true, name: true, tag: true } },
-			applicantOrganization: { columns: { id: true, name: true } },
+			applicantOrganization: { columns: { id: true, name: true, slug: true } },
 			chatChannels: { columns: { id: true } },
 		},
 		orderBy: [desc(lfgApplicationTable.createdAt)],

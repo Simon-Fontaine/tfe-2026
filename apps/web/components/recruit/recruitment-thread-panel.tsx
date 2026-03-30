@@ -2,8 +2,8 @@
 
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import type { RecruitmentThread } from "@scrimflow/shared";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-
 import { sendRecruitmentMessageAction } from "@/app/dashboard/recruit/actions/recruit";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import { formatRecruitmentOwner } from "@/lib/recruitment";
+import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 interface RecruitmentThreadPanelProps {
@@ -23,7 +24,7 @@ export function RecruitmentThreadPanel({ thread, currentUserId }: RecruitmentThr
 	const [content, setContent] = useState("");
 	const pendingRef = useRef(false);
 	const { state, submit, isPending } = useFormAction(sendRecruitmentMessageAction, {
-		loadingMessage: "Sending message…",
+		loadingMessage: "Sending message\u2026",
 		successMessage: "Message sent",
 	});
 
@@ -64,7 +65,13 @@ export function RecruitmentThreadPanel({ thread, currentUserId }: RecruitmentThr
 			<div className="border-b px-4 py-3">
 				<p className="text-sm font-semibold">{activeThread.post.title}</p>
 				<p className="mt-1 text-xs text-muted-foreground">
-					{formatRecruitmentOwner(activeThread.post)} · {activeThread.response.senderDisplayName}
+					{formatRecruitmentOwner(activeThread.post)} &middot;{" "}
+					<Link
+						href={publicRoutes.players.byUsername(activeThread.response.senderUsername)}
+						className="hover:underline"
+					>
+						{activeThread.response.senderDisplayName}
+					</Link>
 				</p>
 			</div>
 
@@ -100,21 +107,29 @@ export function RecruitmentThreadPanel({ thread, currentUserId }: RecruitmentThr
 				})}
 			</div>
 
-			<form onSubmit={handleSubmit} className="space-y-3 border-t p-4">
-				<Textarea
-					value={content}
-					onChange={(e) => setContent(e.target.value)}
-					rows={4}
-					maxLength={1000}
-					placeholder="Write your next message…"
-				/>
-				<div className="flex justify-end">
-					<Button type="submit" size="sm" disabled={isPending || content.trim().length === 0}>
-						{isPending && <Spinner className="mr-1.5" />}
-						Send message
-					</Button>
+			{activeThread.isArchived ? (
+				<div className="border-t p-4">
+					<p className="text-center text-xs text-muted-foreground">
+						This conversation has been closed and is read-only.
+					</p>
 				</div>
-			</form>
+			) : (
+				<form onSubmit={handleSubmit} className="space-y-3 border-t p-4">
+					<Textarea
+						value={content}
+						onChange={(e) => setContent(e.target.value)}
+						rows={4}
+						maxLength={1000}
+						placeholder="Write your next message\u2026"
+					/>
+					<div className="flex justify-end">
+						<Button type="submit" size="sm" disabled={isPending || content.trim().length === 0}>
+							{isPending && <Spinner className="mr-1.5" />}
+							Send message
+						</Button>
+					</div>
+				</form>
+			)}
 		</div>
 	);
 }

@@ -1,5 +1,6 @@
 import { ArrowRight01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { OW2Role } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -12,6 +13,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicTeamPreview } from "@/lib/data/team";
+import { publicRoutes } from "@/lib/routes";
 
 export default async function TeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
 	const { teamId } = await params;
@@ -28,6 +30,11 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+			{team.bannerUrl && (
+				<div className="h-36 w-full overflow-hidden border">
+					<img src={team.bannerUrl} alt="" className="h-full w-full object-cover" />
+				</div>
+			)}
 			<div className="border p-5">
 				<div className="flex items-start gap-4">
 					<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
@@ -38,6 +45,12 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 						<div className="flex items-center gap-2">
 							<h1 className="text-lg font-bold sm:text-xl">{team.name}</h1>
 							<span className="font-mono text-xs text-muted-foreground">[{team.tag}]</span>
+							<Link
+								href={publicRoutes.orgs.bySlug(team.organizationSlug)}
+								className="text-xs text-muted-foreground hover:underline"
+							>
+								{team.organizationName}
+							</Link>
 						</div>
 						<p className="text-xs text-muted-foreground">
 							SR {team.teamSr} · {team.matchesPlayed} scrims played
@@ -113,6 +126,46 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 					</div>
 				)}
 			</div>
+
+			{team.roster.length > 0 && (
+				<div className="space-y-3">
+					<h2 className="text-sm font-semibold">Active roster ({team.activeRosterCount})</h2>
+					<div className="divide-y border">
+						{team.roster.map((member) => {
+							const roleLabel = member.roleInTeam
+								? ({ tank: "Tank", damage: "DPS", support: "Support" } as Record<OW2Role, string>)[
+										member.roleInTeam
+									]
+								: member.staffRole
+									? member.staffRole.charAt(0).toUpperCase() + member.staffRole.slice(1)
+									: null;
+							return (
+								<Link
+									key={member.userId}
+									href={publicRoutes.players.byUsername(member.username)}
+									className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+								>
+									<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
+										<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
+										<AvatarFallback className="rounded-none text-[10px] font-bold">
+											{member.displayName.slice(0, 2).toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-xs font-medium">{member.displayName}</p>
+										{roleLabel && <p className="text-[11px] text-muted-foreground">{roleLabel}</p>}
+									</div>
+									{member.rank && (
+										<Badge variant="outline" className="text-[10px]">
+											{member.rank}
+										</Badge>
+									)}
+								</Link>
+							);
+						})}
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

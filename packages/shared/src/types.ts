@@ -168,6 +168,7 @@ export type TeamPermissions = {
 export type TeamMemberSummary = {
 	id: string;
 	userId: string;
+	username: string;
 	displayName: string;
 	avatarUrl: string | null;
 	memberType: MemberType;
@@ -207,6 +208,7 @@ export type TeamSummary = {
 export type TeamAdminSummary = {
 	id: string;
 	userId: string;
+	username: string;
 	displayName: string;
 	avatarUrl: string | null;
 	permissionRole: TeamPermissionRole;
@@ -281,6 +283,18 @@ export type TeamWorkspaceDetail = TeamSummary & {
 
 export type TeamWithRoster = TeamWorkspaceDetail;
 
+export type PublicRosterMemberSummary = {
+	userId: string;
+	username: string;
+	displayName: string;
+	avatarUrl: string | null;
+	memberType: MemberType;
+	staffRole: StaffRole | null;
+	roleInTeam: OW2Role | null;
+	rank: string | null;
+	status: RosterStatus;
+};
+
 export type TeamPublicPreview = {
 	id: string;
 	organizationId: string;
@@ -299,6 +313,7 @@ export type TeamPublicPreview = {
 	openPostCount: number;
 	hasOpenRolePost: boolean;
 	hasPendingJoinRequest: boolean;
+	roster: PublicRosterMemberSummary[];
 	posts: RecruitmentPostSummary[];
 };
 
@@ -321,6 +336,7 @@ export type UserOrgTeamSummary = {
 	id: string;
 	name: string;
 	tag: string;
+	canManage: boolean;
 };
 
 export type UserOrg = {
@@ -341,6 +357,7 @@ export type OrgTeamSummary = TeamSummary;
 export type OrgMemberSummary = {
 	id: string;
 	userId: string;
+	username: string;
 	displayName: string;
 	avatarUrl: string | null;
 	permissionRole: OrgPermissionRole;
@@ -485,6 +502,7 @@ export type RecruitmentPostSummary = {
 	createdAt: IsoDateString;
 	updatedAt: IsoDateString;
 	ownerUserId: string;
+	ownerUsername: string;
 	userId: string;
 	ownerDisplayName: string;
 	userDisplayName: string;
@@ -515,10 +533,12 @@ export type RecruitmentResponseSummary = {
 	updatedAt: IsoDateString;
 	senderType: RecruitmentOwnerType;
 	senderUserId: string;
+	senderUsername: string;
 	senderDisplayName: string;
 	senderAvatarUrl: string | null;
 	senderOrganizationId: string | null;
 	senderOrganizationName: string | null;
+	senderOrganizationSlug: string | null;
 	senderTeamId: string | null;
 	senderTeamName: string | null;
 	senderTeamTag: string | null;
@@ -547,11 +567,15 @@ export type RecruitmentConversationSummary = {
 	postStatus: RecruitmentPostStatus;
 	counterpartLabel: string;
 	counterpartAvatarUrl: string | null;
+	counterpartType: RecruitmentOwnerType;
+	counterpartUsername: string | null;
+	counterpartOrgSlug: string | null;
 	organizationId: string | null;
 	teamId: string | null;
 	lastMessagePreview: string | null;
 	lastMessageAt: IsoDateString | null;
 	unreadCount: number;
+	isArchived: boolean;
 };
 
 export type RecruitmentMessage = {
@@ -578,6 +602,7 @@ export type RecruitmentThread = {
 	response: RecruitmentResponseSummary;
 	participants: RecruitmentThreadParticipant[];
 	messages: RecruitmentMessage[];
+	isArchived: boolean;
 };
 
 // ─── Legacy LFG aliases ────────────────────────────────────────────────────

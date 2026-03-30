@@ -100,11 +100,15 @@ async function fetchApi(path: string, init?: FetchApiInit): Promise<Response | A
 
 // ─── GET ────────────────────────────────────────────────────────────────────
 
-export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
+export async function apiGet<T>(
+	path: string,
+	options?: { cache?: RequestCache; revalidate?: number }
+): Promise<ApiResponse<T>> {
 	const headers = await authHeaders();
 	const res = await fetchApi(path, {
 		headers,
-		cache: "no-store",
+		cache: options?.cache ?? "no-store",
+		...(options?.revalidate !== undefined && { next: { revalidate: options.revalidate } }),
 	});
 	if (isApiError(res)) return res;
 

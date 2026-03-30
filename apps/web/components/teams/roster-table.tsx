@@ -2,6 +2,7 @@
 
 import { MoreHorizontalIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { useTransition } from "react";
 import {
 	removeRosterMemberAction,
@@ -21,6 +22,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { RosterMember, RosterStatus } from "@/lib/data/team";
+import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
@@ -126,7 +128,12 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 			</Avatar>
 
 			<div className="min-w-0 flex-1">
-				<p className="truncate text-xs font-medium">{member.displayName}</p>
+				<Link
+					href={publicRoutes.players.byUsername(member.username)}
+					className="truncate text-xs font-medium hover:underline"
+				>
+					{member.displayName}
+				</Link>
 				<p className="text-[10px] text-muted-foreground">
 					{member.roleInTeam
 						? ROLE_LABELS[member.roleInTeam]

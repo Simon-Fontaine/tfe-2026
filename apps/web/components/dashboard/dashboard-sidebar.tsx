@@ -57,6 +57,11 @@ export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardS
 	const pathname = usePathname();
 	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
 
+	const activeOrg = activeOrgId ? contextOrgs.find((o) => o.id === activeOrgId) : null;
+	const activeTeam = activeTeamId ? contextTeams.find((t) => t.id === activeTeamId) : null;
+	const canManageOrg = activeOrg?.canManage ?? false;
+	const canManageTeam = activeTeam?.canManage ?? false;
+
 	const contextGroups =
 		activeTeamId && activeOrgId
 			? [
@@ -89,16 +94,20 @@ export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardS
 								href: dashboardRoutes.context.teamConversations(activeOrgId, activeTeamId),
 								icon: Mail01Icon,
 							},
-							{
-								label: "Invites",
-								href: dashboardRoutes.context.teamInvites(activeOrgId, activeTeamId),
-								icon: UserAdd01Icon,
-							},
-							{
-								label: "Settings",
-								href: dashboardRoutes.context.teamSettings(activeOrgId, activeTeamId),
-								icon: Settings01Icon,
-							},
+							...(canManageTeam
+								? [
+										{
+											label: "Invites",
+											href: dashboardRoutes.context.teamInvites(activeOrgId, activeTeamId),
+											icon: UserAdd01Icon,
+										},
+										{
+											label: "Settings",
+											href: dashboardRoutes.context.teamSettings(activeOrgId, activeTeamId),
+											icon: Settings01Icon,
+										},
+									]
+								: []),
 						],
 					},
 				]
@@ -133,16 +142,20 @@ export function DashboardSidebar({ user, contextOrgs, contextTeams }: DashboardS
 									href: dashboardRoutes.context.orgConversations(activeOrgId),
 									icon: Mail01Icon,
 								},
-								{
-									label: "Invites",
-									href: dashboardRoutes.context.orgInvites(activeOrgId),
-									icon: UserAdd01Icon,
-								},
-								{
-									label: "Settings",
-									href: dashboardRoutes.context.orgSettings(activeOrgId),
-									icon: Settings01Icon,
-								},
+								...(canManageOrg
+									? [
+											{
+												label: "Invites",
+												href: dashboardRoutes.context.orgInvites(activeOrgId),
+												icon: UserAdd01Icon,
+											},
+											{
+												label: "Settings",
+												href: dashboardRoutes.context.orgSettings(activeOrgId),
+												icon: Settings01Icon,
+											},
+										]
+									: []),
 							],
 						},
 					]

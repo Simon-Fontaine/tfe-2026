@@ -212,6 +212,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 	"recruitment_application",
 	"recruitment_accepted",
 	"recruitment_rejected",
+	"recruitment_withdrawn",
 	"ocr_completed",
 	"ocr_failed",
 	"dispute_opened",

@@ -72,7 +72,7 @@ async function getPendingResponses(teamId: string) {
 				columns: { id: true, type: true, title: true, teamId: true },
 			},
 			applicant: {
-				columns: { id: true, displayName: true, avatarUrl: true },
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
 				with: {
 					profile: {
 						columns: { primaryRole: true, rank: true },
@@ -83,7 +83,7 @@ async function getPendingResponses(teamId: string) {
 				columns: { id: true, name: true, tag: true },
 			},
 			applicantOrganization: {
-				columns: { id: true, name: true },
+				columns: { id: true, name: true, slug: true },
 			},
 			chatChannels: { columns: { id: true } },
 		},
@@ -112,7 +112,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 				where: eq(teamRosterTable.teamId, teamId),
 				with: {
 					user: {
-						columns: { id: true, displayName: true, avatarUrl: true },
+						columns: { id: true, username: true, displayName: true, avatarUrl: true },
 						with: {
 							profile: {
 								columns: {
@@ -138,7 +138,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 			db.query.lfgPostTable.findMany({
 				where: eq(lfgPostTable.teamId, teamId),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 					team: {
 						columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },
@@ -154,7 +154,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 			db.query.organizationMemberTable.findMany({
 				where: eq(organizationMemberTable.organizationId, team.organizationId),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 				},
 			}),
 		]);
@@ -165,6 +165,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		{
 			id: string;
 			userId: string;
+			username: string;
 			displayName: string;
 			avatarUrl: string | null;
 			permissionRole: "admin" | "member";
@@ -179,6 +180,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		adminsByUserId.set(row.user.id, {
 			id: row.id,
 			userId: row.user.id,
+			username: row.user.username,
 			displayName: row.user.displayName,
 			avatarUrl: row.user.avatarUrl,
 			permissionRole: "admin",
@@ -193,6 +195,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		adminsByUserId.set(row.userId, {
 			id: row.id,
 			userId: row.userId,
+			username: row.username,
 			displayName: row.displayName,
 			avatarUrl: row.avatarUrl,
 			permissionRole: "admin",
@@ -588,7 +591,7 @@ teamRoutes.get("/:id/posts", async (c) => {
 	const rows = await db.query.lfgPostTable.findMany({
 		where: eq(lfgPostTable.teamId, teamId),
 		with: {
-			user: { columns: { id: true, displayName: true, avatarUrl: true } },
+			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 			applications: { columns: { id: true, status: true, applicantUserId: true } },

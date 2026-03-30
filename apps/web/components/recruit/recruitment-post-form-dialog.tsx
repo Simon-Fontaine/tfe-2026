@@ -1,11 +1,10 @@
 "use client";
 
+import type { CreateRecruitmentPostInput, UpdateRecruitmentPostInput } from "@scrimflow/app-sdk";
 import {
-	type CreateRecruitmentPostInput,
 	CreateRecruitmentPostSchema,
 	type RecruitmentOwnerType,
 	type RecruitmentPostSummary,
-	type UpdateRecruitmentPostInput,
 	UpdateRecruitmentPostSchema,
 } from "@scrimflow/shared";
 import { useEffect, useMemo, useRef, useState } from "react";

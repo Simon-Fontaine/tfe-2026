@@ -124,7 +124,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			members: {
 				with: {
 					user: {
-						columns: { id: true, displayName: true, avatarUrl: true },
+						columns: { id: true, username: true, displayName: true, avatarUrl: true },
 					},
 				},
 				orderBy: [asc(organizationMemberTable.createdAt)],
@@ -144,7 +144,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 		db.query.lfgPostTable.findMany({
 			where: eq(lfgPostTable.organizationId, orgId),
 			with: {
-				user: { columns: { id: true, displayName: true, avatarUrl: true } },
+				user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 				organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 				team: {
 					columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },
@@ -198,6 +198,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 		members: org.members.map((member) => ({
 			id: member.id,
 			userId: member.user.id,
+			username: member.user.username,
 			displayName: member.user.displayName,
 			avatarUrl: member.user.avatarUrl,
 			permissionRole: member.role,
@@ -254,6 +255,12 @@ orgRoutes.get("/", async (c) => {
 					teams: {
 						where: eq(teamTable.isArchived, false),
 						columns: { id: true, name: true, tag: true },
+						with: {
+							roster: {
+								where: eq(teamRosterTable.userId, user.id),
+								columns: { permissionRole: true },
+							},
+						},
 					},
 					lfgPosts: {
 						where: eq(lfgPostTable.status, "open"),
@@ -280,6 +287,10 @@ orgRoutes.get("/", async (c) => {
 				id: t.id,
 				name: t.name,
 				tag: t.tag,
+				canManage:
+					membership.role === "owner" ||
+					membership.role === "admin" ||
+					t.roster[0]?.permissionRole === "admin",
 			})),
 		})),
 	});

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
@@ -35,12 +35,12 @@ notificationRoutes.get("/", async (c) => {
 notificationRoutes.get("/unread-count", async (c) => {
 	const user = c.get("user");
 
-	const rows = await db.query.notificationTable.findMany({
-		where: eq(notificationTable.userId, user.id),
-		columns: { isRead: true },
-	});
+	const [result] = await db
+		.select({ count: count() })
+		.from(notificationTable)
+		.where(and(eq(notificationTable.userId, user.id), eq(notificationTable.isRead, false)));
 
-	return c.json({ data: { count: rows.filter((r) => !r.isRead).length } });
+	return c.json({ data: { count: result?.count ?? 0 } });
 });
 
 // POST /:id/read — Mark notification read

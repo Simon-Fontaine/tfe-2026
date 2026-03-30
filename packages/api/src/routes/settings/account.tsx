@@ -37,12 +37,11 @@ accountRoutes.get("/deletion", async (c) => {
 		.then((rows) => rows[0] ?? null);
 
 	if (!record?.scheduledDeletionAt) {
-		return c.json({ isPending: false, scheduledAt: null });
+		return c.json({ data: { isPending: false, scheduledAt: null } });
 	}
 
 	return c.json({
-		isPending: true,
-		scheduledAt: record.scheduledDeletionAt.toISOString(),
+		data: { isPending: true, scheduledAt: record.scheduledDeletionAt.toISOString() },
 	});
 });
 

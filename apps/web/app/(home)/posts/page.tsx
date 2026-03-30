@@ -1,5 +1,12 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+	title: "Recruitment Posts",
+	description:
+		"Browse Overwatch 2 recruitment posts — find teams, players, and staff opportunities.",
+};
 
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";

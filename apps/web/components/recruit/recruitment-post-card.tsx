@@ -3,8 +3,8 @@
 import { LinkIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { RecruitmentPostSummary, RecruitmentResponseSummary } from "@scrimflow/shared";
+import Link from "next/link";
 import { useState } from "react";
-
 import { deleteRecruitmentPostAction } from "@/app/dashboard/recruit/actions/recruit";
 import { RecruitmentPostFormDialog } from "@/components/recruit/recruitment-post-form-dialog";
 import { RecruitmentResponseDialog } from "@/components/recruit/recruitment-response-dialog";
@@ -33,6 +33,7 @@ import {
 	RECRUITMENT_CATEGORY_DESCRIPTIONS,
 	RECRUITMENT_CATEGORY_LABELS,
 } from "@/lib/recruitment";
+import { publicRoutes } from "@/lib/routes";
 
 interface RecruitmentPostCardProps {
 	post: RecruitmentPostSummary;
@@ -61,6 +62,11 @@ export function RecruitmentPostCard({
 	const ownerLabel = formatRecruitmentOwner(post);
 	const compRange = formatRecruitmentCompRange(post);
 	const canRespond = !!currentUserId && post.canRespond && !post.canManage;
+	const ownerHref = post.teamId
+		? publicRoutes.teams.byId(post.teamId)
+		: post.organizationSlug
+			? publicRoutes.orgs.bySlug(post.organizationSlug)
+			: publicRoutes.players.byUsername(post.ownerUsername);
 
 	function submitDelete() {
 		const fd = new FormData();
@@ -76,17 +82,22 @@ export function RecruitmentPostCard({
 		<>
 			<div className="space-y-4 border p-4">
 				<div className="flex items-start gap-3">
-					<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
-						<AvatarImage
-							src={
-								post.teamAvatarUrl ?? post.organizationAvatarUrl ?? post.ownerAvatarUrl ?? undefined
-							}
-							className="rounded-none"
-						/>
-						<AvatarFallback className="rounded-none text-[10px] font-bold">
-							{ownerLabel.slice(0, 2).toUpperCase()}
-						</AvatarFallback>
-					</Avatar>
+					<Link href={ownerHref} tabIndex={-1}>
+						<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage
+								src={
+									post.teamAvatarUrl ??
+									post.organizationAvatarUrl ??
+									post.ownerAvatarUrl ??
+									undefined
+								}
+								className="rounded-none"
+							/>
+							<AvatarFallback className="rounded-none text-[10px] font-bold">
+								{ownerLabel.slice(0, 2).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+					</Link>
 					<div className="min-w-0 flex-1">
 						<div className="flex flex-wrap items-center gap-2">
 							<p className="truncate text-sm font-semibold">{post.title}</p>
@@ -101,7 +112,11 @@ export function RecruitmentPostCard({
 							</Badge>
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
-							{ownerLabel} · {RECRUITMENT_CATEGORY_DESCRIPTIONS[post.category]}
+							<Link href={ownerHref} className="hover:underline">
+								{ownerLabel}
+							</Link>
+							{" · "}
+							{RECRUITMENT_CATEGORY_DESCRIPTIONS[post.category]}
 						</p>
 						{post.description && (
 							<p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">

@@ -34,7 +34,7 @@ publicPlayerRoutes.get("/", async (c) => {
 			lfgPosts: {
 				where: eq(lfgPostTable.status, "open"),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -45,22 +45,20 @@ publicPlayerRoutes.get("/", async (c) => {
 		limit: 100,
 	});
 
-	const data: PublicPlayerSummary[] = rows
-		.map((row) => ({
-			id: row.id,
-			username: row.username,
-			displayName: row.displayName,
-			avatarUrl: row.avatarUrl,
-			bio: row.bio ?? null,
-			primaryRole: row.profile?.primaryRole ?? null,
-			secondaryRole: row.profile?.secondaryRole ?? null,
-			rank: row.profile?.rank ?? null,
-			rankDivision: row.profile?.rankDivision ?? null,
-			openPosts: row.lfgPosts
-				.filter((post) => post.ownerType === "player")
-				.map((post) => mapRecruitmentPost(post, { viewerId: viewer?.id ?? null })),
-		}))
-		.filter((row) => row.openPosts.length > 0);
+	const data: PublicPlayerSummary[] = rows.map((row) => ({
+		id: row.id,
+		username: row.username,
+		displayName: row.displayName,
+		avatarUrl: row.avatarUrl,
+		bio: row.bio ?? null,
+		primaryRole: row.profile?.primaryRole ?? null,
+		secondaryRole: row.profile?.secondaryRole ?? null,
+		rank: row.profile?.rank ?? null,
+		rankDivision: row.profile?.rankDivision ?? null,
+		openPosts: row.lfgPosts
+			.filter((post) => post.ownerType === "player")
+			.map((post) => mapRecruitmentPost(post, { viewerId: viewer?.id ?? null })),
+	}));
 
 	return c.json({ data });
 });
@@ -91,7 +89,7 @@ publicPlayerRoutes.get("/:username", async (c) => {
 			lfgPosts: {
 				where: eq(lfgPostTable.status, "open"),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },

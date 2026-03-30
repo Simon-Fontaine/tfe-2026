@@ -1,5 +1,5 @@
-import type { TeamPublicPreview } from "@scrimflow/shared";
-import { and, eq } from "drizzle-orm";
+import type { PublicRosterMemberSummary, TeamPublicPreview } from "@scrimflow/shared";
+import { and, eq, ne } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
@@ -39,13 +39,28 @@ publicTeamRoutes.get("/:id", async (c) => {
 				},
 			},
 			roster: {
-				where: eq(teamRosterTable.status, "active"),
-				columns: { id: true },
+				where: ne(teamRosterTable.status, "inactive"),
+				columns: {
+					id: true,
+					userId: true,
+					memberType: true,
+					staffRole: true,
+					roleInTeam: true,
+					status: true,
+				},
+				with: {
+					user: {
+						columns: { id: true, username: true, displayName: true, avatarUrl: true },
+						with: {
+							profile: { columns: { rank: true } },
+						},
+					},
+				},
 			},
 			lfgPosts: {
 				where: eq(lfgPostTable.status, "open"),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -73,7 +88,21 @@ publicTeamRoutes.get("/:id", async (c) => {
 		activeRosterCount: team.roster.length,
 		openPostCount: team.lfgPosts.length,
 		hasOpenRolePost: team.lfgPosts.length > 0,
+		// TODO: query actual pending join requests for the authenticated user
 		hasPendingJoinRequest: false,
+		roster: team.roster.map(
+			(row): PublicRosterMemberSummary => ({
+				userId: row.user.id,
+				username: row.user.username,
+				displayName: row.user.displayName,
+				avatarUrl: row.user.avatarUrl,
+				memberType: row.memberType,
+				staffRole: row.staffRole ?? null,
+				roleInTeam: row.roleInTeam ?? null,
+				rank: row.user.profile?.rank ?? null,
+				status: row.status,
+			})
+		),
 		posts: team.lfgPosts.map((post) => mapRecruitmentPost(post, { viewerId: user?.id ?? null })),
 	};
 

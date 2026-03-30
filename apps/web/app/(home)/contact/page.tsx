@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+
+export const metadata: Metadata = {
+	title: "Contact",
+	description: "Get in touch with the Scrimflow team for support or feedback.",
+};
 
 export default function ContactPage() {
 	return (

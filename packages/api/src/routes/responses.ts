@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { lfgApplicationTable, lfgPostTable, teamTable } from "@/db/schema";
+import { chatChannelTable, lfgApplicationTable, lfgPostTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
@@ -27,13 +27,13 @@ responsesRoutes.get("/mine", async (c) => {
 				columns: { id: true, type: true, title: true },
 			},
 			applicant: {
-				columns: { id: true, displayName: true, avatarUrl: true },
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
 				with: {
 					profile: { columns: { primaryRole: true, rank: true } },
 				},
 			},
 			applicantTeam: { columns: { id: true, name: true, tag: true } },
-			applicantOrganization: { columns: { id: true, name: true } },
+			applicantOrganization: { columns: { id: true, name: true, slug: true } },
 			chatChannels: { columns: { id: true } },
 		},
 		orderBy: [lfgApplicationTable.createdAt],
@@ -48,7 +48,11 @@ responsesRoutes.delete("/:id", async (c) => {
 
 	const response = await db.query.lfgApplicationTable.findFirst({
 		where: eq(lfgApplicationTable.id, responseId),
-		columns: { id: true, applicantUserId: true, status: true },
+		columns: { id: true, applicantUserId: true, status: true, postId: true },
+		with: {
+			post: { columns: { id: true, userId: true, title: true } },
+			chatChannels: { columns: { id: true } },
+		},
 	});
 	if (!response) return c.json({ error: "Response not found." }, 404);
 	if (response.applicantUserId !== user.id)
@@ -60,6 +64,26 @@ responsesRoutes.delete("/:id", async (c) => {
 		.update(lfgApplicationTable)
 		.set({ status: "withdrawn" })
 		.where(eq(lfgApplicationTable.id, responseId));
+
+	const threadId = response.chatChannels[0]?.id;
+	if (threadId) {
+		await db
+			.update(chatChannelTable)
+			.set({ isArchived: true })
+			.where(eq(chatChannelTable.id, threadId));
+
+		await sendRecruitmentSystemMessage(threadId, "The applicant withdrew their response.");
+	}
+
+	if (response.post) {
+		await createNotification({
+			userId: response.post.userId,
+			type: "recruitment_withdrawn",
+			title: `A response on "${response.post.title}" was withdrawn.`,
+			referenceType: "lfg_application",
+			referenceId: response.id,
+		});
+	}
 
 	return c.json({ success: true });
 });
@@ -135,10 +159,12 @@ responsesRoutes.post("/:id/decision", async (c) => {
 		});
 
 		if (response.chatChannels[0]) {
-			await sendRecruitmentSystemMessage(
-				response.chatChannels[0].id,
-				"Recruitment response rejected."
-			);
+			const threadId = response.chatChannels[0].id;
+			await sendRecruitmentSystemMessage(threadId, "Recruitment response rejected.");
+			await db
+				.update(chatChannelTable)
+				.set({ isArchived: true })
+				.where(eq(chatChannelTable.id, threadId));
 		}
 
 		return c.json({ success: true });
@@ -286,7 +312,8 @@ responsesRoutes.post("/:id/decision", async (c) => {
 				.where(
 					and(
 						eq(lfgApplicationTable.postId, response.postId),
-						ne(lfgApplicationTable.id, response.id)
+						ne(lfgApplicationTable.id, response.id),
+						eq(lfgApplicationTable.status, "pending")
 					)
 				);
 		}
@@ -301,10 +328,15 @@ responsesRoutes.post("/:id/decision", async (c) => {
 	});
 
 	if (response.chatChannels[0]) {
+		const threadId = response.chatChannels[0].id;
 		await sendRecruitmentSystemMessage(
-			response.chatChannels[0].id,
+			threadId,
 			`Recruitment response accepted for "${response.post.title}".`
 		);
+		await db
+			.update(chatChannelTable)
+			.set({ isArchived: true })
+			.where(eq(chatChannelTable.id, threadId));
 	}
 
 	return c.json({ success: true });

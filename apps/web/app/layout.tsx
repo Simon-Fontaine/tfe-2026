@@ -1,13 +1,42 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/config/site";
 
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-sans" });
+
+const geistSans = Geist({
+	variable: "--font-geist-sans",
+	subsets: ["latin"],
+});
+const geistMono = Geist_Mono({
+	variable: "--font-geist-mono",
+	subsets: ["latin"],
+});
+
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-	title: siteConfig.name,
+	metadataBase: new URL(appUrl),
+	title: {
+		default: siteConfig.name,
+		template: `%s — ${siteConfig.name}`,
+	},
 	description: siteConfig.description,
+	openGraph: {
+		type: "website",
+		siteName: siteConfig.name,
+		title: siteConfig.name,
+		description: siteConfig.description,
+	},
+	twitter: {
+		card: "summary",
+		title: siteConfig.name,
+		description: siteConfig.description,
+	},
 };
 
 export default function RootLayout({
@@ -16,8 +45,8 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning>
-			<body className="antialiased">
+		<html lang="en" className={jetbrainsMono.variable} suppressHydrationWarning>
+			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				<a
 					href="#main-content"
 					className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:shadow-md"

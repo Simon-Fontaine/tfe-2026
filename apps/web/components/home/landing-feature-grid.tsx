@@ -14,7 +14,7 @@ const features = [
 		icon: Calendar01Icon,
 		title: "Scrim scheduling",
 		description:
-			"Schedule scrims with built-in timezone support, availability tracking, and conflict detection.",
+			"Schedule scrims with availability tracking and timezone-aware coordination tools.",
 	},
 	{
 		icon: UserGroupIcon,
@@ -23,13 +23,14 @@ const features = [
 	},
 	{
 		icon: ChartLineData01Icon,
-		title: "Performance tracking",
-		description: "Track match results, map stats, and player performance over time.",
+		title: "Recruitment & discovery",
+		description:
+			"Post recruitment listings, browse players and teams, and manage conversations in one place.",
 	},
 	{
 		icon: Message01Icon,
 		title: "Team communication",
-		description: "Built-in messaging for teams with channels, threads, and file sharing.",
+		description: "Built-in messaging for recruitment conversations with threaded discussions.",
 	},
 	{
 		icon: SecurityCheckIcon,
@@ -38,8 +39,8 @@ const features = [
 	},
 	{
 		icon: FlashIcon,
-		title: "Lightning fast",
-		description: "Optimized for speed on any device. Real-time updates so you never miss a scrim.",
+		title: "Fast & responsive",
+		description: "Optimized for speed on any device with a lightweight, modern interface.",
 	},
 ];
 

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getRecruitmentConversations, getRecruitmentThread } from "@/lib/data/recruit";
 import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
-import { dashboardRoutes } from "@/lib/routes";
+import { dashboardRoutes, publicRoutes } from "@/lib/routes";
 
 interface RecruitConversationsPageProps {
 	searchParams: Promise<{ thread?: string }>;
@@ -45,31 +45,53 @@ export default async function RecruitConversationsPage({
 						<div className="space-y-2">
 							{conversations.map((conversation) => {
 								const isSelected = conversation.threadId === selectedThreadId;
+								const profileHref =
+									conversation.counterpartType === "player" && conversation.counterpartUsername
+										? publicRoutes.players.byUsername(conversation.counterpartUsername)
+										: conversation.counterpartType === "organization" &&
+												conversation.counterpartOrgSlug
+											? publicRoutes.orgs.bySlug(conversation.counterpartOrgSlug)
+											: conversation.counterpartType === "team" && conversation.teamId
+												? publicRoutes.teams.byId(conversation.teamId)
+												: null;
 								return (
-									<Link
+									<div
 										key={conversation.threadId}
-										href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
-										className={`block border p-3 transition-colors hover:bg-muted/50 ${
-											isSelected ? "border-primary bg-primary/5" : ""
-										}`}
+										className={`border transition-colors ${isSelected ? "border-primary" : ""}`}
 									>
-										<div className="flex flex-wrap items-center gap-2">
-											<p className="truncate text-sm font-medium">
-												{conversation.counterpartLabel}
-											</p>
+										<div className="flex flex-wrap items-center gap-2 px-3 pt-3">
+											{profileHref ? (
+												<Link
+													href={profileHref}
+													className="truncate text-sm font-medium hover:underline"
+												>
+													{conversation.counterpartLabel}
+												</Link>
+											) : (
+												<p className="truncate text-sm font-medium">
+													{conversation.counterpartLabel}
+												</p>
+											)}
 											<Badge variant="secondary" className="text-[10px]">
 												{RECRUITMENT_CATEGORY_LABELS[conversation.postCategory]}
 											</Badge>
 										</div>
-										<p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-											{conversation.postTitle}
-										</p>
-										{conversation.lastMessagePreview && (
-											<p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-												{conversation.lastMessagePreview}
+										<Link
+											href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
+											className={`block px-3 pb-3 pt-1 hover:bg-muted/50 ${
+												isSelected ? "bg-primary/5" : ""
+											}`}
+										>
+											<p className="line-clamp-1 text-xs text-muted-foreground">
+												{conversation.postTitle}
 											</p>
-										)}
-									</Link>
+											{conversation.lastMessagePreview && (
+												<p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+													{conversation.lastMessagePreview}
+												</p>
+											)}
+										</Link>
+									</div>
 								);
 							})}
 						</div>

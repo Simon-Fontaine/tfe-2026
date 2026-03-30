@@ -24,6 +24,11 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+			{org.bannerUrl && (
+				<div className="h-36 w-full overflow-hidden border">
+					<img src={org.bannerUrl} alt="" className="h-full w-full object-cover" />
+				</div>
+			)}
 			<div className="border p-5">
 				<div className="flex items-start gap-4">
 					<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">

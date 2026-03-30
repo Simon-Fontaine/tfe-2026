@@ -1,5 +1,6 @@
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/dashboard/page-container";
@@ -13,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
+import { publicRoutes } from "@/lib/routes";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -58,7 +60,12 @@ export default async function OrgMembersPage({ params }: { params: Promise<{ org
 								</AvatarFallback>
 							</Avatar>
 							<div className="min-w-0 flex-1">
-								<p className="truncate text-xs font-medium">{member.displayName}</p>
+								<Link
+									href={publicRoutes.players.byUsername(member.username)}
+									className="truncate text-xs font-medium hover:underline"
+								>
+									{member.displayName}
+								</Link>
 								<p className="text-[11px] text-muted-foreground">
 									{member.memberType === "staff"
 										? (member.staffRole ?? "staff")

@@ -17,7 +17,7 @@ import {
 	ROLE_LABELS,
 	STAFF_ROLE_LABELS,
 } from "@/lib/recruitment";
-import { dashboardRoutes } from "@/lib/routes";
+import { dashboardRoutes, publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const STAFF_OPTIONS = ["coach", "analyst", "manager", "staff"] as const;
@@ -79,17 +79,28 @@ function RecruitmentResponseCard({
 				</Avatar>
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
-						<p className="truncate text-sm font-medium">{response.senderDisplayName}</p>
-						{response.senderTeamName && (
-							<Badge variant="outline" className="text-[10px]">
-								[{response.senderTeamTag}] {response.senderTeamName}
-							</Badge>
+						<Link
+							href={publicRoutes.players.byUsername(response.senderUsername)}
+							className="truncate text-sm font-medium hover:underline"
+						>
+							{response.senderDisplayName}
+						</Link>
+						{response.senderTeamName && response.senderTeamId && (
+							<Link href={publicRoutes.teams.byId(response.senderTeamId)}>
+								<Badge variant="outline" className="text-[10px] hover:bg-muted/50">
+									[{response.senderTeamTag}] {response.senderTeamName}
+								</Badge>
+							</Link>
 						)}
-						{response.senderOrganizationName && !response.senderTeamName && (
-							<Badge variant="outline" className="text-[10px]">
-								{response.senderOrganizationName}
-							</Badge>
-						)}
+						{response.senderOrganizationName &&
+							!response.senderTeamName &&
+							response.senderOrganizationSlug && (
+								<Link href={publicRoutes.orgs.bySlug(response.senderOrganizationSlug)}>
+									<Badge variant="outline" className="text-[10px] hover:bg-muted/50">
+										{response.senderOrganizationName}
+									</Badge>
+								</Link>
+							)}
 						<Badge variant="secondary" className="text-[10px]">
 							{RECRUITMENT_CATEGORY_LABELS[response.postCategory]}
 						</Badge>

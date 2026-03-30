@@ -38,9 +38,15 @@ threadsRoutes.post("/:id/messages", async (c) => {
 			eq(chatChannelMemberTable.userId, user.id)
 		),
 		columns: { id: true, leftAt: true },
+		with: {
+			channel: { columns: { isArchived: true } },
+		},
 	});
 	if (!membership || membership.leftAt) {
 		return c.json({ error: "You do not have access to this conversation." }, 403);
+	}
+	if (membership.channel?.isArchived) {
+		return c.json({ error: "This conversation is closed." }, 403);
 	}
 
 	await db.insert(chatMessageTable).values({

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/dashboard/page-container";
@@ -8,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getTeamWithRoster } from "@/lib/data/teams";
+import { publicRoutes } from "@/lib/routes";
 
 interface TeamOverviewPageProps {
 	params: Promise<{ orgId: string; teamId: string }>;
@@ -70,7 +72,12 @@ export default async function TeamOverviewPage({ params }: TeamOverviewPageProps
 								</AvatarFallback>
 							</Avatar>
 							<div className="min-w-0 flex-1">
-								<p className="truncate text-xs font-medium">{admin.displayName}</p>
+								<Link
+									href={publicRoutes.players.byUsername(admin.username)}
+									className="truncate text-xs font-medium hover:underline"
+								>
+									{admin.displayName}
+								</Link>
 								<p className="text-[11px] text-muted-foreground capitalize">
 									{admin.source === "organization"
 										? `${admin.orgRole} access`

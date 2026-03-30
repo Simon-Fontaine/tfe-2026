@@ -1,10 +1,9 @@
 "use server";
 
+import type { CreateRecruitmentPostInput, UpdateRecruitmentPostInput } from "@scrimflow/app-sdk";
 import {
-	type CreateRecruitmentPostInput,
 	CreateRecruitmentPostSchema,
 	type RecruitmentOwnerType,
-	type UpdateRecruitmentPostInput,
 	UpdateRecruitmentPostSchema,
 } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";

@@ -1,4 +1,11 @@
 import { GameController01Icon } from "@hugeicons/core-free-icons";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+	title: "Teams",
+	description: "Browse Overwatch 2 teams and find your next roster.",
+};
+
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamDiscoveryCard } from "@/components/teams/discovery/team-discovery-card";
 import { TeamDiscoveryFilters } from "@/components/teams/discovery/team-discovery-filters";

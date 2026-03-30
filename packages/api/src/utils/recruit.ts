@@ -187,6 +187,7 @@ export function mapTeamMember(row: {
 	updatedAt: Date;
 	user: {
 		id: string;
+		username: string;
 		displayName: string;
 		avatarUrl: string | null;
 		profile?: {
@@ -199,6 +200,7 @@ export function mapTeamMember(row: {
 	return {
 		id: row.id,
 		userId: row.user.id,
+		username: row.user.username,
 		displayName: row.user.displayName,
 		avatarUrl: row.user.avatarUrl,
 		memberType: row.memberType,
@@ -238,7 +240,7 @@ export function mapRecruitmentPost(
 		userId: string;
 		organizationId: string | null;
 		teamId: string | null;
-		user: { id: string; displayName: string; avatarUrl: string | null };
+		user: { id: string; username: string; displayName: string; avatarUrl: string | null };
 		organization?: { id: string; name: string; slug: string; avatarUrl: string | null } | null;
 		team?: {
 			id: string;
@@ -291,6 +293,7 @@ export function mapRecruitmentPost(
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 		ownerUserId: row.user.id,
+		ownerUsername: row.user.username,
 		userId: row.user.id,
 		ownerDisplayName: row.user.displayName,
 		userDisplayName: row.user.displayName,
@@ -324,6 +327,7 @@ export function mapRecruitmentResponse(row: {
 	applicantOrganizationId: string | null;
 	applicant: {
 		id: string;
+		username: string;
 		displayName: string;
 		avatarUrl: string | null;
 		profile?: {
@@ -332,7 +336,7 @@ export function mapRecruitmentResponse(row: {
 		} | null;
 	};
 	applicantTeam?: { id: string; name: string; tag: string } | null;
-	applicantOrganization?: { id: string; name: string } | null;
+	applicantOrganization?: { id: string; name: string; slug?: string } | null;
 	post?: { id: string; type: "lft" | "lfp" | "lfr" | "lfs"; title: string } | null;
 	chatChannels?: Array<{ id: string }>;
 }) {
@@ -353,10 +357,12 @@ export function mapRecruitmentResponse(row: {
 		updatedAt: row.updatedAt.toISOString(),
 		senderType,
 		senderUserId: row.applicant.id,
+		senderUsername: row.applicant.username,
 		senderDisplayName: row.applicant.displayName,
 		senderAvatarUrl: row.applicant.avatarUrl,
 		senderOrganizationId: row.applicantOrganization?.id ?? row.applicantOrganizationId ?? null,
 		senderOrganizationName: row.applicantOrganization?.name ?? null,
+		senderOrganizationSlug: row.applicantOrganization?.slug ?? null,
 		senderTeamId: row.applicantTeam?.id ?? row.applicantTeamId ?? null,
 		senderTeamName: row.applicantTeam?.name ?? null,
 		senderTeamTag: row.applicantTeam?.tag ?? null,
@@ -387,7 +393,9 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 						with: {
 							post: {
 								with: {
-									user: { columns: { id: true, displayName: true, avatarUrl: true } },
+									user: {
+										columns: { id: true, username: true, displayName: true, avatarUrl: true },
+									},
 									organization: {
 										columns: { id: true, name: true, slug: true, avatarUrl: true },
 									},
@@ -403,7 +411,7 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 								},
 							},
 							applicant: {
-								columns: { id: true, displayName: true, avatarUrl: true },
+								columns: { id: true, username: true, displayName: true, avatarUrl: true },
 								with: {
 									profile: { columns: { primaryRole: true, rank: true } },
 								},
@@ -412,14 +420,14 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 								columns: { id: true, name: true, tag: true },
 							},
 							applicantOrganization: {
-								columns: { id: true, name: true },
+								columns: { id: true, name: true, slug: true },
 							},
 						},
 					},
 					members: {
 						where: isNull(chatChannelMemberTable.leftAt),
 						with: {
-							user: { columns: { id: true, displayName: true, avatarUrl: true } },
+							user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 						},
 					},
 					messages: {
@@ -444,6 +452,21 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 			const otherMember = channel.members.find((member) => member.user.id !== userId);
 			const lastMessage = channel.messages[0];
 
+			// If the current user is the applicant (sender), counterpart is the post owner
+			// If the current user is the post owner, counterpart is the applicant/sender
+			const currentUserIsSender = response.senderUserId === userId;
+			const counterpartType = currentUserIsSender ? post.ownerType : response.senderType;
+			const counterpartUsername = currentUserIsSender
+				? counterpartType === "player"
+					? channel.lfgApplication.post.user.username
+					: null
+				: counterpartType === "player"
+					? channel.lfgApplication.applicant.username
+					: null;
+			const counterpartOrgSlug = currentUserIsSender
+				? post.organizationSlug
+				: response.senderOrganizationSlug;
+
 			return {
 				threadId: channel.id,
 				responseId: response.id,
@@ -453,15 +476,19 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 				postStatus: post.status,
 				counterpartLabel:
 					otherMember?.user.displayName ??
-					(response.senderUserId === userId ? post.ownerDisplayName : response.senderDisplayName),
+					(currentUserIsSender ? post.ownerDisplayName : response.senderDisplayName),
 				counterpartAvatarUrl:
 					otherMember?.user.avatarUrl ??
-					(response.senderUserId === userId ? post.ownerAvatarUrl : response.senderAvatarUrl),
+					(currentUserIsSender ? post.ownerAvatarUrl : response.senderAvatarUrl),
+				counterpartType,
+				counterpartUsername,
+				counterpartOrgSlug,
 				organizationId: post.organizationId,
 				teamId: post.teamId,
 				lastMessagePreview: lastMessage?.content ?? response.message ?? null,
 				lastMessageAt: lastMessage?.createdAt?.toISOString() ?? null,
 				unreadCount: 0,
+				isArchived: channel.isArchived,
 			};
 		})
 		.filter((row): row is NonNullable<typeof row> => row !== null);
@@ -484,7 +511,7 @@ export async function getRecruitmentThreadForUser(threadId: string, userId: stri
 				with: {
 					post: {
 						with: {
-							user: { columns: { id: true, displayName: true, avatarUrl: true } },
+							user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 							organization: {
 								columns: { id: true, name: true, slug: true, avatarUrl: true },
 							},
@@ -500,7 +527,7 @@ export async function getRecruitmentThreadForUser(threadId: string, userId: stri
 						},
 					},
 					applicant: {
-						columns: { id: true, displayName: true, avatarUrl: true },
+						columns: { id: true, username: true, displayName: true, avatarUrl: true },
 						with: {
 							profile: { columns: { primaryRole: true, rank: true } },
 						},
@@ -509,7 +536,7 @@ export async function getRecruitmentThreadForUser(threadId: string, userId: stri
 						columns: { id: true, name: true, tag: true },
 					},
 					applicantOrganization: {
-						columns: { id: true, name: true },
+						columns: { id: true, name: true, slug: true },
 					},
 					chatChannels: { columns: { id: true } },
 				},
@@ -550,6 +577,7 @@ export async function getRecruitmentThreadForUser(threadId: string, userId: stri
 			isSystemMessage: message.isSystemMessage,
 			createdAt: message.createdAt.toISOString(),
 		})),
+		isArchived: channel.isArchived,
 	};
 }
 
@@ -610,7 +638,7 @@ export async function getPublicRecruitmentPosts(filters?: {
 			filters?.region ? eq(lfgPostTable.region, filters.region) : undefined
 		),
 		with: {
-			user: { columns: { id: true, displayName: true, avatarUrl: true } },
+			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: {
 				columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },

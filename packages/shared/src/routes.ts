@@ -145,3 +145,18 @@ export const dashboardRoutes = {
 			`/dashboard/c/org/${orgId}/team/${teamId}/settings`,
 	},
 } as const;
+
+export const publicRoutes = {
+	orgs: {
+		root: "/orgs",
+		bySlug: (slug: string) => `/orgs/${slug}`,
+	},
+	teams: {
+		root: "/teams",
+		byId: (teamId: string) => `/teams/${teamId}`,
+	},
+	players: {
+		root: "/players",
+		byUsername: (username: string) => `/players/${username}`,
+	},
+} as const;

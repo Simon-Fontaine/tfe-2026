@@ -45,6 +45,7 @@ export interface SwitcherTeam {
 	tag: string;
 	organizationId: string;
 	organizationName: string;
+	canManage: boolean;
 }
 
 interface ContextSwitcherProps {

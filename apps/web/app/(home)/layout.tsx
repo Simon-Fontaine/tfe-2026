@@ -1,23 +1,11 @@
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/home/site-footer";
-import { SiteHeader } from "@/components/home/site-header";
-import { getCurrentSession } from "@/lib/auth/session";
+import { SiteHeaderWrapper } from "@/components/home/site-header-wrapper";
 
-export default async function HomeLayout({ children }: { children: ReactNode }) {
-	const { user } = await getCurrentSession();
-
-	const headerUser = user
-		? {
-				email: user.email,
-				displayName: user.displayName,
-				username: user.username,
-				avatarUrl: user.avatarUrl,
-			}
-		: null;
-
+export default function HomeLayout({ children }: { children: ReactNode }) {
 	return (
 		<div>
-			<SiteHeader user={headerUser} />
+			<SiteHeaderWrapper />
 			<main id="main-content">{children}</main>
 			<SiteFooter />
 		</div>

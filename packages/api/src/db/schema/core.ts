@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
@@ -478,8 +479,10 @@ export const lfgApplicationTable = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		// Prevent duplicate applications
-		uniqueIndex("lfg_app_unique_idx").on(table.postId, table.applicantUserId),
+		// Prevent duplicate pending applications (partial index — allows re-apply after withdrawal/rejection)
+		uniqueIndex("lfg_app_unique_idx")
+			.on(table.postId, table.applicantUserId)
+			.where(sql`${table.status} = 'pending'`),
 		index("lfg_app_post_idx").on(table.postId),
 		index("lfg_app_user_idx").on(table.applicantUserId),
 	]

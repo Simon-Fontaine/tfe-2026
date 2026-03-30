@@ -1,5 +1,12 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+	title: "Players",
+	description: "Discover Overwatch 2 players by role and rank.",
+};
+
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +26,7 @@ export default async function PlayersDirectoryPage() {
 							Players
 						</h1>
 						<p className="mt-3 max-w-[48ch] text-xs leading-relaxed text-muted-foreground">
-							Public player profiles now surface open LFT and LFS posts directly.
+							Browse registered players by role and rank.
 						</p>
 					</div>
 					<Button asChild size="sm">
@@ -30,8 +37,8 @@ export default async function PlayersDirectoryPage() {
 				{players.length === 0 ? (
 					<EmptyStateBlock
 						icon={UserSearch01Icon}
-						title="No public player posts yet"
-						description="Check the posts hub or come back later as more players publish availability."
+						title="No players yet"
+						description="Players will appear here once they complete their profile."
 						variant="page"
 					/>
 				) : (
@@ -65,9 +72,6 @@ export default async function PlayersDirectoryPage() {
 											{player.rank}
 										</Badge>
 									)}
-									<Badge variant="outline" className="text-[10px]">
-										{player.openPosts.length} open post{player.openPosts.length === 1 ? "" : "s"}
-									</Badge>
 								</div>
 								{player.bio && (
 									<p className="line-clamp-3 text-xs text-muted-foreground">{player.bio}</p>

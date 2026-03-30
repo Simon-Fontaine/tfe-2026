@@ -2,6 +2,7 @@
 
 import { Notification01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import React from "react";
 import { markNotificationReadAction } from "@/app/dashboard/actions/notifications";
 import { Button } from "@/components/ui/button";
 import { useFormAction } from "@/hooks/use-form-action";
@@ -12,9 +13,9 @@ interface NotificationItemProps {
 	notification: NotificationSummary;
 }
 
-function formatRelativeTime(iso: string): string {
+function formatRelativeTime(iso: string, now: number): string {
 	const date = new Date(iso);
-	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+	const seconds = Math.floor((now - date.getTime()) / 1000);
 	if (seconds < 60) return "just now";
 	const minutes = Math.floor(seconds / 60);
 	if (minutes < 60) return `${minutes}m ago`;
@@ -25,7 +26,18 @@ function formatRelativeTime(iso: string): string {
 	return date.toLocaleDateString();
 }
 
+function useRelativeTime(iso: string): string {
+	const [now, setNow] = React.useState(() => Date.now());
+	React.useEffect(() => {
+		setNow(Date.now());
+		const interval = setInterval(() => setNow(Date.now()), 60_000);
+		return () => clearInterval(interval);
+	}, []);
+	return formatRelativeTime(iso, now);
+}
+
 export function NotificationItem({ notification }: NotificationItemProps) {
+	const relativeTime = useRelativeTime(notification.createdAt);
 	const { submit, isPending } = useFormAction(markNotificationReadAction, {});
 
 	function markRead() {
@@ -55,9 +67,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 				{notification.body && (
 					<p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.body}</p>
 				)}
-				<p className="mt-1 text-[10px] text-muted-foreground">
-					{formatRelativeTime(notification.createdAt)}
-				</p>
+				<p className="mt-1 text-[10px] text-muted-foreground">{relativeTime}</p>
 			</div>
 
 			{!notification.isRead && (

@@ -1,7 +1,13 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+	title: "Scrims",
+	description: "Browse upcoming Overwatch 2 scrims and open practice requests.",
+};
 
 export default function ScrimsDirectoryPage() {
 	return (

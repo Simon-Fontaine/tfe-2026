@@ -4,11 +4,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config/site";
 
-const stats = [
-	{ value: "500+", label: "Teams registered" },
-	{ value: "10k+", label: "Scrims coordinated" },
-	{ value: "99.9%", label: "Uptime" },
-	{ value: "4.9\u2605", label: "User rating" },
+const highlights = [
+	{ value: "Free", label: "For all teams" },
+	{ value: "Open beta", label: "Early access" },
+	{ value: "2FA", label: "Passkeys & TOTP" },
+	{ value: "OW2", label: "Built for comp" },
 ];
 
 export function LandingHeroSection() {
@@ -51,7 +51,7 @@ export function LandingHeroSection() {
 					</div>
 					<div>
 						<div className="grid grid-cols-2">
-							{stats.map((s) => (
+							{highlights.map((s) => (
 								<div key={s.label} className="-mb-px -mr-px border p-4 text-center">
 									<dd className="text-sm font-bold text-primary">{s.value}</dd>
 									<dt className="mt-0.5 text-xs text-muted-foreground">{s.label}</dt>

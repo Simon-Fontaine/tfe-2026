@@ -55,12 +55,18 @@ publicOrgRoutes.get("/", async (c) => {
 	return c.json({ data });
 });
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 publicOrgRoutes.get("/:id", async (c) => {
 	const idOrSlug = c.req.param("id");
 	const user = c.get("user");
 
+	const whereCondition = UUID_RE.test(idOrSlug)
+		? or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug))
+		: eq(organizationTable.slug, idOrSlug);
+
 	const org = await db.query.organizationTable.findFirst({
-		where: or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug)),
+		where: whereCondition,
 		columns: {
 			id: true,
 			slug: true,
@@ -95,7 +101,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 			lfgPosts: {
 				where: eq(lfgPostTable.status, "open"),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -140,6 +146,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 			).size,
 		})),
 		openPosts: org.lfgPosts.map((post) => mapRecruitmentPost(post, { viewerId: user?.id ?? null })),
+		// TODO: query actual pending join requests for the authenticated user
 		hasPendingJoinRequest: false,
 	};
 

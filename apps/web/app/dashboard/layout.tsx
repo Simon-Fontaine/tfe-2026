@@ -29,6 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 				tag: team.tag,
 				organizationId: org.id,
 				organizationName: org.name,
+				canManage: team.canManage,
 			}))
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));
