@@ -21,6 +21,7 @@ import { teamRoutes } from "@/routes/teams";
 import { publicTeamRoutes } from "@/routes/teams/public";
 import { uploadRoutes } from "@/routes/uploads";
 import { userRoutes } from "@/routes/users";
+import { websocket } from "@/websocket";
 
 const app = new Hono();
 
@@ -82,4 +83,5 @@ app.get("/api/health", (c) => c.json({ status: "ok" }));
 export default {
 	port: Number(process.env.API_PORT) || 3001,
 	fetch: app.fetch,
+	websocket,
 };

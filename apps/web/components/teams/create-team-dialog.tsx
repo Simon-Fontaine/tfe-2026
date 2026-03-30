@@ -1,6 +1,8 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { Add01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { type CreateTeamInput, CreateTeamSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -11,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
@@ -23,12 +26,17 @@ import { useFormAction } from "@/hooks/use-form-action";
 
 interface CreateTeamDialogProps {
 	orgId: string;
-	children?: React.ReactNode;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	showTrigger?: boolean;
 }
 
-export function CreateTeamDialog({ orgId, children, open, onOpenChange }: CreateTeamDialogProps) {
+export function CreateTeamDialog({
+	orgId,
+	open,
+	onOpenChange,
+	showTrigger = false,
+}: CreateTeamDialogProps) {
 	const router = useRouter();
 	const pendingRef = useRef(false);
 
@@ -71,10 +79,18 @@ export function CreateTeamDialog({ orgId, children, open, onOpenChange }: Create
 					form.reset({ orgId, name: "", tag: "", description: "", avatarUrl: "", bannerUrl: "" });
 			}}
 		>
-			{children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
+			{showTrigger ? (
+				<DialogTrigger asChild>
+					<Button size="sm">
+						<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+						New team
+					</Button>
+				</DialogTrigger>
+			) : null}
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>Create team</DialogTitle>
+					<DialogDescription>Create a team roster under this organization.</DialogDescription>
 				</DialogHeader>
 
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

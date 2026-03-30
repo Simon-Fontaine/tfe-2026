@@ -1,5 +1,3 @@
-import { Add01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/dashboard/page-container";
@@ -8,7 +6,6 @@ import { PageSection } from "@/components/dashboard/page-section";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
-import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 
@@ -27,16 +24,7 @@ export default async function OrgTeamsPage({ params }: { params: Promise<{ orgId
 			<PageHeader
 				title="Teams"
 				description={`Manage active and archived rosters for ${org.name}.`}
-				actions={
-					canManage ? (
-						<CreateTeamDialog orgId={org.id}>
-							<Button size="sm">
-								<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-								New team
-							</Button>
-						</CreateTeamDialog>
-					) : undefined
-				}
+				actions={canManage ? <CreateTeamDialog orgId={org.id} showTrigger /> : undefined}
 			/>
 
 			<PageSection title="Active teams">

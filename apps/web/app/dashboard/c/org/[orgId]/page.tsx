@@ -1,5 +1,3 @@
-import { Add01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/dashboard/page-container";
@@ -11,7 +9,6 @@ import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 
@@ -66,16 +63,7 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ or
 
 			<PageSection
 				title="Active teams"
-				actions={
-					canManage ? (
-						<CreateTeamDialog orgId={org.id}>
-							<Button size="sm">
-								<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-								New team
-							</Button>
-						</CreateTeamDialog>
-					) : undefined
-				}
+				actions={canManage ? <CreateTeamDialog orgId={org.id} showTrigger /> : undefined}
 			>
 				{org.activeTeams.length === 0 ? (
 					<EmptyStateBlock

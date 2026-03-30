@@ -64,8 +64,9 @@ export async function getTeamPendingInvites(
 	throw new Error(res.error);
 }
 
-export const getTeamSchedule = cache(async (teamId: string): Promise<TeamSchedule> => {
+export const getTeamSchedule = cache(async (teamId: string): Promise<TeamSchedule | null> => {
 	const res = await apiGet<TeamSchedule>(`/api/schedule/team/${teamId}`);
 	if ("data" in res) return res.data;
+	if (res.status === 403) return null;
 	throw new Error(res.error);
 });
