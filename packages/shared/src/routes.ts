@@ -67,11 +67,6 @@ export const apiRoutes = {
 		byId: (responseId: string) => `/api/responses/${responseId}`,
 		decision: (responseId: string) => `/api/responses/${responseId}/decision`,
 	},
-	threads: {
-		root: "/api/threads",
-		byId: (threadId: string) => `/api/threads/${threadId}`,
-		messages: (threadId: string) => `/api/threads/${threadId}/messages`,
-	},
 	chat: {
 		conversations: "/api/chat/conversations",
 		ws: "/api/chat/ws",
@@ -92,11 +87,6 @@ export const apiRoutes = {
 			mine: "/api/responses/mine",
 			byId: (responseId: string) => `/api/responses/${responseId}`,
 			decision: (responseId: string) => `/api/responses/${responseId}/decision`,
-		},
-		threads: {
-			root: "/api/threads",
-			byId: (threadId: string) => `/api/threads/${threadId}`,
-			messages: (threadId: string) => `/api/threads/${threadId}/messages`,
 		},
 	},
 	lfg: {

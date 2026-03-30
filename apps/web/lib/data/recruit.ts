@@ -1,9 +1,7 @@
 import type {
-	RecruitmentConversationSummary,
 	RecruitmentPostCategory,
 	RecruitmentPostSummary,
 	RecruitmentResponseSummary,
-	RecruitmentThread,
 } from "@scrimflow/shared";
 import { cache } from "react";
 
@@ -12,13 +10,7 @@ import type { RecruitEntityOption } from "@/lib/recruitment";
 import { apiRoutes } from "@/lib/routes";
 import { getOrgsForUser, getOrgWithTeams } from "./organization";
 
-export type {
-	RecruitmentConversationSummary,
-	RecruitmentPostCategory,
-	RecruitmentPostSummary,
-	RecruitmentResponseSummary,
-	RecruitmentThread,
-};
+export type { RecruitmentPostCategory, RecruitmentPostSummary, RecruitmentResponseSummary };
 
 export const getManageableRecruitEntities = cache(
 	async (userId: string): Promise<RecruitEntityOption[]> => {
@@ -89,23 +81,6 @@ export const getRecruitmentResponsesForPost = cache(
 		const res = await apiGet<RecruitmentResponseSummary[]>(apiRoutes.posts.responses(postId));
 		if ("data" in res) return res.data;
 		if (res.status === 403 || res.status === 404) return [];
-		throw new Error(res.error);
-	}
-);
-
-export const getRecruitmentConversations = cache(
-	async (): Promise<RecruitmentConversationSummary[]> => {
-		const res = await apiGet<RecruitmentConversationSummary[]>(apiRoutes.threads.root);
-		if ("data" in res) return res.data;
-		throw new Error(res.error);
-	}
-);
-
-export const getRecruitmentThread = cache(
-	async (threadId: string): Promise<RecruitmentThread | null> => {
-		const res = await apiGet<RecruitmentThread>(apiRoutes.threads.byId(threadId));
-		if ("data" in res) return res.data;
-		if (res.status === 404) return null;
 		throw new Error(res.error);
 	}
 );

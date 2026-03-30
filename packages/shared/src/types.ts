@@ -526,7 +526,7 @@ export type RecruitmentPostSummary = {
 export type RecruitmentResponseSummary = {
 	id: string;
 	postId: string;
-	threadId: string | null;
+	conversationId: string | null;
 	status: RecruitmentResponseStatus;
 	message: string | null;
 	createdAt: IsoDateString;
@@ -559,7 +559,7 @@ export type RecruitmentResponseSummary = {
 };
 
 export type RecruitmentConversationSummary = {
-	threadId: string;
+	conversationId: string;
 	responseId: string;
 	postId: string;
 	postCategory: RecruitmentPostCategory;
@@ -580,29 +580,13 @@ export type RecruitmentConversationSummary = {
 
 export type RecruitmentMessage = {
 	id: string;
-	threadId: string;
+	conversationId: string;
 	senderId: string;
 	senderDisplayName: string;
 	senderAvatarUrl: string | null;
 	content: string;
 	isSystemMessage: boolean;
 	createdAt: IsoDateString;
-};
-
-export type RecruitmentThreadParticipant = {
-	id: string;
-	displayName: string;
-	avatarUrl: string | null;
-};
-
-export type RecruitmentThread = {
-	id: string;
-	responseId: string;
-	post: RecruitmentPostSummary;
-	response: RecruitmentResponseSummary;
-	participants: RecruitmentThreadParticipant[];
-	messages: RecruitmentMessage[];
-	isArchived: boolean;
 };
 
 export type ChatConversationType =

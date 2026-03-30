@@ -64,11 +64,6 @@ export type DecideRecruitmentResponseInput = {
 	staffRole?: StaffRole;
 };
 
-export type SendRecruitmentMessageInput = {
-	threadId: string;
-	content: string;
-};
-
 export class RecruitService {
 	constructor(private readonly transport: Transport) {}
 
@@ -89,9 +84,9 @@ export class RecruitService {
 
 	respondToPost(
 		input: CreateRecruitmentResponseInput
-	): Promise<SdkResult<MutationSuccess & { responseId: string; threadId: string }>> {
+	): Promise<SdkResult<MutationSuccess & { responseId: string; conversationId: string }>> {
 		const { postId, ...body } = input;
-		return this.transport.post<MutationSuccess & { responseId: string; threadId: string }>(
+		return this.transport.post<MutationSuccess & { responseId: string; conversationId: string }>(
 			`/api/posts/${postId}/responses`,
 			body
 		);
@@ -104,10 +99,5 @@ export class RecruitService {
 	decideResponse(input: DecideRecruitmentResponseInput): Promise<SdkResult<MutationSuccess>> {
 		const { responseId, ...body } = input;
 		return this.transport.post<MutationSuccess>(`/api/responses/${responseId}/decision`, body);
-	}
-
-	sendMessage(input: SendRecruitmentMessageInput): Promise<SdkResult<MutationSuccess>> {
-		const { threadId, ...body } = input;
-		return this.transport.post<MutationSuccess>(`/api/threads/${threadId}/messages`, body);
 	}
 }

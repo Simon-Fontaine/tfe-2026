@@ -27,7 +27,6 @@ export type {
 	CreateRecruitmentResponseInput,
 	DecideRecruitmentResponseInput,
 	DeleteRecruitmentPostInput,
-	SendRecruitmentMessageInput,
 	UpdateRecruitmentPostInput,
 	WithdrawRecruitmentResponseInput,
 } from "./services/recruit";

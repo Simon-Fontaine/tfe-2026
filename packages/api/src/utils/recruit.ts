@@ -350,7 +350,7 @@ export function mapRecruitmentResponse(row: {
 	return {
 		id: row.id,
 		postId: row.postId,
-		threadId: row.chatChannels?.[0]?.id ?? null,
+		conversationId: row.chatChannels?.[0]?.id ?? null,
 		status: row.status,
 		message: row.message ?? null,
 		createdAt: row.createdAt.toISOString(),
@@ -468,7 +468,7 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 				: response.senderOrganizationSlug;
 
 			return {
-				threadId: channel.id,
+				conversationId: channel.id,
 				responseId: response.id,
 				postId: response.postId,
 				postCategory: post.category,
@@ -494,94 +494,7 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 		.filter((row): row is NonNullable<typeof row> => row !== null);
 }
 
-export async function getRecruitmentThreadForUser(threadId: string, userId: string) {
-	const membership = await db.query.chatChannelMemberTable.findFirst({
-		where: and(
-			eq(chatChannelMemberTable.channelId, threadId),
-			eq(chatChannelMemberTable.userId, userId)
-		),
-		columns: { id: true },
-	});
-	if (!membership) return null;
-
-	const channel = await db.query.chatChannelTable.findFirst({
-		where: and(eq(chatChannelTable.id, threadId), eq(chatChannelTable.channelType, "recruitment")),
-		with: {
-			lfgApplication: {
-				with: {
-					post: {
-						with: {
-							user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
-							organization: {
-								columns: { id: true, name: true, slug: true, avatarUrl: true },
-							},
-							team: {
-								columns: {
-									id: true,
-									name: true,
-									tag: true,
-									avatarUrl: true,
-									teamSr: true,
-								},
-							},
-						},
-					},
-					applicant: {
-						columns: { id: true, username: true, displayName: true, avatarUrl: true },
-						with: {
-							profile: { columns: { primaryRole: true, rank: true } },
-						},
-					},
-					applicantTeam: {
-						columns: { id: true, name: true, tag: true },
-					},
-					applicantOrganization: {
-						columns: { id: true, name: true, slug: true },
-					},
-					chatChannels: { columns: { id: true } },
-				},
-			},
-			members: {
-				where: isNull(chatChannelMemberTable.leftAt),
-				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
-				},
-			},
-			messages: {
-				orderBy: [chatMessageTable.createdAt],
-				with: {
-					sender: { columns: { id: true, displayName: true, avatarUrl: true } },
-				},
-			},
-		},
-	});
-	if (!channel?.lfgApplication?.post) return null;
-
-	return {
-		id: channel.id,
-		responseId: channel.lfgApplication.id,
-		post: mapRecruitmentPost(channel.lfgApplication.post, { viewerId: userId }),
-		response: mapRecruitmentResponse(channel.lfgApplication),
-		participants: channel.members.map((member) => ({
-			id: member.user.id,
-			displayName: member.user.displayName,
-			avatarUrl: member.user.avatarUrl,
-		})),
-		messages: channel.messages.map((message) => ({
-			id: message.id,
-			threadId: channel.id,
-			senderId: message.sender.id,
-			senderDisplayName: message.sender.displayName,
-			senderAvatarUrl: message.sender.avatarUrl,
-			content: message.content,
-			isSystemMessage: message.isSystemMessage,
-			createdAt: message.createdAt.toISOString(),
-		})),
-		isArchived: channel.isArchived,
-	};
-}
-
-export async function createRecruitmentThread(params: {
+export async function createRecruitmentConversation(params: {
 	responseId: string;
 	postOwnerUserId: string;
 	senderUserId: string;

@@ -1,105 +1,30 @@
-import Link from "next/link";
-
+import { ChatWorkspace } from "@/components/chat/chat-workspace";
 import { PageContainer } from "@/components/dashboard/page-container";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { PageSection } from "@/components/dashboard/page-section";
-import { RecruitmentThreadPanel } from "@/components/recruit/recruitment-thread-panel";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { Badge } from "@/components/ui/badge";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getRecruitmentConversations, getRecruitmentThread } from "@/lib/data/recruit";
-import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
-import { dashboardRoutes, publicRoutes } from "@/lib/routes";
+import { getChatConversations } from "@/lib/data/chat";
 
-interface RecruitConversationsPageProps {
-	searchParams: Promise<{ thread?: string }>;
+interface DiscoverChatPageProps {
+	searchParams: Promise<{ conversation?: string }>;
 }
 
-export default async function RecruitConversationsPage({
-	searchParams,
-}: RecruitConversationsPageProps) {
+export default async function DiscoverChatPage({ searchParams }: DiscoverChatPageProps) {
 	const { user } = await getCurrentSession();
 	if (!user) return null;
 
-	const { thread: threadId } = await searchParams;
-	const conversations = await getRecruitmentConversations();
-	const selectedThreadId = threadId ?? conversations[0]?.threadId ?? null;
-	const thread = selectedThreadId ? await getRecruitmentThread(selectedThreadId) : null;
+	const { conversation } = await searchParams;
+	const conversations = await getChatConversations();
 
 	return (
 		<PageContainer>
-			<PageHeader
-				title="Recruit Conversations"
-				description="Manage every recruiting thread in one inbox"
+			<PageHeader title="Chat" description="Manage all conversations in one inbox." />
+			<ChatWorkspace
+				currentUserId={user.id}
+				conversations={conversations}
+				initialConversationId={conversation ?? null}
+				emptyTitle="No conversations yet"
+				emptyDescription="Respond to a post or join a team conversation to get started."
 			/>
-
-			<div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-				<PageSection title="Threads">
-					{conversations.length === 0 ? (
-						<EmptyStateBlock
-							title="No conversations yet"
-							description="Respond to a post to create the first thread."
-							variant="card"
-						/>
-					) : (
-						<div className="space-y-2">
-							{conversations.map((conversation) => {
-								const isSelected = conversation.threadId === selectedThreadId;
-								const profileHref =
-									conversation.counterpartType === "player" && conversation.counterpartUsername
-										? publicRoutes.players.byUsername(conversation.counterpartUsername)
-										: conversation.counterpartType === "organization" &&
-												conversation.counterpartOrgSlug
-											? publicRoutes.orgs.bySlug(conversation.counterpartOrgSlug)
-											: conversation.counterpartType === "team" && conversation.teamId
-												? publicRoutes.teams.byId(conversation.teamId)
-												: null;
-								return (
-									<div
-										key={conversation.threadId}
-										className={`border transition-colors ${isSelected ? "border-primary" : ""}`}
-									>
-										<div className="flex flex-wrap items-center gap-2 px-3 pt-3">
-											{profileHref ? (
-												<Link
-													href={profileHref}
-													className="truncate text-sm font-medium hover:underline"
-												>
-													{conversation.counterpartLabel}
-												</Link>
-											) : (
-												<p className="truncate text-sm font-medium">
-													{conversation.counterpartLabel}
-												</p>
-											)}
-											<Badge variant="secondary" className="text-[10px]">
-												{RECRUITMENT_CATEGORY_LABELS[conversation.postCategory]}
-											</Badge>
-										</div>
-										<Link
-											href={`${dashboardRoutes.discover.conversations}?thread=${conversation.threadId}`}
-											className={`block px-3 pb-3 pt-1 hover:bg-muted/50 ${
-												isSelected ? "bg-primary/5" : ""
-											}`}
-										>
-											<p className="line-clamp-1 text-xs text-muted-foreground">
-												{conversation.postTitle}
-											</p>
-											{conversation.lastMessagePreview && (
-												<p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-													{conversation.lastMessagePreview}
-												</p>
-											)}
-										</Link>
-									</div>
-								);
-							})}
-						</div>
-					)}
-				</PageSection>
-
-				<RecruitmentThreadPanel thread={thread} currentUserId={user.id} />
-			</div>
 		</PageContainer>
 	);
 }

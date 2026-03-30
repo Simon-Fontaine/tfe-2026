@@ -65,14 +65,14 @@ responsesRoutes.delete("/:id", async (c) => {
 		.set({ status: "withdrawn" })
 		.where(eq(lfgApplicationTable.id, responseId));
 
-	const threadId = response.chatChannels[0]?.id;
-	if (threadId) {
+	const conversationId = response.chatChannels[0]?.id;
+	if (conversationId) {
 		await db
 			.update(chatChannelTable)
 			.set({ isArchived: true })
-			.where(eq(chatChannelTable.id, threadId));
+			.where(eq(chatChannelTable.id, conversationId));
 
-		await sendRecruitmentSystemMessage(threadId, "The applicant withdrew their response.");
+		await sendRecruitmentSystemMessage(conversationId, "The applicant withdrew their response.");
 	}
 
 	if (response.post) {
@@ -159,12 +159,12 @@ responsesRoutes.post("/:id/decision", async (c) => {
 		});
 
 		if (response.chatChannels[0]) {
-			const threadId = response.chatChannels[0].id;
-			await sendRecruitmentSystemMessage(threadId, "Recruitment response rejected.");
+			const conversationId = response.chatChannels[0].id;
+			await sendRecruitmentSystemMessage(conversationId, "Recruitment response rejected.");
 			await db
 				.update(chatChannelTable)
 				.set({ isArchived: true })
-				.where(eq(chatChannelTable.id, threadId));
+				.where(eq(chatChannelTable.id, conversationId));
 		}
 
 		return c.json({ success: true });
@@ -328,15 +328,15 @@ responsesRoutes.post("/:id/decision", async (c) => {
 	});
 
 	if (response.chatChannels[0]) {
-		const threadId = response.chatChannels[0].id;
+		const conversationId = response.chatChannels[0].id;
 		await sendRecruitmentSystemMessage(
-			threadId,
+			conversationId,
 			`Recruitment response accepted for "${response.post.title}".`
 		);
 		await db
 			.update(chatChannelTable)
 			.set({ isArchived: true })
-			.where(eq(chatChannelTable.id, threadId));
+			.where(eq(chatChannelTable.id, conversationId));
 	}
 
 	return c.json({ success: true });
