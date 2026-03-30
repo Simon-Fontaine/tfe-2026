@@ -1,10 +1,10 @@
 import { AvailabilitySchema } from "@scrimflow/shared";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { availabilityTable, teamRosterTable } from "@/db/schema";
+import { availabilityTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { verifyUserOnTeam } from "@/utils/team";
@@ -22,6 +22,7 @@ scheduleRoutes.get("/availability", async (c) => {
 		where: and(eq(availabilityTable.userId, user.id), eq(availabilityTable.teamId, teamId)),
 		columns: {
 			id: true,
+			userId: true,
 			teamId: true,
 			dayOfWeek: true,
 			specificDate: true,
@@ -50,6 +51,85 @@ scheduleRoutes.get("/teams", async (c) => {
 	});
 
 	return c.json({ data: rows.map((r) => r.team) });
+});
+
+// GET /team/:teamId — Team-wide schedule for active members
+scheduleRoutes.get("/team/:teamId", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.param("teamId");
+
+	const onTeam = await verifyUserOnTeam(user.id, teamId);
+	if (!onTeam) return c.json({ error: "You are not an active member of this team." }, 403);
+
+	const team = await db.query.teamTable.findFirst({
+		where: eq(teamTable.id, teamId),
+		columns: { id: true, name: true, tag: true },
+	});
+	if (!team) return c.json({ error: "Team not found." }, 404);
+
+	const members = await db.query.teamRosterTable.findMany({
+		where: and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.status, "active")),
+		columns: {
+			userId: true,
+			memberType: true,
+			permissionRole: true,
+			status: true,
+			roleInTeam: true,
+			staffRole: true,
+		},
+		with: {
+			user: {
+				columns: {
+					displayName: true,
+					avatarUrl: true,
+				},
+			},
+		},
+		orderBy: [asc(teamRosterTable.memberType), asc(teamRosterTable.joinedAt)],
+	});
+
+	const availability = members.length
+		? await db.query.availabilityTable.findMany({
+				where: and(
+					eq(availabilityTable.teamId, teamId),
+					inArray(
+						availabilityTable.userId,
+						members.map((member) => member.userId)
+					)
+				),
+				columns: {
+					id: true,
+					userId: true,
+					teamId: true,
+					dayOfWeek: true,
+					specificDate: true,
+					startTime: true,
+					endTime: true,
+					timezone: true,
+					label: true,
+				},
+				orderBy: [asc(availabilityTable.dayOfWeek), asc(availabilityTable.specificDate)],
+			})
+		: [];
+
+	return c.json({
+		data: {
+			teamId: team.id,
+			teamName: team.name,
+			teamTag: team.tag,
+			members: members.map((member) => ({
+				userId: member.userId,
+				displayName: member.user.displayName,
+				avatarUrl: member.user.avatarUrl,
+				memberType: member.memberType,
+				permissionRole: member.permissionRole,
+				status: member.status,
+				gameRole: member.roleInTeam,
+				staffRole: member.staffRole,
+			})),
+			availability,
+		},
+	});
 });
 
 // POST /availability — Add availability

@@ -46,9 +46,9 @@ export function CreateTeamDialog({ orgId, children, open, onOpenChange }: Create
 		if (state?.success && pendingRef.current) {
 			pendingRef.current = false;
 			const teamId = (state as { teamId?: string }).teamId;
-			if (teamId) router.push(`/dashboard/c/org/${orgId}/team/${teamId}`);
+			if (teamId) router.push(`/dashboard/teams/${teamId}`);
 		}
-	}, [state, router, orgId]);
+	}, [state, router]);
 
 	function onSubmit(values: CreateTeamInput) {
 		pendingRef.current = true;

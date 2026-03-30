@@ -6,6 +6,7 @@ import type {
 	TeamJoinRequestSummary,
 	TeamPendingInvite,
 	TeamPublicPreview,
+	TeamSchedule,
 	TeamWithRoster,
 	TeamWorkspaceDetail,
 	UserSearchResult,
@@ -23,6 +24,7 @@ export type {
 	TeamPendingInvite,
 	TeamPublicPreview,
 	TeamWithRoster,
+	TeamSchedule,
 	TeamWorkspaceDetail,
 	UserSearchResult,
 };
@@ -61,3 +63,9 @@ export async function getTeamPendingInvites(
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 }
+
+export const getTeamSchedule = cache(async (teamId: string): Promise<TeamSchedule> => {
+	const res = await apiGet<TeamSchedule>(`/api/schedule/team/${teamId}`);
+	if ("data" in res) return res.data;
+	throw new Error(res.error);
+});

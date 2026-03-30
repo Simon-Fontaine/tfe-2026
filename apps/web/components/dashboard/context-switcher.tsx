@@ -12,7 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sidebar";
 import { dashboardRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { useDashboardContextStore } from "@/stores/dashboard-context";
 
 export interface SwitcherOrg {
 	id: string;
@@ -54,14 +55,16 @@ interface ContextSwitcherProps {
 }
 
 function getActiveContext(pathname: string) {
-	const teamMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)\/team\/([^/]+)/);
-	const orgMatch = pathname.match(/^\/dashboard\/c\/org\/([^/]+)/);
+	const teamMatch = pathname.match(/^\/dashboard\/teams\/([^/]+)/);
+	const orgMatch = pathname.match(/^\/dashboard\/orgs\/([^/]+)/);
 	return {
 		activeOrgId: orgMatch?.[1] ?? null,
-		activeTeamId: teamMatch?.[2] ?? null,
-		isWorkspaceIndex: pathname.startsWith(dashboardRoutes.organizations),
+		activeTeamId: teamMatch?.[1] ?? null,
+		isWorkspaceIndex: pathname === dashboardRoutes.organizations,
 		isPersonal:
-			!pathname.startsWith("/dashboard/c/") && !pathname.startsWith(dashboardRoutes.organizations),
+			!pathname.startsWith("/dashboard/orgs/") &&
+			!pathname.startsWith("/dashboard/teams/") &&
+			!pathname.startsWith(dashboardRoutes.organizations),
 	};
 }
 
@@ -103,6 +106,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 	const { isMobile } = useSidebar();
 	const label = getActiveLabel(activeOrgId, activeTeamId, isWorkspaceIndex, orgs, teams);
 	const icon = getActiveIcon(activeOrgId, activeTeamId, isWorkspaceIndex);
+	const { setScope, selectOrg, selectTeam } = useDashboardContextStore();
 	const [open, setOpen] = useState(false);
 	const [createTeamOpen, setCreateTeamOpen] = useState(false);
 
@@ -117,6 +121,22 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 	}, [teams]);
 
 	const activeOrg = activeOrgId ? (orgs.find((org) => org.id === activeOrgId) ?? null) : null;
+
+	useEffect(() => {
+		if (activeTeamId) {
+			selectTeam(activeTeamId);
+			setScope("team");
+			return;
+		}
+		if (activeOrgId) {
+			selectOrg(activeOrgId);
+			setScope("org");
+			return;
+		}
+		selectOrg(null);
+		selectTeam(null);
+		setScope("personal");
+	}, [activeOrgId, activeTeamId, selectOrg, selectTeam, setScope]);
 
 	return (
 		<>
@@ -169,7 +189,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 											<DropdownMenuLabel className="pb-1">{org.name}</DropdownMenuLabel>
 											<DropdownMenuGroup>
 												<ContextDropdownItem
-													href={dashboardRoutes.context.orgById(org.id)}
+													href={dashboardRoutes.orgs.byId(org.id)}
 													icon={UserGroupIcon}
 													label="Organization"
 													description="Overview, members, posts, and settings"
@@ -179,7 +199,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 												{orgTeams.map((team) => (
 													<ContextDropdownItem
 														key={team.id}
-														href={dashboardRoutes.context.teamById(org.id, team.id)}
+														href={dashboardRoutes.teams.byId(team.id)}
 														icon={Sword03Icon}
 														label={team.name}
 														description={`[${team.tag}] ${team.organizationName}`}

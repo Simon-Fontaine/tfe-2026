@@ -18,7 +18,7 @@ export function ScheduleNoTeams() {
 				availability.
 			</p>
 			<Button asChild size="sm" variant="outline">
-				<Link href="/dashboard">Back to dashboard</Link>
+				<Link href="/dashboard/orgs">Browse organizations</Link>
 			</Button>
 		</div>
 	);

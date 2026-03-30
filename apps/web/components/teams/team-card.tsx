@@ -10,10 +10,10 @@ interface TeamCardProps {
 	orgId: string;
 }
 
-export function TeamCard({ team, orgId }: TeamCardProps) {
+export function TeamCard({ team, orgId: _orgId }: TeamCardProps) {
 	return (
 		<Link
-			href={`/dashboard/c/org/${orgId}/team/${team.id}`}
+			href={`/dashboard/teams/${team.id}`}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 rounded-none overflow-hidden after:rounded-none shrink-0">

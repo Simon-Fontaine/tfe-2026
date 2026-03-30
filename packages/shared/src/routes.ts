@@ -106,43 +106,61 @@ export const apiRoutes = {
 
 export const dashboardRoutes = {
 	home: "/dashboard",
-	organizations: "/dashboard/organizations",
+	organizations: "/dashboard/orgs",
 	personal: {
-		root: "/dashboard/personal",
-		profile: "/dashboard/personal/profile",
-		schedule: "/dashboard/personal/schedule",
-		notifications: "/dashboard/personal/notifications",
+		root: "/dashboard",
+		profile: "/dashboard/profile",
+		notifications: "/dashboard/notifications",
+		invitations: "/dashboard/invitations",
+		recruitingActivity: "/dashboard/recruiting/activity",
 		settings: {
-			root: "/dashboard/personal/settings",
-			account: "/dashboard/personal/settings/account",
-			security: "/dashboard/personal/settings/security",
+			root: "/dashboard/settings",
+			account: "/dashboard/settings/account",
+			security: "/dashboard/settings/security",
 		},
 	},
 	discover: {
-		root: "/dashboard/discover",
-		posts: "/dashboard/discover/posts",
-		conversations: "/dashboard/discover/conversations",
-		invitations: "/dashboard/discover/invitations",
+		root: "/dashboard/recruiting",
+		posts: "/dashboard/recruiting/posts",
+		conversations: "/dashboard/recruiting/conversations",
+		invitations: "/dashboard/invitations",
+	},
+	orgs: {
+		byId: (orgId: string) => `/dashboard/orgs/${orgId}`,
+		teams: (orgId: string) => `/dashboard/orgs/${orgId}/teams`,
+		members: (orgId: string) => `/dashboard/orgs/${orgId}/members`,
+		recruitingPosts: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/posts`,
+		recruitingConversations: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/conversations`,
+		invites: (orgId: string) => `/dashboard/orgs/${orgId}/invites`,
+		settings: (orgId: string) => `/dashboard/orgs/${orgId}/settings`,
+	},
+	teams: {
+		byId: (teamId: string) => `/dashboard/teams/${teamId}`,
+		roster: (teamId: string) => `/dashboard/teams/${teamId}/roster`,
+		schedule: (teamId: string) => `/dashboard/teams/${teamId}/schedule`,
+		recruitingPosts: (teamId: string) => `/dashboard/teams/${teamId}/recruiting/posts`,
+		recruitingConversations: (teamId: string) =>
+			`/dashboard/teams/${teamId}/recruiting/conversations`,
+		invites: (teamId: string) => `/dashboard/teams/${teamId}/invites`,
+		settings: (teamId: string) => `/dashboard/teams/${teamId}/settings`,
 	},
 	context: {
-		orgById: (orgId: string) => `/dashboard/c/org/${orgId}`,
-		orgTeams: (orgId: string) => `/dashboard/c/org/${orgId}/teams`,
-		orgMembers: (orgId: string) => `/dashboard/c/org/${orgId}/members`,
-		orgPosts: (orgId: string) => `/dashboard/c/org/${orgId}/posts`,
-		orgConversations: (orgId: string) => `/dashboard/c/org/${orgId}/conversations`,
-		orgInvites: (orgId: string) => `/dashboard/c/org/${orgId}/invites`,
-		orgSettings: (orgId: string) => `/dashboard/c/org/${orgId}/settings`,
-		teamById: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}`,
-		teamPlayers: (orgId: string, teamId: string) =>
-			`/dashboard/c/org/${orgId}/team/${teamId}/players`,
-		teamStaff: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}/staff`,
-		teamPosts: (orgId: string, teamId: string) => `/dashboard/c/org/${orgId}/team/${teamId}/posts`,
-		teamConversations: (orgId: string, teamId: string) =>
-			`/dashboard/c/org/${orgId}/team/${teamId}/conversations`,
-		teamInvites: (orgId: string, teamId: string) =>
-			`/dashboard/c/org/${orgId}/team/${teamId}/invites`,
-		teamSettings: (orgId: string, teamId: string) =>
-			`/dashboard/c/org/${orgId}/team/${teamId}/settings`,
+		orgById: (orgId: string) => `/dashboard/orgs/${orgId}`,
+		orgTeams: (orgId: string) => `/dashboard/orgs/${orgId}/teams`,
+		orgMembers: (orgId: string) => `/dashboard/orgs/${orgId}/members`,
+		orgPosts: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/posts`,
+		orgConversations: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/conversations`,
+		orgInvites: (orgId: string) => `/dashboard/orgs/${orgId}/invites`,
+		orgSettings: (orgId: string) => `/dashboard/orgs/${orgId}/settings`,
+		teamById: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}`,
+		teamPlayers: (_orgId: string, teamId: string) =>
+			`/dashboard/teams/${teamId}/roster?type=players`,
+		teamStaff: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/roster?type=staff`,
+		teamPosts: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/recruiting/posts`,
+		teamConversations: (_orgId: string, teamId: string) =>
+			`/dashboard/teams/${teamId}/recruiting/conversations`,
+		teamInvites: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/invites`,
+		teamSettings: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/settings`,
 	},
 } as const;
 

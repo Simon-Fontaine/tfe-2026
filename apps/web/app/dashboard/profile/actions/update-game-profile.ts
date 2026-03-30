@@ -22,6 +22,6 @@ export async function updateGameProfileAction(
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
 	revalidatePath("/dashboard");
-	revalidatePath("/dashboard/personal/profile");
+	revalidatePath("/dashboard/profile");
 	return { success: true };
 }
