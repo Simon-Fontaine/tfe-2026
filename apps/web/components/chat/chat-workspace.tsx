@@ -162,10 +162,18 @@ export function ChatWorkspace({
 	}, [selectedConversationId]);
 
 	useEffect(() => {
-		if (!selectedConversationId) return;
+		const currentConversationParam = searchParams.get("conversation");
+		if (currentConversationParam === selectedConversationId) return;
+
 		const params = new URLSearchParams(searchParams.toString());
-		params.set("conversation", selectedConversationId);
-		router.replace(`${pathname}?${params.toString()}`);
+		if (selectedConversationId) {
+			params.set("conversation", selectedConversationId);
+		} else {
+			params.delete("conversation");
+		}
+
+		const query = params.toString();
+		router.replace(query ? `${pathname}?${query}` : pathname);
 	}, [pathname, router, searchParams, selectedConversationId]);
 
 	useEffect(() => {
