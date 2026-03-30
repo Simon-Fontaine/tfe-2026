@@ -41,6 +41,7 @@ export function ChatWorkspace({
 	const [error, setError] = useState<string | null>(null);
 	const wsRef = useRef<WebSocket | null>(null);
 	const subscribedConversationRef = useRef<string | null>(null);
+	const pendingConversationSubscriptionRef = useRef<string | null>(null);
 	const selectedConversationIdRef = useRef<string | null>(selectedConversationId);
 	const typingTimeoutRef = useRef<number | null>(null);
 	const router = useRouter();
@@ -95,6 +96,14 @@ export function ChatWorkspace({
 		const ws = new WebSocket(`${wsProtocol}://${window.location.host}${apiRoutes.chat.ws}`);
 		wsRef.current = ws;
 
+		ws.onopen = () => {
+			const conversationId = pendingConversationSubscriptionRef.current;
+			if (!conversationId) return;
+			ws.send(JSON.stringify({ type: "subscribe", conversationId }));
+			subscribedConversationRef.current = conversationId;
+			pendingConversationSubscriptionRef.current = null;
+		};
+
 		ws.onmessage = (event) => {
 			const raw = String(event.data);
 			let data: ChatRealtimeEvent | null = null;
@@ -123,25 +132,32 @@ export function ChatWorkspace({
 		return () => {
 			ws.close();
 			wsRef.current = null;
+			subscribedConversationRef.current = null;
+			pendingConversationSubscriptionRef.current = null;
 		};
 	}, []);
 
 	useEffect(() => {
-		if (!selectedConversationId || !wsRef.current) return;
+		if (!selectedConversationId) return;
+		const ws = wsRef.current;
+		if (!ws) return;
+		if (ws.readyState === WebSocket.CONNECTING) {
+			pendingConversationSubscriptionRef.current = selectedConversationId;
+			return;
+		}
+		if (ws.readyState !== WebSocket.OPEN) return;
 		if (
 			subscribedConversationRef.current &&
 			subscribedConversationRef.current !== selectedConversationId
 		) {
-			wsRef.current.send(
+			ws.send(
 				JSON.stringify({
 					type: "unsubscribe",
 					conversationId: subscribedConversationRef.current,
 				})
 			);
 		}
-		wsRef.current.send(
-			JSON.stringify({ type: "subscribe", conversationId: selectedConversationId })
-		);
+		ws.send(JSON.stringify({ type: "subscribe", conversationId: selectedConversationId }));
 		subscribedConversationRef.current = selectedConversationId;
 	}, [selectedConversationId]);
 
@@ -164,10 +180,9 @@ export function ChatWorkspace({
 	}, [messages, selectedConversationId]);
 
 	function emitTyping(isTyping: boolean) {
-		if (!selectedConversationId || !wsRef.current) return;
-		wsRef.current.send(
-			JSON.stringify({ type: "typing", conversationId: selectedConversationId, isTyping })
-		);
+		const ws = wsRef.current;
+		if (!selectedConversationId || !ws || ws.readyState !== WebSocket.OPEN) return;
+		ws.send(JSON.stringify({ type: "typing", conversationId: selectedConversationId, isTyping }));
 	}
 
 	async function sendMessage() {
