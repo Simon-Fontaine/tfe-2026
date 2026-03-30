@@ -50,9 +50,9 @@ export function RecruitmentResponseDialog({
 			pendingRef.current = false;
 			setOpen(false);
 			setMessage("");
-			if ("threadId" in state && state.threadId) {
+			if ("conversationId" in state && state.conversationId) {
 				router.push(
-					`${conversationHrefBase ?? dashboardRoutes.discover.conversations}?thread=${state.threadId}`
+					`${conversationHrefBase ?? dashboardRoutes.discover.conversations}?conversation=${state.conversationId}`
 				);
 			}
 		}

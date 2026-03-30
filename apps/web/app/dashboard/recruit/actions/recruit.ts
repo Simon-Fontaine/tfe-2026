@@ -356,7 +356,7 @@ export async function deleteRecruitmentPostAction(
 export async function respondToRecruitmentPostAction(
 	_prev: FormActionResult | null,
 	formData: FormData
-): Promise<FormActionResult & { threadId?: string; responseId?: string }> {
+): Promise<FormActionResult & { conversationId?: string; responseId?: string }> {
 	const sdk = getServerSdk();
 	const postId = getString(formData, "postId");
 	const result = await sdk.recruit.respondToPost({
@@ -375,7 +375,7 @@ export async function respondToRecruitmentPostAction(
 	});
 	return {
 		success: true,
-		threadId: actionResult.data.threadId,
+		conversationId: actionResult.data.conversationId,
 		responseId: actionResult.data.responseId,
 	};
 }
@@ -413,26 +413,6 @@ export async function decideRecruitmentResponseAction(
 			| "manager"
 			| "staff"
 			| undefined,
-	});
-
-	const actionResult = toActionResult(result);
-	if (!("data" in actionResult)) return actionResult;
-
-	await revalidateRecruitPaths({
-		teamId: getOptionalString(formData, "teamId"),
-		orgId: getOptionalString(formData, "organizationId"),
-	});
-	return { success: true };
-}
-
-export async function sendRecruitmentMessageAction(
-	_prev: FormActionResult | null,
-	formData: FormData
-): Promise<FormActionResult> {
-	const sdk = getServerSdk();
-	const result = await sdk.recruit.sendMessage({
-		threadId: getString(formData, "threadId"),
-		content: getString(formData, "content"),
 	});
 
 	const actionResult = toActionResult(result);

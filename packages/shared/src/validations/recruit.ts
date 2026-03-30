@@ -117,15 +117,3 @@ export const DecideRecruitmentResponseSchema = v.object({
 });
 
 export type DecideRecruitmentResponseInput = v.InferOutput<typeof DecideRecruitmentResponseSchema>;
-
-export const SendRecruitmentMessageSchema = v.object({
-	threadId: v.pipe(v.string(), v.uuid("Invalid thread ID")),
-	content: v.pipe(
-		v.string(),
-		v.trim(),
-		v.minLength(1, "Message cannot be empty"),
-		v.maxLength(2000, "Message cannot exceed 2000 characters")
-	),
-});
-
-export type SendRecruitmentMessageInput = v.InferOutput<typeof SendRecruitmentMessageSchema>;

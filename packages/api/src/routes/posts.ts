@@ -15,7 +15,7 @@ import { extractErrors } from "@/routes/auth/utils";
 import { getOrgPermissions } from "@/utils/org";
 import {
 	canManageRecruitmentPost,
-	createRecruitmentThread,
+	createRecruitmentConversation,
 	mapRecruitmentPost,
 	mapRecruitmentResponse,
 } from "@/utils/recruit";
@@ -386,7 +386,7 @@ postsRoutes.post("/:id/responses", async (c) => {
 		})
 		.returning({ id: lfgApplicationTable.id });
 
-	const threadId = await createRecruitmentThread({
+	const conversationId = await createRecruitmentConversation({
 		responseId: response.id,
 		postOwnerUserId: post.userId,
 		senderUserId: user.id,
@@ -395,7 +395,7 @@ postsRoutes.post("/:id/responses", async (c) => {
 
 	if (parsed.output.message) {
 		await db.insert(chatMessageTable).values({
-			channelId: threadId,
+			channelId: conversationId,
 			senderId: user.id,
 			content: parsed.output.message,
 		});
@@ -410,7 +410,7 @@ postsRoutes.post("/:id/responses", async (c) => {
 		referenceId: postId,
 	});
 
-	return c.json({ success: true, responseId: response.id, threadId });
+	return c.json({ success: true, responseId: response.id, conversationId });
 });
 
 export { postsRoutes };

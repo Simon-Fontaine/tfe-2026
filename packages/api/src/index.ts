@@ -19,7 +19,6 @@ import { scheduleRoutes } from "@/routes/schedule";
 import { settingsRoutes } from "@/routes/settings";
 import { teamRoutes } from "@/routes/teams";
 import { publicTeamRoutes } from "@/routes/teams/public";
-import { threadsRoutes } from "@/routes/threads";
 import { uploadRoutes } from "@/routes/uploads";
 import { userRoutes } from "@/routes/users";
 
@@ -54,9 +53,6 @@ app.route("/api/posts", postsRoutes);
 
 app.use("/api/responses/*", requireAuth);
 app.route("/api/responses", responsesRoutes);
-
-app.use("/api/threads/*", requireAuth);
-app.route("/api/threads", threadsRoutes);
 
 app.use("/api/schedule/*", requireAuth);
 app.route("/api/schedule", scheduleRoutes);

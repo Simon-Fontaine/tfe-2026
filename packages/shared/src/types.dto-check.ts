@@ -11,7 +11,6 @@ import type {
 	RecruitmentMessage,
 	RecruitmentPostSummary,
 	RecruitmentResponseSummary,
-	RecruitmentThread,
 	RosterMember,
 	Session,
 	TeamAdminSummary,
@@ -49,7 +48,6 @@ type _RecruitmentConversationSummaryNoDate = AssertNoDate<
 	ContainsDate<RecruitmentConversationSummary>
 >;
 type _RecruitmentMessageNoDate = AssertNoDate<ContainsDate<RecruitmentMessage>>;
-type _RecruitmentThreadNoDate = AssertNoDate<ContainsDate<RecruitmentThread>>;
 type _NotificationSummaryNoDate = AssertNoDate<ContainsDate<NotificationSummary>>;
 type _AvailabilityRowNoDate = AssertNoDate<ContainsDate<AvailabilityRow>>;
 type _TeamAdminSummaryNoDate = AssertNoDate<ContainsDate<TeamAdminSummary>>;

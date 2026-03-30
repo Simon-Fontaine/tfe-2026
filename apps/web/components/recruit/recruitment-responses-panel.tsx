@@ -162,12 +162,12 @@ function RecruitmentResponseCard({
 				) : null}
 
 				<div className="ml-auto flex flex-wrap gap-2">
-					{response.threadId && (
+					{response.conversationId && (
 						<Button asChild size="sm" variant="outline">
 							<Link
 								href={`${
 									conversationHrefBase ?? dashboardRoutes.discover.conversations
-								}?thread=${response.threadId}`}
+								}?conversation=${response.conversationId}`}
 							>
 								Open conversation
 							</Link>
