@@ -69,10 +69,14 @@ export const apiRoutes = {
 	},
 	chat: {
 		conversations: "/api/chat/conversations",
+		createDirect: "/api/chat/conversations/direct",
 		ws: "/api/chat/ws",
 		byId: (conversationId: string) => `/api/chat/conversations/${conversationId}`,
 		messages: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
+		message: (conversationId: string, messageId: string) =>
+			`/api/chat/conversations/${conversationId}/messages/${messageId}`,
 		read: (conversationId: string) => `/api/chat/conversations/${conversationId}/read`,
+		presence: (userId: string) => `/api/chat/presence/${userId}`,
 	},
 	recruit: {
 		posts: {

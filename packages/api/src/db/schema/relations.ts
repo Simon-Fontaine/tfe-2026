@@ -5,6 +5,7 @@ import {
 	availabilityTable,
 	chatChannelMemberTable,
 	chatChannelTable,
+	chatMessageReadTable,
 	chatMessageTable,
 	emailChangeVerificationTable,
 	heroTable,
@@ -304,7 +305,7 @@ export const chatChannelMemberRelations = relations(chatChannelMemberTable, ({ o
 	}),
 }));
 
-export const chatMessageRelations = relations(chatMessageTable, ({ one }) => ({
+export const chatMessageRelations = relations(chatMessageTable, ({ one, many }) => ({
 	channel: one(chatChannelTable, {
 		fields: [chatMessageTable.channelId],
 		references: [chatChannelTable.id],
@@ -316,6 +317,18 @@ export const chatMessageRelations = relations(chatMessageTable, ({ one }) => ({
 	replyTo: one(chatMessageTable, {
 		fields: [chatMessageTable.replyToMessageId],
 		references: [chatMessageTable.id],
+	}),
+	reads: many(chatMessageReadTable),
+}));
+
+export const chatMessageReadRelations = relations(chatMessageReadTable, ({ one }) => ({
+	message: one(chatMessageTable, {
+		fields: [chatMessageReadTable.messageId],
+		references: [chatMessageTable.id],
+	}),
+	user: one(userTable, {
+		fields: [chatMessageReadTable.userId],
+		references: [userTable.id],
 	}),
 }));
 

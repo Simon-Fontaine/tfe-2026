@@ -1,7 +1,12 @@
-import { and, count, desc, eq, gt, isNull, lt, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNull, lt, ne, or } from "drizzle-orm";
 
 import { db } from "@/db";
-import { chatChannelMemberTable, chatChannelTable, chatMessageTable } from "@/db/schema";
+import {
+	chatChannelMemberTable,
+	chatChannelTable,
+	chatMessageReadTable,
+	chatMessageTable,
+} from "@/db/schema";
 
 function normalizeMessageContent(content: string, deletedAt: Date | null): string {
 	if (deletedAt) return "[deleted]";
@@ -362,4 +367,146 @@ export async function markConversationReadForUser(params: {
 		.where(eq(chatChannelMemberTable.id, membership.id));
 
 	return { status: "ok" } as const;
+}
+
+/** Find an existing direct conversation between two users, or create one. */
+export async function findOrCreateDirectConversation(
+	userId: string,
+	targetUserId: string
+): Promise<{ conversationId: string; isNew: boolean }> {
+	// Find a channel of type "direct" where both users are active members
+	const userMemberships = await db.query.chatChannelMemberTable.findMany({
+		where: and(eq(chatChannelMemberTable.userId, userId), isNull(chatChannelMemberTable.leftAt)),
+		columns: { channelId: true },
+		with: {
+			channel: {
+				columns: { id: true, channelType: true },
+			},
+		},
+	});
+
+	const directChannelIds = userMemberships
+		.filter((m) => m.channel?.channelType === "direct")
+		.map((m) => m.channelId);
+
+	if (directChannelIds.length > 0) {
+		const sharedMembership = await db.query.chatChannelMemberTable.findFirst({
+			where: and(
+				eq(chatChannelMemberTable.userId, targetUserId),
+				isNull(chatChannelMemberTable.leftAt),
+				inArray(chatChannelMemberTable.channelId, directChannelIds)
+			),
+			columns: { channelId: true },
+		});
+
+		if (sharedMembership) {
+			return { conversationId: sharedMembership.channelId, isNew: false };
+		}
+	}
+
+	// Create new direct channel
+	const [channel] = await db
+		.insert(chatChannelTable)
+		.values({ channelType: "direct", name: "Direct Message" })
+		.returning({ id: chatChannelTable.id });
+
+	await db.insert(chatChannelMemberTable).values([
+		{ channelId: channel.id, userId },
+		{ channelId: channel.id, userId: targetUserId },
+	]);
+
+	return { conversationId: channel.id, isNew: true };
+}
+
+/** Edit the content of a message the user sent. */
+export async function editMessageForUser(params: {
+	conversationId: string;
+	messageId: string;
+	userId: string;
+	content: string;
+}): Promise<{ status: "ok" | "not_found" | "forbidden" | "deleted" }> {
+	const message = await db.query.chatMessageTable.findFirst({
+		where: and(
+			eq(chatMessageTable.id, params.messageId),
+			eq(chatMessageTable.channelId, params.conversationId)
+		),
+		columns: { senderId: true, deletedAt: true },
+	});
+
+	if (!message) return { status: "not_found" };
+	if (message.senderId !== params.userId) return { status: "forbidden" };
+	if (message.deletedAt) return { status: "deleted" };
+
+	await db
+		.update(chatMessageTable)
+		.set({ content: params.content, editedAt: new Date() })
+		.where(eq(chatMessageTable.id, params.messageId));
+
+	return { status: "ok" };
+}
+
+/** Soft-delete a message. Only the sender can delete their own messages. */
+export async function deleteMessageForUser(params: {
+	conversationId: string;
+	messageId: string;
+	userId: string;
+}): Promise<{ status: "ok" | "not_found" | "forbidden" }> {
+	const message = await db.query.chatMessageTable.findFirst({
+		where: and(
+			eq(chatMessageTable.id, params.messageId),
+			eq(chatMessageTable.channelId, params.conversationId)
+		),
+		columns: { senderId: true, deletedAt: true },
+	});
+
+	if (!message) return { status: "not_found" };
+	if (message.senderId !== params.userId) return { status: "forbidden" };
+
+	await db
+		.update(chatMessageTable)
+		.set({ deletedAt: new Date() })
+		.where(eq(chatMessageTable.id, params.messageId));
+
+	return { status: "ok" };
+}
+
+/** Upsert per-message read receipts and update the member's lastReadAt. */
+export async function markMessagesReadForUser(params: {
+	conversationId: string;
+	userId: string;
+	messageIds: string[];
+}): Promise<void> {
+	if (params.messageIds.length === 0) return;
+
+	// Verify membership
+	const membership = await db.query.chatChannelMemberTable.findFirst({
+		where: and(
+			eq(chatChannelMemberTable.channelId, params.conversationId),
+			eq(chatChannelMemberTable.userId, params.userId),
+			isNull(chatChannelMemberTable.leftAt)
+		),
+		columns: { id: true },
+	});
+	if (!membership) return;
+
+	const now = new Date();
+
+	// Upsert read receipts (ignore conflicts — already read)
+	await db
+		.insert(chatMessageReadTable)
+		.values(
+			params.messageIds.map((messageId) => ({ messageId, userId: params.userId, readAt: now }))
+		)
+		.onConflictDoNothing();
+}
+
+/** Get the list of users who have read a specific message. */
+export async function getMessageReaders(
+	messageId: string
+): Promise<Array<{ userId: string; readAt: string }>> {
+	const rows = await db.query.chatMessageReadTable.findMany({
+		where: eq(chatMessageReadTable.messageId, messageId),
+		columns: { userId: true, readAt: true },
+	});
+	return rows.map((r) => ({ userId: r.userId, readAt: r.readAt.toISOString() }));
 }

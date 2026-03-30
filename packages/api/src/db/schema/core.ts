@@ -1208,3 +1208,28 @@ export const chatMessageTable = pgTable(
 		index("chat_message_reply_idx").on(table.replyToMessageId),
 	]
 );
+
+/**
+ * Per-message read receipts. Tracks which users have read which messages.
+ * Used to show "seen by" indicators. The composite PK prevents duplicate rows.
+ * The conversation-level `lastReadAt` on chat_channel_member still drives unread counts.
+ */
+export const chatMessageReadTable = pgTable(
+	"chat_message_read",
+	{
+		messageId: uuid("message_id")
+			.notNull()
+			.references(() => chatMessageTable.id, { onDelete: "cascade" }),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		readAt: timestamp("read_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.messageId, table.userId] }),
+		// "All messages read by user" — for clearing unread state efficiently
+		index("chat_message_read_user_idx").on(table.userId),
+		// "Who has read this message" — for seen-by display in UI
+		index("chat_message_read_msg_idx").on(table.messageId),
+	]
+);

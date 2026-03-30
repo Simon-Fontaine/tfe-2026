@@ -642,25 +642,45 @@ export type ChatConversationDetail = ChatConversationSummary & {
 	participants: ChatParticipantSummary[];
 };
 
+export type UserPresenceStatus = "online" | "away" | "offline";
+
+export type UserPresence = {
+	userId: string;
+	status: UserPresenceStatus;
+	lastSeenAt: IsoDateString | null;
+};
+
+export type CreateDirectConversationResult = {
+	conversationId: string;
+	isNew: boolean;
+};
+
+export type ChatClientCommand =
+	| { type: "subscribe"; conversationId: string }
+	| { type: "unsubscribe"; conversationId: string }
+	| { type: "typing:start"; conversationId: string }
+	| { type: "typing:stop"; conversationId: string }
+	| { type: "presence:heartbeat" }
+	| { type: "ping" };
+
 export type ChatRealtimeEvent =
-	| { type: "chat.connected"; userId: string }
-	| { type: "chat.pong" }
-	| { type: "chat.error"; error: string; conversationId?: string }
-	| { type: "conversation.subscribed"; conversationId: string }
-	| { type: "conversation.unsubscribed"; conversationId: string }
-	| { type: "conversation.typing"; conversationId: string; userId: string; isTyping: boolean }
-	| { type: "conversation.message.created"; conversationId: string; message: ChatMessage | null }
+	| { type: "chat:connected"; userId: string }
+	| { type: "chat:pong" }
+	| { type: "chat:error"; error: string; conversationId?: string }
+	| { type: "conversation:subscribed"; conversationId: string }
+	| { type: "conversation:unsubscribed"; conversationId: string }
+	| { type: "message:new"; conversationId: string; message: ChatMessage }
+	| { type: "message:updated"; conversationId: string; message: ChatMessage }
+	| { type: "message:deleted"; conversationId: string; messageId: string; deletedAt: IsoDateString }
+	| { type: "message:read"; conversationId: string; userId: string; lastReadMessageId: string }
+	| { type: "typing:start"; conversationId: string; userId: string }
+	| { type: "typing:stop"; conversationId: string; userId: string }
+	| { type: "presence:update"; presence: UserPresence }
 	| {
-			type: "conversation.read.updated";
-			conversationId: string;
-			userId: string;
-			lastReadMessageId: string | null;
-	  }
-	| {
-			type: "notification.created";
+			type: "notification:new";
 			notificationType: "new_message";
 			conversationId: string;
-			message: ChatMessage | null;
+			message: ChatMessage;
 			senderId: string;
 	  };
 
