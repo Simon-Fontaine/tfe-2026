@@ -2,6 +2,7 @@ import { PageContainer } from "@/components/dashboard/page-container";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ScheduleGrid } from "@/components/schedule/schedule-grid";
 import { TeamScheduleBoard } from "@/components/schedule/team/team-schedule-board";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPlayerAvailability } from "@/lib/data/player";
 import { getTeamSchedule, getTeamWithRoster } from "@/lib/data/teams";
@@ -22,6 +23,18 @@ export default async function TeamSchedulePage({
 	]);
 
 	if (!team) return null;
+	if (!schedule) {
+		return (
+			<PageContainer>
+				<PageHeader title="Schedule" description="Team-wide availability and planning." />
+				<EmptyStateBlock
+					title="Schedule unavailable"
+					description="You must be an active team member to view this schedule."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
 
 	const teamOption = { id: team.id, name: team.name, tag: team.tag };
 

@@ -1,6 +1,5 @@
 import { ReadConversationSchema, SendChatMessageSchema } from "@scrimflow/shared";
 import { Hono } from "hono";
-import { upgradeWebSocket } from "hono/bun";
 import * as v from "valibot";
 
 import type { AuthEnv } from "@/middleware/auth";
@@ -24,6 +23,7 @@ import {
 	listMessagesForUser,
 	markConversationReadForUser,
 } from "@/utils/chat";
+import { upgradeWebSocket } from "@/websocket";
 
 const chatRoutes = new Hono<AuthEnv>();
 
