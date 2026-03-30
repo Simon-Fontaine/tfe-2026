@@ -7,6 +7,11 @@ export type {
 	TwoFactorInput,
 } from "./services/auth";
 export type {
+	ListChatMessagesInput,
+	MarkConversationReadInput,
+	SendChatMessageInput as SendChatV2MessageInput,
+} from "./services/chat";
+export type {
 	CreateOrgInput,
 	DeleteOrgInput,
 	InviteOrgMemberInput,
@@ -36,6 +41,11 @@ export type {
 } from "./services/teams";
 export type {
 	AuthTokenStrategy,
+	ChatConversationDetail,
+	ChatConversationSummary,
+	ChatMessage,
+	ChatMessagePage,
+	ChatRealtimeEvent,
 	FieldErrors,
 	MutationSuccess,
 	SdkClientConfig,

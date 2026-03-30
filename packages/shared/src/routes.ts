@@ -72,6 +72,13 @@ export const apiRoutes = {
 		byId: (threadId: string) => `/api/threads/${threadId}`,
 		messages: (threadId: string) => `/api/threads/${threadId}/messages`,
 	},
+	chat: {
+		conversations: "/api/chat/conversations",
+		ws: "/api/chat/ws",
+		byId: (conversationId: string) => `/api/chat/conversations/${conversationId}`,
+		messages: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
+		read: (conversationId: string) => `/api/chat/conversations/${conversationId}/read`,
+	},
 	recruit: {
 		posts: {
 			root: "/api/posts",

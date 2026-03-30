@@ -41,6 +41,10 @@ export class Transport {
 		});
 	}
 
+	getBaseUrl(): string {
+		return this.baseUrl;
+	}
+
 	private async request<T>(path: string, init: RequestInit): Promise<SdkResult<T>> {
 		const authHeaders = (await this.auth?.getAuthHeaders?.()) ?? {};
 		const headers = {
