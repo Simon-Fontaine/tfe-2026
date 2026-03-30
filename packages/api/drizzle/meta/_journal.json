@@ -29,6 +29,13 @@
 			"when": 1774628822245,
 			"tag": "0003_square_ego",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1774891305895,
+			"tag": "0004_bored_the_stranger",
+			"breakpoints": true
 		}
 	]
 }

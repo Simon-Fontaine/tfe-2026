@@ -1,4 +1,9 @@
-import { ReadConversationSchema, SendChatMessageSchema } from "@scrimflow/shared";
+import {
+	CreateDirectConversationSchema,
+	EditChatMessageSchema,
+	ReadConversationSchema,
+	SendChatMessageSchema,
+} from "@scrimflow/shared";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -7,14 +12,19 @@ import { createNotification } from "@/notifications";
 import {
 	publishConversationEvent,
 	publishUserEvent,
+	refreshSocketPresence,
 	registerChatSocket,
 	subscribeSocketToConversation,
 	unregisterChatSocket,
 	unsubscribeSocketFromConversation,
 } from "@/realtime/chat-hub";
+import { getUserPresence } from "@/realtime/presence";
 import { extractErrors } from "@/routes/auth/utils";
 import {
 	createMessageForUser,
+	deleteMessageForUser,
+	editMessageForUser,
+	findOrCreateDirectConversation,
 	getConversationDetailForUser,
 	getMessageByIdForConversation,
 	hasConversationAccess,
@@ -22,15 +32,20 @@ import {
 	listConversationsForUser,
 	listMessagesForUser,
 	markConversationReadForUser,
+	markMessagesReadForUser,
 } from "@/utils/chat";
 import { upgradeWebSocket } from "@/websocket";
 
 const chatRoutes = new Hono<AuthEnv>();
 
+// ─── WebSocket ────────────────────────────────────────────────────────────────
+
 type ChatSocketCommand =
 	| { type: "subscribe"; conversationId: string }
 	| { type: "unsubscribe"; conversationId: string }
-	| { type: "typing"; conversationId: string; isTyping: boolean }
+	| { type: "typing:start"; conversationId: string }
+	| { type: "typing:stop"; conversationId: string }
+	| { type: "presence:heartbeat" }
 	| { type: "ping" };
 
 chatRoutes.get(
@@ -41,17 +56,22 @@ chatRoutes.get(
 		async function handleCommand(raw: string, ws: { send: (value: string) => void }) {
 			const parsed = JSON.parse(raw) as ChatSocketCommand;
 			if (!parsed?.type) {
-				ws.send(JSON.stringify({ type: "chat.error", error: "Invalid websocket payload." }));
+				ws.send(JSON.stringify({ type: "chat:error", error: "Invalid websocket payload." }));
 				return;
 			}
 
 			if (parsed.type === "ping") {
-				ws.send(JSON.stringify({ type: "chat.pong" }));
+				ws.send(JSON.stringify({ type: "chat:pong" }));
+				return;
+			}
+
+			if (parsed.type === "presence:heartbeat") {
+				refreshSocketPresence(ws as { send: (payload: string) => unknown });
 				return;
 			}
 
 			if (!("conversationId" in parsed) || !parsed.conversationId) {
-				ws.send(JSON.stringify({ type: "chat.error", error: "conversationId is required." }));
+				ws.send(JSON.stringify({ type: "chat:error", error: "conversationId is required." }));
 				return;
 			}
 
@@ -59,7 +79,7 @@ chatRoutes.get(
 			if (!hasAccess) {
 				ws.send(
 					JSON.stringify({
-						type: "chat.error",
+						type: "chat:error",
 						error: "You do not have access to this conversation.",
 						conversationId: parsed.conversationId,
 					})
@@ -68,21 +88,37 @@ chatRoutes.get(
 			}
 
 			if (parsed.type === "subscribe") {
-				subscribeSocketToConversation(ws, parsed.conversationId);
+				subscribeSocketToConversation(
+					ws as { send: (payload: string) => unknown },
+					parsed.conversationId
+				);
 				return;
 			}
 
 			if (parsed.type === "unsubscribe") {
-				unsubscribeSocketFromConversation(ws, parsed.conversationId);
+				unsubscribeSocketFromConversation(
+					ws as { send: (payload: string) => unknown },
+					parsed.conversationId
+				);
 				return;
 			}
 
-			if (parsed.type === "typing") {
+			if (parsed.type === "typing:start") {
 				publishConversationEvent({
 					conversationId: parsed.conversationId,
-					event: "conversation.typing",
+					event: "typing:start",
 					excludeUserId: user.id,
-					payload: { userId: user.id, isTyping: parsed.isTyping },
+					payload: { userId: user.id },
+				});
+				return;
+			}
+
+			if (parsed.type === "typing:stop") {
+				publishConversationEvent({
+					conversationId: parsed.conversationId,
+					event: "typing:stop",
+					excludeUserId: user.id,
+					payload: { userId: user.id },
 				});
 			}
 		}
@@ -93,7 +129,7 @@ chatRoutes.get(
 			},
 			onMessage(event, ws) {
 				void handleCommand(event.data.toString(), ws).catch(() => {
-					ws.send(JSON.stringify({ type: "chat.error", error: "Unable to process command." }));
+					ws.send(JSON.stringify({ type: "chat:error", error: "Unable to process command." }));
 				});
 			},
 			onClose(_event, ws) {
@@ -106,6 +142,8 @@ chatRoutes.get(
 	})
 );
 
+// ─── Conversations ────────────────────────────────────────────────────────────
+
 chatRoutes.get("/conversations", async (c) => {
 	const user = c.get("user");
 	return c.json({ data: await listConversationsForUser(user.id) });
@@ -117,6 +155,25 @@ chatRoutes.get("/conversations/:id", async (c) => {
 	if (!conversation) return c.json({ error: "Conversation not found." }, 404);
 	return c.json({ data: conversation });
 });
+
+/** Create or find a direct (1:1) conversation with another user. */
+chatRoutes.post("/conversations/direct", async (c) => {
+	const user = c.get("user");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(CreateDirectConversationSchema, body);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	if (parsed.output.targetUserId === user.id) {
+		return c.json({ error: "Cannot start a conversation with yourself." }, 400);
+	}
+
+	const result = await findOrCreateDirectConversation(user.id, parsed.output.targetUserId);
+	return c.json({ data: result });
+});
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
 
 chatRoutes.get("/conversations/:id/messages", async (c) => {
 	const user = c.get("user");
@@ -165,11 +222,13 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 	});
 	const members = await listConversationMembers(conversationId);
 
-	publishConversationEvent({
-		conversationId,
-		event: "conversation.message.created",
-		payload: { message },
-	});
+	if (message) {
+		publishConversationEvent({
+			conversationId,
+			event: "message:new",
+			payload: { message },
+		});
+	}
 
 	for (const member of members) {
 		if (member.userId === user.id) continue;
@@ -184,20 +243,80 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 			referenceId: conversationId,
 		});
 
-		publishUserEvent({
-			userId: member.userId,
-			event: "notification.created",
-			payload: {
-				notificationType: "new_message",
-				conversationId,
-				message,
-				senderId: user.id,
-			},
-		});
+		if (message) {
+			publishUserEvent({
+				userId: member.userId,
+				event: "notification:new",
+				payload: {
+					notificationType: "new_message",
+					conversationId,
+					message,
+					senderId: user.id,
+				},
+			});
+		}
 	}
 
 	return c.json({ success: true, messageId: result.messageId });
 });
+
+/** Edit a message the authenticated user sent. */
+chatRoutes.patch("/conversations/:id/messages/:messageId", async (c) => {
+	const user = c.get("user");
+	const conversationId = c.req.param("id");
+	const messageId = c.req.param("messageId");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(EditChatMessageSchema, body);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const result = await editMessageForUser({
+		conversationId,
+		messageId,
+		userId: user.id,
+		content: parsed.output.content,
+	});
+
+	if (result.status === "not_found") return c.json({ error: "Message not found." }, 404);
+	if (result.status === "forbidden")
+		return c.json({ error: "You can only edit your own messages." }, 403);
+	if (result.status === "deleted") return c.json({ error: "Cannot edit a deleted message." }, 400);
+
+	const message = await getMessageByIdForConversation({ conversationId, messageId });
+	if (message) {
+		publishConversationEvent({
+			conversationId,
+			event: "message:updated",
+			payload: { message },
+		});
+	}
+
+	return c.json({ success: true });
+});
+
+/** Soft-delete a message the authenticated user sent. */
+chatRoutes.delete("/conversations/:id/messages/:messageId", async (c) => {
+	const user = c.get("user");
+	const conversationId = c.req.param("id");
+	const messageId = c.req.param("messageId");
+
+	const result = await deleteMessageForUser({ conversationId, messageId, userId: user.id });
+
+	if (result.status === "not_found") return c.json({ error: "Message not found." }, 404);
+	if (result.status === "forbidden")
+		return c.json({ error: "You can only delete your own messages." }, 403);
+
+	publishConversationEvent({
+		conversationId,
+		event: "message:deleted",
+		payload: { messageId, deletedAt: new Date().toISOString() },
+	});
+
+	return c.json({ success: true });
+});
+
+// ─── Read state ───────────────────────────────────────────────────────────────
 
 chatRoutes.post("/conversations/:id/read", async (c) => {
 	const user = c.get("user");
@@ -216,9 +335,18 @@ chatRoutes.post("/conversations/:id/read", async (c) => {
 	if (result.status === "invalid_message")
 		return c.json({ error: "Invalid last read message for this conversation." }, 400);
 
+	// Upsert per-message receipt if a specific message ID was provided
+	if (parsed.output.lastReadMessageId) {
+		await markMessagesReadForUser({
+			conversationId,
+			userId: user.id,
+			messageIds: [parsed.output.lastReadMessageId],
+		});
+	}
+
 	publishConversationEvent({
 		conversationId,
-		event: "conversation.read.updated",
+		event: "message:read",
 		excludeUserId: user.id,
 		payload: {
 			userId: user.id,
@@ -227,6 +355,13 @@ chatRoutes.post("/conversations/:id/read", async (c) => {
 	});
 
 	return c.json({ success: true });
+});
+
+// ─── Presence ─────────────────────────────────────────────────────────────────
+
+chatRoutes.get("/presence/:userId", async (c) => {
+	const presence = await getUserPresence(c.req.param("userId"));
+	return c.json({ data: presence });
 });
 
 export { chatRoutes };
