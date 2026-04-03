@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 		"Browse Overwatch 2 recruitment posts — find teams, players, and staff opportunities.",
 };
 
+import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
@@ -41,55 +42,48 @@ export default async function PublicPostsPage({ searchParams }: PublicPostsPageP
 	});
 
 	return (
-		<section className="border-b px-4 py-14 md:py-20" aria-labelledby="posts-heading">
-			<div className="mx-auto max-w-6xl space-y-6">
-				<div className="flex flex-wrap items-start justify-between gap-4">
-					<div>
-						<h1 id="posts-heading" className="text-lg font-bold leading-tight md:text-2xl">
-							Recruiting Posts
-						</h1>
-						<p className="mt-3 max-w-[56ch] text-xs leading-relaxed text-muted-foreground">
-							Public LFT, LFP, LFR, and LFS posts replace the old Discord channels and keep player,
-							team, and staff recruiting in one place.
-						</p>
-					</div>
-					<Button asChild size="sm">
-						<Link href={user ? "/dashboard/recruiting/posts" : "/auth?step=login"}>
-							{user ? "Open dashboard recruiting" : "Sign in to respond"}
-						</Link>
-					</Button>
-				</div>
+		<PublicPageShell
+			title="Recruiting Posts"
+			description="Public LFT, LFP, LFR, and LFS posts replace the old Discord channels and keep player, team, and staff recruiting in one place."
+			maxWidth="6xl"
+			contentClassName="space-y-6"
+			actions={
+				<Button asChild size="sm">
+					<Link href={user ? "/dashboard/recruiting/posts" : "/auth?step=login"}>
+						{user ? "Open dashboard recruiting" : "Sign in to respond"}
+					</Link>
+				</Button>
+			}
+		>
+			<div className="flex flex-wrap gap-2">
+				{CATEGORY_FILTERS.map((filter) => (
+					<Link key={filter} href={filter === "all" ? "/posts" : `/posts?category=${filter}`}>
+						<Badge variant={category === filter ? "default" : "outline"}>
+							{filter === "all" ? "All posts" : RECRUITMENT_CATEGORY_LABELS[filter]}
+						</Badge>
+					</Link>
+				))}
+			</div>
 
-				<div className="flex flex-wrap gap-2">
-					{CATEGORY_FILTERS.map((filter) => (
-						<Link key={filter} href={filter === "all" ? "/posts" : `/posts?category=${filter}`}>
-							<Badge variant={category === filter ? "default" : "outline"}>
-								{filter === "all" ? "All posts" : RECRUITMENT_CATEGORY_LABELS[filter]}
-							</Badge>
-						</Link>
+			{posts.length === 0 ? (
+				<EmptyStateBlock
+					icon={UserSearch01Icon}
+					title="No public posts match this filter"
+					description="Check another category or create a recruiting post from the dashboard."
+					variant="page"
+				/>
+			) : (
+				<div className="space-y-4">
+					{posts.map((post) => (
+						<RecruitmentPostCard
+							key={post.id}
+							post={post}
+							currentUserId={user?.id ?? null}
+							entityOptions={entityOptions}
+						/>
 					))}
 				</div>
-
-				{posts.length === 0 ? (
-					<EmptyStateBlock
-						icon={UserSearch01Icon}
-						title="No public posts match this filter"
-						description="Check another category or create a recruiting post from the dashboard."
-						variant="page"
-					/>
-				) : (
-					<div className="space-y-4">
-						{posts.map((post) => (
-							<RecruitmentPostCard
-								key={post.id}
-								post={post}
-								currentUserId={user?.id ?? null}
-								entityOptions={entityOptions}
-							/>
-						))}
-					</div>
-				)}
-			</div>
-		</section>
+			)}
+		</PublicPageShell>
 	);
 }

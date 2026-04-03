@@ -10,7 +10,7 @@ const FOOTER_LINKS = [
 
 export function SiteFooter() {
 	return (
-		<footer className="border-t py-8 text-xs">
+		<footer className="py-8 text-xs">
 			<div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 				<p className="text-muted-foreground">
 					&copy; {new Date().getFullYear()} {siteConfig.footer.copyright} &middot; All rights

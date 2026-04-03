@@ -4,9 +4,11 @@ import { SiteHeaderWrapper } from "@/components/home/site-header-wrapper";
 
 export default function HomeLayout({ children }: { children: ReactNode }) {
 	return (
-		<div>
+		<div className="flex min-h-dvh flex-col">
 			<SiteHeaderWrapper />
-			<main id="main-content">{children}</main>
+			<main id="main-content" className="flex-1">
+				{children}
+			</main>
 			<SiteFooter />
 		</div>
 	);

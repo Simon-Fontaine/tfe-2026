@@ -26,6 +26,7 @@ export const apiRoutes = {
 	teams: {
 		root: "/api/teams",
 		byId: (teamId: string) => `/api/teams/${teamId}`,
+		publicRoot: "/api/public/teams",
 		admins: (teamId: string) => `/api/teams/${teamId}/admins`,
 		memberRole: (teamId: string, memberId: string) =>
 			`/api/teams/${teamId}/members/${memberId}/role`,

@@ -1,9 +1,11 @@
 import { ArrowRight01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OW2Role } from "@scrimflow/shared";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PublicPageSection } from "@/components/home/public-page-section";
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,8 +33,15 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
 			{team.bannerUrl && (
-				<div className="h-36 w-full overflow-hidden border">
-					<img src={team.bannerUrl} alt="" className="h-full w-full object-cover" />
+				<div className="relative h-36 w-full overflow-hidden border">
+					<Image
+						src={team.bannerUrl}
+						alt=""
+						fill
+						unoptimized
+						className="object-cover"
+						sizes="100vw"
+					/>
 				</div>
 			)}
 			<div className="border p-5">
@@ -99,13 +108,10 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 				</div>
 			</div>
 
-			<div className="space-y-4">
-				<div>
-					<h2 className="text-sm font-semibold">Open posts</h2>
-					<p className="text-xs text-muted-foreground">
-						Current opportunities published directly by this team.
-					</p>
-				</div>
+			<PublicPageSection
+				title="Open posts"
+				description="Current opportunities published directly by this team."
+			>
 				{team.posts.length === 0 ? (
 					<EmptyStateBlock
 						icon={UserGroupIcon}
@@ -125,11 +131,17 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 						))}
 					</div>
 				)}
-			</div>
+			</PublicPageSection>
 
-			{team.roster.length > 0 && (
-				<div className="space-y-3">
-					<h2 className="text-sm font-semibold">Active roster ({team.activeRosterCount})</h2>
+			<PublicPageSection title={`Active roster (${team.activeRosterCount})`} className="space-y-3">
+				{team.roster.length === 0 ? (
+					<EmptyStateBlock
+						icon={UserGroupIcon}
+						title="No active roster listed yet"
+						description="This team has not published any active roster members yet."
+						variant="card"
+					/>
+				) : (
 					<div className="divide-y border">
 						{team.roster.map((member) => {
 							const roleLabel = member.roleInTeam
@@ -164,8 +176,8 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 							);
 						})}
 					</div>
-				</div>
-			)}
+				)}
+			</PublicPageSection>
 		</div>
 	);
 }

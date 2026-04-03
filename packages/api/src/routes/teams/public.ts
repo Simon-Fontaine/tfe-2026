@@ -1,5 +1,9 @@
-import type { PublicRosterMemberSummary, TeamPublicPreview } from "@scrimflow/shared";
-import { and, eq, ne } from "drizzle-orm";
+import type {
+	DiscoveryTeam,
+	PublicRosterMemberSummary,
+	TeamPublicPreview,
+} from "@scrimflow/shared";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
@@ -11,6 +15,55 @@ import { mapRecruitmentPost } from "@/utils/recruit";
 const publicTeamRoutes = new Hono<AuthEnv>();
 
 publicTeamRoutes.use("*", optionalAuth);
+
+publicTeamRoutes.get("/", async (c) => {
+	const recruiting = c.req.query("recruiting");
+	const recruitingFilter =
+		recruiting === "true" ? true : recruiting === "false" ? false : undefined;
+
+	const rows = await db.query.teamTable.findMany({
+		where: and(
+			eq(teamTable.isArchived, false),
+			recruitingFilter !== undefined ? eq(teamTable.isRecruiting, recruitingFilter) : undefined
+		),
+		columns: {
+			id: true,
+			organizationId: true,
+			name: true,
+			tag: true,
+			description: true,
+			avatarUrl: true,
+			teamSr: true,
+			isRecruiting: true,
+		},
+		with: {
+			roster: {
+				columns: { id: true, status: true },
+			},
+			lfgPosts: {
+				where: eq(lfgPostTable.status, "open"),
+				columns: { id: true },
+			},
+		},
+		orderBy: [asc(teamTable.name)],
+		limit: 60,
+	});
+
+	const data: DiscoveryTeam[] = rows.map((team) => ({
+		id: team.id,
+		organizationId: team.organizationId,
+		name: team.name,
+		tag: team.tag,
+		description: team.description ?? null,
+		avatarUrl: team.avatarUrl,
+		teamSr: team.teamSr,
+		isRecruiting: team.isRecruiting,
+		activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
+		openPostCount: team.lfgPosts.length,
+	}));
+
+	return c.json({ data });
+});
 
 publicTeamRoutes.get("/:id", async (c) => {
 	const teamId = c.req.param("id");

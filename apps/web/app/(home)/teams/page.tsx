@@ -6,6 +6,7 @@ export const metadata: Metadata = {
 	description: "Browse Overwatch 2 teams and find your next roster.",
 };
 
+import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamDiscoveryCard } from "@/components/teams/discovery/team-discovery-card";
 import { TeamDiscoveryFilters } from "@/components/teams/discovery/team-discovery-filters";
@@ -22,34 +23,28 @@ export default async function TeamsDirectoryPage({ searchParams }: TeamsDirector
 	const teams = await getTeamsForDiscovery({ recruiting: recruitingFilter });
 
 	return (
-		<section className="border-b px-4 py-14 md:py-20" aria-labelledby="teams-heading">
-			<div className="mx-auto max-w-6xl space-y-6">
-				<div>
-					<h1 id="teams-heading" className="text-lg font-bold leading-tight md:text-2xl">
-						Teams
-					</h1>
-					<p className="mt-3 max-w-[48ch] text-xs text-muted-foreground leading-relaxed">
-						Explore team profiles, roster size, and recruiting status.
-					</p>
+		<PublicPageShell
+			title="Teams"
+			description="Explore team profiles, roster size, and recruiting status."
+			maxWidth="6xl"
+			contentClassName="space-y-6"
+		>
+			<TeamDiscoveryFilters recruitingFilter={recruitingFilter} />
+
+			{teams.length === 0 ? (
+				<EmptyStateBlock
+					icon={GameController01Icon}
+					title="No teams matched this filter"
+					description="Try changing filters or check back as new teams are published."
+					variant="page"
+				/>
+			) : (
+				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{teams.map((team) => (
+						<TeamDiscoveryCard key={team.id} team={team} />
+					))}
 				</div>
-
-				<TeamDiscoveryFilters recruitingFilter={recruitingFilter} />
-
-				{teams.length === 0 ? (
-					<EmptyStateBlock
-						icon={GameController01Icon}
-						title="No teams matched this filter"
-						description="Try changing filters or check back as new teams are published."
-						variant="page"
-					/>
-				) : (
-					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{teams.map((team) => (
-							<TeamDiscoveryCard key={team.id} team={team} />
-						))}
-					</div>
-				)}
-			</div>
-		</section>
+			)}
+		</PublicPageShell>
 	);
 }

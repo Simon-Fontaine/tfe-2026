@@ -1,5 +1,5 @@
 {
-	"id": "ae261ac4-4784-49ec-b041-fe6eabd7bf3c",
+	"id": "6d5c18c5-8aca-4a9d-8a81-88b845937df6",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -2038,6 +2038,93 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
+		"public.chat_message_read": {
+			"name": "chat_message_read",
+			"schema": "",
+			"columns": {
+				"message_id": {
+					"name": "message_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"read_at": {
+					"name": "read_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"chat_message_read_user_idx": {
+					"name": "chat_message_read_user_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"chat_message_read_msg_idx": {
+					"name": "chat_message_read_msg_idx",
+					"columns": [
+						{
+							"expression": "message_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"chat_message_read_message_id_chat_message_id_fk": {
+					"name": "chat_message_read_message_id_chat_message_id_fk",
+					"tableFrom": "chat_message_read",
+					"tableTo": "chat_message",
+					"columnsFrom": ["message_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"chat_message_read_user_id_user_id_fk": {
+					"name": "chat_message_read_user_id_user_id_fk",
+					"tableFrom": "chat_message_read",
+					"tableTo": "user",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"chat_message_read_message_id_user_id_pk": {
+					"name": "chat_message_read_message_id_user_id_pk",
+					"columns": ["message_id", "user_id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
 		"public.chat_message": {
 			"name": "chat_message",
 			"schema": "",
@@ -2310,6 +2397,12 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"applicant_organization_id": {
+					"name": "applicant_organization_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"message": {
 					"name": "message",
 					"type": "text",
@@ -2357,6 +2450,7 @@
 						}
 					],
 					"isUnique": true,
+					"where": "\"lfg_application\".\"status\" = 'pending'",
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
@@ -2419,6 +2513,15 @@
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
 					"onUpdate": "no action"
+				},
+				"lfg_application_applicant_organization_id_organization_id_fk": {
+					"name": "lfg_application_applicant_organization_id_organization_id_fk",
+					"tableFrom": "lfg_application",
+					"tableTo": "organization",
+					"columnsFrom": ["applicant_organization_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
 				}
 			},
 			"compositePrimaryKeys": {},
@@ -2453,15 +2556,51 @@
 					"notNull": true,
 					"default": "'open'"
 				},
+				"owner_type": {
+					"name": "owner_type",
+					"type": "recruitment_owner_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'player'"
+				},
 				"user_id": {
 					"name": "user_id",
 					"type": "uuid",
 					"primaryKey": false,
 					"notNull": true
 				},
+				"organization_id": {
+					"name": "organization_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"team_id": {
 					"name": "team_id",
 					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "''"
+				},
+				"member_type": {
+					"name": "member_type",
+					"type": "member_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'player'"
+				},
+				"staff_role": {
+					"name": "staff_role",
+					"type": "staff_role",
+					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": false
 				},
@@ -2651,6 +2790,15 @@
 					"tableFrom": "lfg_post",
 					"tableTo": "user",
 					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"lfg_post_organization_id_organization_id_fk": {
+					"name": "lfg_post_organization_id_organization_id_fk",
+					"tableFrom": "lfg_post",
+					"tableTo": "organization",
+					"columnsFrom": ["organization_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
 					"onUpdate": "no action"
@@ -3088,7 +3236,29 @@
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true,
+					"default": "'member'"
+				},
+				"member_type": {
+					"name": "member_type",
+					"type": "member_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
 					"default": "'player'"
+				},
+				"staff_role": {
+					"name": "staff_role",
+					"type": "staff_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"game_role": {
+					"name": "game_role",
+					"type": "ow2_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": false
 				},
 				"status": {
 					"name": "status",
@@ -3325,7 +3495,29 @@
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true,
+					"default": "'member'"
+				},
+				"member_type": {
+					"name": "member_type",
+					"type": "member_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
 					"default": "'player'"
+				},
+				"staff_role": {
+					"name": "staff_role",
+					"type": "staff_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"game_role": {
+					"name": "game_role",
+					"type": "ow2_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": false
 				},
 				"created_at": {
 					"name": "created_at",
@@ -4859,12 +5051,27 @@
 					"primaryKey": false,
 					"notNull": true
 				},
+				"member_type": {
+					"name": "member_type",
+					"type": "member_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'player'"
+				},
 				"role_in_team": {
 					"name": "role_in_team",
 					"type": "ow2_role",
 					"typeSchema": "public",
 					"primaryKey": false,
-					"notNull": true
+					"notNull": false
+				},
+				"staff_role": {
+					"name": "staff_role",
+					"type": "staff_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": false
 				},
 				"permission_role": {
 					"name": "permission_role",
@@ -5110,12 +5317,27 @@
 					"primaryKey": false,
 					"notNull": true
 				},
+				"member_type": {
+					"name": "member_type",
+					"type": "member_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'player'"
+				},
 				"role_in_team": {
 					"name": "role_in_team",
 					"type": "ow2_role",
 					"typeSchema": "public",
 					"primaryKey": false,
-					"notNull": true
+					"notNull": false
+				},
+				"staff_role": {
+					"name": "staff_role",
+					"type": "staff_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": false
 				},
 				"permission_role": {
 					"name": "permission_role",
@@ -5283,6 +5505,12 @@
 				},
 				"avatar_url": {
 					"name": "avatar_url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"banner_url": {
+					"name": "banner_url",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false
@@ -5471,7 +5699,7 @@
 		"public.lfg_type": {
 			"name": "lfg_type",
 			"schema": "public",
-			"values": ["team_seeking_player", "player_seeking_team"]
+			"values": ["lft", "lfp", "lfr", "lfs"]
 		},
 		"public.map_type": {
 			"name": "map_type",
@@ -5482,6 +5710,11 @@
 			"name": "match_result",
 			"schema": "public",
 			"values": ["victory", "defeat", "draw"]
+		},
+		"public.member_type": {
+			"name": "member_type",
+			"schema": "public",
+			"values": ["player", "staff"]
 		},
 		"public.notification_type": {
 			"name": "notification_type",
@@ -5494,6 +5727,7 @@
 				"recruitment_application",
 				"recruitment_accepted",
 				"recruitment_rejected",
+				"recruitment_withdrawn",
 				"ocr_completed",
 				"ocr_failed",
 				"dispute_opened",
@@ -5525,7 +5759,7 @@
 		"public.org_role": {
 			"name": "org_role",
 			"schema": "public",
-			"values": ["owner", "manager", "coach", "analyst", "player"]
+			"values": ["owner", "admin", "member"]
 		},
 		"public.ow2_rank": {
 			"name": "ow2_rank",
@@ -5545,6 +5779,11 @@
 			"name": "ow2_role",
 			"schema": "public",
 			"values": ["tank", "damage", "support"]
+		},
+		"public.recruitment_owner_type": {
+			"name": "recruitment_owner_type",
+			"schema": "public",
+			"values": ["player", "team", "organization"]
 		},
 		"public.roster_status": {
 			"name": "roster_status",
@@ -5578,6 +5817,11 @@
 				"security_alert",
 				"account_deletion"
 			]
+		},
+		"public.staff_role": {
+			"name": "staff_role",
+			"schema": "public",
+			"values": ["coach", "analyst", "manager", "staff"]
 		},
 		"public.team_invite_status": {
 			"name": "team_invite_status",

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { DiscoveryTeam } from "@/lib/data/discovery";
+import { publicRoutes } from "@/lib/routes";
 
 interface TeamDiscoveryCardProps {
 	team: DiscoveryTeam;
@@ -12,7 +13,7 @@ interface TeamDiscoveryCardProps {
 export function TeamDiscoveryCard({ team }: TeamDiscoveryCardProps) {
 	return (
 		<Link
-			href={`/teams/${team.id}`}
+			href={publicRoutes.teams.byId(team.id)}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">

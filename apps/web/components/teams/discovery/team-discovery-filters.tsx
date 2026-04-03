@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { publicRoutes } from "@/lib/routes";
 
 interface TeamDiscoveryFiltersProps {
 	recruitingFilter: boolean | undefined;
@@ -20,7 +21,9 @@ export function TeamDiscoveryFilters({ recruitingFilter }: TeamDiscoveryFiltersP
 			} else {
 				params.set("recruiting", String(recruiting));
 			}
-			router.replace(`/teams${params.toString() ? `?${params.toString()}` : ""}`);
+			router.replace(
+				`${publicRoutes.teams.root}${params.toString() ? `?${params.toString()}` : ""}`
+			);
 		},
 		[router, searchParams]
 	);

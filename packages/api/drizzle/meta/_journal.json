@@ -5,36 +5,8 @@
 		{
 			"idx": 0,
 			"version": "7",
-			"when": 1774459092926,
-			"tag": "0000_romantic_diamondback",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1774466332527,
-			"tag": "0001_oval_swarm",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1774558254525,
-			"tag": "0002_sudden_odin",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1774628822245,
-			"tag": "0003_square_ego",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1774891305895,
-			"tag": "0004_bored_the_stranger",
+			"when": 1775056778962,
+			"tag": "0000_bright_shotgun",
 			"breakpoints": true
 		}
 	]

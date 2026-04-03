@@ -1,8 +1,10 @@
 import { ArrowRight01Icon, GameController01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PublicPageSection } from "@/components/home/public-page-section";
 import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
+import { publicRoutes } from "@/lib/routes";
 
 export default async function OrgProfilePage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { orgId } = await params;
@@ -25,8 +28,15 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
 			{org.bannerUrl && (
-				<div className="h-36 w-full overflow-hidden border">
-					<img src={org.bannerUrl} alt="" className="h-full w-full object-cover" />
+				<div className="relative h-36 w-full overflow-hidden border">
+					<Image
+						src={org.bannerUrl}
+						alt=""
+						fill
+						unoptimized
+						className="object-cover"
+						sizes="100vw"
+					/>
 				</div>
 			)}
 			<div className="border p-5">
@@ -65,13 +75,10 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				)}
 			</div>
 
-			<div className="space-y-4">
-				<div>
-					<h2 className="text-sm font-semibold">Open organisation posts</h2>
-					<p className="text-xs text-muted-foreground">
-						Public organisation recruiting posts are surfaced here instead of join-request forms.
-					</p>
-				</div>
+			<PublicPageSection
+				title="Open organisation posts"
+				description="Public organisation recruiting posts are surfaced here instead of join-request forms."
+			>
 				{org.openPosts.length === 0 ? (
 					<EmptyStateBlock
 						icon={GameController01Icon}
@@ -91,10 +98,9 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						))}
 					</div>
 				)}
-			</div>
+			</PublicPageSection>
 
-			<div className="space-y-3">
-				<h2 className="text-sm font-semibold">Teams</h2>
+			<PublicPageSection title="Teams" className="space-y-3">
 				{org.teams.length === 0 ? (
 					<EmptyStateBlock
 						icon={GameController01Icon}
@@ -107,7 +113,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						{org.teams.map((team) => (
 							<Link
 								key={team.id}
-								href={`/teams/${team.id}`}
+								href={publicRoutes.teams.byId(team.id)}
 								className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 							>
 								<Avatar className="size-9 shrink-0 overflow-hidden rounded-none after:rounded-none">
@@ -132,7 +138,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						))}
 					</div>
 				)}
-			</div>
+			</PublicPageSection>
 		</div>
 	);
 }

@@ -25,13 +25,15 @@ export function MessageList({ conversationId, currentUserId, participantNames }:
 	const sentinelRef = useRef<HTMLDivElement>(null);
 	const isAtBottomRef = useRef(true);
 	const listRef = useRef<HTMLDivElement>(null);
+	const latestMessageId = messages[messages.length - 1]?.id;
 
 	// Auto-scroll to bottom on new messages (only when already near bottom)
 	useEffect(() => {
+		if (!latestMessageId) return;
 		if (isAtBottomRef.current) {
 			bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [messages.length]);
+	}, [latestMessageId]);
 
 	// Track scroll position to decide whether to auto-scroll
 	function handleScroll() {
