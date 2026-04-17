@@ -2,7 +2,7 @@
 
 import { ComputerIcon, GlobeIcon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { SessionInfo } from "@/app/dashboard/settings/actions/session";
+import type { SessionInfo } from "@/app/actions/settings/session";
 import {
 	AlertDialog,
 	AlertDialogAction,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import type { AvailabilityRow, UserTeam } from "@/lib/data/player";
+import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { OneOffList } from "./one-off-list";
 import { WeeklyGrid } from "./weekly-grid";
@@ -24,7 +25,7 @@ export function ScheduleGrid({ availability, teams, activeTeam }: ScheduleGridPr
 					{teams.map((team) => (
 						<Link
 							key={team.id}
-							href={`/dashboard/teams/${team.id}/schedule`}
+							href={appRoutes.teams.calendar(team.id)}
 							className={cn(
 								"border px-3 py-1 text-xs font-medium transition-colors hover:bg-muted",
 								activeTeam.id === team.id

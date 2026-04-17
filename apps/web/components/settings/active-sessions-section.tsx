@@ -9,7 +9,7 @@ import {
 	revokeAllOtherSessionsAction,
 	revokeSessionAction,
 	type SessionInfo,
-} from "@/app/dashboard/settings/actions/session";
+} from "@/app/actions/settings/session";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import {

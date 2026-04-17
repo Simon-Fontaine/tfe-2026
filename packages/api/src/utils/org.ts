@@ -64,7 +64,6 @@ export async function getOrgPermissions(orgId: string, userId: string) {
 		canDelete: canDeleteOrg(role),
 		canTransferOwnership: canTransferOrgOwnership(role),
 		canLeave: role !== "owner" && role !== null,
-		canReviewRequests: canManageOrg(role),
 		canManageMembers: canManageOrg(role),
 		canManageTeams: canManageOrg(role),
 	};

@@ -1,33 +1,28 @@
 "use server";
 
-import { toActionResult } from "@/lib/action-result";
-import { getServerSdk } from "@/lib/app-sdk";
+import { apiAuthPost } from "@/lib/api-client";
+import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./types";
+import { toAuthActionResult } from "./utils";
 
 export async function twoFactorAction(
 	_prev: ActionResult | null,
 	formData: FormData
 ): Promise<ActionResult> {
-	const sdk = getServerSdk();
-	const result = await sdk.auth.verifyTotp({
+	const result = await apiAuthPost<ActionResult>(apiRoutes.auth.twoFactor.totp, {
 		code: String(formData.get("code") ?? ""),
 		next: formData.get("next")?.toString() ?? "",
 	});
-
-	const actionResult = toActionResult(result);
-	return "data" in actionResult ? (actionResult.data as ActionResult) : actionResult;
+	return toAuthActionResult(result);
 }
 
 export async function recoveryCodeAction(
 	_prev: ActionResult | null,
 	formData: FormData
 ): Promise<ActionResult> {
-	const sdk = getServerSdk();
-	const result = await sdk.auth.verifyRecoveryCode({
+	const result = await apiAuthPost<ActionResult>(apiRoutes.auth.twoFactor.recovery, {
 		code: String(formData.get("code") ?? ""),
 		next: formData.get("next")?.toString() ?? "",
 	});
-
-	const actionResult = toActionResult(result);
-	return "data" in actionResult ? (actionResult.data as ActionResult) : actionResult;
+	return toAuthActionResult(result);
 }

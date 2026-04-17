@@ -1,12 +1,12 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
 	chatChannelMemberTable,
 	chatChannelTable,
 	chatMessageTable,
-	lfgPostTable,
 	organizationMemberTable,
+	recruitmentListingTable,
 	teamRosterTable,
 } from "@/db/schema";
 import { getOrgPermissions } from "@/utils/org";
@@ -39,8 +39,8 @@ export function normalizeMemberFields(input: {
 	};
 }
 
-export async function canManageRecruitmentPost(
-	post: {
+export async function canManageRecruitmentListing(
+	listing: {
 		userId: string;
 		ownerType: "player" | "team" | "organization";
 		teamId: string | null;
@@ -48,13 +48,13 @@ export async function canManageRecruitmentPost(
 	},
 	userId: string
 ) {
-	if (post.ownerType === "player") return post.userId === userId;
-	if (post.ownerType === "team" && post.teamId) {
-		const access = await getTeamAccessContext(post.teamId, userId);
+	if (listing.ownerType === "player") return listing.userId === userId;
+	if (listing.ownerType === "team" && listing.teamId) {
+		const access = await getTeamAccessContext(listing.teamId, userId);
 		return access?.canManageTeam ?? false;
 	}
-	if (post.ownerType === "organization" && post.organizationId) {
-		const permissions = await getOrgPermissions(post.organizationId, userId);
+	if (listing.ownerType === "organization" && listing.organizationId) {
+		const permissions = await getOrgPermissions(listing.organizationId, userId);
 		return permissions.canManage;
 	}
 	return false;
@@ -218,7 +218,7 @@ export function mapTeamMember(row: {
 	};
 }
 
-export function mapRecruitmentPost(
+export function mapRecruitmentListing(
 	row: {
 		id: string;
 		type: "lft" | "lfp" | "lfr" | "lfs";
@@ -231,8 +231,8 @@ export function mapRecruitmentPost(
 		rolesNeeded: unknown;
 		minRank: string | null;
 		maxRank: string | null;
-		minSr: number | null;
-		maxSr: number | null;
+		minRating: number | null;
+		maxRating: number | null;
 		region: string | null;
 		expiresAt: Date | null;
 		createdAt: Date;
@@ -247,7 +247,7 @@ export function mapRecruitmentPost(
 			name: string;
 			tag: string;
 			avatarUrl: string | null;
-			teamSr: number;
+			rating: number;
 		} | null;
 		applications?: Array<{
 			id: string;
@@ -261,9 +261,11 @@ export function mapRecruitmentPost(
 	}
 ) {
 	const viewerId = params?.viewerId ?? null;
-	const responseCount =
+	const isExpiredByTime = row.expiresAt ? row.expiresAt.getTime() < Date.now() : false;
+	const effectiveStatus = row.status === "open" && isExpiredByTime ? "expired" : row.status;
+	const applicationCount =
 		row.applications?.filter((application) => application.status !== "withdrawn").length ?? 0;
-	const hasResponded = viewerId
+	const hasApplied = viewerId
 		? (row.applications ?? []).some(
 				(application) =>
 					application.applicantUserId === viewerId && application.status === "pending"
@@ -276,7 +278,7 @@ export function mapRecruitmentPost(
 		id: row.id,
 		category: row.type,
 		type: row.type,
-		status: row.status,
+		status: effectiveStatus,
 		ownerType: row.ownerType,
 		title: row.title,
 		description: row.description ?? null,
@@ -286,8 +288,8 @@ export function mapRecruitmentPost(
 		rolesNeeded: gameRoles,
 		minRank: row.minRank ?? null,
 		maxRank: row.maxRank ?? null,
-		minSr: row.minSr ?? null,
-		maxSr: row.maxSr ?? null,
+		minRating: row.minRating ?? null,
+		maxRating: row.maxRating ?? null,
 		region: row.region ?? null,
 		expiresAt: row.expiresAt?.toISOString() ?? null,
 		createdAt: row.createdAt.toISOString(),
@@ -307,17 +309,32 @@ export function mapRecruitmentPost(
 		teamName: row.team?.name ?? null,
 		teamTag: row.team?.tag ?? null,
 		teamAvatarUrl: row.team?.avatarUrl ?? null,
-		teamSr: row.team?.teamSr ?? null,
-		responseCount,
-		hasResponded,
+		rating: row.team?.rating ?? null,
+		applicationCount,
+		hasApplied,
 		canManage,
-		canRespond: !canManage && row.status === "open" && !hasResponded,
+		canApply: !canManage && effectiveStatus === "open" && !hasApplied,
 	};
 }
 
-export function mapRecruitmentResponse(row: {
+export async function sweepExpiredListings() {
+	const expiredListings = await db
+		.update(recruitmentListingTable)
+		.set({ status: "expired" })
+		.where(
+			and(
+				eq(recruitmentListingTable.status, "open"),
+				lt(recruitmentListingTable.expiresAt, new Date())
+			)
+		)
+		.returning({ id: recruitmentListingTable.id });
+
+	return expiredListings.length;
+}
+
+export function mapRecruitmentApplication(row: {
 	id: string;
-	postId: string;
+	listingId: string;
 	message: string | null;
 	status: "pending" | "accepted" | "rejected" | "withdrawn";
 	createdAt: Date;
@@ -337,7 +354,7 @@ export function mapRecruitmentResponse(row: {
 	};
 	applicantTeam?: { id: string; name: string; tag: string } | null;
 	applicantOrganization?: { id: string; name: string; slug?: string } | null;
-	post?: { id: string; type: "lft" | "lfp" | "lfr" | "lfs"; title: string } | null;
+	listing?: { id: string; type: "lft" | "lfp" | "lfr" | "lfs"; title: string } | null;
 	chatChannels?: Array<{ id: string }>;
 }) {
 	const senderType =
@@ -349,7 +366,7 @@ export function mapRecruitmentResponse(row: {
 
 	return {
 		id: row.id,
-		postId: row.postId,
+		listingId: row.listingId,
 		conversationId: row.chatChannels?.[0]?.id ?? null,
 		status: row.status,
 		message: row.message ?? null,
@@ -378,8 +395,8 @@ export function mapRecruitmentResponse(row: {
 		applicantAvatarUrl: row.applicant.avatarUrl,
 		applicantPrimaryRole: row.applicant.profile?.primaryRole ?? null,
 		applicantRank: row.applicant.profile?.rank ?? null,
-		postCategory: row.post?.type ?? "lfp",
-		postTitle: row.post?.title ?? "Recruitment post",
+		listingCategory: row.listing?.type ?? "lfp",
+		listingTitle: row.listing?.title ?? "Recruitment listing",
 	};
 }
 
@@ -389,9 +406,9 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 		with: {
 			channel: {
 				with: {
-					lfgApplication: {
+					recruitmentApplication: {
 						with: {
-							post: {
+							listing: {
 								with: {
 									user: {
 										columns: { id: true, username: true, displayName: true, avatarUrl: true },
@@ -405,7 +422,7 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 											name: true,
 											tag: true,
 											avatarUrl: true,
-											teamSr: true,
+											rating: true,
 										},
 									},
 								},
@@ -446,46 +463,48 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 	return rows
 		.map((row) => {
 			const channel = row.channel;
-			if (!channel?.lfgApplication?.post) return null;
-			const post = mapRecruitmentPost(channel.lfgApplication.post, { viewerId: userId });
-			const response = mapRecruitmentResponse(channel.lfgApplication);
+			if (!channel?.recruitmentApplication?.listing) return null;
+			const listing = mapRecruitmentListing(channel.recruitmentApplication.listing, {
+				viewerId: userId,
+			});
+			const application = mapRecruitmentApplication(channel.recruitmentApplication);
 			const otherMember = channel.members.find((member) => member.user.id !== userId);
 			const lastMessage = channel.messages[0];
 
-			// If the current user is the applicant (sender), counterpart is the post owner
-			// If the current user is the post owner, counterpart is the applicant/sender
-			const currentUserIsSender = response.senderUserId === userId;
-			const counterpartType = currentUserIsSender ? post.ownerType : response.senderType;
+			// If the current user is the applicant (sender), counterpart is the listing owner.
+			// If the current user owns the listing, counterpart is the applicant.
+			const currentUserIsSender = application.senderUserId === userId;
+			const counterpartType = currentUserIsSender ? listing.ownerType : application.senderType;
 			const counterpartUsername = currentUserIsSender
 				? counterpartType === "player"
-					? channel.lfgApplication.post.user.username
+					? channel.recruitmentApplication.listing.user.username
 					: null
 				: counterpartType === "player"
-					? channel.lfgApplication.applicant.username
+					? channel.recruitmentApplication.applicant.username
 					: null;
 			const counterpartOrgSlug = currentUserIsSender
-				? post.organizationSlug
-				: response.senderOrganizationSlug;
+				? listing.organizationSlug
+				: application.senderOrganizationSlug;
 
 			return {
 				conversationId: channel.id,
-				responseId: response.id,
-				postId: response.postId,
-				postCategory: post.category,
-				postTitle: post.title,
-				postStatus: post.status,
+				applicationId: application.id,
+				listingId: application.listingId,
+				listingCategory: listing.category,
+				listingTitle: listing.title,
+				listingStatus: listing.status,
 				counterpartLabel:
 					otherMember?.user.displayName ??
-					(currentUserIsSender ? post.ownerDisplayName : response.senderDisplayName),
+					(currentUserIsSender ? listing.ownerDisplayName : application.senderDisplayName),
 				counterpartAvatarUrl:
 					otherMember?.user.avatarUrl ??
-					(currentUserIsSender ? post.ownerAvatarUrl : response.senderAvatarUrl),
+					(currentUserIsSender ? listing.ownerAvatarUrl : application.senderAvatarUrl),
 				counterpartType,
 				counterpartUsername,
 				counterpartOrgSlug,
-				organizationId: post.organizationId,
-				teamId: post.teamId,
-				lastMessagePreview: lastMessage?.content ?? response.message ?? null,
+				organizationId: listing.organizationId,
+				teamId: listing.teamId,
+				lastMessagePreview: lastMessage?.content ?? application.message ?? null,
 				lastMessageAt: lastMessage?.createdAt?.toISOString() ?? null,
 				unreadCount: 0,
 				isArchived: channel.isArchived,
@@ -495,22 +514,22 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 }
 
 export async function createRecruitmentConversation(params: {
-	responseId: string;
-	postOwnerUserId: string;
+	applicationId: string;
+	listingOwnerUserId: string;
 	senderUserId: string;
-	postTitle: string;
+	listingTitle: string;
 }) {
 	const [channel] = await db
 		.insert(chatChannelTable)
 		.values({
 			channelType: "recruitment",
-			name: params.postTitle,
-			lfgApplicationId: params.responseId,
+			name: params.listingTitle,
+			recruitmentApplicationId: params.applicationId,
 		})
 		.returning({ id: chatChannelTable.id });
 
 	await db.insert(chatChannelMemberTable).values([
-		{ channelId: channel.id, userId: params.postOwnerUserId },
+		{ channelId: channel.id, userId: params.listingOwnerUserId },
 		{ channelId: channel.id, userId: params.senderUserId },
 	]);
 
@@ -538,31 +557,52 @@ export async function sendRecruitmentSystemMessage(channelId: string, content: s
 	});
 }
 
-export async function getPublicRecruitmentPosts(filters?: {
+export async function getPublicRecruitmentListings(filters?: {
 	category?: "lft" | "lfp" | "lfr" | "lfs";
 	memberType?: "player" | "staff";
 	region?: string;
 }) {
-	const rows = await db.query.lfgPostTable.findMany({
+	const now = new Date();
+	const rows = await db.query.recruitmentListingTable.findMany({
 		where: and(
-			eq(lfgPostTable.status, "open"),
-			filters?.category ? eq(lfgPostTable.type, filters.category) : undefined,
-			filters?.memberType ? eq(lfgPostTable.memberType, filters.memberType) : undefined,
-			filters?.region ? eq(lfgPostTable.region, filters.region) : undefined
+			eq(recruitmentListingTable.status, "open"),
+			or(isNull(recruitmentListingTable.expiresAt), gte(recruitmentListingTable.expiresAt, now)),
+			filters?.category ? eq(recruitmentListingTable.type, filters.category) : undefined,
+			filters?.memberType ? eq(recruitmentListingTable.memberType, filters.memberType) : undefined,
+			filters?.region ? eq(recruitmentListingTable.region, filters.region) : undefined
 		),
 		with: {
 			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: {
-				columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },
+				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
 			},
 			applications: {
 				columns: { id: true, status: true, applicantUserId: true },
 			},
 		},
-		orderBy: [desc(lfgPostTable.createdAt)],
+		orderBy: [desc(recruitmentListingTable.createdAt)],
 		limit: 100,
 	});
 
-	return rows.map((row) => mapRecruitmentPost(row));
+	return rows.map((row) => mapRecruitmentListing(row));
+}
+
+export async function getPublicRecruitmentListingById(id: string) {
+	const row = await db.query.recruitmentListingTable.findFirst({
+		where: eq(recruitmentListingTable.id, id),
+		with: {
+			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+			team: {
+				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
+			},
+			applications: {
+				columns: { id: true, status: true, applicantUserId: true },
+			},
+		},
+	});
+
+	if (!row) return null;
+	return mapRecruitmentListing(row);
 }

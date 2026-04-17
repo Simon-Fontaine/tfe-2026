@@ -2,7 +2,7 @@
 
 import {
 	ComputerIcon,
-	DashboardSquare01Icon,
+	Home01Icon,
 	Logout01Icon,
 	Moon02Icon,
 	Settings01Icon,
@@ -30,6 +30,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { appRoutes } from "@/lib/routes";
 
 export interface UserMenuUser {
 	displayName: string;
@@ -116,19 +117,19 @@ export function UserMenuDropdown({
 
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard">
-							<HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />
-							Dashboard
+						<Link href={appRoutes.root}>
+							<HugeiconsIcon icon={Home01Icon} strokeWidth={2} />
+							Home
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/profile">
+						<Link href={appRoutes.profile}>
 							<HugeiconsIcon icon={UserCircle02Icon} strokeWidth={2} />
 							Profile
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/settings/account">
+						<Link href={appRoutes.settings.account}>
 							<HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
 							Settings
 						</Link>

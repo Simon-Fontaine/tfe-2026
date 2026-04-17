@@ -38,7 +38,7 @@ export async function getTeamById(teamId: string) {
 			description: true,
 			avatarUrl: true,
 			bannerUrl: true,
-			teamSr: true,
+			rating: true,
 			matchesPlayed: true,
 			isRecruiting: true,
 			isArchived: true,
@@ -106,6 +106,32 @@ export async function isUserOnTeam(userId: string, teamId: string): Promise<bool
 		columns: { status: true },
 	});
 	return !!row && row.status !== "inactive";
+}
+
+export async function listTeamAdminUserIds(teamId: string): Promise<string[]> {
+	const rows = await db.query.teamRosterTable.findMany({
+		where: and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.permissionRole, "admin")),
+		columns: { userId: true, status: true },
+	});
+
+	return [...new Set(rows.filter((row) => row.status !== "inactive").map((row) => row.userId))];
+}
+
+export async function listTeamWorkspaceUserIds(teamId: string): Promise<string[]> {
+	const rows = await db.query.teamRosterTable.findMany({
+		where: and(eq(teamRosterTable.teamId, teamId)),
+		columns: { userId: true, status: true },
+	});
+
+	return [
+		...new Set(
+			rows
+				.filter(
+					(row) => row.status === "active" || row.status === "benched" || row.status === "trial"
+				)
+				.map((row) => row.userId)
+		),
+	];
 }
 
 export async function verifyUserOnTeam(userId: string, teamId: string): Promise<boolean> {

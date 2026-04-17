@@ -1,29 +1,28 @@
 "use server";
 
-import { toActionResult } from "@/lib/action-result";
-import { getServerSdk } from "@/lib/app-sdk";
+import { apiAuthPost, apiGet } from "@/lib/api-client";
+import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./types";
+import { toAuthActionResult } from "./utils";
 
 export async function registerAction(
 	_prev: ActionResult | null,
 	formData: FormData
 ): Promise<ActionResult> {
-	const sdk = getServerSdk();
-	const result = await sdk.auth.register({
+	const result = await apiAuthPost<ActionResult>(apiRoutes.auth.register.root, {
 		email: String(formData.get("email") ?? ""),
 		username: String(formData.get("username") ?? ""),
 		displayName: formData.get("displayName")?.toString() || undefined,
 		password: String(formData.get("password") ?? ""),
 		confirmPassword: String(formData.get("confirmPassword") ?? ""),
 	});
-
-	const actionResult = toActionResult(result);
-	return "data" in actionResult ? (actionResult.data as ActionResult) : actionResult;
+	return toAuthActionResult(result);
 }
 
 export async function checkUsernameAction(username: string): Promise<{ available: boolean }> {
-	const sdk = getServerSdk();
-	const result = await sdk.auth.checkUsername(username);
-	if (!result.ok) return { available: false };
-	return result.data.data;
+	const result = await apiGet<{ available: boolean }>(
+		apiRoutes.auth.register.checkUsername(username)
+	);
+	if ("error" in result) return { available: false };
+	return result.data;
 }

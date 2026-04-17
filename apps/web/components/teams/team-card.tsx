@@ -4,16 +4,18 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { OrgTeamSummary } from "@/lib/data/organization";
+import { appRoutes } from "@/lib/routes";
 
 interface TeamCardProps {
 	team: OrgTeamSummary;
 	orgId: string;
+	href?: string;
 }
 
-export function TeamCard({ team, orgId: _orgId }: TeamCardProps) {
+export function TeamCard({ team, href, orgId: _orgId }: TeamCardProps) {
 	return (
 		<Link
-			href={`/dashboard/teams/${team.id}`}
+			href={href ?? appRoutes.teams.byId(team.id)}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 rounded-none overflow-hidden after:rounded-none shrink-0">
@@ -30,7 +32,7 @@ export function TeamCard({ team, orgId: _orgId }: TeamCardProps) {
 				</div>
 				<p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
 					<HugeiconsIcon icon={GameController01Icon} strokeWidth={2} className="size-3" />
-					SR {team.teamSr}
+					Rating {team.rating}
 				</p>
 			</div>
 

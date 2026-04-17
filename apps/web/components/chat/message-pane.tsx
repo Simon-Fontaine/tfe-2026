@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChatConversationSummary, ChatMessage } from "@scrimflow/shared";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
 import { chatSocket } from "@/lib/ws/chat-socket";
@@ -17,9 +17,12 @@ interface MessagePaneProps {
 
 export function MessagePane({ conversationId, currentUserId, conversation }: MessagePaneProps) {
 	const { setMessages, appendMessage, clearUnread } = useChatStore();
+	const messages = useChatStore((s) => s.messages[conversationId] ?? []);
 	const isLoading = useChatStore(
 		(s) => s.messages[conversationId] === undefined && s.loadingOlder[conversationId] !== false
 	);
+	const lastPersistedReadRef = useRef<string | null>(null);
+	const previousConversationRef = useRef<string | null>(null);
 
 	// Load initial messages for this conversation
 	useEffect(() => {
@@ -57,8 +60,27 @@ export function MessagePane({ conversationId, currentUserId, conversation }: Mes
 
 	// Clear unread badge when pane becomes active
 	useEffect(() => {
+		if (previousConversationRef.current !== conversationId) {
+			previousConversationRef.current = conversationId;
+			lastPersistedReadRef.current = null;
+		}
+
 		clearUnread(conversationId);
-	}, [conversationId, clearUnread]);
+
+		const lastMessageId = messages[messages.length - 1]?.id;
+		if (!lastMessageId || lastMessageId.startsWith("temp-")) return;
+		if (lastPersistedReadRef.current === lastMessageId) return;
+
+		lastPersistedReadRef.current = lastMessageId;
+		void fetch(apiRoutes.chat.read(conversationId), {
+			method: "POST",
+			credentials: "include",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ lastReadMessageId: lastMessageId }),
+		}).catch(() => {
+			lastPersistedReadRef.current = null;
+		});
+	}, [conversationId, messages, clearUnread]);
 
 	async function handleSend(content: string) {
 		// Optimistic: add a temp message immediately

@@ -31,7 +31,7 @@ export function TeamDiscoveryCard({ team }: TeamDiscoveryCardProps) {
 				<div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
 					<span className="flex items-center gap-1">
 						<HugeiconsIcon icon={GameController01Icon} strokeWidth={2} className="size-3" />
-						SR {team.teamSr}
+						Rating {team.rating}
 					</span>
 					<span className="flex items-center gap-1">
 						<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3" />

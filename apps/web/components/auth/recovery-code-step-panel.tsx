@@ -15,6 +15,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
+import { appRoutes } from "@/lib/routes";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function RecoveryCodeStepPanel() {
@@ -65,7 +66,7 @@ export function RecoveryCodeStepPanel() {
 				<Button
 					type="button"
 					className="w-full"
-					onClick={() => router.push(state?.next || next || "/dashboard")}
+					onClick={() => router.push(state?.next || next || appRoutes.root)}
 				>
 					I&apos;ve saved my code — continue
 				</Button>

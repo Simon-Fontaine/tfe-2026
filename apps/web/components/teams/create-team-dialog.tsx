@@ -7,7 +7,7 @@ import { type CreateTeamInput, CreateTeamSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { createTeamAction } from "@/app/dashboard/workspace/orgs/actions/team";
+import { createTeamAction } from "@/app/actions/team";
 import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
+import { appRoutes } from "@/lib/routes";
 
 interface CreateTeamDialogProps {
 	orgId: string;
@@ -54,7 +55,7 @@ export function CreateTeamDialog({
 		if (state?.success && pendingRef.current) {
 			pendingRef.current = false;
 			const teamId = (state as { teamId?: string }).teamId;
-			if (teamId) router.push(`/dashboard/teams/${teamId}`);
+			if (teamId) router.push(appRoutes.teams.byId(teamId));
 		}
 	}, [state, router]);
 

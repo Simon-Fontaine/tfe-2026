@@ -16,7 +16,7 @@ import {
 	cancelTwoFactorDisableAction,
 	confirmTwoFactorDisableAction,
 	requestTwoFactorDisableAction,
-} from "@/app/dashboard/settings/actions/two-factor-disable";
+} from "@/app/actions/settings/two-factor-disable";
 import { CodeDisplay } from "@/components/shared/code-display";
 import { RecoveryCodeDialog } from "@/components/shared/recovery-code-dialog";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";

@@ -1,9 +1,6 @@
 "use client";
 
-import {
-	cancelTeamInviteAction,
-	resendTeamInviteAction,
-} from "@/app/dashboard/workspace/orgs/actions/team";
+import { cancelTeamInviteAction, resendTeamInviteAction } from "@/app/actions/team";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicPageSection } from "@/components/home/public-page-section";
-import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -80,27 +80,27 @@ export default async function PlayerProfilePage({
 					<Link href={publicRoutes.players.root}>Back to players</Link>
 				</Button>
 				<Button asChild size="sm">
-					<Link href="/posts">Browse all posts</Link>
+					<Link href={publicRoutes.recruiting.root}>Browse all listings</Link>
 				</Button>
 			</div>
 
 			<PublicPageSection
-				title="Open posts"
-				description="Public availability and recruiting posts published directly by this player."
+				title="Open listings"
+				description="Public availability and recruiting listings published directly by this player."
 			>
-				{player.openPosts.length === 0 ? (
+				{player.openListings.length === 0 ? (
 					<EmptyStateBlock
 						icon={UserSearch01Icon}
-						title="No public posts right now"
-						description="Check the posts hub for other open recruiting opportunities."
+						title="No public listings right now"
+						description="Check recruiting for other open opportunities."
 						variant="card"
 					/>
 				) : (
 					<div className="space-y-4">
-						{player.openPosts.map((post) => (
-							<RecruitmentPostCard
-								key={post.id}
-								post={post}
+						{player.openListings.map((listing) => (
+							<RecruitmentListingCard
+								key={listing.id}
+								listing={listing}
 								currentUserId={user?.id ?? null}
 								entityOptions={entityOptions}
 							/>

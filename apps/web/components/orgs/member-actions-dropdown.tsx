@@ -3,10 +3,7 @@
 import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
-import {
-	removeOrgMemberAction,
-	updateOrgMemberRoleAction,
-} from "@/app/dashboard/workspace/orgs/actions/org";
+import { removeOrgMemberAction, updateOrgMemberRoleAction } from "@/app/actions/org";
 import {
 	AlertDialog,
 	AlertDialogCancel,

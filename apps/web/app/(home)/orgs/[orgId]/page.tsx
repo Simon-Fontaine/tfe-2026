@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicPageSection } from "@/components/home/public-page-section";
-import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -63,35 +63,35 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 
 			<div className="flex flex-wrap gap-2">
 				<Button asChild size="sm">
-					<Link href="/posts">
-						Browse all posts
+					<Link href={publicRoutes.recruiting.root}>
+						Browse all listings
 						<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-1 size-4" />
 					</Link>
 				</Button>
 				{isMember && (
 					<Button asChild size="sm" variant="outline">
-						<Link href={`/dashboard/c/org/${org.id}`}>Open workspace</Link>
+						<Link href={`/app/orgs/${org.id}/overview`}>Open workspace</Link>
 					</Button>
 				)}
 			</div>
 
 			<PublicPageSection
-				title="Open organisation posts"
-				description="Public organisation recruiting posts are surfaced here instead of join-request forms."
+				title="Open organisation listings"
+				description="Public organisation recruiting listings are surfaced here instead of join-request forms."
 			>
-				{org.openPosts.length === 0 ? (
+				{org.openListings.length === 0 ? (
 					<EmptyStateBlock
 						icon={GameController01Icon}
-						title="No open organisation posts right now"
-						description="Explore team posts below or browse the full public posts hub."
+						title="No open organisation listings right now"
+						description="Explore team listings below or browse the full public recruiting directory."
 						variant="card"
 					/>
 				) : (
 					<div className="space-y-4">
-						{org.openPosts.map((post) => (
-							<RecruitmentPostCard
-								key={post.id}
-								post={post}
+						{org.openListings.map((listing) => (
+							<RecruitmentListingCard
+								key={listing.id}
+								listing={listing}
 								currentUserId={user?.id ?? null}
 								entityOptions={entityOptions}
 							/>
@@ -126,7 +126,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 									<p className="truncate text-sm font-medium">{team.name}</p>
 									<p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
 										<HugeiconsIcon icon={GameController01Icon} strokeWidth={2} className="size-3" />
-										SR {team.teamSr}
+										Rating {team.rating}
 									</p>
 								</div>
 								{team.isRecruiting && (

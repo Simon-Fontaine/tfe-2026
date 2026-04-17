@@ -1,6 +1,7 @@
 "use client";
 
-import { Send01Icon } from "@hugeicons/core-free-icons";
+import { SentIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -101,7 +102,11 @@ export function MessageInput({ conversationId, disabled, onSend }: MessageInputP
 					onClick={handleSend}
 					disabled={isSending || message.trim().length === 0 || disabled}
 				>
-					{isSending ? <Spinner className="mr-1.5" /> : <Send01Icon className="mr-1.5 size-3.5" />}
+					{isSending ? (
+						<Spinner className="mr-1.5" />
+					) : (
+						<HugeiconsIcon icon={SentIcon} strokeWidth={2} className="mr-1.5 size-3.5" />
+					)}
 					Send
 				</Button>
 			</div>

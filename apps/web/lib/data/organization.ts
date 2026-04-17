@@ -1,6 +1,5 @@
 import type {
 	OrgInviteSummary,
-	OrgJoinRequestSummary,
 	OrgMemberSummary,
 	OrgPendingInvite,
 	OrgRole,
@@ -16,7 +15,6 @@ import { apiRoutes } from "@/lib/routes";
 
 export type {
 	OrgInviteSummary,
-	OrgJoinRequestSummary,
 	OrgMemberSummary,
 	OrgPendingInvite,
 	OrgRole,

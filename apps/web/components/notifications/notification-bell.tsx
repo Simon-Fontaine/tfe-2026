@@ -1,6 +1,7 @@
 import { Notification01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
+import { appRoutes } from "@/lib/routes";
 
 interface NotificationBellProps {
 	unreadCount: number;
@@ -9,7 +10,7 @@ interface NotificationBellProps {
 export function NotificationBell({ unreadCount }: NotificationBellProps) {
 	return (
 		<Link
-			href="/dashboard/notifications"
+			href={appRoutes.inbox}
 			className="relative inline-flex size-8 items-center justify-center rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 		>
 			<HugeiconsIcon icon={Notification01Icon} strokeWidth={2} className="size-4" />

@@ -2,15 +2,29 @@
 
 import { Notification01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import React from "react";
-import { markNotificationReadAction } from "@/app/dashboard/actions/notifications";
+import { markNotificationReadAction } from "@/app/actions/notifications";
 import { Button } from "@/components/ui/button";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { NotificationSummary } from "@/lib/data/notifications";
+import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+
+function getNotificationHref(notification: NotificationSummary): string | null {
+	if (notification.referenceType === "recruitment_listing") {
+		return appRoutes.recruiting.root;
+	}
+	if (notification.referenceType === "recruitment_application") {
+		return appRoutes.recruiting.conversations;
+	}
+	return null;
+}
 
 interface NotificationItemProps {
 	notification: NotificationSummary;
+	onMarkRead?: (notificationId: string) => Promise<void> | void;
+	isPending?: boolean;
 }
 
 function formatRelativeTime(iso: string, now: number): string {
@@ -36,11 +50,22 @@ function useRelativeTime(iso: string): string {
 	return formatRelativeTime(iso, now);
 }
 
-export function NotificationItem({ notification }: NotificationItemProps) {
+export function NotificationItem({
+	notification,
+	onMarkRead,
+	isPending: externalPending,
+}: NotificationItemProps) {
 	const relativeTime = useRelativeTime(notification.createdAt);
 	const { submit, isPending } = useFormAction(markNotificationReadAction, {});
+	const isBusy = externalPending ?? (!onMarkRead && isPending);
+	const href = getNotificationHref(notification);
 
 	function markRead() {
+		if (onMarkRead) {
+			void onMarkRead(notification.id);
+			return;
+		}
+
 		const fd = new FormData();
 		fd.set("notificationId", notification.id);
 		submit(fd);
@@ -62,13 +87,23 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 				<HugeiconsIcon icon={Notification01Icon} strokeWidth={2} className="size-3.5" />
 			</div>
 
-			<div className="min-w-0 flex-1">
-				<p className="text-sm font-medium">{notification.title}</p>
-				{notification.body && (
-					<p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.body}</p>
-				)}
-				<p className="mt-1 text-[10px] text-muted-foreground">{relativeTime}</p>
-			</div>
+			{href ? (
+				<Link href={href} className="min-w-0 flex-1">
+					<p className="text-sm font-medium">{notification.title}</p>
+					{notification.body && (
+						<p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.body}</p>
+					)}
+					<p className="mt-1 text-[10px] text-muted-foreground">{relativeTime}</p>
+				</Link>
+			) : (
+				<div className="min-w-0 flex-1">
+					<p className="text-sm font-medium">{notification.title}</p>
+					{notification.body && (
+						<p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.body}</p>
+					)}
+					<p className="mt-1 text-[10px] text-muted-foreground">{relativeTime}</p>
+				</div>
+			)}
 
 			{!notification.isRead && (
 				<Button
@@ -76,7 +111,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 					variant="ghost"
 					className="h-7 shrink-0 text-xs text-muted-foreground"
 					onClick={markRead}
-					disabled={isPending}
+					disabled={isBusy}
 				>
 					Mark read
 				</Button>

@@ -38,10 +38,7 @@ export function canAssignTeamAdmin(
 	return false;
 }
 
-export function canRespondToInvite(
-	status: InviteLifecycleStatus,
-	expiresAt: string | Date
-): boolean {
+export function canApplyToInvite(status: InviteLifecycleStatus, expiresAt: string | Date): boolean {
 	if (status !== "pending") return false;
 	const expiry = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
 	return expiry.getTime() > Date.now();

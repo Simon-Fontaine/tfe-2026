@@ -7,10 +7,10 @@ import { and, asc, eq, ne } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { lfgPostTable, teamRosterTable, teamTable } from "@/db/schema";
+import { recruitmentListingTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
-import { mapRecruitmentPost } from "@/utils/recruit";
+import { mapRecruitmentListing } from "@/utils/recruit";
 
 const publicTeamRoutes = new Hono<AuthEnv>();
 
@@ -33,15 +33,15 @@ publicTeamRoutes.get("/", async (c) => {
 			tag: true,
 			description: true,
 			avatarUrl: true,
-			teamSr: true,
+			rating: true,
 			isRecruiting: true,
 		},
 		with: {
 			roster: {
 				columns: { id: true, status: true },
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				columns: { id: true },
 			},
 		},
@@ -56,10 +56,10 @@ publicTeamRoutes.get("/", async (c) => {
 		tag: team.tag,
 		description: team.description ?? null,
 		avatarUrl: team.avatarUrl,
-		teamSr: team.teamSr,
+		rating: team.rating,
 		isRecruiting: team.isRecruiting,
 		activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
-		openPostCount: team.lfgPosts.length,
+		openListingCount: team.recruitmentListings.length,
 	}));
 
 	return c.json({ data });
@@ -79,7 +79,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 			description: true,
 			avatarUrl: true,
 			bannerUrl: true,
-			teamSr: true,
+			rating: true,
 			matchesPlayed: true,
 			isRecruiting: true,
 			isArchived: true,
@@ -110,12 +110,12 @@ publicTeamRoutes.get("/:id", async (c) => {
 					},
 				},
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				with: {
 					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
-					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
 				},
 			},
@@ -134,15 +134,13 @@ publicTeamRoutes.get("/:id", async (c) => {
 		description: team.description ?? null,
 		avatarUrl: team.avatarUrl,
 		bannerUrl: team.bannerUrl ?? null,
-		teamSr: team.teamSr,
+		rating: team.rating,
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
 		isArchived: team.isArchived,
 		activeRosterCount: team.roster.length,
-		openPostCount: team.lfgPosts.length,
-		hasOpenRolePost: team.lfgPosts.length > 0,
-		// TODO: query actual pending join requests for the authenticated user
-		hasPendingJoinRequest: false,
+		openListingCount: team.recruitmentListings.length,
+		hasOpenListing: team.recruitmentListings.length > 0,
 		roster: team.roster.map(
 			(row): PublicRosterMemberSummary => ({
 				userId: row.user.id,
@@ -156,7 +154,9 @@ publicTeamRoutes.get("/:id", async (c) => {
 				status: row.status,
 			})
 		),
-		posts: team.lfgPosts.map((post) => mapRecruitmentPost(post, { viewerId: user?.id ?? null })),
+		listings: team.recruitmentListings.map((listing) =>
+			mapRecruitmentListing(listing, { viewerId: user?.id ?? null })
+		),
 	};
 
 	return c.json({ data });

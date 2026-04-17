@@ -5,8 +5,15 @@
 		{
 			"idx": 0,
 			"version": "7",
-			"when": 1775056778962,
-			"tag": "0000_bright_shotgun",
+			"when": 1775297136338,
+			"tag": "0000_left_ghost_rider",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1776151200000,
+			"tag": "0001_recruitment_listing_hero_pool_gin",
 			"breakpoints": true
 		}
 	]

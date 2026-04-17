@@ -27,7 +27,7 @@ export default async function PlayersDirectoryPage() {
 			contentClassName="space-y-6"
 			actions={
 				<Button asChild size="sm">
-					<Link href="/posts">Browse all recruiting posts</Link>
+					<Link href={publicRoutes.recruiting.root}>Browse all recruiting listings</Link>
 				</Button>
 			}
 		>

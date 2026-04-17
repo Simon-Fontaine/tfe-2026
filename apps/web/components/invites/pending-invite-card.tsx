@@ -1,8 +1,8 @@
 "use client";
 
-import { canRespondToInvite } from "@scrimflow/shared";
-import { respondToOrgInviteAction } from "@/app/dashboard/workspace/orgs/actions/org";
-import { respondToTeamInviteAction } from "@/app/dashboard/workspace/orgs/actions/team";
+import { canApplyToInvite } from "@scrimflow/shared";
+import { respondToOrgInviteAction } from "@/app/actions/org";
+import { respondToTeamInviteAction } from "@/app/actions/team";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 			? (props.invite.roleInTeam ?? props.invite.staffRole ?? props.invite.memberType)
 			: props.invite.role;
 	const permissionRole = props.type === "team" ? props.invite.permissionRole : null;
-	const canRespond = canRespondToInvite(props.invite.status, props.invite.expiresAt);
+	const canApply = canApplyToInvite(props.invite.status, props.invite.expiresAt);
 
 	return (
 		<div className="flex items-center gap-3 border p-4">
@@ -97,7 +97,7 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 				</p>
 			</div>
 
-			{canRespond ? (
+			{canApply ? (
 				<div className="flex shrink-0 gap-2">
 					<Button size="sm" onClick={() => respond("accept")} disabled={isPending}>
 						{isPending && <Spinner className="mr-1.5" />}

@@ -16,6 +16,31 @@ export const getChatConversations = cache(async (): Promise<ChatConversationSumm
 	throw new Error(res.error);
 });
 
+export const getRecruitmentChatConversations = cache(
+	async (): Promise<ChatConversationSummary[]> => {
+		const conversations = await getChatConversations();
+		return conversations.filter((conversation) => conversation.type === "recruitment");
+	}
+);
+
+export const getTeamChatConversations = cache(
+	async (teamId: string): Promise<ChatConversationSummary[]> => {
+		const res = await apiGet<ChatConversationSummary[]>(apiRoutes.chat.teamConversations(teamId));
+		if ("data" in res) return res.data;
+		if (res.status === 403 || res.status === 404) return [];
+		throw new Error(res.error);
+	}
+);
+
+export const getScrimChatConversations = cache(
+	async (scrimId: string): Promise<ChatConversationSummary[]> => {
+		const res = await apiGet<ChatConversationSummary[]>(apiRoutes.chat.scrimConversations(scrimId));
+		if ("data" in res) return res.data;
+		if (res.status === 403 || res.status === 404) return [];
+		throw new Error(res.error);
+	}
+);
+
 export const getChatConversation = cache(
 	async (conversationId: string): Promise<ChatConversationDetail | null> => {
 		const res = await apiGet<ChatConversationDetail>(apiRoutes.chat.byId(conversationId));
@@ -34,7 +59,7 @@ export const getChatMessages = cache(async (conversationId: string): Promise<Cha
 export async function createDirectConversation(
 	targetUserId: string
 ): Promise<CreateDirectConversationResult | null> {
-	const res = await apiPost<CreateDirectConversationResult>(apiRoutes.chat.createDirect, {
+	const res = await apiPost<{ data: CreateDirectConversationResult }>(apiRoutes.chat.createDirect, {
 		targetUserId,
 	});
 	if ("data" in res) return res.data;

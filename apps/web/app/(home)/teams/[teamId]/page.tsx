@@ -6,7 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicPageSection } from "@/components/home/public-page-section";
-import { RecruitmentPostCard } from "@/components/recruit/recruitment-post-card";
+import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 	const userOrgRole = user
 		? await getUserOrgRole(team.organizationId, user.id).catch(() => null)
 		: null;
-	const canManageInDashboard = userOrgRole === "owner" || userOrgRole === "admin";
+	const canManageInWorkspace = userOrgRole === "owner" || userOrgRole === "admin";
 	const isOrgMember = userOrgRole !== null;
 	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
 
@@ -62,7 +62,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 							</Link>
 						</div>
 						<p className="text-xs text-muted-foreground">
-							SR {team.teamSr} · {team.matchesPlayed} scrims played
+							Rating {team.rating} · {team.matchesPlayed} scrims played
 						</p>
 						{team.description && (
 							<p className="text-sm text-muted-foreground">{team.description}</p>
@@ -75,9 +75,9 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 								<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3" />
 								{team.activeRosterCount} active member{team.activeRosterCount === 1 ? "" : "s"}
 							</span>
-							{team.openPostCount > 0 && (
+							{team.openListingCount > 0 && (
 								<Badge variant="outline" className="text-[10px]">
-									{team.openPostCount} open post{team.openPostCount === 1 ? "" : "s"}
+									{team.openListingCount} open listing{team.openListingCount === 1 ? "" : "s"}
 								</Badge>
 							)}
 						</div>
@@ -88,20 +88,20 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 			<div className="border p-5">
 				<h2 className="text-sm font-semibold">Recruiting</h2>
 				<p className="mt-1 text-sm text-muted-foreground">
-					Use the team’s public recruiting posts below instead of request-to-join forms or Discord
-					channels.
+					Use the team’s public recruiting listings below instead of request-to-join forms or
+					Discord channels.
 				</p>
 				<div className="mt-3 flex flex-wrap gap-2">
 					<Button asChild size="sm">
-						<Link href="/posts">
-							Browse all posts
+						<Link href={publicRoutes.recruiting.root}>
+							Browse all listings
 							<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-1 size-4" />
 						</Link>
 					</Button>
 					{isOrgMember && (
 						<Button asChild size="sm" variant="outline">
-							<Link href={`/dashboard/c/org/${team.organizationId}/team/${team.id}`}>
-								{canManageInDashboard ? "Manage in dashboard" : "Open workspace"}
+							<Link href={`/app/teams/${team.id}/overview`}>
+								{canManageInWorkspace ? "Manage in workspace" : "Open workspace"}
 							</Link>
 						</Button>
 					)}
@@ -109,22 +109,22 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 			</div>
 
 			<PublicPageSection
-				title="Open posts"
+				title="Open listings"
 				description="Current opportunities published directly by this team."
 			>
-				{team.posts.length === 0 ? (
+				{team.listings.length === 0 ? (
 					<EmptyStateBlock
 						icon={UserGroupIcon}
-						title="No open posts right now"
-						description="Check back later or browse other public recruiting posts."
+						title="No open listings right now"
+						description="Check back later or browse other public recruiting listings."
 						variant="card"
 					/>
 				) : (
 					<div className="space-y-4">
-						{team.posts.map((post) => (
-							<RecruitmentPostCard
-								key={post.id}
-								post={post}
+						{team.listings.map((listing) => (
+							<RecruitmentListingCard
+								key={listing.id}
+								listing={listing}
 								currentUserId={user?.id ?? null}
 								entityOptions={entityOptions}
 							/>

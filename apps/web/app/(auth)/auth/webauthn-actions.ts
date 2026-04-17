@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { apiAuthPost } from "@/lib/api-client";
+import { appRoutes } from "@/lib/routes";
 
 interface VerifyResult {
 	error?: string;
@@ -23,7 +24,7 @@ export async function verifyPasskey2faAction(
 		next,
 	});
 	if ("error" in res) return { error: res.error };
-	redirect(res.redirect ?? next ?? "/dashboard");
+	redirect(res.redirect ?? next ?? appRoutes.root);
 }
 
 export async function verifySecurityKey2faAction(
@@ -36,7 +37,7 @@ export async function verifySecurityKey2faAction(
 		next,
 	});
 	if ("error" in res) return { error: res.error };
-	redirect(res.redirect ?? next ?? "/dashboard");
+	redirect(res.redirect ?? next ?? appRoutes.root);
 }
 
 export async function loginWithPasskeyAction(
@@ -49,5 +50,5 @@ export async function loginWithPasskeyAction(
 		next,
 	});
 	if ("error" in res) return { error: res.error };
-	redirect(res.redirect ?? next ?? "/dashboard");
+	redirect(res.redirect ?? next ?? appRoutes.root);
 }

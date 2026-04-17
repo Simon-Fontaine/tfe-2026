@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { appRoutes } from "@/lib/routes";
 
 export function ScheduleNoTeams() {
 	return (
@@ -18,7 +19,7 @@ export function ScheduleNoTeams() {
 				availability.
 			</p>
 			<Button asChild size="sm" variant="outline">
-				<Link href="/dashboard/orgs">Browse organizations</Link>
+				<Link href={appRoutes.orgs.root}>Browse organizations</Link>
 			</Button>
 		</div>
 	);

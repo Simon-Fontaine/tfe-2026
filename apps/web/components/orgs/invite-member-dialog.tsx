@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { inviteToOrgAction } from "@/app/dashboard/workspace/orgs/actions/org";
+import { inviteToOrgAction } from "@/app/actions/org";
 import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
 import { Button } from "@/components/ui/button";

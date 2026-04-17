@@ -1,4 +1,11 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+	DeleteObjectCommand,
+	GetObjectCommand,
+	HeadObjectCommand,
+	PutObjectCommand,
+	S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // ─── Singleton S3 client ──────────────────────────────────────────────────────
 
@@ -17,6 +24,11 @@ function getS3Client(): S3Client {
 		});
 	}
 	return _s3Client;
+}
+
+export function buildObjectUrl(bucket: string, key: string) {
+	const publicUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
+	return `${publicUrl}/${bucket}/${key}`;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -42,8 +54,7 @@ export async function uploadFile(
 		})
 	);
 
-	const publicUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
-	return `${publicUrl}/${bucket}/${key}`;
+	return buildObjectUrl(bucket, key);
 }
 
 /**
@@ -58,6 +69,85 @@ export async function deleteFile(bucket: string, key: string): Promise<void> {
 			Key: key,
 		})
 	);
+}
+
+export async function downloadFile(
+	bucket: string,
+	key: string
+): Promise<{ buffer: Buffer; contentType: string | null }> {
+	const client = getS3Client();
+	const response = await client.send(
+		new GetObjectCommand({
+			Bucket: bucket,
+			Key: key,
+		})
+	);
+
+	if (!response.Body) {
+		throw new Error("Storage provider returned an empty object body.");
+	}
+
+	if (
+		typeof response.Body === "object" &&
+		response.Body !== null &&
+		"transformToByteArray" in response.Body &&
+		typeof response.Body.transformToByteArray === "function"
+	) {
+		const bytes = await response.Body.transformToByteArray();
+		return {
+			buffer: Buffer.from(bytes),
+			contentType: response.ContentType ?? null,
+		};
+	}
+
+	const arrayBuffer = await new Response(response.Body as BodyInit).arrayBuffer();
+	return {
+		buffer: Buffer.from(arrayBuffer),
+		contentType: response.ContentType ?? null,
+	};
+}
+
+export async function createPutUploadUrl(params: {
+	bucket: string;
+	key: string;
+	contentType: string;
+	expiresInSeconds?: number;
+}) {
+	const client = getS3Client();
+	const uploadUrl = await getSignedUrl(
+		client,
+		new PutObjectCommand({
+			Bucket: params.bucket,
+			Key: params.key,
+			ContentType: params.contentType,
+		}),
+		{
+			expiresIn: params.expiresInSeconds ?? 900,
+		}
+	);
+
+	return {
+		uploadUrl,
+		objectUrl: buildObjectUrl(params.bucket, params.key),
+	};
+}
+
+export async function headFile(
+	bucket: string,
+	key: string
+): Promise<{ contentType: string | null; contentLength: number | null }> {
+	const client = getS3Client();
+	const response = await client.send(
+		new HeadObjectCommand({
+			Bucket: bucket,
+			Key: key,
+		})
+	);
+
+	return {
+		contentType: response.ContentType ?? null,
+		contentLength: typeof response.ContentLength === "number" ? response.ContentLength : null,
+	};
 }
 
 /**

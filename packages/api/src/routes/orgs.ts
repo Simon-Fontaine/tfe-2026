@@ -14,21 +14,22 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import {
-	lfgPostTable,
 	organizationMemberTable,
 	organizationTable,
 	orgInviteTable,
+	recruitmentListingTable,
 	teamRosterTable,
 	teamTable,
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
+import logger from "@/utils/logger";
 import { ensureUniqueSlug, getOrgPermissions, getUserOrgRole, nameToSlug } from "@/utils/org";
 import {
 	ensureOrganizationMembership,
 	getRecruitmentConversationsForUser,
-	mapRecruitmentPost,
+	mapRecruitmentListing,
 } from "@/utils/recruit";
 
 const orgRoutes = new Hono<AuthEnv>();
@@ -47,7 +48,7 @@ function toOrgTeamSummary(
 		description: string | null;
 		avatarUrl: string | null;
 		bannerUrl: string | null;
-		teamSr: number;
+		rating: number;
 		matchesPlayed: number;
 		isRecruiting: boolean;
 		isArchived: boolean;
@@ -71,7 +72,7 @@ function toOrgTeamSummary(
 		description: team.description ?? null,
 		avatarUrl: team.avatarUrl,
 		bannerUrl: team.bannerUrl ?? null,
-		teamSr: team.teamSr,
+		rating: team.rating,
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
 		isArchived: team.isArchived,
@@ -105,7 +106,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 					description: true,
 					avatarUrl: true,
 					bannerUrl: true,
-					teamSr: true,
+					rating: true,
 					matchesPlayed: true,
 					isRecruiting: true,
 					isArchived: true,
@@ -133,7 +134,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 	});
 	if (!org) return null;
 
-	const [inviteRows, postRows, conversations] = await Promise.all([
+	const [inviteRows, listingRows, conversations] = await Promise.all([
 		db.query.orgInviteTable.findMany({
 			where: eq(orgInviteTable.organizationId, orgId),
 			with: {
@@ -141,21 +142,27 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			},
 			orderBy: [desc(orgInviteTable.createdAt)],
 		}),
-		db.query.lfgPostTable.findMany({
-			where: eq(lfgPostTable.organizationId, orgId),
+		db.query.recruitmentListingTable.findMany({
+			where: eq(recruitmentListingTable.organizationId, orgId),
 			with: {
 				user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 				organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 				team: {
-					columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },
+					columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
 				},
 				applications: {
 					columns: { id: true, status: true, applicantUserId: true },
 				},
 			},
-			orderBy: [desc(lfgPostTable.createdAt)],
+			orderBy: [desc(recruitmentListingTable.createdAt)],
 		}),
-		getRecruitmentConversationsForUser(userId),
+		getRecruitmentConversationsForUser(userId).catch((err: unknown) => {
+			logger.error(
+				{ err, orgId, userId },
+				"failed to load recruitment conversations for org workspace"
+			);
+			return [];
+		}),
 	]);
 
 	const activeTeamCountsByUser = new Map<string, number>();
@@ -168,6 +175,83 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			);
 		}
 	}
+
+	const members = org.members.flatMap((member) => {
+		const user = member.user as typeof member.user | null;
+		if (!user) {
+			logger.warn({ orgId, memberId: member.id }, "skipping org member with missing user");
+			return [];
+		}
+
+		return [
+			{
+				id: member.id,
+				userId: user.id,
+				username: user.username,
+				displayName: user.displayName,
+				avatarUrl: user.avatarUrl,
+				permissionRole: member.role,
+				role: member.role,
+				memberType: member.memberType,
+				staffRole: member.staffRole ?? null,
+				gameRole: member.gameRole ?? null,
+				activeTeamCount: activeTeamCountsByUser.get(user.id) ?? 0,
+				joinedAt: member.createdAt.toISOString(),
+			},
+		];
+	});
+
+	const pendingInvites = inviteRows
+		.flatMap((invite) => {
+			const invitee = invite.invitee as typeof invite.invitee | null;
+			if (!invitee) {
+				logger.warn({ orgId, inviteId: invite.id }, "skipping org invite with missing invitee");
+				return [];
+			}
+
+			return [
+				{
+					id: invite.id,
+					inviteeUserId: invitee.id,
+					inviteeDisplayName: invitee.displayName,
+					inviteeAvatarUrl: invitee.avatarUrl,
+					permissionRole: invite.role,
+					role: invite.role,
+					memberType: invite.memberType,
+					staffRole: invite.staffRole ?? null,
+					gameRole: invite.gameRole ?? null,
+					status: getEffectiveInviteStatus(invite.status, invite.expiresAt),
+					expiresAt: invite.expiresAt.toISOString(),
+					createdAt: invite.createdAt.toISOString(),
+					statusChangedAt: invite.updatedAt.toISOString(),
+				},
+			];
+		})
+		.filter((invite) => invite.status === "pending");
+
+	const ownedListings = listingRows.flatMap((listing) => {
+		const owner = listing.user as typeof listing.user | null;
+		if (!owner) {
+			logger.warn(
+				{ orgId, listingId: listing.id },
+				"skipping org recruitment listing with missing owner"
+			);
+			return [];
+		}
+
+		return [
+			mapRecruitmentListing(
+				{
+					...listing,
+					user: owner,
+				},
+				{
+					viewerId: userId,
+					canManage: permissions.canManage,
+				}
+			),
+		];
+	});
 
 	return {
 		id: org.id,
@@ -187,7 +271,6 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			canManageTeams: permissions.canManageTeams,
 			canManageInvites: permissions.canManage,
 			canManageSettings: permissions.canManage,
-			canReviewRequests: false,
 		},
 		activeTeams: org.teams
 			.filter((team) => !team.isArchived)
@@ -195,45 +278,10 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 		archivedTeams: org.teams
 			.filter((team) => team.isArchived)
 			.map((team) => toOrgTeamSummary(org, team)),
-		members: org.members.map((member) => ({
-			id: member.id,
-			userId: member.user.id,
-			username: member.user.username,
-			displayName: member.user.displayName,
-			avatarUrl: member.user.avatarUrl,
-			permissionRole: member.role,
-			role: member.role,
-			memberType: member.memberType,
-			staffRole: member.staffRole ?? null,
-			gameRole: member.gameRole ?? null,
-			activeTeamCount: activeTeamCountsByUser.get(member.user.id) ?? 0,
-			joinedAt: member.createdAt.toISOString(),
-		})),
-		pendingInvites: inviteRows
-			.map((invite) => ({
-				id: invite.id,
-				inviteeUserId: invite.invitee.id,
-				inviteeDisplayName: invite.invitee.displayName,
-				inviteeAvatarUrl: invite.invitee.avatarUrl,
-				permissionRole: invite.role,
-				role: invite.role,
-				memberType: invite.memberType,
-				staffRole: invite.staffRole ?? null,
-				gameRole: invite.gameRole ?? null,
-				status: getEffectiveInviteStatus(invite.status, invite.expiresAt),
-				expiresAt: invite.expiresAt.toISOString(),
-				createdAt: invite.createdAt.toISOString(),
-				statusChangedAt: invite.updatedAt.toISOString(),
-			}))
-			.filter((invite) => invite.status === "pending"),
-		ownedPosts: postRows.map((post) =>
-			mapRecruitmentPost(post, {
-				viewerId: userId,
-				canManage: permissions.canManage,
-			})
-		),
+		members,
+		pendingInvites,
+		ownedListings,
 		conversations: conversations.filter((conversation) => conversation.organizationId === orgId),
-		pendingJoinRequests: [],
 	};
 }
 
@@ -262,8 +310,8 @@ orgRoutes.get("/", async (c) => {
 							},
 						},
 					},
-					lfgPosts: {
-						where: eq(lfgPostTable.status, "open"),
+					recruitmentListings: {
+						where: eq(recruitmentListingTable.status, "open"),
 						columns: { id: true },
 					},
 				},
@@ -281,7 +329,7 @@ orgRoutes.get("/", async (c) => {
 			description: membership.organization.description ?? null,
 			role: membership.role,
 			teamCount: membership.organization.teams.length,
-			openPostCount: membership.organization.lfgPosts.length,
+			openListingCount: membership.organization.recruitmentListings.length,
 			canManage: membership.role === "owner" || membership.role === "admin",
 			teams: membership.organization.teams.map((t) => ({
 				id: t.id,
@@ -794,15 +842,5 @@ orgRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 
 	return c.json({ success: true });
 });
-
-orgRoutes.get("/:id/requests", (c) =>
-	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
-);
-orgRoutes.post("/:id/requests", (c) =>
-	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
-);
-orgRoutes.post("/:id/requests/:requestId/respond", (c) =>
-	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
-);
 
 export { orgRoutes };

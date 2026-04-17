@@ -109,6 +109,22 @@ export type ApiErrorResponse = {
 	fieldErrors?: Partial<Record<string, string[]>>;
 };
 
+export type DirectUploadIntent = {
+	uploadUrl: string;
+	uploadMethod: "PUT";
+	uploadHeaders: Record<string, string>;
+	objectKey: string;
+	objectUrl: string;
+	expiresAt: IsoDateString;
+};
+
+export type FinalizedUpload = {
+	objectKey: string;
+	url: string;
+	contentType: string | null;
+	sizeBytes: number | null;
+};
+
 // ─── Temporal conventions ───────────────────────────────────────────────────
 
 /**
@@ -126,6 +142,9 @@ export interface HeadersGetter {
 
 // ─── Common domain types ───────────────────────────────────────────────────
 
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
+
 export type OW2Role = "tank" | "damage" | "support";
 export type RosterStatus = "active" | "benched" | "trial" | "inactive";
 export type OrgPermissionRole = "owner" | "admin" | "member";
@@ -134,11 +153,10 @@ export type TeamPermissionRole = "admin" | "member";
 export type MemberType = "player" | "staff";
 export type StaffRole = "coach" | "analyst" | "manager" | "staff";
 export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
-export type JoinRequestStatus = "pending" | "approved" | "rejected" | "withdrawn" | "cancelled";
-export type RecruitmentPostCategory = "lft" | "lfp" | "lfr" | "lfs";
+export type RecruitmentListingCategory = "lft" | "lfp" | "lfr" | "lfs";
 export type RecruitmentOwnerType = "player" | "team" | "organization";
-export type RecruitmentPostStatus = "open" | "closed" | "fulfilled" | "expired";
-export type RecruitmentResponseStatus = "pending" | "accepted" | "rejected" | "withdrawn";
+export type RecruitmentListingStatus = "open" | "closed" | "fulfilled" | "expired";
+export type RecruitmentApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 
 export type UserSearchResult = {
 	id: string;
@@ -158,9 +176,8 @@ export type TeamPermissions = {
 	canManageMembers: boolean;
 	canManageRoster: boolean;
 	canManageInvites: boolean;
-	canManagePosts: boolean;
+	canManageListings: boolean;
 	canManageConversations: boolean;
-	canManageRequests: boolean;
 	canManageSettings: boolean;
 	canLeave: boolean;
 };
@@ -197,7 +214,7 @@ export type TeamSummary = {
 	description: string | null;
 	avatarUrl: string | null;
 	bannerUrl: string | null;
-	teamSr: number;
+	rating: number;
 	matchesPlayed: number;
 	isRecruiting: boolean;
 	isArchived: boolean;
@@ -250,18 +267,22 @@ export type TeamPendingInvite = {
 	statusChangedAt: IsoDateString;
 };
 
-export type TeamJoinRequestSummary = {
+export type TeamRatingHistoryEntry = {
 	id: string;
-	requesterUserId: string;
-	requesterDisplayName: string;
-	requesterAvatarUrl: string | null;
-	requesterPrimaryRole: OW2Role | null;
-	requesterRank: string | null;
-	requestedRoleInTeam: OW2Role;
-	message: string | null;
-	status: JoinRequestStatus;
+	scrimId: string;
+	opponentTeamId: string | null;
+	opponentTeamName: string | null;
+	opponentTeamTag: string | null;
+	teamMapScore: number;
+	opponentMapScore: number;
+	result: "win" | "loss" | "draw";
+	ratingBefore: number;
+	ratingAfter: number;
+	ratingDelta: number;
+	ratingDeviationBefore: number | null;
+	ratingDeviationAfter: number | null;
+	scheduledAt: IsoDateString | null;
 	createdAt: IsoDateString;
-	statusChangedAt: IsoDateString;
 };
 
 export type TeamWorkspaceConversation = RecruitmentConversationSummary;
@@ -274,11 +295,10 @@ export type TeamWorkspaceDetail = TeamSummary & {
 	roster: TeamMemberSummary[];
 	admins: TeamAdminSummary[];
 	pendingInvites: TeamPendingInvite[];
-	pendingJoinRequests: TeamJoinRequestSummary[];
-	ownedPosts: RecruitmentPostSummary[];
+	ownedListings: RecruitmentListingSummary[];
 	conversations: TeamWorkspaceConversation[];
-	applications: RecruitmentResponseSummary[];
-	lfgPosts: RecruitmentPostSummary[];
+	applications: RecruitmentApplicationSummary[];
+	ratingHistory: TeamRatingHistoryEntry[];
 };
 
 export type TeamWithRoster = TeamWorkspaceDetail;
@@ -305,16 +325,15 @@ export type TeamPublicPreview = {
 	description: string | null;
 	avatarUrl: string | null;
 	bannerUrl: string | null;
-	teamSr: number;
+	rating: number;
 	matchesPlayed: number;
 	isRecruiting: boolean;
 	isArchived: boolean;
 	activeRosterCount: number;
-	openPostCount: number;
-	hasOpenRolePost: boolean;
-	hasPendingJoinRequest: boolean;
+	openListingCount: number;
+	hasOpenListing: boolean;
 	roster: PublicRosterMemberSummary[];
-	posts: RecruitmentPostSummary[];
+	listings: RecruitmentListingSummary[];
 };
 
 // ─── Organization types ────────────────────────────────────────────────────
@@ -329,7 +348,6 @@ export type OrgPermissions = {
 	canManageTeams: boolean;
 	canManageInvites: boolean;
 	canManageSettings: boolean;
-	canReviewRequests: boolean;
 };
 
 export type UserOrgTeamSummary = {
@@ -347,7 +365,7 @@ export type UserOrg = {
 	description: string | null;
 	role: OrgPermissionRole;
 	teamCount: number;
-	openPostCount: number;
+	openListingCount: number;
 	canManage: boolean;
 	teams: UserOrgTeamSummary[];
 };
@@ -402,19 +420,6 @@ export type OrgPendingInvite = {
 	statusChangedAt: IsoDateString;
 };
 
-export type OrgJoinRequestSummary = {
-	id: string;
-	requesterUserId: string;
-	requesterDisplayName: string;
-	requesterAvatarUrl: string | null;
-	requesterPrimaryRole: OW2Role | null;
-	requesterRank: string | null;
-	message: string | null;
-	status: JoinRequestStatus;
-	createdAt: IsoDateString;
-	statusChangedAt: IsoDateString;
-};
-
 export type OrgWorkspaceDetail = {
 	id: string;
 	name: string;
@@ -428,9 +433,8 @@ export type OrgWorkspaceDetail = {
 	archivedTeams: OrgTeamSummary[];
 	members: OrgMemberSummary[];
 	pendingInvites: OrgPendingInvite[];
-	ownedPosts: RecruitmentPostSummary[];
+	ownedListings: RecruitmentListingSummary[];
 	conversations: RecruitmentConversationSummary[];
-	pendingJoinRequests: OrgJoinRequestSummary[];
 };
 
 export type OrgWithTeams = OrgWorkspaceDetail;
@@ -443,7 +447,7 @@ export type PublicOrgSummary = {
 	description: string | null;
 	teamCount: number;
 	activeRosterCount: number;
-	openPostCount: number;
+	openListingCount: number;
 };
 
 export type PublicOrgDetail = {
@@ -456,8 +460,7 @@ export type PublicOrgDetail = {
 	teamCount: number;
 	activeRosterCount: number;
 	teams: OrgTeamSummary[];
-	openPosts: RecruitmentPostSummary[];
-	hasPendingJoinRequest: boolean;
+	openListings: RecruitmentListingSummary[];
 };
 
 // ─── Discovery types ───────────────────────────────────────────────────────
@@ -469,10 +472,10 @@ export type DiscoveryTeam = {
 	tag: string;
 	description: string | null;
 	avatarUrl: string | null;
-	teamSr: number;
+	rating: number;
 	isRecruiting: boolean;
 	activeRosterCount: number;
-	openPostCount: number;
+	openListingCount: number;
 };
 
 export type DiscoveryFilters = {
@@ -481,11 +484,11 @@ export type DiscoveryFilters = {
 
 // ─── Recruitment types ─────────────────────────────────────────────────────
 
-export type RecruitmentPostSummary = {
+export type RecruitmentListingSummary = {
 	id: string;
-	category: RecruitmentPostCategory;
-	type: RecruitmentPostCategory;
-	status: RecruitmentPostStatus;
+	category: RecruitmentListingCategory;
+	type: RecruitmentListingCategory;
+	status: RecruitmentListingStatus;
 	ownerType: RecruitmentOwnerType;
 	title: string;
 	description: string | null;
@@ -495,8 +498,8 @@ export type RecruitmentPostSummary = {
 	rolesNeeded: OW2Role[];
 	minRank: string | null;
 	maxRank: string | null;
-	minSr: number | null;
-	maxSr: number | null;
+	minRating: number | null;
+	maxRating: number | null;
 	region: string | null;
 	expiresAt: IsoDateString | null;
 	createdAt: IsoDateString;
@@ -516,18 +519,18 @@ export type RecruitmentPostSummary = {
 	teamName: string | null;
 	teamTag: string | null;
 	teamAvatarUrl: string | null;
-	teamSr: number | null;
-	responseCount: number;
-	hasResponded: boolean;
+	rating: number | null;
+	applicationCount: number;
+	hasApplied: boolean;
 	canManage: boolean;
-	canRespond: boolean;
+	canApply: boolean;
 };
 
-export type RecruitmentResponseSummary = {
+export type RecruitmentApplicationSummary = {
 	id: string;
-	postId: string;
+	listingId: string;
 	conversationId: string | null;
-	status: RecruitmentResponseStatus;
+	status: RecruitmentApplicationStatus;
 	message: string | null;
 	createdAt: IsoDateString;
 	updatedAt: IsoDateString;
@@ -554,17 +557,17 @@ export type RecruitmentResponseSummary = {
 	applicantAvatarUrl: string | null;
 	applicantPrimaryRole: OW2Role | null;
 	applicantRank: string | null;
-	postCategory: RecruitmentPostCategory;
-	postTitle: string;
+	listingCategory: RecruitmentListingCategory;
+	listingTitle: string;
 };
 
 export type RecruitmentConversationSummary = {
 	conversationId: string;
-	responseId: string;
-	postId: string;
-	postCategory: RecruitmentPostCategory;
-	postTitle: string;
-	postStatus: RecruitmentPostStatus;
+	applicationId: string;
+	listingId: string;
+	listingCategory: RecruitmentListingCategory;
+	listingTitle: string;
+	listingStatus: RecruitmentListingStatus;
 	counterpartLabel: string;
 	counterpartAvatarUrl: string | null;
 	counterpartType: RecruitmentOwnerType;
@@ -576,6 +579,28 @@ export type RecruitmentConversationSummary = {
 	lastMessageAt: IsoDateString | null;
 	unreadCount: number;
 	isArchived: boolean;
+};
+
+export type UpdatePostScopeType = "team" | "organization";
+export type UpdatePostVisibility = "workspace" | "public";
+
+export type UpdatePostSummary = {
+	id: string;
+	scopeType: UpdatePostScopeType;
+	visibility: UpdatePostVisibility;
+	title: string;
+	body: string;
+	authorUserId: string;
+	authorDisplayName: string | null;
+	teamId: string | null;
+	teamName: string | null;
+	teamTag: string | null;
+	organizationId: string | null;
+	organizationName: string | null;
+	organizationSlug: string | null;
+	canManage: boolean;
+	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
 };
 
 export type RecruitmentMessage = {
@@ -603,7 +628,7 @@ export type ChatConversationSummary = {
 	isArchived: boolean;
 	scrimId: string | null;
 	teamId: string | null;
-	lfgApplicationId: string | null;
+	recruitmentApplicationId: string | null;
 	lastMessagePreview: string | null;
 	lastMessageAt: IsoDateString | null;
 	unreadCount: number;
@@ -684,17 +709,389 @@ export type ChatRealtimeEvent =
 			senderId: string;
 	  };
 
-// ─── Legacy LFG aliases ────────────────────────────────────────────────────
+export type ScrimOcrJobRealtimePayload = {
+	jobId: string;
+	scrimId: string;
+	status: OcrJobStatus;
+	progressStage: OcrJobProgressStage;
+	errorMessage: string | null;
+	retryCount: number;
+	processingTimeMs: number | null;
+	updatedAt: IsoDateString;
+};
 
-export type LfgPostSummary = RecruitmentPostSummary;
-export type LfgApplicationSummary = RecruitmentResponseSummary;
-export type UserApplicationSummary = RecruitmentResponseSummary;
+export type AppRealtimeClientCommand =
+	| { type: "subscribe:scrim"; scrimId: string }
+	| { type: "unsubscribe:scrim"; scrimId: string }
+	| { type: "subscribe:team"; teamId: string }
+	| { type: "unsubscribe:team"; teamId: string }
+	| { type: "ping" };
 
-export type LfgFilters = {
-	type?: RecruitmentPostCategory;
-	category?: RecruitmentPostCategory;
-	role?: string;
-	region?: string;
+export type AppRealtimeEvent =
+	| { type: "realtime:connected"; userId: string }
+	| { type: "realtime:pong" }
+	| { type: "realtime:error"; error: string; scrimId?: string }
+	| { type: "scrim:subscribed"; scrimId: string }
+	| { type: "scrim:unsubscribed"; scrimId: string }
+	| { type: "team:subscribed"; teamId: string }
+	| { type: "team:unsubscribed"; teamId: string }
+	| {
+			type: "notification:created";
+			notification: NotificationSummary;
+			unreadCount: number;
+	  }
+	| {
+			type: "notification:read";
+			notificationId: string;
+			unreadCount: number;
+	  }
+	| {
+			type: "notification:read-all";
+			unreadCount: number;
+	  }
+	| {
+			type: "update:created";
+			teamId: string;
+			update: UpdatePostSummary;
+	  }
+	| {
+			type: "update:updated";
+			teamId: string;
+			update: UpdatePostSummary;
+	  }
+	| {
+			type: "update:deleted";
+			teamId: string;
+			updateId: string;
+	  }
+	| {
+			type: "scrim:ocr-job-updated";
+			scrimId: string;
+			job: ScrimOcrJobRealtimePayload;
+	  }
+	| {
+			type: "recruit:application-received";
+			listingId: string;
+			application: RecruitmentApplicationSummary;
+	  }
+	| { type: "recruit:application-decided"; applicationId: string; status: "accepted" | "rejected" };
+
+// ─── Scrim types ────────────────────────────────────────────────────────────
+
+export type ScrimStatus =
+	| "pending"
+	| "accepted"
+	| "scheduled"
+	| "in_progress"
+	| "awaiting_confirmation"
+	| "completed"
+	| "cancelled"
+	| "disputed";
+
+export type ScrimConfirmationStatus = "pending" | "confirmed" | "disputed";
+export type ScrimDisputeResolution =
+	| "pending"
+	| "home_confirmed"
+	| "away_confirmed"
+	| "admin_resolved"
+	| "voided";
+export type OcrJobStatus = "queued" | "processing" | "completed" | "failed" | "requires_review";
+export type OcrJobProgressStage =
+	| "queued"
+	| "claimed"
+	| "preprocessing"
+	| "provider_request"
+	| "validating"
+	| "requires_review"
+	| "completed"
+	| "failed";
+export type OcrConfidenceFlag =
+	| "incomplete_map_results"
+	| "incomplete_player_stats"
+	| "manual_review_required";
+
+export type ScrimConfig = {
+	mapPool?: string[];
+	bestOf?: number;
+	heroRestrictions?: string[];
+	format?: string;
+};
+
+export type OcrGameHistoryMatch = {
+	matchOrder: number;
+	mapName: string;
+	mapType:
+		| "assault"
+		| "clash"
+		| "control"
+		| "escort"
+		| "flashpoint"
+		| "hybrid"
+		| "push"
+		| "unknown"
+		| null;
+	gameMode:
+		| "competitive_role_queue"
+		| "competitive_open_queue"
+		| "custom_game"
+		| "conquest_meta_event"
+		| "deathmatch"
+		| "payload_race"
+		| "stadium_competitive"
+		| "unranked_role_queue"
+		| "unranked_open_queue"
+		| null;
+	durationText: string | null;
+	result: "victory" | "defeat" | "draw";
+	allyScore: number;
+	enemyScore: number;
+};
+
+export type OcrScoreboardPlayer = {
+	playerName: string;
+	hero: string | null;
+	role: OW2Role | null;
+	eliminations: number;
+	assists: number;
+	deaths: number;
+	damage: number;
+	healing: number;
+	mitigation: number;
+};
+
+export type OcrGameHistoryExtractedResult = {
+	screenshotType: "game_history";
+	matches: OcrGameHistoryMatch[];
+	warnings: string[];
+};
+
+export type OcrScoreboardExtractedResult = {
+	screenshotType: "scoreboard";
+	allyTeam: OcrScoreboardPlayer[];
+	enemyTeam: OcrScoreboardPlayer[];
+	warnings: string[];
+};
+
+export type OcrExtractedResult = OcrGameHistoryExtractedResult | OcrScoreboardExtractedResult;
+
+export type ScrimTeamSummary = {
+	id: string;
+	name: string;
+	tag: string;
+	organizationId: string;
+	organizationName: string | null;
+	avatarUrl: string | null;
+	rating: number;
+};
+
+export type ScrimConfirmationSummary = {
+	id: string;
+	teamId: string;
+	teamName: string;
+	teamTag: string;
+	status: ScrimConfirmationStatus;
+	disputeReason: string | null;
+	confirmedByUserId: string | null;
+	confirmedByDisplayName: string | null;
+	confirmedAt: IsoDateString | null;
+	updatedAt: IsoDateString;
+};
+
+export type ScrimRatingEventSummary = {
+	id: string;
+	teamId: string;
+	teamName: string;
+	teamTag: string;
+	ratingBefore: number;
+	ratingAfter: number;
+	ratingDelta: number;
+	ratingDeviationBefore: number | null;
+	ratingDeviationAfter: number | null;
+	createdAt: IsoDateString;
+};
+
+export type ScrimDisputeSummary = {
+	resolution: ScrimDisputeResolution | null;
+	resolvedByUserId: string | null;
+	resolvedByDisplayName: string | null;
+	resolvedAt: IsoDateString | null;
+	notes: string | null;
+};
+
+export type ScrimPlayerStatSummary = {
+	id: string;
+	side: "home" | "away" | "unknown";
+	userId: string | null;
+	teamId: string | null;
+	playerName: string;
+	hero: string | null;
+	role: OW2Role | null;
+	eliminations: number | null;
+	assists: number | null;
+	deaths: number | null;
+	damage: number | null;
+	healing: number | null;
+	mitigation: number | null;
+};
+
+export type ScrimMapSummary = {
+	id: string;
+	mapOrder: number;
+	mapName: string;
+	mapType:
+		| "assault"
+		| "clash"
+		| "control"
+		| "escort"
+		| "flashpoint"
+		| "hybrid"
+		| "push"
+		| "unknown";
+	gameMode:
+		| "competitive_role_queue"
+		| "competitive_open_queue"
+		| "custom_game"
+		| "conquest_meta_event"
+		| "deathmatch"
+		| "payload_race"
+		| "stadium_competitive"
+		| "unranked_role_queue"
+		| "unranked_open_queue";
+	durationSeconds: number | null;
+	result: "victory" | "defeat" | "draw";
+	homeScore: number;
+	awayScore: number;
+	ocrJobId: string | null;
+	players: ScrimPlayerStatSummary[];
+};
+
+export type ScrimResultDiffBasis =
+	| "ocr_job"
+	| "previous_revision"
+	| "existing_result"
+	| "manual_baseline";
+
+export type ScrimResultFieldChange = {
+	path: string;
+	before: JsonValue;
+	after: JsonValue;
+};
+
+export type ScrimResultChangeSummary = {
+	basis: ScrimResultDiffBasis;
+	changeCount: number;
+	fieldChanges: ScrimResultFieldChange[];
+};
+
+export type ScrimResultRevisionPlayerSnapshot = {
+	playerName: string;
+	side: "home" | "away" | "unknown";
+	hero: string | null;
+	role: OW2Role | null;
+	eliminations: number | null;
+	assists: number | null;
+	deaths: number | null;
+	damage: number | null;
+	healing: number | null;
+	mitigation: number | null;
+};
+
+export type ScrimResultRevisionMapSnapshot = {
+	mapOrder: number;
+	mapName: string;
+	mapType:
+		| "assault"
+		| "clash"
+		| "control"
+		| "escort"
+		| "flashpoint"
+		| "hybrid"
+		| "push"
+		| "unknown";
+	scoreboardOcrJobId: string | null;
+	homeScore: number;
+	awayScore: number;
+	durationSeconds: number | null;
+	players: ScrimResultRevisionPlayerSnapshot[];
+};
+
+export type ScrimResultRevisionSnapshot = {
+	homeMapScore: number;
+	awayMapScore: number;
+	startedAt: IsoDateString | null;
+	endedAt: IsoDateString | null;
+	maps: ScrimResultRevisionMapSnapshot[];
+};
+
+export type ScrimResultRevisionSummary = {
+	id: string;
+	revisionNumber: number;
+	reportingTeamId: string | null;
+	reportingTeamName: string | null;
+	reportingTeamTag: string | null;
+	submittedByUserId: string | null;
+	submittedByDisplayName: string | null;
+	sourceOcrJobId: string | null;
+	homeMapScore: number;
+	awayMapScore: number;
+	startedAt: IsoDateString | null;
+	endedAt: IsoDateString | null;
+	snapshot: ScrimResultRevisionSnapshot;
+	changeSummary: ScrimResultChangeSummary;
+	createdAt: IsoDateString;
+};
+
+export type OcrJobSummary = {
+	id: string;
+	scrimId: string;
+	screenshotType: string;
+	imageUrl: string;
+	status: OcrJobStatus;
+	progressStage: OcrJobProgressStage;
+	errorMessage: string | null;
+	errorCode: string | null;
+	retryCount: number;
+	submittedByUserId: string;
+	submittedByDisplayName: string | null;
+	providerName: string | null;
+	providerModel: string | null;
+	promptVersion: string | null;
+	runAfter: IsoDateString | null;
+	processingTimeMs: number | null;
+	confidenceFlags: OcrConfidenceFlag[];
+	validatedOutput: OcrExtractedResult | null;
+	startedAt: IsoDateString | null;
+	completedAt: IsoDateString | null;
+	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+};
+
+export type ScrimSummary = {
+	id: string;
+	status: ScrimStatus;
+	message: string | null;
+	config: ScrimConfig;
+	scheduledAt: IsoDateString | null;
+	startedAt: IsoDateString | null;
+	endedAt: IsoDateString | null;
+	homeMapScore: number;
+	awayMapScore: number;
+	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+	createdByUserId: string;
+	createdByDisplayName: string | null;
+	homeTeam: ScrimTeamSummary;
+	awayTeam: ScrimTeamSummary | null;
+	pendingConfirmationCount: number;
+};
+
+export type ScrimDetail = ScrimSummary & {
+	confirmations: ScrimConfirmationSummary[];
+	ocrJobs: OcrJobSummary[];
+	ratingEvents: ScrimRatingEventSummary[];
+	dispute: ScrimDisputeSummary;
+	maps: ScrimMapSummary[];
+	resultRevisions: ScrimResultRevisionSummary[];
 };
 
 // ─── Notification types ────────────────────────────────────────────────────
@@ -718,7 +1115,6 @@ export type PlayerProfileFull = {
 	secondaryRole: OW2Role | null;
 	rank: string | null;
 	rankDivision: number | null;
-	internalSr: number;
 	heroes: {
 		id: string;
 		displayName: string;
@@ -728,7 +1124,7 @@ export type PlayerProfileFull = {
 };
 
 export type PlayerStats = {
-	sr: number;
+	topTeamRating: number | null;
 	scrimsPlayed: number;
 	wins: number;
 };
@@ -782,7 +1178,7 @@ export type PublicPlayerSummary = {
 	secondaryRole: OW2Role | null;
 	rank: string | null;
 	rankDivision: number | null;
-	openPosts: RecruitmentPostSummary[];
+	openListings: RecruitmentListingSummary[];
 };
 
 export type PublicPlayerDetail = PublicPlayerSummary & {

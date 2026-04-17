@@ -2,6 +2,7 @@
 
 import type { OnboardingActionResult } from "@/hooks/use-onboarding-action";
 import { apiPost } from "@/lib/api-client";
+import { appRoutes } from "@/lib/routes";
 
 export async function createPlayerProfileAction(
 	_prev: OnboardingActionResult | null,
@@ -19,5 +20,5 @@ export async function createPlayerProfileAction(
 	});
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
-	return { redirect: res.redirect ?? "/dashboard" };
+	return { redirect: res.redirect ?? appRoutes.root };
 }

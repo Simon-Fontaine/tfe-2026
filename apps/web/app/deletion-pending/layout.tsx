@@ -7,13 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
+import { appRoutes } from "@/lib/routes";
 
 export default async function DeletionPendingLayout({ children }: { children: ReactNode }) {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 
 	const deletionRes = await apiGet<{ isPending: boolean }>("/api/settings/account/deletion");
-	if (!("data" in deletionRes) || !deletionRes.data.isPending) redirect("/dashboard");
+	if (!("data" in deletionRes) || !deletionRes.data.isPending) redirect(appRoutes.root);
 
 	return (
 		<div className="flex min-h-dvh flex-col items-center justify-center px-4 py-12">

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-	{ label: "Account", href: "/dashboard/settings/account" },
-	{ label: "Security", href: "/dashboard/settings/security" },
+	{ label: "Account", href: appRoutes.settings.account },
+	{ label: "Security", href: appRoutes.settings.security },
 ] as const;
 
 export function SettingsSubNav() {
@@ -16,8 +17,8 @@ export function SettingsSubNav() {
 		<nav className="mb-6 flex gap-1 border-b" aria-label="Settings sections">
 			{TABS.map((tab) => {
 				const isActive =
-					tab.href === "/dashboard/settings/account"
-						? pathname === "/dashboard/settings/account"
+					tab.href === appRoutes.settings.account
+						? pathname === appRoutes.settings.account
 						: pathname.startsWith(tab.href);
 
 				return (

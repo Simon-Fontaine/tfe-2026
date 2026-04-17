@@ -20,7 +20,7 @@ import {
 	cancelPasskeyDisableAction,
 	confirmPasskeyDisableAction,
 	requestPasskeyDisableAction,
-} from "@/app/dashboard/settings/actions/credential-disable";
+} from "@/app/actions/settings/credential-disable";
 import { CredentialListItem } from "@/components/shared/credential-list-item";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { RecoveryCodeDialog } from "@/components/shared/recovery-code-dialog";

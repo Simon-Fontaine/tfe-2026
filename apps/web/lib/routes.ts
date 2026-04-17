@@ -1,3 +1,3 @@
-import { apiRoutes, dashboardRoutes, publicRoutes } from "@scrimflow/shared";
+import { apiRoutes, appRoutes, publicRoutes } from "@scrimflow/shared";
 
-export { apiRoutes, dashboardRoutes, publicRoutes };
+export { apiRoutes, appRoutes, publicRoutes };

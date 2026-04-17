@@ -1,4 +1,25 @@
 export const apiRoutes = {
+	auth: {
+		session: "/api/auth/session",
+		login: "/api/auth/login",
+		logout: "/api/auth/logout",
+		register: {
+			root: "/api/auth/register",
+			checkUsername: (username: string) =>
+				`/api/auth/register/check-username?username=${encodeURIComponent(username.trim())}`,
+		},
+		twoFactor: {
+			totp: "/api/auth/2fa/totp",
+			recovery: "/api/auth/2fa/recovery",
+		},
+		verify: {
+			email: "/api/auth/verify/email",
+			device: "/api/auth/verify/device",
+			resend: "/api/auth/verify/resend",
+		},
+		forgotPassword: "/api/auth/forgot-password",
+		resetPassword: "/api/auth/reset-password",
+	},
 	orgs: {
 		root: "/api/orgs",
 		byId: (orgId: string) => `/api/orgs/${orgId}`,
@@ -17,15 +38,12 @@ export const apiRoutes = {
 			resend: (orgId: string, inviteId: string) => `/api/orgs/${orgId}/invites/${inviteId}/resend`,
 			respond: (inviteId: string) => `/api/orgs/invites/${inviteId}/respond`,
 		},
-		requests: {
-			root: (orgId: string) => `/api/orgs/${orgId}/requests`,
-			respond: (orgId: string, requestId: string) =>
-				`/api/orgs/${orgId}/requests/${requestId}/respond`,
-		},
 	},
 	teams: {
 		root: "/api/teams",
 		byId: (teamId: string) => `/api/teams/${teamId}`,
+		recruiting: (teamId: string) => `/api/teams/${teamId}/recruiting`,
+		archive: (teamId: string) => `/api/teams/${teamId}/archive`,
 		publicRoot: "/api/public/teams",
 		admins: (teamId: string) => `/api/teams/${teamId}/admins`,
 		memberRole: (teamId: string, memberId: string) =>
@@ -45,32 +63,67 @@ export const apiRoutes = {
 			root: (teamId: string) => `/api/teams/${teamId}/roster`,
 			byId: (teamId: string, rosterId: string) => `/api/teams/${teamId}/roster/${rosterId}`,
 		},
-		requests: {
-			root: (teamId: string) => `/api/teams/${teamId}/requests`,
-			respond: (teamId: string, requestId: string) =>
-				`/api/teams/${teamId}/requests/${requestId}/respond`,
+		recruitment: {
+			listings: (teamId: string) => `/api/teams/${teamId}/recruitment/listings`,
+			applications: (teamId: string) => `/api/teams/${teamId}/recruitment/applications`,
+			conversations: (teamId: string) => `/api/teams/${teamId}/recruitment/conversations`,
 		},
-		applications: (teamId: string) => `/api/teams/${teamId}/applications`,
-		lfg: (teamId: string) => `/api/teams/${teamId}/posts`,
-		posts: (teamId: string) => `/api/teams/${teamId}/posts`,
-		conversations: (teamId: string) => `/api/teams/${teamId}/conversations`,
 	},
-	posts: {
-		root: "/api/posts",
-		mine: "/api/posts/mine",
-		byId: (postId: string) => `/api/posts/${postId}`,
-		responses: (postId: string) => `/api/posts/${postId}/responses`,
-		publicRoot: "/api/public/posts",
+	recruitment: {
+		listings: {
+			root: "/api/recruitment/listings",
+			mine: "/api/recruitment/listings/mine",
+			byId: (listingId: string) => `/api/recruitment/listings/${listingId}`,
+			applications: (listingId: string) => `/api/recruitment/listings/${listingId}/applications`,
+			publicRoot: "/api/public/recruitment/listings",
+			publicById: (listingId: string) => `/api/public/recruitment/listings/${listingId}`,
+		},
+		applications: {
+			root: "/api/recruitment/applications",
+			mine: "/api/recruitment/applications/mine",
+			byId: (applicationId: string) => `/api/recruitment/applications/${applicationId}`,
+			decision: (applicationId: string) =>
+				`/api/recruitment/applications/${applicationId}/decision`,
+		},
 	},
-	responses: {
-		root: "/api/responses",
-		mine: "/api/responses/mine",
-		byId: (responseId: string) => `/api/responses/${responseId}`,
-		decision: (responseId: string) => `/api/responses/${responseId}/decision`,
+	scrims: {
+		root: "/api/scrims",
+		byId: (scrimId: string) => `/api/scrims/${scrimId}`,
+		respond: (scrimId: string) => `/api/scrims/${scrimId}/respond`,
+		result: (scrimId: string) => `/api/scrims/${scrimId}/result`,
+		confirm: (scrimId: string) => `/api/scrims/${scrimId}/confirm`,
+		resolveDispute: (scrimId: string) => `/api/scrims/${scrimId}/resolve-dispute`,
+		ocrJobs: (scrimId: string) => `/api/scrims/${scrimId}/ocr-jobs`,
+		retryOcrJob: (scrimId: string, jobId: string) =>
+			`/api/scrims/${scrimId}/ocr-jobs/${jobId}/retry`,
+		publicRoot: "/api/public/scrims",
+	},
+	uploads: {
+		root: "/api/uploads",
+		assets: "/api/uploads/assets",
+		scrimEvidence: "/api/uploads/scrim-evidence",
+		scrimEvidenceIntents: "/api/uploads/scrim-evidence/intents",
+		scrimEvidenceFinalize: "/api/uploads/scrim-evidence/finalize",
+	},
+	realtime: {
+		ws: "/api/realtime/ws",
+	},
+	notifications: {
+		root: "/api/notifications",
+		unreadCount: "/api/notifications/unread-count",
+		read: (notificationId: string) => `/api/notifications/${notificationId}/read`,
+		readAll: "/api/notifications/read-all",
+	},
+	updates: {
+		root: "/api/updates",
+		byId: (updateId: string) => `/api/updates/${updateId}`,
+		publicRoot: "/api/public/updates",
 	},
 	chat: {
 		conversations: "/api/chat/conversations",
 		createDirect: "/api/chat/conversations/direct",
+		teamConversations: (teamId: string) => `/api/chat/teams/${teamId}/conversations`,
+		scrimConversations: (scrimId: string) => `/api/chat/scrims/${scrimId}/conversations`,
 		ws: "/api/chat/ws",
 		byId: (conversationId: string) => `/api/chat/conversations/${conversationId}`,
 		messages: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
@@ -79,90 +132,43 @@ export const apiRoutes = {
 		read: (conversationId: string) => `/api/chat/conversations/${conversationId}/read`,
 		presence: (userId: string) => `/api/chat/presence/${userId}`,
 	},
-	recruit: {
-		posts: {
-			root: "/api/posts",
-			mine: "/api/posts/mine",
-			byId: (postId: string) => `/api/posts/${postId}`,
-			responses: (postId: string) => `/api/posts/${postId}/responses`,
-			publicRoot: "/api/public/posts",
-		},
-		responses: {
-			root: "/api/responses",
-			mine: "/api/responses/mine",
-			byId: (responseId: string) => `/api/responses/${responseId}`,
-			decision: (responseId: string) => `/api/responses/${responseId}/decision`,
-		},
-	},
-	lfg: {
-		root: "/api/posts",
-		byId: (postId: string) => `/api/posts/${postId}`,
-		applications: "/api/responses/mine",
-		close: (postId: string) => `/api/posts/${postId}`,
-		apply: (postId: string) => `/api/posts/${postId}/responses`,
-		applicationById: (_postId: string, applicationId: string) => `/api/responses/${applicationId}`,
-		respondToApplication: (_postId: string, applicationId: string) =>
-			`/api/responses/${applicationId}/decision`,
-	},
 } as const;
 
-export const dashboardRoutes = {
-	home: "/dashboard",
-	organizations: "/dashboard/orgs",
-	personal: {
-		root: "/dashboard",
-		profile: "/dashboard/profile",
-		notifications: "/dashboard/notifications",
-		invitations: "/dashboard/invitations",
-		recruitingActivity: "/dashboard/recruiting/activity",
-		settings: {
-			root: "/dashboard/settings",
-			account: "/dashboard/settings/account",
-			security: "/dashboard/settings/security",
-		},
+export const appRoutes = {
+	root: "/app",
+	me: "/app/me",
+	inbox: "/app/inbox",
+	calendar: "/app/calendar",
+	profile: "/app/profile",
+	settings: {
+		root: "/app/settings",
+		account: "/app/settings/account",
+		security: "/app/settings/security",
 	},
-	discover: {
-		root: "/dashboard/recruiting",
-		posts: "/dashboard/recruiting/posts",
-		conversations: "/dashboard/recruiting/conversations",
-		invitations: "/dashboard/invitations",
-	},
-	orgs: {
-		byId: (orgId: string) => `/dashboard/orgs/${orgId}`,
-		teams: (orgId: string) => `/dashboard/orgs/${orgId}/teams`,
-		members: (orgId: string) => `/dashboard/orgs/${orgId}/members`,
-		recruitingPosts: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/posts`,
-		recruitingConversations: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/conversations`,
-		invites: (orgId: string) => `/dashboard/orgs/${orgId}/invites`,
-		settings: (orgId: string) => `/dashboard/orgs/${orgId}/settings`,
+	recruiting: {
+		root: "/app/recruiting",
+		conversations: "/app/recruiting/conversations",
+		byId: (listingId: string) => `/app/recruiting/${listingId}`,
 	},
 	teams: {
-		byId: (teamId: string) => `/dashboard/teams/${teamId}`,
-		roster: (teamId: string) => `/dashboard/teams/${teamId}/roster`,
-		schedule: (teamId: string) => `/dashboard/teams/${teamId}/schedule`,
-		recruitingPosts: (teamId: string) => `/dashboard/teams/${teamId}/recruiting/posts`,
-		recruitingConversations: (teamId: string) =>
-			`/dashboard/teams/${teamId}/recruiting/conversations`,
-		invites: (teamId: string) => `/dashboard/teams/${teamId}/invites`,
-		settings: (teamId: string) => `/dashboard/teams/${teamId}/settings`,
+		byId: (teamId: string) => `/app/teams/${teamId}/overview`,
+		scrimById: (teamId: string, scrimId: string) => `/app/teams/${teamId}/scrims/${scrimId}`,
+		roster: (teamId: string) => `/app/teams/${teamId}/roster`,
+		calendar: (teamId: string) => `/app/teams/${teamId}/calendar`,
+		scrims: (teamId: string) => `/app/teams/${teamId}/scrims`,
+		recruiting: (teamId: string) => `/app/teams/${teamId}/recruiting`,
+		chat: (teamId: string) => `/app/teams/${teamId}/chat`,
+		updates: (teamId: string) => `/app/teams/${teamId}/updates`,
+		settings: (teamId: string) => `/app/teams/${teamId}/settings`,
 	},
-	context: {
-		orgById: (orgId: string) => `/dashboard/orgs/${orgId}`,
-		orgTeams: (orgId: string) => `/dashboard/orgs/${orgId}/teams`,
-		orgMembers: (orgId: string) => `/dashboard/orgs/${orgId}/members`,
-		orgPosts: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/posts`,
-		orgConversations: (orgId: string) => `/dashboard/orgs/${orgId}/recruiting/conversations`,
-		orgInvites: (orgId: string) => `/dashboard/orgs/${orgId}/invites`,
-		orgSettings: (orgId: string) => `/dashboard/orgs/${orgId}/settings`,
-		teamById: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}`,
-		teamPlayers: (_orgId: string, teamId: string) =>
-			`/dashboard/teams/${teamId}/roster?type=players`,
-		teamStaff: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/roster?type=staff`,
-		teamPosts: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/recruiting/posts`,
-		teamConversations: (_orgId: string, teamId: string) =>
-			`/dashboard/teams/${teamId}/recruiting/conversations`,
-		teamInvites: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/invites`,
-		teamSettings: (_orgId: string, teamId: string) => `/dashboard/teams/${teamId}/settings`,
+	orgs: {
+		root: "/app/orgs",
+		byId: (orgId: string) => `/app/orgs/${orgId}/overview`,
+		teams: (orgId: string) => `/app/orgs/${orgId}/teams`,
+		staff: (orgId: string) => `/app/orgs/${orgId}/staff`,
+		brand: (orgId: string) => `/app/orgs/${orgId}/brand`,
+		recruiting: (orgId: string) => `/app/orgs/${orgId}/recruiting`,
+		settings: (orgId: string) => `/app/orgs/${orgId}/settings`,
 	},
 } as const;
 
@@ -178,5 +184,15 @@ export const publicRoutes = {
 	players: {
 		root: "/players",
 		byUsername: (username: string) => `/players/${username}`,
+	},
+	recruiting: {
+		root: "/recruiting",
+		byId: (listingId: string) => `/recruiting/${listingId}`,
+	},
+	scrims: {
+		root: "/scrims",
+	},
+	updates: {
+		root: "/updates",
 	},
 } as const;

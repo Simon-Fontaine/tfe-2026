@@ -11,14 +11,19 @@ import { onboardingRoutes } from "@/routes/onboarding";
 import { orgRoutes } from "@/routes/orgs";
 import { publicOrgRoutes } from "@/routes/orgs/public";
 import { publicPlayerRoutes } from "@/routes/players/public";
-import { postsRoutes } from "@/routes/posts";
-import { publicPostsRoutes } from "@/routes/posts/public";
 import { profileRoutes } from "@/routes/profile";
-import { responsesRoutes } from "@/routes/responses";
+import { realtimeRoutes } from "@/routes/realtime";
+import {
+	publicRecruitmentListingsRoutes,
+	recruitmentApplicationsRoutes,
+	recruitmentListingsRoutes,
+} from "@/routes/recruitment";
 import { scheduleRoutes } from "@/routes/schedule";
+import { publicScrimRoutes, scrimRoutes } from "@/routes/scrims";
 import { settingsRoutes } from "@/routes/settings";
 import { teamRoutes } from "@/routes/teams";
 import { publicTeamRoutes } from "@/routes/teams/public";
+import { publicUpdatesRoutes, updatesRoutes } from "@/routes/updates";
 import { uploadRoutes } from "@/routes/uploads";
 import { userRoutes } from "@/routes/users";
 import { websocket } from "@/websocket";
@@ -49,11 +54,11 @@ app.route("/api/orgs", orgRoutes);
 app.use("/api/teams/*", requireAuth);
 app.route("/api/teams", teamRoutes);
 
-app.use("/api/posts/*", requireAuth);
-app.route("/api/posts", postsRoutes);
+app.use("/api/recruitment/listings/*", requireAuth);
+app.route("/api/recruitment/listings", recruitmentListingsRoutes);
 
-app.use("/api/responses/*", requireAuth);
-app.route("/api/responses", responsesRoutes);
+app.use("/api/recruitment/applications/*", requireAuth);
+app.route("/api/recruitment/applications", recruitmentApplicationsRoutes);
 
 app.use("/api/schedule/*", requireAuth);
 app.route("/api/schedule", scheduleRoutes);
@@ -63,6 +68,15 @@ app.route("/api/notifications", notificationRoutes);
 
 app.use("/api/chat/*", requireAuth);
 app.route("/api/chat", chatRoutes);
+
+app.use("/api/scrims/*", requireAuth);
+app.route("/api/scrims", scrimRoutes);
+
+app.use("/api/realtime/*", requireAuth);
+app.route("/api/realtime", realtimeRoutes);
+
+app.use("/api/updates/*", requireAuth);
+app.route("/api/updates", updatesRoutes);
 
 app.use("/api/uploads/*", requireAuth);
 app.route("/api/uploads", uploadRoutes);
@@ -75,7 +89,9 @@ app.route("/api/heroes", heroRoutes);
 app.route("/api/public/teams", publicTeamRoutes);
 app.route("/api/public/orgs", publicOrgRoutes);
 app.route("/api/public/players", publicPlayerRoutes);
-app.route("/api/public/posts", publicPostsRoutes);
+app.route("/api/public/recruitment/listings", publicRecruitmentListingsRoutes);
+app.route("/api/public/scrims", publicScrimRoutes);
+app.route("/api/public/updates", publicUpdatesRoutes);
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));

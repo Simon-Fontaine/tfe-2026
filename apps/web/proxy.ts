@@ -5,7 +5,7 @@ import { type NextRequest, NextResponse } from "next/server";
  * Fast cookie presence check only; deep DB validation happens in Server Components.
  */
 
-const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/deletion-pending"];
+const PROTECTED_PREFIXES = ["/app", "/onboarding", "/deletion-pending"];
 const AUTH_PATH = "/auth";
 
 export function proxy(request: NextRequest) {

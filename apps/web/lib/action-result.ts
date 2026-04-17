@@ -1,17 +1,27 @@
-import type { SdkResult } from "@scrimflow/app-sdk";
-
 export type BasicActionResult = {
 	error?: string;
 	fieldErrors?: Partial<Record<string, string[]>>;
 };
 
-export function toActionResult<T>(result: SdkResult<T>): BasicActionResult | { data: T } {
-	if (!result.ok) {
-		return {
-			error: result.error.message,
-			fieldErrors: result.error.fieldErrors,
-		};
-	}
+export type ApiMutationError = {
+	error: string;
+	fieldErrors?: Partial<Record<string, string[]>>;
+	status: number;
+};
 
-	return { data: result.data };
+export type ApiMutationSuccess<T extends Record<string, unknown> = Record<string, never>> = {
+	success: true;
+} & T;
+
+export function isApiActionError<T extends Record<string, unknown>>(
+	result: ApiMutationSuccess<T> | ApiMutationError
+): result is ApiMutationError {
+	return "error" in result;
+}
+
+export function toFormActionError(result: ApiMutationError): BasicActionResult {
+	return {
+		error: result.error,
+		fieldErrors: result.fieldErrors,
+	};
 }

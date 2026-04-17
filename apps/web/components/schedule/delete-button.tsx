@@ -2,7 +2,7 @@
 
 import { Delete01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { deleteAvailabilityAction } from "@/app/dashboard/schedule/actions/availability";
+import { deleteAvailabilityAction } from "@/app/actions/schedule/availability";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";

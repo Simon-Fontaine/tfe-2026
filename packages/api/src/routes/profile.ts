@@ -1,10 +1,17 @@
 import { UpdateBasicInfoSchema, UpdateGameProfileSchema } from "@scrimflow/shared";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { heroTable, playerHeroTable, playerProfileTable, userTable } from "@/db/schema";
+import {
+	heroTable,
+	playerHeroTable,
+	playerProfileTable,
+	scrimTable,
+	teamRosterTable,
+	userTable,
+} from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 
@@ -48,7 +55,6 @@ profileRoutes.get("/", async (c) => {
 			secondaryRole: true,
 			rank: true,
 			rankDivision: true,
-			internalSr: true,
 		},
 	});
 
@@ -71,7 +77,6 @@ profileRoutes.get("/", async (c) => {
 			secondaryRole: profile.secondaryRole ?? null,
 			rank: profile.rank ?? null,
 			rankDivision: profile.rankDivision ?? null,
-			internalSr: profile.internalSr,
 			heroes: heroRows.map((row) => row.hero),
 		},
 	});
@@ -81,16 +86,57 @@ profileRoutes.get("/", async (c) => {
 profileRoutes.get("/stats", async (c) => {
 	const user = c.get("user");
 
-	const profile = await db.query.playerProfileTable.findFirst({
-		where: eq(playerProfileTable.userId, user.id),
-		columns: { internalSr: true },
+	const memberships = await db.query.teamRosterTable.findMany({
+		where: and(eq(teamRosterTable.userId, user.id), eq(teamRosterTable.status, "active")),
+		columns: { teamId: true },
+		with: {
+			team: {
+				columns: { rating: true },
+			},
+		},
 	});
+
+	const teamIds = [...new Set(memberships.map((membership) => membership.teamId))];
+	const topTeamRating =
+		memberships.length > 0
+			? Math.max(...memberships.map((membership) => membership.team?.rating ?? 0))
+			: null;
+	let scrimsPlayed = 0;
+	let wins = 0;
+
+	if (teamIds.length > 0) {
+		const scrims = await db.query.scrimTable.findMany({
+			where: and(
+				eq(scrimTable.status, "completed"),
+				or(inArray(scrimTable.homeTeamId, teamIds), inArray(scrimTable.awayTeamId, teamIds))
+			),
+			columns: {
+				homeTeamId: true,
+				awayTeamId: true,
+				homeMapScore: true,
+				awayMapScore: true,
+			},
+		});
+
+		scrimsPlayed = scrims.length;
+		wins = scrims.filter((scrim) =>
+			teamIds.some((teamId) => {
+				if (scrim.homeTeamId === teamId) {
+					return scrim.homeMapScore > scrim.awayMapScore;
+				}
+				if (scrim.awayTeamId === teamId) {
+					return scrim.awayMapScore > scrim.homeMapScore;
+				}
+				return false;
+			})
+		).length;
+	}
 
 	return c.json({
 		data: {
-			sr: profile?.internalSr ?? 1500,
-			scrimsPlayed: 0,
-			wins: 0,
+			topTeamRating,
+			scrimsPlayed,
+			wins,
 		},
 	});
 });

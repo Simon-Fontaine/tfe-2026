@@ -16,7 +16,7 @@ import {
 	cancelEmailChangeAction,
 	requestEmailChangeAction,
 	verifyEmailChangeAction,
-} from "@/app/dashboard/settings/actions/email-change";
+} from "@/app/actions/settings/email-change";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";

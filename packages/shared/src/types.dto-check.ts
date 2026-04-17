@@ -2,20 +2,18 @@ import type {
 	AvailabilityRow,
 	NotificationSummary,
 	OrgInviteSummary,
-	OrgJoinRequestSummary,
 	OrgPendingInvite,
 	OrgWorkspaceDetail,
 	PublicPlayerDetail,
 	PublicPlayerSummary,
+	RecruitmentApplicationSummary,
 	RecruitmentConversationSummary,
+	RecruitmentListingSummary,
 	RecruitmentMessage,
-	RecruitmentPostSummary,
-	RecruitmentResponseSummary,
 	RosterMember,
 	Session,
 	TeamAdminSummary,
 	TeamInviteSummary,
-	TeamJoinRequestSummary,
 	TeamPendingInvite,
 	TeamWorkspaceDetail,
 } from "./types";
@@ -40,10 +38,11 @@ type _TeamInviteSummaryNoDate = AssertNoDate<ContainsDate<TeamInviteSummary>>;
 type _TeamPendingInviteNoDate = AssertNoDate<ContainsDate<TeamPendingInvite>>;
 type _OrgInviteSummaryNoDate = AssertNoDate<ContainsDate<OrgInviteSummary>>;
 type _OrgPendingInviteNoDate = AssertNoDate<ContainsDate<OrgPendingInvite>>;
-type _OrgJoinRequestSummaryNoDate = AssertNoDate<ContainsDate<OrgJoinRequestSummary>>;
 type _OrgWorkspaceDetailNoDate = AssertNoDate<ContainsDate<OrgWorkspaceDetail>>;
-type _RecruitmentPostSummaryNoDate = AssertNoDate<ContainsDate<RecruitmentPostSummary>>;
-type _RecruitmentResponseSummaryNoDate = AssertNoDate<ContainsDate<RecruitmentResponseSummary>>;
+type _RecruitmentListingSummaryNoDate = AssertNoDate<ContainsDate<RecruitmentListingSummary>>;
+type _RecruitmentApplicationSummaryNoDate = AssertNoDate<
+	ContainsDate<RecruitmentApplicationSummary>
+>;
 type _RecruitmentConversationSummaryNoDate = AssertNoDate<
 	ContainsDate<RecruitmentConversationSummary>
 >;
@@ -51,7 +50,6 @@ type _RecruitmentMessageNoDate = AssertNoDate<ContainsDate<RecruitmentMessage>>;
 type _NotificationSummaryNoDate = AssertNoDate<ContainsDate<NotificationSummary>>;
 type _AvailabilityRowNoDate = AssertNoDate<ContainsDate<AvailabilityRow>>;
 type _TeamAdminSummaryNoDate = AssertNoDate<ContainsDate<TeamAdminSummary>>;
-type _TeamJoinRequestSummaryNoDate = AssertNoDate<ContainsDate<TeamJoinRequestSummary>>;
 type _TeamWorkspaceDetailNoDate = AssertNoDate<ContainsDate<TeamWorkspaceDetail>>;
 type _PublicPlayerSummaryNoDate = AssertNoDate<ContainsDate<PublicPlayerSummary>>;
 type _PublicPlayerDetailNoDate = AssertNoDate<ContainsDate<PublicPlayerDetail>>;

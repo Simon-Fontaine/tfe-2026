@@ -19,10 +19,6 @@ import {
 	confirmationStatusEnum,
 	disputeResolutionEnum,
 	gameModeEnum,
-	joinRequestStatusEnum,
-	lfgApplicationStatusEnum,
-	lfgStatusEnum,
-	lfgTypeEnum,
 	mapTypeEnum,
 	matchResultEnum,
 	memberTypeEnum,
@@ -32,12 +28,17 @@ import {
 	orgRoleEnum,
 	ow2RankEnum,
 	ow2RoleEnum,
+	recruitmentApplicationStatusEnum,
+	recruitmentListingCategoryEnum,
+	recruitmentListingStatusEnum,
 	recruitmentOwnerTypeEnum,
 	rosterStatusEnum,
 	scrimStatusEnum,
 	staffRoleEnum,
 	teamInviteStatusEnum,
 	teamMemberRoleEnum,
+	updateScopeEnum,
+	updateVisibilityEnum,
 } from "./enums";
 // ============================================================================
 // PLAYER PROFILE — Extends auth user with Overwatch 2-specific data
@@ -72,15 +73,6 @@ export const playerProfileTable = pgTable(
 		/** Rank division 1-5 within the tier (1 = highest). */
 		rankDivision: smallint("rank_division"),
 
-		/**
-		 * Internal SR computed from scrim results on this platform. Starts at 1500.
-		 * Updated only after both teams confirm a scrim result.
-		 */
-		internalSr: integer("internal_sr").notNull().default(1500),
-
-		/** Glicko-2 rating deviation. */
-		srDeviation: integer("sr_deviation").notNull().default(350),
-
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()
@@ -90,10 +82,7 @@ export const playerProfileTable = pgTable(
 	(table) => [
 		uniqueIndex("player_profile_user_idx").on(table.userId),
 		index("player_profile_battletag_idx").on(table.battletag),
-		// LFG query: "find all support players in diamond+ with SR > X"
-		index("player_profile_lfg_idx").on(table.primaryRole, table.rank, table.internalSr),
-		// Matchmaking: fast SR-range lookups
-		index("player_profile_sr_idx").on(table.internalSr),
+		index("player_profile_role_rank_idx").on(table.primaryRole, table.rank),
 	]
 );
 
@@ -279,7 +268,7 @@ export const organizationMemberTable = pgTable(
 // ============================================================================
 
 /**
- * A competitive roster owned by an organization. `teamSr` is a composite rating
+ * A competitive roster owned by an organization. `rating` is a composite rating
  * updated after confirmed scrims. Archived teams are hidden from matchmaking.
  */
 export const teamTable = pgTable(
@@ -295,11 +284,11 @@ export const teamTable = pgTable(
 		avatarUrl: text("avatar_url"),
 		bannerUrl: text("banner_url"),
 
-		/** Composite team SR for matchmaking. */
-		teamSr: integer("team_sr").notNull().default(1500),
-		srDeviation: integer("sr_deviation").notNull().default(350),
+		/** Composite team rating for matchmaking. */
+		rating: integer("rating").notNull().default(1500),
+		ratingDeviation: integer("rating_deviation").notNull().default(350),
 
-		/** Completed scrim count for SR calibration. */
+		/** Completed scrim count for rating calibration. */
 		matchesPlayed: integer("matches_played").notNull().default(0),
 
 		/** Archived teams are hidden from matchmaking. */
@@ -316,8 +305,8 @@ export const teamTable = pgTable(
 	},
 	(table) => [
 		index("team_org_idx").on(table.organizationId),
-		// Matchmaking: "find active teams in SR range"
-		index("team_matchmaking_idx").on(table.teamSr, table.isArchived),
+		// Matchmaking: "find active teams in rating range"
+		index("team_matchmaking_idx").on(table.rating, table.isArchived),
 	]
 );
 
@@ -367,22 +356,22 @@ export const teamRosterTable = pgTable(
 );
 
 // ============================================================================
-// LFG POSTS — Bidirectional Looking-For-Group
+// RECRUITMENT LISTINGS
 // ============================================================================
 
 /**
- * Bidirectional LFG posts. `team_seeking_player` sets `teamId`; `player_seeking_team`
+ * Recruitment listings. Team-owned listings set `teamId`; player-owned listings
  * leaves it null. `heroPoolFilter` uses a GIN index for hero-based matching.
  */
-export const lfgPostTable = pgTable(
-	"lfg_post",
+export const recruitmentListingTable = pgTable(
+	"recruitment_listing",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-		type: lfgTypeEnum("type").notNull(),
-		status: lfgStatusEnum("status").notNull().default("open"),
+		type: recruitmentListingCategoryEnum("type").notNull(),
+		status: recruitmentListingStatusEnum("status").notNull().default("open"),
 		ownerType: recruitmentOwnerTypeEnum("owner_type").notNull().default("player"),
 
-		/** User who created the post. */
+		/** User who created the listing. */
 		userId: uuid("user_id")
 			.notNull()
 			.references(() => userTable.id, { onDelete: "cascade" }),
@@ -391,7 +380,7 @@ export const lfgPostTable = pgTable(
 			onDelete: "cascade",
 		}),
 
-		/** Set for team-owned posts. */
+		/** Set for team-owned listings. */
 		teamId: uuid("team_id").references(() => teamTable.id, { onDelete: "cascade" }),
 
 		title: text("title").notNull().default(""),
@@ -407,11 +396,11 @@ export const lfgPostTable = pgTable(
 		/** Maximum acceptable rank tier. */
 		maxRank: ow2RankEnum("max_rank"),
 
-		/** Minimum internal SR. */
-		minSr: integer("min_sr"),
+		/** Minimum acceptable team rating. */
+		minRating: integer("min_rating"),
 
-		/** Maximum internal SR. */
-		maxSr: integer("max_sr"),
+		/** Maximum acceptable team rating. */
+		maxRating: integer("max_rating"),
 
 		/** Hero pool filter, GIN-indexed. */
 		heroPoolFilter: jsonb("hero_pool_filter").$type<string[]>().default([]),
@@ -432,26 +421,33 @@ export const lfgPostTable = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		// Primary LFG feed query: open posts of a given type
-		index("lfg_feed_idx").on(table.type, table.status),
+		// Primary recruiting feed query: open listings of a given type
+		index("recruitment_listing_feed_idx").on(table.type, table.status),
 		// Filter by role + rank range for the "find me a support" queries
-		index("lfg_role_rank_idx").on(table.status, table.minRank, table.maxRank),
-		// SR-range matching for internal matchmaking-aware LFG
-		index("lfg_sr_range_idx").on(table.status, table.minSr, table.maxSr),
-		// My posts
-		index("lfg_user_idx").on(table.userId),
-		index("lfg_team_idx").on(table.teamId),
+		index("recruitment_listing_role_rank_idx").on(table.status, table.minRank, table.maxRank),
+		index("recruitment_listing_rating_range_idx").on(
+			table.status,
+			table.minRating,
+			table.maxRating
+		),
+		index("recruitment_listing_hero_pool_gin_idx").using(
+			"gin",
+			table.heroPoolFilter.op("jsonb_ops")
+		),
+		// My listings
+		index("recruitment_listing_user_idx").on(table.userId),
+		index("recruitment_listing_team_idx").on(table.teamId),
 	]
 );
 
-/** Applications and responses to LFG posts, from players or teams. */
-export const lfgApplicationTable = pgTable(
-	"lfg_application",
+/** Applications to recruitment listings, from players or teams. */
+export const recruitmentApplicationTable = pgTable(
+	"recruitment_application",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-		postId: uuid("post_id")
+		listingId: uuid("listing_id")
 			.notNull()
-			.references(() => lfgPostTable.id, { onDelete: "cascade" }),
+			.references(() => recruitmentListingTable.id, { onDelete: "cascade" }),
 
 		/** User who is applying or reaching out. */
 		applicantUserId: uuid("applicant_user_id")
@@ -470,7 +466,7 @@ export const lfgApplicationTable = pgTable(
 		),
 
 		message: text("message"),
-		status: lfgApplicationStatusEnum("status").notNull().default("pending"),
+		status: recruitmentApplicationStatusEnum("status").notNull().default("pending"),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -480,11 +476,55 @@ export const lfgApplicationTable = pgTable(
 	},
 	(table) => [
 		// Prevent duplicate pending applications (partial index — allows re-apply after withdrawal/rejection)
-		uniqueIndex("lfg_app_unique_idx")
-			.on(table.postId, table.applicantUserId)
+		uniqueIndex("recruitment_application_unique_idx")
+			.on(table.listingId, table.applicantUserId)
 			.where(sql`${table.status} = 'pending'`),
-		index("lfg_app_post_idx").on(table.postId),
-		index("lfg_app_user_idx").on(table.applicantUserId),
+		index("recruitment_application_listing_idx").on(table.listingId),
+		index("recruitment_application_user_idx").on(table.applicantUserId),
+	]
+);
+
+// ============================================================================
+// UPDATES — Team and organization announcements
+// ============================================================================
+
+/**
+ * Team and organization announcements published into workspace and public feeds.
+ * `scopeType` determines which parent entity owns the update. `visibility`
+ * controls whether the update stays inside the workspace or appears publicly.
+ */
+export const updatePostTable = pgTable(
+	"update_post",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+
+		scopeType: updateScopeEnum("scope_type").notNull(),
+		visibility: updateVisibilityEnum("visibility").notNull().default("workspace"),
+
+		authorUserId: uuid("author_user_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "restrict" }),
+
+		organizationId: uuid("organization_id").references(() => organizationTable.id, {
+			onDelete: "cascade",
+		}),
+		teamId: uuid("team_id").references(() => teamTable.id, { onDelete: "cascade" }),
+
+		title: text("title").notNull(),
+		body: text("body").notNull(),
+
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("update_post_scope_idx").on(table.scopeType, table.createdAt),
+		index("update_post_team_idx").on(table.teamId, table.createdAt),
+		index("update_post_org_idx").on(table.organizationId, table.createdAt),
+		index("update_post_visibility_idx").on(table.visibility, table.createdAt),
+		index("update_post_author_idx").on(table.authorUserId, table.createdAt),
 	]
 );
 
@@ -583,9 +623,6 @@ export const scrimTable = pgTable(
 		homeMapScore: smallint("home_map_score").notNull().default(0),
 		awayMapScore: smallint("away_map_score").notNull().default(0),
 
-		/** SR delta applied after confirmation. */
-		srDelta: integer("sr_delta"),
-
 		/** Dispute resolution outcome. */
 		disputeResolution: disputeResolutionEnum("dispute_resolution"),
 
@@ -626,12 +663,12 @@ export const scrimTable = pgTable(
 );
 
 // ============================================================================
-// SCRIM CONFIRMATIONS — Both teams must confirm before SR is updated
+// SCRIM CONFIRMATIONS — Both teams must confirm before ratings are updated
 // ============================================================================
 
 /**
  * Post-scrim result confirmation. One row per team per scrim. Both teams must
- * confirm before SR is updated; a dispute from either side triggers admin review.
+ * confirm before team ratings are updated; a dispute from either side triggers admin review.
  */
 export const scrimConfirmationTable = pgTable(
 	"scrim_confirmation",
@@ -664,6 +701,107 @@ export const scrimConfirmationTable = pgTable(
 		// One confirmation per team per scrim
 		uniqueIndex("scrim_confirm_unique_idx").on(table.scrimId, table.teamId),
 		index("scrim_confirm_scrim_idx").on(table.scrimId),
+	]
+);
+
+// ============================================================================
+// SCRIM RESULT REVISIONS — Immutable reviewed result history
+// ============================================================================
+
+type ScrimResultRevisionJsonValue =
+	| string
+	| number
+	| boolean
+	| null
+	| { [key: string]: ScrimResultRevisionJsonValue }
+	| ScrimResultRevisionJsonValue[];
+
+type ScrimResultRevisionPlayerSnapshot = {
+	playerName: string;
+	side: "home" | "away" | "unknown";
+	hero: string | null;
+	role: "tank" | "damage" | "support" | null;
+	eliminations: number | null;
+	assists: number | null;
+	deaths: number | null;
+	damage: number | null;
+	healing: number | null;
+	mitigation: number | null;
+};
+
+type ScrimResultRevisionMapSnapshot = {
+	mapOrder: number;
+	mapName: string;
+	mapType:
+		| "assault"
+		| "clash"
+		| "control"
+		| "escort"
+		| "flashpoint"
+		| "hybrid"
+		| "push"
+		| "unknown";
+	homeScore: number;
+	awayScore: number;
+	durationSeconds: number | null;
+	players: ScrimResultRevisionPlayerSnapshot[];
+};
+
+type ScrimResultRevisionSnapshot = {
+	homeMapScore: number;
+	awayMapScore: number;
+	startedAt: string | null;
+	endedAt: string | null;
+	maps: ScrimResultRevisionMapSnapshot[];
+};
+
+type ScrimResultFieldChange = {
+	path: string;
+	before: ScrimResultRevisionJsonValue;
+	after: ScrimResultRevisionJsonValue;
+};
+
+type ScrimResultChangeSummary = {
+	basis: "ocr_job" | "previous_revision" | "existing_result" | "manual_baseline";
+	changeCount: number;
+	fieldChanges: ScrimResultFieldChange[];
+};
+
+/**
+ * Immutable snapshots of every reviewed result submission. This preserves the
+ * authoritative history even when the latest reviewed result replaces the
+ * current `scrim_map` / `scrim_player_stat` rows.
+ */
+export const scrimResultRevisionTable = pgTable(
+	"scrim_result_revision",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		scrimId: uuid("scrim_id")
+			.notNull()
+			.references(() => scrimTable.id, { onDelete: "cascade" }),
+		revisionNumber: smallint("revision_number").notNull(),
+		reportingTeamId: uuid("reporting_team_id").references(() => teamTable.id, {
+			onDelete: "set null",
+		}),
+		submittedByUserId: uuid("submitted_by_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		sourceOcrJobId: uuid("source_ocr_job_id").references(() => ocrJobTable.id, {
+			onDelete: "set null",
+		}),
+		homeMapScore: smallint("home_map_score").notNull().default(0),
+		awayMapScore: smallint("away_map_score").notNull().default(0),
+		startedAt: timestamp("started_at", { mode: "date" }),
+		endedAt: timestamp("ended_at", { mode: "date" }),
+		snapshot: jsonb("snapshot").$type<ScrimResultRevisionSnapshot>().notNull(),
+		changeSummary: jsonb("change_summary").$type<ScrimResultChangeSummary>().notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		uniqueIndex("scrim_result_revision_unique_idx").on(table.scrimId, table.revisionNumber),
+		index("scrim_result_revision_scrim_idx").on(table.scrimId, table.createdAt),
+		index("scrim_result_revision_reporting_team_idx").on(table.reportingTeamId),
+		index("scrim_result_revision_source_ocr_idx").on(table.sourceOcrJobId),
 	]
 );
 
@@ -753,18 +891,18 @@ export const scrimPlayerStatTable = pgTable(
 		playerName: text("player_name").notNull(),
 
 		/** Hero played on this map. */
-		hero: text("hero").notNull(),
+		hero: text("hero"),
 
 		/** Role played on this map. */
-		role: ow2RoleEnum("role").notNull(),
+		role: ow2RoleEnum("role"),
 
 		// ---- Core stat columns (direct from OCR) ----
-		eliminations: integer("eliminations").notNull().default(0),
-		assists: integer("assists").notNull().default(0),
-		deaths: integer("deaths").notNull().default(0),
-		damage: integer("damage").notNull().default(0),
-		healing: integer("healing").notNull().default(0),
-		mitigation: integer("mitigation").notNull().default(0),
+		eliminations: integer("eliminations"),
+		assists: integer("assists"),
+		deaths: integer("deaths"),
+		damage: integer("damage"),
+		healing: integer("healing"),
+		mitigation: integer("mitigation"),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 	},
@@ -782,44 +920,35 @@ export const scrimPlayerStatTable = pgTable(
 );
 
 // ============================================================================
-// SR HISTORY — Audit trail for internal rating changes
+// TEAM RATING EVENTS — Audit trail for team rating changes
 // ============================================================================
 
 /**
- * Immutable SR change log for both players and teams. `entityType` + `entityId`
- * form a polymorphic reference to either `playerProfile.id` or `team.id`.
+ * Immutable team rating change log keyed to scrims. One row per team per rated
+ * scrim, preserving the before/after values and rating deviation changes.
  */
-export const srHistoryTable = pgTable(
-	"sr_history",
+export const teamRatingEventTable = pgTable(
+	"team_rating_event",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-
-		/** "player" or "team". */
-		entityType: text("entity_type").notNull(),
-
-		/** UUID of the player_profile or team row. */
-		entityId: uuid("entity_id").notNull(),
-
-		/** Scrim that triggered this SR change. */
+		teamId: uuid("team_id")
+			.notNull()
+			.references(() => teamTable.id, { onDelete: "cascade" }),
 		scrimId: uuid("scrim_id")
 			.notNull()
 			.references(() => scrimTable.id, { onDelete: "cascade" }),
-
-		srBefore: integer("sr_before").notNull(),
-		srAfter: integer("sr_after").notNull(),
-		srDelta: integer("sr_delta").notNull(),
-
-		/** Deviation before and after (Glicko-2). */
-		deviationBefore: integer("deviation_before"),
-		deviationAfter: integer("deviation_after"),
+		ratingBefore: integer("rating_before").notNull(),
+		ratingAfter: integer("rating_after").notNull(),
+		ratingDelta: integer("rating_delta").notNull(),
+		ratingDeviationBefore: integer("rating_deviation_before"),
+		ratingDeviationAfter: integer("rating_deviation_after"),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 	},
 	(table) => [
-		index("sr_history_entity_idx").on(table.entityType, table.entityId),
-		index("sr_history_scrim_idx").on(table.scrimId),
-		// Timeline query: "show my SR graph"
-		index("sr_history_timeline_idx").on(table.entityType, table.entityId, table.createdAt),
+		uniqueIndex("team_rating_event_team_scrim_idx").on(table.teamId, table.scrimId),
+		index("team_rating_event_team_idx").on(table.teamId, table.createdAt),
+		index("team_rating_event_scrim_idx").on(table.scrimId),
 	]
 );
 
@@ -851,11 +980,20 @@ export const ocrJobTable = pgTable(
 		imageUrl: text("image_url").notNull(),
 
 		status: ocrJobStatusEnum("status").notNull().default("queued"),
+		progressStage: text("progress_stage").notNull().default("queued"),
+		runAfter: timestamp("run_after", { mode: "date" }).notNull().defaultNow(),
+		leaseExpiresAt: timestamp("lease_expires_at", { mode: "date" }),
+		providerName: text("provider_name"),
+		providerModel: text("provider_model"),
+		promptVersion: text("prompt_version"),
 
 		/** Full OCR JSON response for audit and re-processing. */
 		rawOcrOutput: jsonb("raw_ocr_output"),
+		validatedOutput: jsonb("validated_output"),
+		confidenceFlags: jsonb("confidence_flags").$type<string[]>().notNull().default([]),
 
 		/** Error message if the job failed. */
+		errorCode: text("error_code"),
 		errorMessage: text("error_message"),
 
 		/** Processing duration in milliseconds. */
@@ -875,6 +1013,7 @@ export const ocrJobTable = pgTable(
 	(table) => [
 		index("ocr_job_scrim_idx").on(table.scrimId),
 		index("ocr_job_status_idx").on(table.status),
+		index("ocr_job_queue_idx").on(table.status, table.runAfter, table.leaseExpiresAt),
 		index("ocr_job_user_idx").on(table.submittedByUserId),
 	]
 );
@@ -898,7 +1037,7 @@ export const notificationTable = pgTable(
 		body: text("body"),
 
 		/** Polymorphic reference to the source entity. */
-		referenceType: text("reference_type"), // "scrim" | "lfg_post" | "lfg_application" | etc.
+		referenceType: text("reference_type"), // "scrim" | "recruitment_listing" | "recruitment_application" | etc.
 		referenceId: uuid("reference_id"),
 
 		isRead: boolean("is_read").notNull().default(false),
@@ -919,7 +1058,7 @@ export const notificationTable = pgTable(
 /**
  * Conversation container with typed context. Five channel types drive different
  * access rules and lifecycles. Only the relevant polymorphic FK (`scrimId`,
- * `teamId`, `lfgApplicationId`) is set per channel. Archived channels are
+ * `teamId`, `recruitmentApplicationId`) is set per channel. Archived channels are
  * read-only. Socket.io rooms map 1:1 to channel IDs as `channel:{id}`.
  */
 export const chatChannelTable = pgTable(
@@ -940,9 +1079,12 @@ export const chatChannelTable = pgTable(
 		teamId: uuid("team_id").references(() => teamTable.id, { onDelete: "cascade" }),
 
 		/** Set for recruitment channels. */
-		lfgApplicationId: uuid("lfg_application_id").references(() => lfgApplicationTable.id, {
-			onDelete: "cascade",
-		}),
+		recruitmentApplicationId: uuid("recruitment_application_id").references(
+			() => recruitmentApplicationTable.id,
+			{
+				onDelete: "cascade",
+			}
+		),
 
 		/** Archived channels are read-only. */
 		isArchived: boolean("is_archived").notNull().default(false),
@@ -959,7 +1101,7 @@ export const chatChannelTable = pgTable(
 		// "Team chat channel"
 		index("chat_channel_team_idx").on(table.teamId),
 		// "Recruitment thread for this application"
-		index("chat_channel_lfg_app_idx").on(table.lfgApplicationId),
+		index("chat_channel_recruitment_app_idx").on(table.recruitmentApplicationId),
 		// "List active channels by type"
 		index("chat_channel_type_idx").on(table.channelType, table.isArchived),
 	]
@@ -1009,7 +1151,7 @@ export const chatChannelMemberTable = pgTable(
 // ============================================================================
 
 /**
- * A direct invitation from a team manager to a user. Distinct from LFG
+ * A direct invitation from a team manager to a user. Distinct from recruitment
  * applications (which are player-initiated). Invite expires after 7 days.
  * The uniqueIndex prevents duplicate pending invites to the same player.
  */
@@ -1098,63 +1240,6 @@ export const orgInviteTable = pgTable(
 	(table) => [
 		index("org_invite_org_idx").on(table.organizationId),
 		index("org_invite_invitee_idx").on(table.inviteeUserId),
-	]
-);
-
-// ============================================================================
-// ORG JOIN REQUESTS — Direct requests from users who want to join an org
-// ============================================================================
-
-export const orgJoinRequestTable = pgTable(
-	"org_join_request",
-	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
-			.notNull()
-			.references(() => organizationTable.id, { onDelete: "cascade" }),
-		requesterUserId: uuid("requester_user_id")
-			.notNull()
-			.references(() => userTable.id, { onDelete: "cascade" }),
-		message: text("message"),
-		status: joinRequestStatusEnum("status").notNull().default("pending"),
-		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { mode: "date" })
-			.notNull()
-			.defaultNow()
-			.$onUpdate(() => new Date()),
-	},
-	(table) => [
-		index("org_join_request_org_idx").on(table.organizationId),
-		index("org_join_request_requester_idx").on(table.requesterUserId),
-	]
-);
-
-// ============================================================================
-// TEAM JOIN REQUESTS — Direct requests from users who want to join a team
-// ============================================================================
-
-export const teamJoinRequestTable = pgTable(
-	"team_join_request",
-	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		teamId: uuid("team_id")
-			.notNull()
-			.references(() => teamTable.id, { onDelete: "cascade" }),
-		requesterUserId: uuid("requester_user_id")
-			.notNull()
-			.references(() => userTable.id, { onDelete: "cascade" }),
-		requestedRoleInTeam: ow2RoleEnum("requested_role_in_team").notNull(),
-		message: text("message"),
-		status: joinRequestStatusEnum("status").notNull().default("pending"),
-		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { mode: "date" })
-			.notNull()
-			.defaultNow()
-			.$onUpdate(() => new Date()),
-	},
-	(table) => [
-		index("team_join_request_team_idx").on(table.teamId),
-		index("team_join_request_requester_idx").on(table.requesterUserId),
 	]
 );
 

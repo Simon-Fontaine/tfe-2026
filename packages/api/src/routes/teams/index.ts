@@ -16,11 +16,12 @@ import * as v from "valibot";
 
 import { db } from "@/db";
 import {
-	lfgApplicationTable,
-	lfgPostTable,
 	organizationMemberTable,
 	organizationTable,
+	recruitmentApplicationTable,
+	recruitmentListingTable,
 	teamInviteTable,
+	teamRatingEventTable,
 	teamRosterTable,
 	teamTable,
 } from "@/db/schema";
@@ -32,8 +33,8 @@ import {
 	ensureOrganizationMembership,
 	ensureTeamMembership,
 	getRecruitmentConversationsForUser,
-	mapRecruitmentPost,
-	mapRecruitmentResponse,
+	mapRecruitmentApplication,
+	mapRecruitmentListing,
 	mapTeamMember,
 	normalizeMemberFields,
 } from "@/utils/recruit";
@@ -56,19 +57,18 @@ function toTeamPermissions(ctx: NonNullable<Awaited<ReturnType<typeof getTeamAcc
 		canManageMembers: ctx.canManageTeam,
 		canManageRoster: ctx.canManageTeam,
 		canManageInvites: ctx.canManageTeam,
-		canManagePosts: ctx.canManageTeam,
+		canManageListings: ctx.canManageTeam,
 		canManageConversations: ctx.canManageTeam,
-		canManageRequests: false,
 		canManageSettings: ctx.canManageTeam,
 		canLeave: ctx.teamMemberId !== null && ctx.teamStatus !== "inactive",
 	};
 }
 
-async function getPendingResponses(teamId: string) {
-	const rows = await db.query.lfgApplicationTable.findMany({
-		where: eq(lfgApplicationTable.status, "pending"),
+async function getPendingRecruitmentApplications(teamId: string) {
+	const rows = await db.query.recruitmentApplicationTable.findMany({
+		where: eq(recruitmentApplicationTable.status, "pending"),
 		with: {
-			post: {
+			listing: {
 				columns: { id: true, type: true, title: true, teamId: true },
 			},
 			applicant: {
@@ -87,12 +87,12 @@ async function getPendingResponses(teamId: string) {
 			},
 			chatChannels: { columns: { id: true } },
 		},
-		orderBy: [desc(lfgApplicationTable.createdAt)],
+		orderBy: [desc(recruitmentApplicationTable.createdAt)],
 	});
 
 	return rows
-		.filter((row) => row.post?.teamId === teamId)
-		.map((row) => mapRecruitmentResponse(row));
+		.filter((row) => row.listing?.teamId === teamId)
+		.map((row) => mapRecruitmentApplication(row));
 }
 
 async function getTeamWorkspaceDetail(teamId: string, userId: string) {
@@ -102,62 +102,95 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 	]);
 	if (!team || !access || (!access.orgRole && !access.teamMemberId)) return null;
 
-	const [organization, rosterRows, inviteRows, postRows, applications, conversations, orgAdmins] =
-		await Promise.all([
-			db.query.organizationTable.findFirst({
-				where: eq(organizationTable.id, team.organizationId),
-				columns: { id: true, name: true, slug: true },
-			}),
-			db.query.teamRosterTable.findMany({
-				where: eq(teamRosterTable.teamId, teamId),
-				with: {
-					user: {
-						columns: { id: true, username: true, displayName: true, avatarUrl: true },
-						with: {
-							profile: {
-								columns: {
-									primaryRole: true,
-									rank: true,
-									rankDivision: true,
-								},
+	const [
+		organization,
+		rosterRows,
+		inviteRows,
+		listingRows,
+		applications,
+		conversations,
+		orgAdmins,
+		ratingHistoryRows,
+	] = await Promise.all([
+		db.query.organizationTable.findFirst({
+			where: eq(organizationTable.id, team.organizationId),
+			columns: { id: true, name: true, slug: true },
+		}),
+		db.query.teamRosterTable.findMany({
+			where: eq(teamRosterTable.teamId, teamId),
+			with: {
+				user: {
+					columns: { id: true, username: true, displayName: true, avatarUrl: true },
+					with: {
+						profile: {
+							columns: {
+								primaryRole: true,
+								rank: true,
+								rankDivision: true,
 							},
 						},
 					},
 				},
-				orderBy: [asc(teamRosterTable.joinedAt)],
-			}),
-			db.query.teamInviteTable.findMany({
-				where: eq(teamInviteTable.teamId, teamId),
-				with: {
-					invitee: {
-						columns: { id: true, displayName: true, avatarUrl: true },
+			},
+			orderBy: [asc(teamRosterTable.joinedAt)],
+		}),
+		db.query.teamInviteTable.findMany({
+			where: eq(teamInviteTable.teamId, teamId),
+			with: {
+				invitee: {
+					columns: { id: true, displayName: true, avatarUrl: true },
+				},
+			},
+			orderBy: [desc(teamInviteTable.createdAt)],
+		}),
+		db.query.recruitmentListingTable.findMany({
+			where: eq(recruitmentListingTable.teamId, teamId),
+			with: {
+				user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+				organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+				team: {
+					columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
+				},
+				applications: {
+					columns: { id: true, status: true, applicantUserId: true },
+				},
+			},
+			orderBy: [desc(recruitmentListingTable.createdAt)],
+		}),
+		getPendingRecruitmentApplications(teamId),
+		getRecruitmentConversationsForUser(userId),
+		db.query.organizationMemberTable.findMany({
+			where: eq(organizationMemberTable.organizationId, team.organizationId),
+			with: {
+				user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+			},
+		}),
+		db.query.teamRatingEventTable.findMany({
+			where: eq(teamRatingEventTable.teamId, teamId),
+			with: {
+				scrim: {
+					columns: {
+						id: true,
+						homeTeamId: true,
+						awayTeamId: true,
+						homeMapScore: true,
+						awayMapScore: true,
+						scheduledAt: true,
+					},
+					with: {
+						homeTeam: {
+							columns: { id: true, name: true, tag: true },
+						},
+						awayTeam: {
+							columns: { id: true, name: true, tag: true },
+						},
 					},
 				},
-				orderBy: [desc(teamInviteTable.createdAt)],
-			}),
-			db.query.lfgPostTable.findMany({
-				where: eq(lfgPostTable.teamId, teamId),
-				with: {
-					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
-					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
-					team: {
-						columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true },
-					},
-					applications: {
-						columns: { id: true, status: true, applicantUserId: true },
-					},
-				},
-				orderBy: [desc(lfgPostTable.createdAt)],
-			}),
-			getPendingResponses(teamId),
-			getRecruitmentConversationsForUser(userId),
-			db.query.organizationMemberTable.findMany({
-				where: eq(organizationMemberTable.organizationId, team.organizationId),
-				with: {
-					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
-				},
-			}),
-		]);
+			},
+			orderBy: [desc(teamRatingEventTable.createdAt)],
+			limit: 8,
+		}),
+	]);
 
 	const members = rosterRows.map((row) => mapTeamMember(row));
 	const adminsByUserId = new Map<
@@ -204,6 +237,33 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		});
 	}
 
+	const ratingHistory = ratingHistoryRows.map((event) => {
+		const isHomeTeam = event.scrim.homeTeamId === teamId;
+		const opponentTeam = isHomeTeam ? event.scrim.awayTeam : event.scrim.homeTeam;
+		const teamMapScore = isHomeTeam ? event.scrim.homeMapScore : event.scrim.awayMapScore;
+		const opponentMapScore = isHomeTeam ? event.scrim.awayMapScore : event.scrim.homeMapScore;
+		const result =
+			teamMapScore > opponentMapScore ? "win" : teamMapScore < opponentMapScore ? "loss" : "draw";
+
+		return {
+			id: event.id,
+			scrimId: event.scrimId,
+			opponentTeamId: opponentTeam?.id ?? null,
+			opponentTeamName: opponentTeam?.name ?? null,
+			opponentTeamTag: opponentTeam?.tag ?? null,
+			teamMapScore,
+			opponentMapScore,
+			result,
+			ratingBefore: event.ratingBefore,
+			ratingAfter: event.ratingAfter,
+			ratingDelta: event.ratingDelta,
+			ratingDeviationBefore: event.ratingDeviationBefore ?? null,
+			ratingDeviationAfter: event.ratingDeviationAfter ?? null,
+			scheduledAt: event.scrim.scheduledAt?.toISOString() ?? null,
+			createdAt: event.createdAt.toISOString(),
+		};
+	});
+
 	return {
 		id: team.id,
 		organizationId: team.organizationId,
@@ -214,7 +274,7 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		description: team.description ?? null,
 		avatarUrl: team.avatarUrl,
 		bannerUrl: team.bannerUrl ?? null,
-		teamSr: team.teamSr,
+		rating: team.rating,
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
 		isArchived: team.isArchived,
@@ -251,21 +311,15 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 				};
 			})
 			.filter((invite) => invite.status === "pending"),
-		pendingJoinRequests: [],
-		ownedPosts: postRows.map((post) =>
-			mapRecruitmentPost(post, {
+		ownedListings: listingRows.map((listing) =>
+			mapRecruitmentListing(listing, {
 				viewerId: userId,
 				canManage: access.canManageTeam,
 			})
 		),
 		conversations: conversations.filter((conversation) => conversation.teamId === teamId),
 		applications,
-		lfgPosts: postRows.map((post) =>
-			mapRecruitmentPost(post, {
-				viewerId: userId,
-				canManage: access.canManageTeam,
-			})
-		),
+		ratingHistory,
 	};
 }
 
@@ -395,8 +449,8 @@ teamRoutes.get("/", async (c) => {
 			roster: {
 				columns: { id: true, status: true },
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				columns: { id: true },
 			},
 		},
@@ -413,10 +467,10 @@ teamRoutes.get("/", async (c) => {
 			description: team.description ?? null,
 			avatarUrl: team.avatarUrl,
 			bannerUrl: team.bannerUrl ?? null,
-			teamSr: team.teamSr,
+			rating: team.rating,
 			isRecruiting: team.isRecruiting,
 			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
-			openPostCount: team.lfgPosts.length,
+			openListingCount: team.recruitmentListings.length,
 		})),
 	});
 });
@@ -574,34 +628,34 @@ teamRoutes.delete("/:id", async (c) => {
 	return c.json({ success: true });
 });
 
-teamRoutes.get("/:id/applications", async (c) => {
+teamRoutes.get("/:id/recruitment/applications", async (c) => {
 	const user = c.get("user");
 	const access = await getTeamAccessContext(c.req.param("id"), user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
 	if (!access.canManageTeam) return c.json({ data: [] });
-	return c.json({ data: await getPendingResponses(access.teamId) });
+	return c.json({ data: await getPendingRecruitmentApplications(access.teamId) });
 });
 
-teamRoutes.get("/:id/posts", async (c) => {
+teamRoutes.get("/:id/recruitment/listings", async (c) => {
 	const user = c.get("user");
 	const teamId = c.req.param("id");
 	const access = await getTeamAccessContext(teamId, user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
 
-	const rows = await db.query.lfgPostTable.findMany({
-		where: eq(lfgPostTable.teamId, teamId),
+	const rows = await db.query.recruitmentListingTable.findMany({
+		where: eq(recruitmentListingTable.teamId, teamId),
 		with: {
 			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
-			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 			applications: { columns: { id: true, status: true, applicantUserId: true } },
 		},
-		orderBy: [desc(lfgPostTable.createdAt)],
+		orderBy: [desc(recruitmentListingTable.createdAt)],
 	});
 
 	return c.json({
 		data: rows.map((row) =>
-			mapRecruitmentPost(row, {
+			mapRecruitmentListing(row, {
 				viewerId: user.id,
 				canManage: access.canManageTeam,
 			})
@@ -609,7 +663,7 @@ teamRoutes.get("/:id/posts", async (c) => {
 	});
 });
 
-teamRoutes.get("/:id/conversations", async (c) => {
+teamRoutes.get("/:id/recruitment/conversations", async (c) => {
 	const user = c.get("user");
 	const access = await getTeamAccessContext(c.req.param("id"), user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
@@ -930,15 +984,5 @@ teamRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 
 	return c.json({ success: true });
 });
-
-teamRoutes.get("/:id/requests", (c) =>
-	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
-);
-teamRoutes.post("/:id/requests", (c) =>
-	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
-);
-teamRoutes.post("/:id/requests/:requestId/respond", (c) =>
-	c.json({ error: "Join requests have been removed. Use recruiting posts or direct invites." }, 410)
-);
 
 export { teamRoutes };

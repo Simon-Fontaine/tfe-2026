@@ -10,7 +10,7 @@ import {
 	leaveTeamAction,
 	unarchiveTeamAction,
 	updateTeamAction,
-} from "@/app/dashboard/workspace/orgs/actions/team";
+} from "@/app/actions/team";
 import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { RecruitingToggle } from "@/components/teams/recruiting-toggle";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { TeamWithRoster } from "@/lib/data/team";
-import { dashboardRoutes } from "@/lib/routes";
+import { appRoutes } from "@/lib/routes";
 
 interface TeamSettingsPanelProps {
 	team: TeamWithRoster;
@@ -125,7 +125,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 										className="font-mono uppercase"
 									/>
 									<FieldDescription>
-										Used across roster, posts, and the public team profile.
+										Used across roster, recruiting listings, and the public team profile.
 									</FieldDescription>
 								</Field>
 								<Field>
@@ -192,17 +192,17 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 					{canManageSettings ? (
 						<CardAction>
 							<Button asChild size="sm">
-								<Link href={dashboardRoutes.context.teamInvites(team.organizationId, team.id)}>
+								<Link href={appRoutes.teams.roster(team.id)}>
 									<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Manage invites
+									Open roster
 								</Link>
 							</Button>
 						</CardAction>
 					) : null}
 					<CardTitle className="text-sm">Membership policy</CardTitle>
 					<CardDescription>
-						New team members must be invited. Direct roster adds are disabled across players and
-						staff.
+						New team members must be invited. Pending invites and roster activation now live in the
+						roster workspace instead of a separate team invites page.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-2 text-xs text-muted-foreground">

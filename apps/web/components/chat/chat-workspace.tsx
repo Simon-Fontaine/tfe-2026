@@ -2,7 +2,7 @@
 
 import { MessageNotification02Icon } from "@hugeicons/core-free-icons";
 import type { ChatConversationSummary } from "@scrimflow/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 import { useChatStore } from "@/stores/chat";
@@ -10,6 +10,7 @@ import { ConversationSidebar } from "./conversation-sidebar";
 import { MessagePane } from "./message-pane";
 
 interface ChatWorkspaceProps {
+	contextKey?: string;
 	currentUserId: string;
 	conversations: ChatConversationSummary[];
 	emptyTitle: string;
@@ -18,6 +19,7 @@ interface ChatWorkspaceProps {
 }
 
 export function ChatWorkspace({
+	contextKey,
 	currentUserId,
 	conversations,
 	emptyTitle,
@@ -37,6 +39,21 @@ export function ChatWorkspace({
 	const list = storeConversations.length > 0 ? storeConversations : conversations;
 	const selectedConversation = list.find((c) => c.id === selectedConversationId);
 
+	useEffect(() => {
+		const nextSelectedConversationId =
+			initialConversationId &&
+			conversations.some((conversation) => conversation.id === initialConversationId)
+				? initialConversationId
+				: (conversations[0]?.id ?? null);
+
+		if (
+			!selectedConversationId ||
+			!conversations.some((conversation) => conversation.id === selectedConversationId)
+		) {
+			setSelectedConversationId(nextSelectedConversationId);
+		}
+	}, [conversations, initialConversationId, selectedConversationId]);
+
 	if (conversations.length === 0) {
 		return (
 			<EmptyStateBlock
@@ -51,6 +68,7 @@ export function ChatWorkspace({
 	return (
 		<div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
 			<ConversationSidebar
+				key={contextKey ?? "default"}
 				initialConversations={conversations}
 				selectedConversationId={selectedConversationId}
 				onSelect={setSelectedConversationId}

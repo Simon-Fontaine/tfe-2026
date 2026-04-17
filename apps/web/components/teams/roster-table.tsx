@@ -9,7 +9,7 @@ import {
 	updateRosterStatusAction,
 	updateTeamMemberAction,
 	updateTeamMemberPermissionAction,
-} from "@/app/dashboard/workspace/orgs/actions/team";
+} from "@/app/actions/team";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

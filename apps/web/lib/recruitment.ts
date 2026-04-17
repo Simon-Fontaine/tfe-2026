@@ -1,7 +1,8 @@
 import type {
-	RecruitmentPostCategory,
-	RecruitmentPostSummary,
-	RecruitmentResponseSummary,
+	CreateRecruitmentListingInput,
+	RecruitmentApplicationSummary,
+	RecruitmentListingCategory,
+	RecruitmentListingSummary,
 	StaffRole,
 } from "@scrimflow/shared";
 
@@ -12,14 +13,14 @@ export type RecruitEntityOption = {
 	organizationId?: string;
 };
 
-export const RECRUITMENT_CATEGORY_LABELS: Record<RecruitmentPostCategory, string> = {
+export const RECRUITMENT_CATEGORY_LABELS: Record<RecruitmentListingCategory, string> = {
 	lft: "LFT",
 	lfp: "LFP",
 	lfr: "LFR",
 	lfs: "LFS",
 };
 
-export const RECRUITMENT_CATEGORY_DESCRIPTIONS: Record<RecruitmentPostCategory, string> = {
+export const RECRUITMENT_CATEGORY_DESCRIPTIONS: Record<RecruitmentListingCategory, string> = {
 	lft: "Player looking for a team",
 	lfp: "Team looking for a player",
 	lfr: "Team looking for a ringer",
@@ -31,6 +32,19 @@ export const ROLE_LABELS: Record<"tank" | "damage" | "support", string> = {
 	damage: "DPS",
 	support: "Support",
 };
+
+export type RecruitmentRank = NonNullable<CreateRecruitmentListingInput["minRank"]>;
+
+export const RECRUITMENT_RANK_VALUES = [
+	"bronze",
+	"silver",
+	"gold",
+	"platinum",
+	"diamond",
+	"master",
+	"grandmaster",
+	"champion",
+] as const satisfies readonly RecruitmentRank[];
 
 export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 	coach: "Coach",
@@ -55,32 +69,50 @@ export const RANK_LABELS: Record<string, string> = {
 	champion: "Champion",
 };
 
-export function formatRecruitmentOwner(post: RecruitmentPostSummary) {
-	if (post.teamName && post.teamTag) return `[${post.teamTag}] ${post.teamName}`;
-	if (post.organizationName) return post.organizationName;
-	return post.ownerDisplayName;
-}
+export function getRecruitmentRank(value: string): RecruitmentRank | undefined {
+	const normalized = value.trim().toLowerCase();
 
-export function formatRecruitmentAudience(post: RecruitmentPostSummary) {
-	if (post.memberType === "staff") {
-		return post.staffRole ? STAFF_ROLE_LABELS[post.staffRole] : "Staff";
+	if (RECRUITMENT_RANK_VALUES.some((rank) => rank === normalized)) {
+		return normalized as RecruitmentRank;
 	}
 
-	if (post.gameRoles.length === 0) return "Any role";
-	return post.gameRoles.map((role) => ROLE_LABELS[role]).join(" / ");
+	return undefined;
 }
 
-export function formatRecruitmentCompRange(post: RecruitmentPostSummary) {
-	if (post.minSr !== null || post.maxSr !== null) {
-		return [post.minSr ? `SR ${post.minSr}` : null, post.maxSr ? `SR ${post.maxSr}` : null]
-			.filter(Boolean)
-			.join(" - ");
+export function formatRecruitmentOwner(listing: RecruitmentListingSummary) {
+	if (listing.teamName && listing.teamTag) return `[${listing.teamTag}] ${listing.teamName}`;
+	if (listing.organizationName) return listing.organizationName;
+	return listing.ownerDisplayName;
+}
+
+export function formatRecruitmentAudience(listing: RecruitmentListingSummary) {
+	if (listing.memberType === "staff") {
+		return listing.staffRole ? STAFF_ROLE_LABELS[listing.staffRole] : "Staff";
 	}
 
-	if (post.minRank || post.maxRank) {
+	if (listing.gameRoles.length === 0) return "Any role";
+	return listing.gameRoles.map((role) => ROLE_LABELS[role]).join(" / ");
+}
+
+export function formatRecruitmentCompRange(listing: RecruitmentListingSummary) {
+	if (listing.minRating !== null || listing.maxRating !== null) {
+		if (listing.minRating !== null && listing.maxRating !== null) {
+			return `Rating ${listing.minRating} - ${listing.maxRating}`;
+		}
+
+		if (listing.minRating !== null) {
+			return `Min rating ${listing.minRating}`;
+		}
+
+		if (listing.maxRating !== null) {
+			return `Up to rating ${listing.maxRating}`;
+		}
+	}
+
+	if (listing.minRank || listing.maxRank) {
 		return [
-			post.minRank ? (RANK_LABELS[post.minRank] ?? post.minRank) : null,
-			post.maxRank ? (RANK_LABELS[post.maxRank] ?? post.maxRank) : null,
+			listing.minRank ? (RANK_LABELS[listing.minRank] ?? listing.minRank) : null,
+			listing.maxRank ? (RANK_LABELS[listing.maxRank] ?? listing.maxRank) : null,
 		]
 			.filter(Boolean)
 			.join(" - ");
@@ -96,7 +128,7 @@ export function getDefaultCategoryForOwner(ownerType: "player" | "team" | "organ
 }
 
 export function categoryMatchesOwner(
-	category: RecruitmentPostCategory,
+	category: RecruitmentListingCategory,
 	ownerType: "player" | "team" | "organization"
 ) {
 	if (category === "lft") return ownerType === "player";
@@ -105,12 +137,12 @@ export function categoryMatchesOwner(
 	return true;
 }
 
-export function getDefaultMemberTypeForCategory(category: RecruitmentPostCategory) {
+export function getDefaultMemberTypeForCategory(category: RecruitmentListingCategory) {
 	return category === "lfs" ? "staff" : "player";
 }
 
-export function getPostResponseLabel(post: RecruitmentPostSummary) {
-	switch (post.category) {
+export function getRecruitmentApplicationLabel(listing: RecruitmentListingSummary) {
+	switch (listing.category) {
 		case "lft":
 			return "Reach out";
 		case "lfp":
@@ -118,14 +150,14 @@ export function getPostResponseLabel(post: RecruitmentPostSummary) {
 		case "lfr":
 			return "Offer availability";
 		case "lfs":
-			return post.ownerType === "player" ? "Contact" : "Apply";
+			return listing.ownerType === "player" ? "Contact" : "Apply";
 		default:
-			return "Respond";
+			return "Apply";
 	}
 }
 
-export function getResponseAcceptLabel(response: RecruitmentResponseSummary) {
-	switch (response.postCategory) {
+export function getRecruitmentApplicationAcceptLabel(application: RecruitmentApplicationSummary) {
+	switch (application.listingCategory) {
 		case "lfr":
 			return "Accept contact";
 		case "lfs":

@@ -34,15 +34,16 @@ export const siteConfig: SiteConfig = {
 	description: "Overwatch 2 team management and scrim coordination platform.",
 	logo: Sword03Icon,
 	nav: {
-		// Desktop-only nav bar links. Authed users also see Dashboard here.
+		// Desktop-only nav bar links. Signed-in users also see the app workspace entry here.
 		primary: [
 			{ label: "Home", href: "/", visibility: "all" },
 			{ label: "Players", href: "/players", visibility: "all" },
 			{ label: "Teams", href: "/teams", visibility: "all" },
 			{ label: "Orgs", href: "/orgs", visibility: "all" },
-			{ label: "Posts", href: "/posts", visibility: "all" },
+			{ label: "Recruiting", href: "/recruiting", visibility: "all" },
 			{ label: "Scrims", href: "/scrims", visibility: "all" },
-			{ label: "Dashboard", href: "/dashboard", visibility: "auth" },
+			{ label: "Updates", href: "/updates", visibility: "all" },
+			{ label: "App", href: "/app", visibility: "auth" },
 		],
 		// Shown in the header for guests only (auth users have the user dropdown).
 		user: [{ label: "Sign in", href: "/auth?step=login", visibility: "guest" }],

@@ -3,10 +3,15 @@ import { and, asc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { lfgPostTable, organizationTable, teamRosterTable, teamTable } from "@/db/schema";
+import {
+	organizationTable,
+	recruitmentListingTable,
+	teamRosterTable,
+	teamTable,
+} from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
-import { mapRecruitmentPost } from "@/utils/recruit";
+import { mapRecruitmentListing } from "@/utils/recruit";
 
 const publicOrgRoutes = new Hono<AuthEnv>();
 
@@ -32,8 +37,8 @@ publicOrgRoutes.get("/", async (c) => {
 					},
 				},
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				columns: { id: true },
 			},
 		},
@@ -49,7 +54,7 @@ publicOrgRoutes.get("/", async (c) => {
 		description: row.description ?? null,
 		teamCount: row.teams.length,
 		activeRosterCount: row.teams.reduce((sum, team) => sum + team.roster.length, 0),
-		openPostCount: row.lfgPosts.length,
+		openListingCount: row.recruitmentListings.length,
 	}));
 
 	return c.json({ data });
@@ -86,7 +91,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 					description: true,
 					avatarUrl: true,
 					bannerUrl: true,
-					teamSr: true,
+					rating: true,
 					matchesPlayed: true,
 					isRecruiting: true,
 					isArchived: true,
@@ -98,12 +103,12 @@ publicOrgRoutes.get("/:id", async (c) => {
 				},
 				orderBy: [asc(teamTable.name)],
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				with: {
 					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
-					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
 				},
 			},
@@ -134,7 +139,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 			description: team.description ?? null,
 			avatarUrl: team.avatarUrl,
 			bannerUrl: team.bannerUrl ?? null,
-			teamSr: team.teamSr,
+			rating: team.rating,
 			matchesPlayed: team.matchesPlayed,
 			isRecruiting: team.isRecruiting,
 			isArchived: team.isArchived,
@@ -145,9 +150,9 @@ publicOrgRoutes.get("/:id", async (c) => {
 					.map((row) => row.userId)
 			).size,
 		})),
-		openPosts: org.lfgPosts.map((post) => mapRecruitmentPost(post, { viewerId: user?.id ?? null })),
-		// TODO: query actual pending join requests for the authenticated user
-		hasPendingJoinRequest: false,
+		openListings: org.recruitmentListings.map((listing) =>
+			mapRecruitmentListing(listing, { viewerId: user?.id ?? null })
+		),
 	};
 
 	return c.json({ data });

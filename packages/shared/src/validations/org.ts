@@ -7,14 +7,9 @@ const TEAM_PERMISSION_ROLE_VALUES = ["admin", "member"] as const;
 const MEMBER_TYPE_VALUES = ["player", "staff"] as const;
 const STAFF_ROLE_VALUES = ["coach", "analyst", "manager", "staff"] as const;
 const INVITE_ACTION_VALUES = ["accept", "decline"] as const;
-const REQUEST_ACTION_VALUES = ["approve", "reject", "cancel"] as const;
 
 const optionalDescription = v.optional(
 	v.pipe(v.string(), v.trim(), v.maxLength(800, "Description cannot exceed 800 characters"))
-);
-
-const optionalMessage = v.optional(
-	v.pipe(v.string(), v.trim(), v.maxLength(500, "Message cannot exceed 500 characters"))
 );
 
 const optionalSlug = v.optional(
@@ -285,34 +280,3 @@ export const RespondToOrgInviteSchema = v.object({
 });
 
 export type RespondToOrgInviteInput = v.InferOutput<typeof RespondToOrgInviteSchema>;
-
-// ─── Legacy join request schemas ─────────────────────────────────────────────
-
-export const CreateOrgJoinRequestSchema = v.object({
-	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
-	message: optionalMessage,
-});
-
-export type CreateOrgJoinRequestInput = v.InferOutput<typeof CreateOrgJoinRequestSchema>;
-
-export const CreateTeamJoinRequestSchema = v.object({
-	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
-	requestedRoleInTeam: v.picklist(OW2_ROLE_VALUES, "Please select a role"),
-	message: optionalMessage,
-});
-
-export type CreateTeamJoinRequestInput = v.InferOutput<typeof CreateTeamJoinRequestSchema>;
-
-export const RespondToOrgJoinRequestSchema = v.object({
-	requestId: v.pipe(v.string(), v.uuid("Invalid request ID")),
-	action: v.picklist(REQUEST_ACTION_VALUES, "Please select an action"),
-});
-
-export type RespondToOrgJoinRequestInput = v.InferOutput<typeof RespondToOrgJoinRequestSchema>;
-
-export const RespondToTeamJoinRequestSchema = v.object({
-	requestId: v.pipe(v.string(), v.uuid("Invalid request ID")),
-	action: v.picklist(REQUEST_ACTION_VALUES, "Please select an action"),
-});
-
-export type RespondToTeamJoinRequestInput = v.InferOutput<typeof RespondToTeamJoinRequestSchema>;

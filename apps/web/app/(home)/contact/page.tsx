@@ -19,7 +19,7 @@ export default function ContactPage() {
 				<Link href="/teams" className="underline underline-offset-4">
 					public team profiles
 				</Link>{" "}
-				or sign in for dashboard workflows.
+				or sign in for the app workspace.
 			</p>
 		</PublicPageShell>
 	);

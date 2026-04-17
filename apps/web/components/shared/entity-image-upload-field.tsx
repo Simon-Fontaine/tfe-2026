@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { apiRoutes } from "@/lib/routes";
 
 type UploadKind = "org-avatar" | "org-banner" | "team-avatar" | "team-banner";
 
@@ -55,7 +56,7 @@ export function EntityImageUploadField({
 			formData.set("file", file);
 			formData.set("kind", kind);
 
-			const res = await fetch("/api/uploads/assets", { method: "POST", body: formData });
+			const res = await fetch(apiRoutes.uploads.assets, { method: "POST", body: formData });
 			const data = (await res.json()) as { url?: string; error?: string };
 			if (!res.ok || !data.url) throw new Error(data.error ?? "Upload failed.");
 			onChange(data.url);

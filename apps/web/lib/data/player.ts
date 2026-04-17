@@ -32,7 +32,7 @@ export const getPlayerProfileFull = cache(
 export const getPlayerStats = cache(async (_userId: string): Promise<PlayerStats> => {
 	const res = await apiGet<PlayerStats>("/api/profile/stats");
 	if ("data" in res) return res.data;
-	if (res.status === 404) return { sr: 1500, scrimsPlayed: 0, wins: 0 };
+	if (res.status === 404) return { topTeamRating: null, scrimsPlayed: 0, wins: 0 };
 	throw new Error(res.error);
 });
 

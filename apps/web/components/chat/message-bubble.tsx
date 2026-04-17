@@ -1,6 +1,7 @@
 "use client";
 
 import { Delete01Icon, Edit01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ChatMessage } from "@scrimflow/shared";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -108,7 +109,7 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 									className="text-muted-foreground hover:text-foreground"
 									onClick={() => setIsEditing(true)}
 								>
-									<Edit01Icon className="size-3" />
+									<HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-3" />
 								</button>
 							) : null}
 							{onDelete ? (
@@ -118,7 +119,7 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 									className="text-muted-foreground hover:text-destructive"
 									onClick={() => onDelete(message.id)}
 								>
-									<Delete01Icon className="size-3" />
+									<HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-3" />
 								</button>
 							) : null}
 						</div>

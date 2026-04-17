@@ -19,8 +19,7 @@
 			}
 		],
 		"paths": {
-			"@/*": ["./*"],
-			"@scrimflow/app-sdk": ["../../packages/app-sdk/src/index.ts"]
+			"@/*": ["./*"]
 		}
 	},
 	"include": [

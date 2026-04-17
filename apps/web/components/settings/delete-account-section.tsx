@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import {
 	confirmAccountDeletionAction,
 	requestAccountDeletionAction,
-} from "@/app/dashboard/settings/actions/account-deletion";
+} from "@/app/actions/settings/account-deletion";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import {
 	AlertDialog,

@@ -1,6 +1,6 @@
 "use client";
 
-import { toggleRecruitingAction } from "@/app/dashboard/workspace/orgs/actions/team";
+import { toggleRecruitingAction } from "@/app/actions/team";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
 import { cn } from "@/lib/utils";

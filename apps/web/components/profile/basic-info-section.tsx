@@ -3,7 +3,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { type UpdateBasicInfoInput, UpdateBasicInfoSchema } from "@scrimflow/shared";
 import { useForm } from "react-hook-form";
-import { updateBasicInfoAction } from "@/app/dashboard/profile/actions/update-basic-info";
+import { updateBasicInfoAction } from "@/app/actions/profile/update-basic-info";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";

@@ -75,9 +75,19 @@ export const disputeResolutionEnum = pgEnum("dispute_resolution", [
 ]);
 
 /** Unified recruitment post categories. */
-export const lfgTypeEnum = pgEnum("lfg_type", ["lft", "lfp", "lfr", "lfs"]);
+export const recruitmentListingCategoryEnum = pgEnum("recruitment_listing_category", [
+	"lft",
+	"lfp",
+	"lfr",
+	"lfs",
+]);
 
-export const lfgStatusEnum = pgEnum("lfg_status", ["open", "closed", "fulfilled", "expired"]);
+export const recruitmentListingStatusEnum = pgEnum("recruitment_listing_status", [
+	"open",
+	"closed",
+	"fulfilled",
+	"expired",
+]);
 
 /** Access roles within an organization. */
 export const orgRoleEnum = pgEnum("org_role", ["owner", "admin", "member"]);
@@ -110,12 +120,18 @@ export const ocrJobStatusEnum = pgEnum("ocr_job_status", [
 	"requires_review",
 ]);
 
+/** Update feed owner scope. */
+export const updateScopeEnum = pgEnum("update_scope", ["team", "organization"]);
+
+/** Whether an update stays inside the workspace or appears publicly. */
+export const updateVisibilityEnum = pgEnum("update_visibility", ["workspace", "public"]);
+
 /** Chat channel context — determines access rules and lifecycle. */
 export const channelTypeEnum = pgEnum("channel_type", [
 	"scrim_lobby", // Created when a scrim is accepted. Members: both teams' rosters.
 	"scrim_negotiation", // Created when a scrim request is sent (pre-accept). Members: both managers.
 	"team", // Persistent team-internal chat. Members: active roster + coaches.
-	"recruitment", // Created per LFG application. Members: applicant + team managers.
+	"recruitment", // Created per recruitment application. Members: applicant + team managers.
 	"direct", // 1-on-1 direct message between two users.
 ]);
 
@@ -141,8 +157,8 @@ export const sessionRevocationReasonEnum = pgEnum("session_revocation_reason", [
 	"account_deletion",
 ]);
 
-/** LFG application lifecycle. */
-export const lfgApplicationStatusEnum = pgEnum("lfg_application_status", [
+/** Recruitment application lifecycle. */
+export const recruitmentApplicationStatusEnum = pgEnum("recruitment_application_status", [
 	"pending",
 	"accepted",
 	"rejected",
@@ -164,15 +180,6 @@ export const orgInviteStatusEnum = pgEnum("org_invite_status", [
 	"accepted",
 	"declined",
 	"expired",
-	"cancelled",
-]);
-
-/** Shared lifecycle for org/team join requests. */
-export const joinRequestStatusEnum = pgEnum("join_request_status", [
-	"pending",
-	"approved",
-	"rejected",
-	"withdrawn",
 	"cancelled",
 ]);
 
@@ -208,6 +215,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 	"scrim_request",
 	"scrim_accepted",
 	"scrim_cancelled",
+	"scrim_disputed",
+	"scrim_resolved",
 	"scrim_reminder",
 	"recruitment_application",
 	"recruitment_accepted",

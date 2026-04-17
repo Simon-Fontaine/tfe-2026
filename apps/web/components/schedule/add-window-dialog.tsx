@@ -4,7 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { type AvailabilityInput, AvailabilitySchema } from "@scrimflow/shared";
 import { useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { addAvailabilityAction } from "@/app/dashboard/schedule/actions/availability";
+import { addAvailabilityAction } from "@/app/actions/schedule/availability";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";

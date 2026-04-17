@@ -16,7 +16,7 @@ import {
 	cancelPasswordChangeAction,
 	confirmPasswordChangeAction,
 	requestPasswordChangeAction,
-} from "@/app/dashboard/settings/actions/password";
+} from "@/app/actions/settings/password";
 import { PasswordInput } from "@/components/shared/password-input";
 import { PasswordStrengthMeter } from "@/components/shared/password-strength-meter";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";

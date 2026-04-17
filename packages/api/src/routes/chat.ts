@@ -24,6 +24,7 @@ import {
 	createMessageForUser,
 	deleteMessageForUser,
 	editMessageForUser,
+	ensureScrimConversationLifecycle,
 	findOrCreateDirectConversation,
 	getConversationDetailForUser,
 	getMessageByIdForConversation,
@@ -31,12 +32,16 @@ import {
 	listConversationMembers,
 	listConversationsForUser,
 	listMessagesForUser,
+	listScrimConversationsForUser,
+	listTeamConversationsForUser,
 	markConversationReadForUser,
 	markMessagesReadForUser,
 } from "@/utils/chat";
+import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
 import { upgradeWebSocket } from "@/websocket";
 
 const chatRoutes = new Hono<AuthEnv>();
+const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
@@ -147,6 +152,42 @@ chatRoutes.get(
 chatRoutes.get("/conversations", async (c) => {
 	const user = c.get("user");
 	return c.json({ data: await listConversationsForUser(user.id) });
+});
+
+chatRoutes.get("/teams/:teamId/conversations", async (c) => {
+	const user = c.get("user");
+	const teamId = c.req.param("teamId");
+	const access = await getTeamAccessContext(teamId, user.id);
+	if (!access) return c.json({ error: "Team not found." }, 404);
+
+	const canView = access.teamStatus
+		? TEAM_VIEWABLE_STATUSES.includes(access.teamStatus as (typeof TEAM_VIEWABLE_STATUSES)[number])
+		: false;
+	if (!canView) {
+		return c.json({ error: "You do not have access to this team's chat workspace." }, 403);
+	}
+
+	return c.json({
+		data: await listTeamConversationsForUser(teamId, user.id),
+	});
+});
+
+chatRoutes.get("/scrims/:scrimId/conversations", async (c) => {
+	const user = c.get("user");
+	const scrimId = c.req.param("scrimId");
+	const scrim = await ensureScrimConversationLifecycle(scrimId);
+	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+
+	const canAccess =
+		(await isUserOnTeam(user.id, scrim.homeTeamId)) ||
+		(scrim.awayTeamId ? await isUserOnTeam(user.id, scrim.awayTeamId) : false);
+	if (!canAccess) {
+		return c.json({ error: "You do not have access to this scrim." }, 403);
+	}
+
+	return c.json({
+		data: await listScrimConversationsForUser(scrimId, user.id),
+	});
 });
 
 chatRoutes.get("/conversations/:id", async (c) => {

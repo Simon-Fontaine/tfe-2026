@@ -4,7 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { type UpdateGameProfileInput, UpdateGameProfileSchema } from "@scrimflow/shared";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { updateGameProfileAction } from "@/app/dashboard/profile/actions/update-game-profile";
+import { updateGameProfileAction } from "@/app/actions/profile/update-game-profile";
 import { HeroPoolPicker } from "@/components/shared/hero-pool-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

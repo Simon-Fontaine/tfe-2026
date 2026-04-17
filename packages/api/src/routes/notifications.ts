@@ -1,11 +1,44 @@
+import type { NotificationSummary } from "@scrimflow/shared";
 import { and, count, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
 import { notificationTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
+import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
 
 const notificationRoutes = new Hono<AuthEnv>();
+
+function mapNotification(row: {
+	id: string;
+	type: string;
+	title: string;
+	body: string | null;
+	referenceType: string | null;
+	referenceId: string | null;
+	isRead: boolean;
+	createdAt: Date;
+}): NotificationSummary {
+	return {
+		id: row.id,
+		type: row.type,
+		title: row.title,
+		body: row.body,
+		referenceType: row.referenceType,
+		referenceId: row.referenceId,
+		isRead: row.isRead,
+		createdAt: row.createdAt.toISOString(),
+	};
+}
+
+async function getUnreadNotificationCount(userId: string) {
+	const [result] = await db
+		.select({ count: count() })
+		.from(notificationTable)
+		.where(and(eq(notificationTable.userId, userId), eq(notificationTable.isRead, false)));
+
+	return Number(result?.count ?? 0);
+}
 
 // GET / — List user's notifications
 notificationRoutes.get("/", async (c) => {
@@ -18,40 +51,46 @@ notificationRoutes.get("/", async (c) => {
 	});
 
 	return c.json({
-		data: rows.map((r) => ({
-			id: r.id,
-			type: r.type,
-			title: r.title,
-			body: r.body ?? null,
-			referenceType: r.referenceType ?? null,
-			referenceId: r.referenceId ?? null,
-			isRead: r.isRead,
-			createdAt: r.createdAt,
-		})),
+		data: rows.map(mapNotification),
 	});
 });
 
 // GET /unread-count — Count unread notifications
 notificationRoutes.get("/unread-count", async (c) => {
 	const user = c.get("user");
-
-	const [result] = await db
-		.select({ count: count() })
-		.from(notificationTable)
-		.where(and(eq(notificationTable.userId, user.id), eq(notificationTable.isRead, false)));
-
-	return c.json({ data: { count: result?.count ?? 0 } });
+	return c.json({ data: { count: await getUnreadNotificationCount(user.id) } });
 });
 
 // POST /:id/read — Mark notification read
 notificationRoutes.post("/:id/read", async (c) => {
 	const user = c.get("user");
 	const notificationId = c.req.param("id");
+	const notification = await db.query.notificationTable.findFirst({
+		where: and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)),
+		columns: {
+			id: true,
+			isRead: true,
+		},
+	});
+	if (!notification) {
+		return c.json({ error: "Notification not found." }, 404);
+	}
 
-	await db
-		.update(notificationTable)
-		.set({ isRead: true })
-		.where(and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)));
+	if (!notification.isRead) {
+		await db
+			.update(notificationTable)
+			.set({ isRead: true })
+			.where(and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)));
+
+		publishUserRealtimeEvent({
+			userId: user.id,
+			event: "notification:read",
+			payload: {
+				notificationId,
+				unreadCount: await getUnreadNotificationCount(user.id),
+			},
+		});
+	}
 
 	return c.json({ success: true });
 });
@@ -64,6 +103,14 @@ notificationRoutes.post("/read-all", async (c) => {
 		.update(notificationTable)
 		.set({ isRead: true })
 		.where(eq(notificationTable.userId, user.id));
+
+	publishUserRealtimeEvent({
+		userId: user.id,
+		event: "notification:read-all",
+		payload: {
+			unreadCount: 0,
+		},
+	});
 
 	return c.json({ success: true });
 });

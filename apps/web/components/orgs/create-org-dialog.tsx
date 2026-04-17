@@ -5,7 +5,7 @@ import { type CreateOrgInput, CreateOrgSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { createOrgAction } from "@/app/dashboard/workspace/orgs/actions/org";
+import { createOrgAction } from "@/app/actions/org";
 import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
+import { appRoutes } from "@/lib/routes";
 
 interface CreateOrgDialogProps {
 	children: React.ReactNode;
@@ -46,7 +47,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 			pendingRef.current = false;
 			openRef.current = false;
 			const orgId = (state as { orgId?: string }).orgId;
-			if (orgId) router.push(`/dashboard/c/org/${orgId}`);
+			if (orgId) router.push(appRoutes.orgs.byId(orgId));
 		}
 	}, [state, router]);
 

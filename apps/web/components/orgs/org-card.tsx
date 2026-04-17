@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { UserOrg } from "@/lib/data/organization";
+import { appRoutes } from "@/lib/routes";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -18,7 +19,7 @@ interface OrgCardProps {
 export function OrgCard({ org }: OrgCardProps) {
 	return (
 		<Link
-			href={`/dashboard/orgs/${org.id}`}
+			href={appRoutes.orgs.byId(org.id)}
 			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 rounded-none overflow-hidden after:rounded-none shrink-0">

@@ -12,12 +12,12 @@ const OW2_RANK_VALUES = [
 ] as const;
 
 const OW2_ROLE_VALUES = ["tank", "damage", "support"] as const;
-const POST_CATEGORY_VALUES = ["lft", "lfp", "lfr", "lfs"] as const;
+const LISTING_CATEGORY_VALUES = ["lft", "lfp", "lfr", "lfs"] as const;
 const OWNER_TYPE_VALUES = ["player", "team", "organization"] as const;
 const MEMBER_TYPE_VALUES = ["player", "staff"] as const;
 const STAFF_ROLE_VALUES = ["coach", "analyst", "manager", "staff"] as const;
-const POST_STATUS_VALUES = ["open", "closed", "fulfilled", "expired"] as const;
-const RESPONSE_DECISION_VALUES = ["accept", "reject"] as const;
+const LISTING_STATUS_VALUES = ["open", "closed", "fulfilled", "expired"] as const;
+const APPLICATION_DECISION_VALUES = ["accept", "reject"] as const;
 
 const optionalDescription = v.optional(
 	v.pipe(v.string(), v.trim(), v.maxLength(800, "Description cannot exceed 800 characters"))
@@ -33,8 +33,8 @@ const optionalStaffRole = v.optional(v.picklist(STAFF_ROLE_VALUES, "Invalid staf
 const optionalGameRoles = v.optional(v.array(v.picklist(OW2_ROLE_VALUES, "Invalid role")));
 const optionalRank = v.optional(v.picklist(OW2_RANK_VALUES, "Invalid rank"));
 
-export const CreateRecruitmentPostSchema = v.object({
-	category: v.picklist(POST_CATEGORY_VALUES, "Please select a category"),
+export const CreateRecruitmentListingSchema = v.object({
+	category: v.picklist(LISTING_CATEGORY_VALUES, "Please select a category"),
 	ownerType: v.picklist(OWNER_TYPE_VALUES, "Please select an owner"),
 	organizationId: optionalUuid,
 	teamId: optionalUuid,
@@ -50,17 +50,17 @@ export const CreateRecruitmentPostSchema = v.object({
 	gameRoles: optionalGameRoles,
 	minRank: optionalRank,
 	maxRank: optionalRank,
-	minSr: v.optional(v.number("Minimum SR must be a number")),
-	maxSr: v.optional(v.number("Maximum SR must be a number")),
+	minRating: v.optional(v.number("Minimum rating must be a number")),
+	maxRating: v.optional(v.number("Maximum rating must be a number")),
 	region: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(60, "Region name too long"))),
 	expiresAt: v.optional(v.string()),
 });
 
-export type CreateRecruitmentPostInput = v.InferOutput<typeof CreateRecruitmentPostSchema>;
+export type CreateRecruitmentListingInput = v.InferOutput<typeof CreateRecruitmentListingSchema>;
 
-export const UpdateRecruitmentPostSchema = v.object({
-	postId: v.pipe(v.string(), v.uuid("Invalid post ID")),
-	category: v.picklist(POST_CATEGORY_VALUES, "Please select a category"),
+export const UpdateRecruitmentListingSchema = v.object({
+	listingId: v.pipe(v.string(), v.uuid("Invalid listing ID")),
+	category: v.picklist(LISTING_CATEGORY_VALUES, "Please select a category"),
 	title: v.pipe(
 		v.string(),
 		v.trim(),
@@ -73,47 +73,51 @@ export const UpdateRecruitmentPostSchema = v.object({
 	gameRoles: optionalGameRoles,
 	minRank: optionalRank,
 	maxRank: optionalRank,
-	minSr: v.optional(v.number("Minimum SR must be a number")),
-	maxSr: v.optional(v.number("Maximum SR must be a number")),
+	minRating: v.optional(v.number("Minimum rating must be a number")),
+	maxRating: v.optional(v.number("Maximum rating must be a number")),
 	region: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(60, "Region name too long"))),
 	expiresAt: v.optional(v.string()),
-	status: v.optional(v.picklist(POST_STATUS_VALUES, "Invalid post status")),
+	status: v.optional(v.picklist(LISTING_STATUS_VALUES, "Invalid listing status")),
 });
 
-export type UpdateRecruitmentPostInput = v.InferOutput<typeof UpdateRecruitmentPostSchema>;
+export type UpdateRecruitmentListingInput = v.InferOutput<typeof UpdateRecruitmentListingSchema>;
 
-export const UpdateRecruitmentPostStatusSchema = v.object({
-	postId: v.pipe(v.string(), v.uuid("Invalid post ID")),
-	status: v.picklist(POST_STATUS_VALUES, "Invalid post status"),
+export const UpdateRecruitmentListingStatusSchema = v.object({
+	listingId: v.pipe(v.string(), v.uuid("Invalid listing ID")),
+	status: v.picklist(LISTING_STATUS_VALUES, "Invalid listing status"),
 });
 
-export type UpdateRecruitmentPostStatusInput = v.InferOutput<
-	typeof UpdateRecruitmentPostStatusSchema
+export type UpdateRecruitmentListingStatusInput = v.InferOutput<
+	typeof UpdateRecruitmentListingStatusSchema
 >;
 
-export const CreateRecruitmentResponseSchema = v.object({
-	postId: v.pipe(v.string(), v.uuid("Invalid post ID")),
+export const CreateRecruitmentApplicationSchema = v.object({
+	listingId: v.pipe(v.string(), v.uuid("Invalid listing ID")),
 	message: optionalMessage,
 	senderTeamId: optionalUuid,
 	senderOrganizationId: optionalUuid,
 });
 
-export type CreateRecruitmentResponseInput = v.InferOutput<typeof CreateRecruitmentResponseSchema>;
-
-export const WithdrawRecruitmentResponseSchema = v.object({
-	responseId: v.pipe(v.string(), v.uuid("Invalid response ID")),
-});
-
-export type WithdrawRecruitmentResponseInput = v.InferOutput<
-	typeof WithdrawRecruitmentResponseSchema
+export type CreateRecruitmentApplicationInput = v.InferOutput<
+	typeof CreateRecruitmentApplicationSchema
 >;
 
-export const DecideRecruitmentResponseSchema = v.object({
-	responseId: v.pipe(v.string(), v.uuid("Invalid response ID")),
-	action: v.picklist(RESPONSE_DECISION_VALUES, "Please select an action"),
+export const WithdrawRecruitmentApplicationSchema = v.object({
+	applicationId: v.pipe(v.string(), v.uuid("Invalid application ID")),
+});
+
+export type WithdrawRecruitmentApplicationInput = v.InferOutput<
+	typeof WithdrawRecruitmentApplicationSchema
+>;
+
+export const DecideRecruitmentApplicationSchema = v.object({
+	applicationId: v.pipe(v.string(), v.uuid("Invalid application ID")),
+	action: v.picklist(APPLICATION_DECISION_VALUES, "Please select an action"),
 	memberType: v.optional(v.picklist(MEMBER_TYPE_VALUES, "Please select a member type")),
 	staffRole: optionalStaffRole,
 	gameRole: optionalOw2Role,
 });
 
-export type DecideRecruitmentResponseInput = v.InferOutput<typeof DecideRecruitmentResponseSchema>;
+export type DecideRecruitmentApplicationInput = v.InferOutput<
+	typeof DecideRecruitmentApplicationSchema
+>;

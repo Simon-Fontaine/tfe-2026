@@ -1,18 +1,35 @@
+import {
+	CreateScrimEvidenceUploadIntentSchema,
+	FinalizeScrimEvidenceUploadSchema,
+} from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
+import * as v from "valibot";
 
 import { db } from "@/db";
-import { userTable } from "@/db/schema";
+import { scrimTable, userTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
-import { deleteFile, keyFromUrl, uploadFile } from "@/storage/s3";
+import { extractErrors } from "@/routes/auth/utils";
+import {
+	buildObjectUrl,
+	createPutUploadUrl,
+	deleteFile,
+	headFile,
+	keyFromUrl,
+	uploadFile,
+} from "@/storage/s3";
+import { isUserOnTeam } from "@/utils/team";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const BANNER_MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const AVATAR_BUCKET = process.env.S3_BUCKET_AVATARS ?? "avatars";
 const BANNER_BUCKET = process.env.S3_BUCKET_BANNERS ?? "banners";
+const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
 const ENTITY_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const ENTITY_BANNER_MAX_BYTES = 4 * 1024 * 1024;
+const SCREENSHOT_MAX_BYTES = 8 * 1024 * 1024;
+const SCREENSHOT_TYPES = ["game_history", "scoreboard"] as const;
 
 const uploadRoutes = new Hono<AuthEnv>();
 
@@ -22,6 +39,34 @@ const ENTITY_UPLOAD_KIND = {
 	"team-avatar": { bucket: AVATAR_BUCKET, maxBytes: ENTITY_AVATAR_MAX_BYTES },
 	"team-banner": { bucket: BANNER_BUCKET, maxBytes: ENTITY_BANNER_MAX_BYTES },
 } as const;
+
+function sanitizeFileName(fileName: string) {
+	return fileName
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9._-]+/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-|-$/g, "")
+		.slice(0, 80);
+}
+
+async function getScrimAccess(scrimId: string, userId: string) {
+	const scrim = await db.query.scrimTable.findFirst({
+		where: eq(scrimTable.id, scrimId),
+		columns: {
+			id: true,
+			homeTeamId: true,
+			awayTeamId: true,
+		},
+	});
+	if (!scrim) return { scrim: null, canAccess: false };
+
+	const canAccess =
+		(await isUserOnTeam(userId, scrim.homeTeamId)) ||
+		(scrim.awayTeamId ? await isUserOnTeam(userId, scrim.awayTeamId) : false);
+
+	return { scrim, canAccess };
+}
 
 uploadRoutes.post("/assets", async (c) => {
 	const user = c.get("user");
@@ -47,6 +92,150 @@ uploadRoutes.post("/assets", async (c) => {
 	const url = await uploadFile(uploadConfig.bucket, key, buffer, file.type);
 
 	return c.json({ url });
+});
+
+uploadRoutes.post("/scrim-evidence", async (c) => {
+	const user = c.get("user");
+	const body = await c.req.parseBody();
+	const file = body.file;
+	const scrimId = body.scrimId;
+	const screenshotType = body.screenshotType;
+
+	if (!(file instanceof File)) return c.json({ error: "No file provided." }, 400);
+	if (typeof scrimId !== "string" || !scrimId) {
+		return c.json({ error: "A scrim ID is required." }, 400);
+	}
+	if (
+		typeof screenshotType !== "string" ||
+		!SCREENSHOT_TYPES.includes(screenshotType as (typeof SCREENSHOT_TYPES)[number])
+	) {
+		return c.json({ error: "Invalid screenshot type." }, 400);
+	}
+
+	if (!ALLOWED_TYPES.includes(file.type))
+		return c.json({ error: "Only JPEG, PNG and WebP images are allowed." }, 400);
+	if (file.size > SCREENSHOT_MAX_BYTES) {
+		return c.json({ error: "File must be smaller than 8 MB." }, 400);
+	}
+
+	const scrim = await db.query.scrimTable.findFirst({
+		where: eq(scrimTable.id, scrimId),
+		columns: {
+			id: true,
+			homeTeamId: true,
+			awayTeamId: true,
+		},
+	});
+	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+
+	const canAccess =
+		(await isUserOnTeam(user.id, scrim.homeTeamId)) ||
+		(scrim.awayTeamId ? await isUserOnTeam(user.id, scrim.awayTeamId) : false);
+	if (!canAccess) {
+		return c.json({ error: "You do not have access to upload evidence for this scrim." }, 403);
+	}
+
+	const arrayBuffer = await file.arrayBuffer();
+	const buffer = Buffer.from(arrayBuffer);
+	const key = `private/scrims/${scrimId}/${user.id}/${screenshotType}/${Date.now()}`;
+	const url = await uploadFile(SCREENSHOT_BUCKET, key, buffer, file.type);
+
+	return c.json({ url });
+});
+
+uploadRoutes.post("/scrim-evidence/intents", async (c) => {
+	const user = c.get("user");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(CreateScrimEvidenceUploadIntentSchema, body);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const { scrim, canAccess } = await getScrimAccess(parsed.output.scrimId, user.id);
+	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+	if (!canAccess) {
+		return c.json({ error: "You do not have access to upload evidence for this scrim." }, 403);
+	}
+
+	const extension =
+		parsed.output.contentType === "image/png"
+			? "png"
+			: parsed.output.contentType === "image/webp"
+				? "webp"
+				: "jpg";
+	const safeFileName =
+		sanitizeFileName(parsed.output.fileName.replace(/\.[^.]+$/, "")) || "evidence";
+	const objectKey = [
+		"private",
+		"scrims",
+		scrim.id,
+		user.id,
+		parsed.output.screenshotType,
+		`${Date.now()}-${safeFileName}.${extension}`,
+	].join("/");
+
+	const upload = await createPutUploadUrl({
+		bucket: SCREENSHOT_BUCKET,
+		key: objectKey,
+		contentType: parsed.output.contentType,
+		expiresInSeconds: 900,
+	});
+
+	return c.json({
+		data: {
+			uploadUrl: upload.uploadUrl,
+			uploadMethod: "PUT",
+			uploadHeaders: {
+				"Content-Type": parsed.output.contentType,
+			},
+			objectKey,
+			objectUrl: upload.objectUrl,
+			expiresAt: new Date(Date.now() + 900_000).toISOString(),
+		},
+	});
+});
+
+uploadRoutes.post("/scrim-evidence/finalize", async (c) => {
+	const user = c.get("user");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(FinalizeScrimEvidenceUploadSchema, body);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const { scrim, canAccess } = await getScrimAccess(parsed.output.scrimId, user.id);
+	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+	if (!canAccess) {
+		return c.json({ error: "You do not have access to finalize evidence for this scrim." }, 403);
+	}
+
+	const requiredPrefix = `private/scrims/${scrim.id}/${user.id}/${parsed.output.screenshotType}/`;
+	if (!parsed.output.objectKey.startsWith(requiredPrefix)) {
+		return c.json(
+			{ error: "This upload key does not belong to your scrim evidence session." },
+			400
+		);
+	}
+
+	const object = await headFile(SCREENSHOT_BUCKET, parsed.output.objectKey).catch(() => null);
+	if (!object) {
+		return c.json({ error: "Uploaded object not found." }, 404);
+	}
+	if (object.contentType && !ALLOWED_TYPES.includes(object.contentType)) {
+		return c.json({ error: "Uploaded evidence has an unsupported content type." }, 400);
+	}
+	if (object.contentLength && object.contentLength > SCREENSHOT_MAX_BYTES) {
+		return c.json({ error: "Uploaded evidence exceeds the 8 MB limit." }, 400);
+	}
+
+	return c.json({
+		data: {
+			objectKey: parsed.output.objectKey,
+			url: buildObjectUrl(SCREENSHOT_BUCKET, parsed.output.objectKey),
+			contentType: object.contentType,
+			sizeBytes: object.contentLength,
+		},
+	});
 });
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────

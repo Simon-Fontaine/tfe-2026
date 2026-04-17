@@ -3,10 +3,10 @@ import { asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { lfgPostTable, userTable } from "@/db/schema";
+import { recruitmentListingTable, userTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
-import { mapRecruitmentPost } from "@/utils/recruit";
+import { mapRecruitmentListing } from "@/utils/recruit";
 
 const publicPlayerRoutes = new Hono<AuthEnv>();
 
@@ -31,12 +31,12 @@ publicPlayerRoutes.get("/", async (c) => {
 					rankDivision: true,
 				},
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				with: {
 					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
-					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
 				},
 			},
@@ -55,9 +55,9 @@ publicPlayerRoutes.get("/", async (c) => {
 		secondaryRole: row.profile?.secondaryRole ?? null,
 		rank: row.profile?.rank ?? null,
 		rankDivision: row.profile?.rankDivision ?? null,
-		openPosts: row.lfgPosts
+		openListings: row.recruitmentListings
 			.filter((post) => post.ownerType === "player")
-			.map((post) => mapRecruitmentPost(post, { viewerId: viewer?.id ?? null })),
+			.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null })),
 	}));
 
 	return c.json({ data });
@@ -86,12 +86,12 @@ publicPlayerRoutes.get("/:username", async (c) => {
 					rankDivision: true,
 				},
 			},
-			lfgPosts: {
-				where: eq(lfgPostTable.status, "open"),
+			recruitmentListings: {
+				where: eq(recruitmentListingTable.status, "open"),
 				with: {
 					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
-					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, teamSr: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
 				},
 			},
@@ -99,9 +99,9 @@ publicPlayerRoutes.get("/:username", async (c) => {
 	});
 	if (!player) return c.json({ error: "Player not found." }, 404);
 
-	const openPosts = player.lfgPosts
+	const openListings = player.recruitmentListings
 		.filter((post) => post.ownerType === "player")
-		.map((post) => mapRecruitmentPost(post, { viewerId: viewer?.id ?? null }));
+		.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null }));
 
 	const data: PublicPlayerDetail = {
 		id: player.id,
@@ -114,7 +114,7 @@ publicPlayerRoutes.get("/:username", async (c) => {
 		secondaryRole: player.profile?.secondaryRole ?? null,
 		rank: player.profile?.rank ?? null,
 		rankDivision: player.profile?.rankDivision ?? null,
-		openPosts,
+		openListings,
 	};
 
 	return c.json({ data });

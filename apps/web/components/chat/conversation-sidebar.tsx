@@ -23,12 +23,10 @@ export function ConversationSidebar({
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
 
-	// Hydrate the store with server-fetched data on first render
+	// Keep the store aligned with the current server-rendered chat context.
 	useEffect(() => {
-		if (conversations.length === 0 && initialConversations.length > 0) {
-			setConversations(initialConversations);
-		}
-	}, [initialConversations, conversations.length, setConversations]);
+		setConversations(initialConversations);
+	}, [initialConversations, setConversations]);
 
 	// Sync selected conversation to URL search param
 	useEffect(() => {
@@ -86,6 +84,9 @@ function ConversationItem({
 					</Badge>
 				) : null}
 			</div>
+			<p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+				{formatConversationTypeLabel(conversation.type)}
+			</p>
 			{conversation.lastMessagePreview ? (
 				<p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
 					{conversation.lastMessagePreview}
@@ -95,4 +96,21 @@ function ConversationItem({
 			)}
 		</button>
 	);
+}
+
+function formatConversationTypeLabel(type: ChatConversationSummary["type"]) {
+	switch (type) {
+		case "team":
+			return "Team room";
+		case "scrim_lobby":
+			return "Scrim lobby";
+		case "scrim_negotiation":
+			return "Scrim negotiation";
+		case "recruitment":
+			return "Recruitment";
+		case "direct":
+			return "Direct message";
+		default:
+			return type;
+	}
 }

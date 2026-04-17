@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { checkUsernameAction } from "@/app/(auth)/auth/actions";
-import { changeUsernameAction } from "@/app/dashboard/settings/actions/username";
+import { changeUsernameAction } from "@/app/actions/settings/username";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";

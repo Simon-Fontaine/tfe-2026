@@ -1,9 +1,6 @@
 "use client";
 
-import {
-	cancelOrgInviteAction,
-	resendOrgInviteAction,
-} from "@/app/dashboard/workspace/orgs/actions/org";
+import { cancelOrgInviteAction, resendOrgInviteAction } from "@/app/actions/org";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

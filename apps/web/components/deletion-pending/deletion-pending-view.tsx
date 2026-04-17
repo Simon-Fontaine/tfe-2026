@@ -7,9 +7,10 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { signOutAction } from "@/app/(auth)/auth/sign-out-actions";
-import { cancelAccountDeletionAction } from "@/app/dashboard/settings/actions/account-deletion";
+import { cancelAccountDeletionAction } from "@/app/actions/settings/account-deletion";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { appRoutes } from "@/lib/routes";
 
 interface DeletionPendingViewProps {
 	scheduledAt: string;
@@ -35,7 +36,7 @@ export function DeletionPendingView({ scheduledAt }: DeletionPendingViewProps) {
 				toast.error(result.error);
 			} else {
 				toast.success("Account deletion cancelled.");
-				router.push("/dashboard");
+				router.push(appRoutes.root);
 			}
 		});
 	}
