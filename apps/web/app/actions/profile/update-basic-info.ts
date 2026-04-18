@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiPatch } from "@/lib/api-client";
-import { appRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 function revalidateProfileSurfaces() {
 	revalidatePath(appRoutes.root);
@@ -16,7 +16,7 @@ export async function updateBasicInfoAction(
 	_prev: FormActionResult | null,
 	formData: FormData
 ): Promise<FormActionResult> {
-	const res = await apiPatch("/api/profile/basic", {
+	const res = await apiPatch(apiRoutes.profile.basic, {
 		displayName: String(formData.get("displayName") ?? ""),
 		bio: formData.get("bio") ?? undefined,
 		socialLinks: {

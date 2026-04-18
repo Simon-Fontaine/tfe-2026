@@ -1,4 +1,5 @@
 import { encodeBase64 } from "@oslojs/encoding";
+import { appRoutes } from "@scrimflow/shared";
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type * as v from "valibot";
@@ -32,7 +33,7 @@ export type ActionResult = {
 export function safeRedirectUrl(next: string | null | undefined): string {
 	const url = typeof next === "string" ? next.trim() : "";
 	if (!url || !url.startsWith("/") || url.startsWith("//") || url.startsWith("/auth")) {
-		return "/dashboard";
+		return appRoutes.root;
 	}
 	return url;
 }

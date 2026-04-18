@@ -2,6 +2,7 @@ import type { Session, SessionUser, SessionValidationResult } from "@scrimflow/s
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
+import { apiRoutes } from "@/lib/routes";
 
 export type {
 	Session,
@@ -16,7 +17,7 @@ export type {
 /** Request-memoized current session via API. */
 export const getCurrentSession = cache(async (): Promise<SessionValidationResult> => {
 	const res = await apiGet<{ session: Session | null; user: SessionUser | null }>(
-		"/api/auth/session"
+		apiRoutes.auth.session
 	);
 	if ("data" in res && res.data.session && res.data.user) {
 		return { session: res.data.session, user: res.data.user };

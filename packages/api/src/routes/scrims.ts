@@ -284,7 +284,7 @@ type ScrimSummaryRow = {
 	awayMapScore: number;
 	createdAt: Date;
 	updatedAt: Date;
-	createdByUserId: string;
+	createdByUserId: string | null;
 	createdBy: ScrimRow["createdBy"];
 	homeTeam: ScrimRow["homeTeam"];
 	awayTeam: ScrimRow["awayTeam"];

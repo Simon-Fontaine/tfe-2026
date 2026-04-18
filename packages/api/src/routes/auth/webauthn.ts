@@ -5,7 +5,7 @@ import {
 	parseAuthenticatorData,
 	parseClientDataJSON,
 } from "@oslojs/webauthn";
-import { rateLimits } from "@scrimflow/shared";
+import { appRoutes, rateLimits } from "@scrimflow/shared";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
 import { resolveDevice } from "@/auth/device";
@@ -145,7 +145,7 @@ webauthnRoutes.post("/passkey/verify", requireAuth, async (c) => {
 	});
 
 	const redirect =
-		body.next?.startsWith("/") && !body.next.startsWith("//") ? body.next : "/dashboard";
+		body.next?.startsWith("/") && !body.next.startsWith("//") ? body.next : appRoutes.root;
 
 	return c.json({ redirect });
 });
@@ -189,7 +189,7 @@ webauthnRoutes.post("/security-key/verify", requireAuth, async (c) => {
 	});
 
 	const redirect =
-		body.next?.startsWith("/") && !body.next.startsWith("//") ? body.next : "/dashboard";
+		body.next?.startsWith("/") && !body.next.startsWith("//") ? body.next : appRoutes.root;
 
 	return c.json({ redirect });
 });
@@ -316,7 +316,7 @@ webauthnRoutes.post("/passkey/login", async (c) => {
 	);
 
 	const { next } = body as { next?: string };
-	const redirect = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+	const redirect = next?.startsWith("/") && !next.startsWith("//") ? next : appRoutes.root;
 
 	return c.json({ redirect });
 });

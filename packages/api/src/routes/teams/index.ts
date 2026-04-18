@@ -46,6 +46,10 @@ function getEffectiveInviteStatus(status: string, expiresAt: Date) {
 	return status === "pending" && expiresAt < new Date() ? "expired" : status;
 }
 
+function isActivePendingInvite(status: string, expiresAt: Date) {
+	return getEffectiveInviteStatus(status, expiresAt) === "pending";
+}
+
 function toTeamPermissions(ctx: NonNullable<Awaited<ReturnType<typeof getTeamAccessContext>>>) {
 	const orgCanManage = ctx.orgRole === "owner" || ctx.orgRole === "admin";
 
@@ -381,9 +385,12 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 	if (!invite) return c.json({ error: "Invite not found." }, 404);
 	if (invite.inviteeUserId !== user.id)
 		return c.json({ error: "This invite is not for you." }, 403);
-	if (invite.status !== "pending")
+	const effectiveStatus = getEffectiveInviteStatus(invite.status, invite.expiresAt);
+	if (effectiveStatus === "expired") {
+		return c.json({ error: "This invite has expired." }, 400);
+	}
+	if (effectiveStatus !== "pending")
 		return c.json({ error: "This invite is no longer active." }, 400);
-	if (invite.expiresAt < new Date()) return c.json({ error: "This invite has expired." }, 400);
 
 	if (parsed.output.action === "accept") {
 		const normalized = normalizeMemberFields({
@@ -941,7 +948,7 @@ teamRoutes.delete("/:id/invites/:inviteId", async (c) => {
 		columns: { id: true, teamId: true, status: true, expiresAt: true },
 	});
 	if (!invite || invite.teamId !== teamId) return c.json({ error: "Invite not found." }, 404);
-	if (getEffectiveInviteStatus(invite.status, invite.expiresAt) !== "pending") {
+	if (!isActivePendingInvite(invite.status, invite.expiresAt)) {
 		return c.json({ error: "Only pending invites can be cancelled." }, 400);
 	}
 
@@ -968,7 +975,7 @@ teamRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 		with: { team: { columns: { name: true } } },
 	});
 	if (!invite || invite.teamId !== teamId) return c.json({ error: "Invite not found." }, 404);
-	if (invite.status !== "pending")
+	if (!isActivePendingInvite(invite.status, invite.expiresAt))
 		return c.json({ error: "Only pending invites can be resent." }, 400);
 
 	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);

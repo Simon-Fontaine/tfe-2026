@@ -590,7 +590,7 @@ export type UpdatePostSummary = {
 	visibility: UpdatePostVisibility;
 	title: string;
 	body: string;
-	authorUserId: string;
+	authorUserId: string | null;
 	authorDisplayName: string | null;
 	teamId: string | null;
 	teamName: string | null;
@@ -1051,7 +1051,7 @@ export type OcrJobSummary = {
 	errorMessage: string | null;
 	errorCode: string | null;
 	retryCount: number;
-	submittedByUserId: string;
+	submittedByUserId: string | null;
 	submittedByDisplayName: string | null;
 	providerName: string | null;
 	providerModel: string | null;
@@ -1078,7 +1078,7 @@ export type ScrimSummary = {
 	awayMapScore: number;
 	createdAt: IsoDateString;
 	updatedAt: IsoDateString;
-	createdByUserId: string;
+	createdByUserId: string | null;
 	createdByDisplayName: string | null;
 	homeTeam: ScrimTeamSummary;
 	awayTeam: ScrimTeamSummary | null;

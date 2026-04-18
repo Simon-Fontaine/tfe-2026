@@ -7,7 +7,7 @@ export function mapUpdatePost(
 		visibility: "workspace" | "public";
 		title: string;
 		body: string;
-		authorUserId: string;
+		authorUserId: string | null;
 		createdAt: Date;
 		updatedAt: Date;
 		author?: { id: string; displayName: string | null } | null;

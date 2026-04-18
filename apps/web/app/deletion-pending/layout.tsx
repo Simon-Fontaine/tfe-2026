@@ -7,13 +7,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
-import { appRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export default async function DeletionPendingLayout({ children }: { children: ReactNode }) {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 
-	const deletionRes = await apiGet<{ isPending: boolean }>("/api/settings/account/deletion");
+	const deletionRes = await apiGet<{ isPending: boolean }>(
+		apiRoutes.settings.account.deletion.root
+	);
 	if (!("data" in deletionRes) || !deletionRes.data.isPending) redirect(appRoutes.root);
 
 	return (

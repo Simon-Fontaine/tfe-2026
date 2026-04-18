@@ -8,6 +8,7 @@ import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getActiveHeroes } from "@/lib/data/heroes";
 import { getPlayerProfileFull } from "@/lib/data/player";
+import { apiRoutes } from "@/lib/routes";
 
 type UserInfo = {
 	displayName: string;
@@ -23,7 +24,7 @@ export default async function AppProfilePage() {
 
 	const [profile, userInfoRes, heroes] = await Promise.all([
 		getPlayerProfileFull(user.id),
-		apiGet<UserInfo | null>("/api/profile/user-info"),
+		apiGet<UserInfo | null>(apiRoutes.profile.userInfo),
 		getActiveHeroes(),
 	]);
 

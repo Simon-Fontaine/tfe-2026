@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiPatch } from "@/lib/api-client";
-import { appRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 function revalidateProfileSurfaces() {
 	revalidatePath(appRoutes.root);
@@ -18,7 +18,7 @@ export async function updateGameProfileAction(
 ): Promise<FormActionResult> {
 	const rawDivision = formData.get("rankDivision");
 
-	const res = await apiPatch("/api/profile/game", {
+	const res = await apiPatch(apiRoutes.profile.game, {
 		battletag: formData.get("battletag") || undefined,
 		primaryRole: String(formData.get("primaryRole") ?? ""),
 		secondaryRole: formData.get("secondaryRole") || null,

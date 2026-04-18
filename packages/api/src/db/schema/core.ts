@@ -217,7 +217,7 @@ export const organizationTable = pgTable(
 		/** Org creator. Denormalized for fast access. */
 		ownerId: uuid("owner_id")
 			.notNull()
-			.references(() => userTable.id, { onDelete: "restrict" }),
+			.references(() => userTable.id, { onDelete: "cascade" }),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -501,9 +501,9 @@ export const updatePostTable = pgTable(
 		scopeType: updateScopeEnum("scope_type").notNull(),
 		visibility: updateVisibilityEnum("visibility").notNull().default("workspace"),
 
-		authorUserId: uuid("author_user_id")
-			.notNull()
-			.references(() => userTable.id, { onDelete: "restrict" }),
+		authorUserId: uuid("author_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
 
 		organizationId: uuid("organization_id").references(() => organizationTable.id, {
 			onDelete: "cascade",
@@ -638,9 +638,9 @@ export const scrimTable = pgTable(
 		disputeNotes: text("dispute_notes"),
 
 		/** User who created this scrim request. */
-		createdByUserId: uuid("created_by_user_id")
-			.notNull()
-			.references(() => userTable.id, { onDelete: "restrict" }),
+		createdByUserId: uuid("created_by_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
 
 		/** Optional message from the requester. */
 		message: text("message"),
@@ -969,9 +969,9 @@ export const ocrJobTable = pgTable(
 			.references(() => scrimTable.id, { onDelete: "cascade" }),
 
 		/** User who uploaded the screenshot. */
-		submittedByUserId: uuid("submitted_by_user_id")
-			.notNull()
-			.references(() => userTable.id, { onDelete: "restrict" }),
+		submittedByUserId: uuid("submitted_by_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
 
 		/** Screenshot type: "game_history" or "scoreboard". */
 		screenshotType: text("screenshot_type").notNull(),
@@ -1171,7 +1171,7 @@ export const teamInviteTable = pgTable(
 		/** Manager who sent the invite. */
 		inviterUserId: uuid("inviter_user_id")
 			.notNull()
-			.references(() => userTable.id, { onDelete: "restrict" }),
+			.references(() => userTable.id, { onDelete: "cascade" }),
 
 		/** Role the invitee will join with. */
 		memberType: memberTypeEnum("member_type").notNull().default("player"),
@@ -1219,7 +1219,7 @@ export const orgInviteTable = pgTable(
 		/** Manager who sent the invite. */
 		inviterUserId: uuid("inviter_user_id")
 			.notNull()
-			.references(() => userTable.id, { onDelete: "restrict" }),
+			.references(() => userTable.id, { onDelete: "cascade" }),
 
 		/** Role the invitee will join as. */
 		role: orgRoleEnum("role").notNull().default("member"),

@@ -4,16 +4,19 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getOrgsForUser } from "@/lib/data/orgs";
 import { getMyRecruitmentListings, getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
+import { apiRoutes } from "@/lib/routes";
 
 export async function requireWorkspaceSession() {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 	if (user.registered2FA && !session.twoFactorVerified) redirect("/auth");
 
-	const profileRes = await apiGet<{ exists: boolean }>("/api/profile/exists");
+	const profileRes = await apiGet<{ exists: boolean }>(apiRoutes.profile.exists);
 	if (!("data" in profileRes) || !profileRes.data.exists) redirect("/onboarding");
 
-	const deletionRes = await apiGet<{ isPending: boolean }>("/api/settings/account/deletion");
+	const deletionRes = await apiGet<{ isPending: boolean }>(
+		apiRoutes.settings.account.deletion.root
+	);
 	if ("data" in deletionRes && deletionRes.data.isPending) redirect("/deletion-pending");
 
 	return { session, user };

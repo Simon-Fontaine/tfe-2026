@@ -14,6 +14,7 @@ import { TotpManagementSection } from "@/components/settings/totp-management-sec
 import { TwoFactorMethodsSection } from "@/components/settings/two-factor-methods-section";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
+import { apiRoutes } from "@/lib/routes";
 import { SecurityStatusProvider } from "@/stores/security-status";
 
 export default async function AppSecuritySettingsPage() {
@@ -21,7 +22,7 @@ export default async function AppSecuritySettingsPage() {
 	if (!session || !user) redirect("/auth");
 
 	const [securityRes, passkeys, securityKeys, pending] = await Promise.all([
-		apiGet<{ hasPassword: boolean }>("/api/settings/security/summary"),
+		apiGet<{ hasPassword: boolean }>(apiRoutes.settings.security.summary),
 		listPasskeysAction(),
 		listSecurityKeysAction(),
 		getPendingVerificationsAction(),

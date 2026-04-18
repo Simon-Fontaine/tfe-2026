@@ -2,7 +2,7 @@
 
 import type { OnboardingActionResult } from "@/hooks/use-onboarding-action";
 import { apiPost } from "@/lib/api-client";
-import { appRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export async function createPlayerProfileAction(
 	_prev: OnboardingActionResult | null,
@@ -10,7 +10,7 @@ export async function createPlayerProfileAction(
 ): Promise<OnboardingActionResult> {
 	const rawDivision = formData.get("rankDivision");
 
-	const res = await apiPost<{ redirect?: string }>("/api/onboarding/profile", {
+	const res = await apiPost<{ redirect?: string }>(apiRoutes.onboarding.profile, {
 		battletag: formData.get("battletag") || undefined,
 		primaryRole: String(formData.get("primaryRole") ?? ""),
 		secondaryRole: formData.get("secondaryRole") || null,

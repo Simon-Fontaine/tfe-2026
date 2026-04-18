@@ -3,6 +3,17 @@ export const apiRoutes = {
 		session: "/api/auth/session",
 		login: "/api/auth/login",
 		logout: "/api/auth/logout",
+		credentials: {
+			challenge: "/api/auth/credentials/challenge",
+			passkeys: "/api/auth/credentials/passkeys",
+			securityKeys: "/api/auth/credentials/security-keys",
+			passkey: {
+				register: "/api/auth/credentials/passkey/register",
+			},
+			securityKey: {
+				register: "/api/auth/credentials/security-key/register",
+			},
+		},
 		register: {
 			root: "/api/auth/register",
 			checkUsername: (username: string) =>
@@ -12,13 +23,96 @@ export const apiRoutes = {
 			totp: "/api/auth/2fa/totp",
 			recovery: "/api/auth/2fa/recovery",
 		},
+		totp: {
+			root: "/api/auth/totp",
+			generate: "/api/auth/totp/generate",
+			enable: "/api/auth/totp/enable",
+			status: "/api/auth/totp/status",
+		},
 		verify: {
 			email: "/api/auth/verify/email",
 			device: "/api/auth/verify/device",
 			resend: "/api/auth/verify/resend",
 		},
+		webauthn: {
+			challenge: "/api/auth/webauthn/challenge",
+			passkey: {
+				verify: "/api/auth/webauthn/passkey/verify",
+				login: "/api/auth/webauthn/passkey/login",
+			},
+			securityKey: {
+				verify: "/api/auth/webauthn/security-key/verify",
+			},
+		},
 		forgotPassword: "/api/auth/forgot-password",
 		resetPassword: "/api/auth/reset-password",
+	},
+	onboarding: {
+		profile: "/api/onboarding/profile",
+	},
+	profile: {
+		root: "/api/profile",
+		exists: "/api/profile/exists",
+		userInfo: "/api/profile/user-info",
+		stats: "/api/profile/stats",
+		basic: "/api/profile/basic",
+		game: "/api/profile/game",
+	},
+	settings: {
+		root: "/api/settings",
+		account: {
+			deletion: {
+				root: "/api/settings/account/deletion",
+				request: "/api/settings/account/deletion/request",
+				confirm: "/api/settings/account/deletion/confirm",
+			},
+		},
+		credentials: {
+			passkey: {
+				disable: {
+					request: "/api/settings/credentials/passkey/disable/request",
+					confirm: "/api/settings/credentials/passkey/disable/confirm",
+				},
+			},
+			securityKey: {
+				disable: {
+					request: "/api/settings/credentials/security-key/disable/request",
+					confirm: "/api/settings/credentials/security-key/disable/confirm",
+				},
+			},
+		},
+		email: {
+			request: "/api/settings/email/request",
+			verify: "/api/settings/email/verify",
+		},
+		password: {
+			request: "/api/settings/password/request",
+			confirm: "/api/settings/password/confirm",
+		},
+		security: {
+			summary: "/api/settings/security/summary",
+		},
+		sessions: {
+			root: "/api/settings/sessions",
+			byId: (sessionId: string) => `/api/settings/sessions/${sessionId}`,
+			logout: "/api/settings/sessions/logout",
+		},
+		twoFactorDisable: {
+			request: "/api/settings/2fa/request",
+			confirm: "/api/settings/2fa/confirm",
+		},
+		username: "/api/settings/username",
+		verifications: {
+			pending: "/api/settings/verifications/pending",
+		},
+	},
+	schedule: {
+		availability: {
+			root: "/api/schedule/availability",
+			byId: (availabilityId: string) => `/api/schedule/availability/${availabilityId}`,
+		},
+		teams: "/api/schedule/teams",
+		teamById: (teamId: string) => `/api/schedule/team/${teamId}`,
 	},
 	orgs: {
 		root: "/api/orgs",
@@ -118,6 +212,13 @@ export const apiRoutes = {
 		root: "/api/updates",
 		byId: (updateId: string) => `/api/updates/${updateId}`,
 		publicRoot: "/api/public/updates",
+	},
+	heroes: {
+		root: "/api/heroes",
+	},
+	players: {
+		publicRoot: "/api/public/players",
+		publicByUsername: (username: string) => `/api/public/players/${username}`,
 	},
 	chat: {
 		conversations: "/api/chat/conversations",

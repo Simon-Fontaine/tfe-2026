@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiDelete, apiPost } from "@/lib/api-client";
-import { appRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 function revalidateScheduleSurfaces(teamId: string) {
 	revalidatePath(appRoutes.root);
@@ -17,7 +17,7 @@ export async function addAvailabilityAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const teamId = String(formData.get("teamId") ?? "");
-	const res = await apiPost("/api/schedule/availability", {
+	const res = await apiPost(apiRoutes.schedule.availability.root, {
 		teamId,
 		type: String(formData.get("type") ?? ""),
 		dayOfWeek: formData.get("dayOfWeek") !== null ? Number(formData.get("dayOfWeek")) : null,
@@ -39,7 +39,7 @@ export async function deleteAvailabilityAction(
 ): Promise<FormActionResult> {
 	const id = String(formData.get("id") ?? "");
 	const teamId = String(formData.get("teamId") ?? "");
-	const res = await apiDelete(`/api/schedule/availability/${id}`);
+	const res = await apiDelete(apiRoutes.schedule.availability.byId(id));
 	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
 
 	if (teamId) {

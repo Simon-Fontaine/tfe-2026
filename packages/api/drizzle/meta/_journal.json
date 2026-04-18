@@ -15,6 +15,13 @@
 			"when": 1776151200000,
 			"tag": "0001_recruitment_listing_hero_pool_gin",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1776500965164,
+			"tag": "0002_absent_pyro",
+			"breakpoints": true
 		}
 	]
 }

@@ -2,14 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { apiAuthPost } from "@/lib/api-client";
-import { appRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 interface VerifyResult {
 	error?: string;
 }
 
 export async function createWebAuthnChallengeAction(): Promise<string> {
-	const res = await apiAuthPost<{ challenge: string }>("/api/auth/webauthn/challenge");
+	const res = await apiAuthPost<{ challenge: string }>(apiRoutes.auth.webauthn.challenge);
 	if ("error" in res) throw new Error(res.error);
 	return res.challenge;
 }
@@ -19,7 +19,7 @@ export async function verifyPasskey2faAction(
 	next?: string
 ): Promise<VerifyResult> {
 	const data = JSON.parse(encodedData);
-	const res = await apiAuthPost<{ redirect?: string }>("/api/auth/webauthn/passkey/verify", {
+	const res = await apiAuthPost<{ redirect?: string }>(apiRoutes.auth.webauthn.passkey.verify, {
 		...data,
 		next,
 	});
@@ -32,7 +32,7 @@ export async function verifySecurityKey2faAction(
 	next?: string
 ): Promise<VerifyResult> {
 	const data = JSON.parse(encodedData);
-	const res = await apiAuthPost<{ redirect?: string }>("/api/auth/webauthn/security-key/verify", {
+	const res = await apiAuthPost<{ redirect?: string }>(apiRoutes.auth.webauthn.securityKey.verify, {
 		...data,
 		next,
 	});
@@ -45,7 +45,7 @@ export async function loginWithPasskeyAction(
 	next?: string
 ): Promise<VerifyResult> {
 	const data = JSON.parse(encodedData);
-	const res = await apiAuthPost<{ redirect?: string }>("/api/auth/webauthn/passkey/login", {
+	const res = await apiAuthPost<{ redirect?: string }>(apiRoutes.auth.webauthn.passkey.login, {
 		...data,
 		next,
 	});

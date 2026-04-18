@@ -1,4 +1,4 @@
-import { CreatePlayerProfileSchema } from "@scrimflow/shared";
+import { appRoutes, CreatePlayerProfileSchema } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
@@ -22,7 +22,7 @@ onboardingRoutes.post("/profile", async (c) => {
 		where: eq(playerProfileTable.userId, user.id),
 		columns: { id: true },
 	});
-	if (existing) return c.json({ redirect: "/dashboard" });
+	if (existing) return c.json({ redirect: appRoutes.root });
 
 	const parsed = v.safeParse(CreatePlayerProfileSchema, body);
 	if (!parsed.success) {
@@ -68,7 +68,7 @@ onboardingRoutes.post("/profile", async (c) => {
 		}
 	});
 
-	return c.json({ redirect: "/dashboard" });
+	return c.json({ redirect: appRoutes.root });
 });
 
 export { onboardingRoutes };

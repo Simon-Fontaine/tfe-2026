@@ -1,6 +1,7 @@
 "use server";
 
 import { apiDelete, apiGet, apiPost } from "@/lib/api-client";
+import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./password";
 
 export interface DeletionStatus {
@@ -9,25 +10,25 @@ export interface DeletionStatus {
 }
 
 export async function getAccountDeletionStatusAction(): Promise<DeletionStatus> {
-	const res = await apiGet<DeletionStatus>("/api/settings/account/deletion");
+	const res = await apiGet<DeletionStatus>(apiRoutes.settings.account.deletion.root);
 	if ("data" in res) return res.data;
 	return { isPending: false, scheduledAt: null };
 }
 
 export async function requestAccountDeletionAction(reason?: string): Promise<ActionResult> {
-	const res = await apiPost("/api/settings/account/deletion/request", { reason });
+	const res = await apiPost(apiRoutes.settings.account.deletion.request, { reason });
 	if ("error" in res) return { error: res.error };
 	return { success: true };
 }
 
 export async function confirmAccountDeletionAction(code: string): Promise<ActionResult> {
-	const res = await apiPost("/api/settings/account/deletion/confirm", { code });
+	const res = await apiPost(apiRoutes.settings.account.deletion.confirm, { code });
 	if ("error" in res) return { error: res.error };
 	return { success: true };
 }
 
 export async function cancelAccountDeletionAction(): Promise<ActionResult> {
-	const res = await apiDelete("/api/settings/account/deletion");
+	const res = await apiDelete(apiRoutes.settings.account.deletion.root);
 	if ("error" in res) return { error: res.error };
 	return { success: true };
 }

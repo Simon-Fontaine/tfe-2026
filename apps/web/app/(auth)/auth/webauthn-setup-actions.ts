@@ -1,6 +1,7 @@
 "use server";
 
 import { apiAuthPost, apiGet } from "@/lib/api-client";
+import { apiRoutes } from "@/lib/routes";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export interface CredentialInfo {
 // ─── Registration challenge ─────────────────────────────────────────────────
 
 export async function createRegistrationChallengeAction(): Promise<string> {
-	const res = await apiAuthPost<{ challenge: string }>("/api/auth/credentials/challenge");
+	const res = await apiAuthPost<{ challenge: string }>(apiRoutes.auth.credentials.challenge);
 	if ("error" in res) throw new Error(res.error);
 	return res.challenge;
 }
@@ -31,7 +32,7 @@ export async function registerPasskeyAction(
 ): Promise<SetupResult & { recoveryCode?: string }> {
 	const data = JSON.parse(encodedData);
 	const res = await apiAuthPost<{ recoveryCode?: string }>(
-		"/api/auth/credentials/passkey/register",
+		apiRoutes.auth.credentials.passkey.register,
 		{ ...data, name: name.trim() || "My Passkey" }
 	);
 	if ("error" in res) return { error: res.error };
@@ -46,7 +47,7 @@ export async function registerSecurityKeyAction(
 ): Promise<SetupResult & { recoveryCode?: string }> {
 	const data = JSON.parse(encodedData);
 	const res = await apiAuthPost<{ recoveryCode?: string }>(
-		"/api/auth/credentials/security-key/register",
+		apiRoutes.auth.credentials.securityKey.register,
 		{ ...data, name: name.trim() || "My Security Key" }
 	);
 	if ("error" in res) return { error: res.error };
@@ -56,13 +57,13 @@ export async function registerSecurityKeyAction(
 // ─── List credentials ──────────────────────────────────────────────────────────
 
 export async function listPasskeysAction(): Promise<CredentialInfo[]> {
-	const res = await apiGet<CredentialInfo[]>("/api/auth/credentials/passkeys");
+	const res = await apiGet<CredentialInfo[]>(apiRoutes.auth.credentials.passkeys);
 	if ("data" in res) return res.data;
 	return [];
 }
 
 export async function listSecurityKeysAction(): Promise<CredentialInfo[]> {
-	const res = await apiGet<CredentialInfo[]>("/api/auth/credentials/security-keys");
+	const res = await apiGet<CredentialInfo[]>(apiRoutes.auth.credentials.securityKeys);
 	if ("data" in res) return res.data;
 	return [];
 }
