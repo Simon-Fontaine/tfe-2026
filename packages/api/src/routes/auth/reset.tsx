@@ -13,6 +13,8 @@ import { sendMail } from "@/email/mailer";
 import { PasswordResetEmail } from "@/email/templates/PasswordResetEmail";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import { disconnectChatUserSessions } from "@/realtime/chat-hub";
+import { disconnectRealtimeUserSessions } from "@/realtime/scrim-hub";
 import { fetchGeoData } from "@/utils/geo";
 import logger from "@/utils/logger";
 
@@ -57,7 +59,7 @@ resetRoutes.post("/forgot-password", async (c) => {
 	if (!resetSession)
 		return c.json({ nextStep: "forgot-password-sent", email } satisfies ActionResult);
 
-	const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 	const resetUrl = `${appUrl}/auth?reset_token=${resetSession.id}`;
 
 	await sendMail({
@@ -144,6 +146,8 @@ resetRoutes.post("/reset-password", async (c) => {
 	});
 
 	await invalidateUserSessions(resetSession.userId, "password_change");
+	disconnectRealtimeUserSessions(resetSession.userId, "session_revoked");
+	disconnectChatUserSessions(resetSession.userId, "session_revoked");
 
 	const geo = await fetchGeoData(client.ip);
 

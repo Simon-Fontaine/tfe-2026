@@ -3,15 +3,10 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
-import { clearRecoveryCodeIfNo2FA } from "@/auth/2fa";
+import { generateRecoveryCode } from "@/auth/2fa";
 import { writeAuditLog } from "@/auth/audit";
 import { sendSecurityAlertEmail } from "@/auth/email-security";
-import {
-	checkTotpUpdateRateLimit,
-	deleteUserTotpKey,
-	getUserTotpKey,
-	upsertUserTotpKey,
-} from "@/auth/totp";
+import { checkTotpUpdateRateLimit, getUserTotpKey, upsertUserTotpKey } from "@/auth/totp";
 import { encryptStringToText } from "@/crypto/encryption";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
@@ -30,12 +25,6 @@ const TotpCodeSchema = v.pipe(
 );
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function generateRecoveryCode(): string {
-	const bytes = new Uint8Array(10);
-	crypto.getRandomValues(bytes);
-	return encodeBase32UpperCaseNoPadding(bytes);
-}
 
 async function ensureRecoveryCode(userId: string): Promise<string | null> {
 	const user = await db
@@ -161,54 +150,6 @@ totpSetupRoutes.post("/enable", async (c) => {
 	);
 
 	return c.json({ success: true, ...(recoveryCode ? { recoveryCode } : {}) });
-});
-
-// DELETE / — Disable TOTP
-totpSetupRoutes.delete("/", async (c) => {
-	const session = c.get("session");
-	const user = c.get("user");
-
-	const { allowed, retryAfterMs } = await checkTotpUpdateRateLimit(session.userId);
-	if (!allowed) {
-		return c.json(
-			{
-				error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
-			},
-			429
-		);
-	}
-
-	const existingKey = await getUserTotpKey(session.userId);
-	if (!existingKey) return c.json({ error: "TOTP is not enabled." }, 400);
-
-	await deleteUserTotpKey(session.userId);
-	await clearRecoveryCodeIfNo2FA(session.userId);
-
-	const client = c.get("client");
-	const geo = await fetchGeoData(client.ip);
-
-	await sendSecurityAlertEmail({
-		to: user.email,
-		ip: client.ip,
-		device: client.deviceName,
-		geo,
-		alertType: "two_factor_disabled",
-		twoFactorMethod: "totp",
-	});
-
-	writeAuditLog(
-		session.userId,
-		"two_factor_disable",
-		client.ip,
-		client.userAgent,
-		geo.country,
-		geo.city,
-		{
-			method: "totp",
-		}
-	);
-
-	return c.json({ success: true });
 });
 
 // GET /status — Check if TOTP is enabled

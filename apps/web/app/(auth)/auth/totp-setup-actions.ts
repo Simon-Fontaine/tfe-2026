@@ -1,6 +1,6 @@
 "use server";
 
-import { apiAuthDelete, apiAuthPost, apiGet } from "@/lib/api-client";
+import { apiAuthPost, apiGet } from "@/lib/api-client";
 import { apiRoutes } from "@/lib/routes";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -36,14 +36,6 @@ export async function verifyAndEnableTotpAction(
 	});
 	if ("error" in res) return { error: res.error };
 	return { success: true, ...(res.recoveryCode ? { recoveryCode: res.recoveryCode } : {}) };
-}
-
-// ─── Disable TOTP ────────────────────────────────────────────────────────────
-
-export async function disableTotpAction(): Promise<TotpSetupResult> {
-	const res = await apiAuthDelete(apiRoutes.auth.totp.root);
-	if ("error" in res) return { error: res.error };
-	return { success: true };
 }
 
 // ─── Status ────────────────────────────────────────────────────────────────────
