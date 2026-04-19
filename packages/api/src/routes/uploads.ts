@@ -94,55 +94,6 @@ uploadRoutes.post("/assets", async (c) => {
 	return c.json({ url });
 });
 
-uploadRoutes.post("/scrim-evidence", async (c) => {
-	const user = c.get("user");
-	const body = await c.req.parseBody();
-	const file = body.file;
-	const scrimId = body.scrimId;
-	const screenshotType = body.screenshotType;
-
-	if (!(file instanceof File)) return c.json({ error: "No file provided." }, 400);
-	if (typeof scrimId !== "string" || !scrimId) {
-		return c.json({ error: "A scrim ID is required." }, 400);
-	}
-	if (
-		typeof screenshotType !== "string" ||
-		!SCREENSHOT_TYPES.includes(screenshotType as (typeof SCREENSHOT_TYPES)[number])
-	) {
-		return c.json({ error: "Invalid screenshot type." }, 400);
-	}
-
-	if (!ALLOWED_TYPES.includes(file.type))
-		return c.json({ error: "Only JPEG, PNG and WebP images are allowed." }, 400);
-	if (file.size > SCREENSHOT_MAX_BYTES) {
-		return c.json({ error: "File must be smaller than 8 MB." }, 400);
-	}
-
-	const scrim = await db.query.scrimTable.findFirst({
-		where: eq(scrimTable.id, scrimId),
-		columns: {
-			id: true,
-			homeTeamId: true,
-			awayTeamId: true,
-		},
-	});
-	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
-
-	const canAccess =
-		(await isUserOnTeam(user.id, scrim.homeTeamId)) ||
-		(scrim.awayTeamId ? await isUserOnTeam(user.id, scrim.awayTeamId) : false);
-	if (!canAccess) {
-		return c.json({ error: "You do not have access to upload evidence for this scrim." }, 403);
-	}
-
-	const arrayBuffer = await file.arrayBuffer();
-	const buffer = Buffer.from(arrayBuffer);
-	const key = `private/scrims/${scrimId}/${user.id}/${screenshotType}/${Date.now()}`;
-	const url = await uploadFile(SCREENSHOT_BUCKET, key, buffer, file.type);
-
-	return c.json({ url });
-});
-
 uploadRoutes.post("/scrim-evidence/intents", async (c) => {
 	const user = c.get("user");
 	const body = await c.req.json().catch(() => null);
