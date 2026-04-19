@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getOrgsForUser } from "@/lib/data/organization";
+import { getOrgsForUser } from "@/lib/data/orgs";
 import { appRoutes } from "@/lib/routes";
 
 export default async function AppHomePage() {
