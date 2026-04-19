@@ -195,7 +195,6 @@ export const apiRoutes = {
 	uploads: {
 		root: "/api/uploads",
 		assets: "/api/uploads/assets",
-		scrimEvidence: "/api/uploads/scrim-evidence",
 		scrimEvidenceIntents: "/api/uploads/scrim-evidence/intents",
 		scrimEvidenceFinalize: "/api/uploads/scrim-evidence/finalize",
 	},

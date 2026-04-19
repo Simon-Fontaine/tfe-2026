@@ -29,7 +29,6 @@ const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
 const ENTITY_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const ENTITY_BANNER_MAX_BYTES = 4 * 1024 * 1024;
 const SCREENSHOT_MAX_BYTES = 8 * 1024 * 1024;
-const SCREENSHOT_TYPES = ["game_history", "scoreboard"] as const;
 
 const uploadRoutes = new Hono<AuthEnv>();
 
