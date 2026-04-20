@@ -9,7 +9,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { type VerifyCodeInput, VerifyCodeSchema } from "@scrimflow/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { twoFactorAction } from "@/app/(auth)/auth/actions";
@@ -29,7 +29,7 @@ import { useAuthFlow } from "@/stores/auth-flow";
 
 export function TwoFactorStepPanel() {
 	const { twoFactorMethods, next, transitionTo } = useAuthFlow();
-	const { submit, isPending } = useAuthAction(twoFactorAction, {
+	const { state, submit, isPending } = useAuthAction(twoFactorAction, {
 		loadingMessage: "Verifying…",
 		successMessage: "Signed in",
 	});
@@ -39,6 +39,15 @@ export function TwoFactorStepPanel() {
 		resolver: valibotResolver(VerifyCodeSchema),
 		defaultValues: { code: "" },
 	});
+
+	useEffect(() => {
+		if (!state?.fieldErrors) return;
+		for (const [field, messages] of Object.entries(state.fieldErrors)) {
+			if (field in form.getValues()) {
+				form.setError(field as keyof VerifyCodeInput, { message: messages?.[0] });
+			}
+		}
+	}, [state, form]);
 
 	function onSubmit(data: VerifyCodeInput) {
 		const formData = new FormData();
