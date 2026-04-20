@@ -17,7 +17,11 @@ export function useAuthAction(
 		loadingMessage,
 		onResult: (result, toastId) => {
 			if (result.nextStep) {
-				toast.dismiss(toastId);
+				if (successMessage) {
+					toast.success(successMessage, { id: toastId });
+				} else {
+					toast.dismiss(toastId);
+				}
 				transitionTo(result.nextStep, {
 					email: result.email,
 					next: result.next,

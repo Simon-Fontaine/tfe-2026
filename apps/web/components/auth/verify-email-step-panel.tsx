@@ -36,6 +36,12 @@ export function VerifyEmailStepPanel() {
 		}
 	}, [state, form]);
 
+	useEffect(() => {
+		if (state?.error) {
+			form.reset({ code: "" });
+		}
+	}, [state?.error, form]);
+
 	function onSubmit(data: VerifyCodeInput) {
 		const formData = new FormData();
 		formData.set("next", next ?? "");

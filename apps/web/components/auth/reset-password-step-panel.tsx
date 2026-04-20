@@ -22,6 +22,7 @@ import { useAuthAction } from "@/hooks/use-auth-action";
 export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
 	const { state, submit, isPending } = useAuthAction(resetPasswordAction, {
 		loadingMessage: "Resetting password…",
+		successMessage: "Password reset. Please sign in.",
 	});
 	const [pwStrength, setPwStrength] = useState<PasswordStrength | null>(null);
 
