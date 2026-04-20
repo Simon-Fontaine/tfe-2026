@@ -3,6 +3,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { HelpCircleIcon } from "@hugeicons/core-free-icons";
 import { type ForgotPasswordInput, ForgotPasswordSchema } from "@scrimflow/shared";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { forgotPasswordAction } from "@/app/(auth)/auth/actions";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
@@ -15,7 +16,7 @@ import { useAuthFlow } from "@/stores/auth-flow";
 
 export function ForgotPasswordStepPanel() {
 	const { goToLogin } = useAuthFlow();
-	const { submit, isPending } = useAuthAction(forgotPasswordAction, {
+	const { state, submit, isPending } = useAuthAction(forgotPasswordAction, {
 		loadingMessage: "Sending reset link…",
 	});
 
@@ -23,6 +24,15 @@ export function ForgotPasswordStepPanel() {
 		resolver: valibotResolver(ForgotPasswordSchema),
 		defaultValues: { email: "" },
 	});
+
+	useEffect(() => {
+		if (!state?.fieldErrors) return;
+		for (const [field, messages] of Object.entries(state.fieldErrors)) {
+			if (field in form.getValues()) {
+				form.setError(field as keyof ForgotPasswordInput, { message: messages?.[0] });
+			}
+		}
+	}, [state, form]);
 
 	function onSubmit(data: ForgotPasswordInput) {
 		const formData = new FormData();

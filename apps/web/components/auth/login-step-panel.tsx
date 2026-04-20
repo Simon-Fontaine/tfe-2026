@@ -4,7 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { FingerPrintIcon, HandGripIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { type LoginInput, LoginSchema } from "@scrimflow/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { loginAction } from "@/app/(auth)/auth/actions";
@@ -22,7 +22,7 @@ import { useAuthFlow } from "@/stores/auth-flow";
 
 export function LoginStepPanel({ next }: { next?: string }) {
 	const { goToRegister, goToForgotPassword } = useAuthFlow();
-	const { submit, isPending } = useAuthAction(loginAction, {
+	const { state, submit, isPending } = useAuthAction(loginAction, {
 		loadingMessage: "Signing in…",
 		successMessage: "Signed in",
 	});
@@ -32,6 +32,15 @@ export function LoginStepPanel({ next }: { next?: string }) {
 		resolver: valibotResolver(LoginSchema),
 		defaultValues: { email: "", password: "" },
 	});
+
+	useEffect(() => {
+		if (!state?.fieldErrors) return;
+		for (const [field, messages] of Object.entries(state.fieldErrors)) {
+			if (field in form.getValues()) {
+				form.setError(field as keyof LoginInput, { message: messages?.[0] });
+			}
+		}
+	}, [state, form]);
 
 	function onSubmit(data: LoginInput) {
 		const formData = new FormData();

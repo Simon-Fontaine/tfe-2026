@@ -8,7 +8,7 @@ import {
 	type ResetPasswordInput,
 	ResetPasswordSchema,
 } from "@scrimflow/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { resetPasswordAction } from "@/app/(auth)/auth/actions";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
 
 export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
-	const { submit, isPending } = useAuthAction(resetPasswordAction, {
+	const { state, submit, isPending } = useAuthAction(resetPasswordAction, {
 		loadingMessage: "Resetting password…",
 	});
 	const [pwStrength, setPwStrength] = useState<PasswordStrength | null>(null);
@@ -29,6 +29,15 @@ export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
 		resolver: valibotResolver(ResetPasswordSchema),
 		defaultValues: { password: "", confirmPassword: "" },
 	});
+
+	useEffect(() => {
+		if (!state?.fieldErrors) return;
+		for (const [field, messages] of Object.entries(state.fieldErrors)) {
+			if (field in form.getValues()) {
+				form.setError(field as keyof ResetPasswordInput, { message: messages?.[0] });
+			}
+		}
+	}, [state, form]);
 
 	function onSubmit(data: ResetPasswordInput) {
 		const formData = new FormData();
