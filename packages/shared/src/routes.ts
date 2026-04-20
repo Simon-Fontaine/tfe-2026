@@ -139,7 +139,6 @@ export const apiRoutes = {
 		recruiting: (teamId: string) => `/api/teams/${teamId}/recruiting`,
 		archive: (teamId: string) => `/api/teams/${teamId}/archive`,
 		publicRoot: "/api/public/teams",
-		admins: (teamId: string) => `/api/teams/${teamId}/admins`,
 		memberRole: (teamId: string, memberId: string) =>
 			`/api/teams/${teamId}/members/${memberId}/role`,
 		unarchive: (teamId: string) => `/api/teams/${teamId}/unarchive`,

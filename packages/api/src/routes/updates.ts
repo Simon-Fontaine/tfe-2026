@@ -214,7 +214,7 @@ updatesRoutes.post("/", async (c) => {
 				)
 		);
 
-		publishTeamEvent({
+		void publishTeamEvent({
 			teamId,
 			event: "update:created",
 			payload: {
@@ -266,7 +266,7 @@ updatesRoutes.patch("/:id", async (c) => {
 
 	const mapped = mapUpdatePost(updated, { canManage: true });
 	if (updated.teamId) {
-		publishTeamEvent({
+		void publishTeamEvent({
 			teamId: updated.teamId,
 			event: "update:updated",
 			payload: {
@@ -301,7 +301,7 @@ updatesRoutes.delete("/:id", async (c) => {
 	await db.delete(updatePostTable).where(eq(updatePostTable.id, updateId));
 
 	if (existing.teamId) {
-		publishTeamEvent({
+		void publishTeamEvent({
 			teamId: existing.teamId,
 			event: "update:deleted",
 			payload: {
