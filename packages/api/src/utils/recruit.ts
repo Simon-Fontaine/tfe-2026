@@ -6,6 +6,7 @@ import {
 	chatChannelTable,
 	chatMessageTable,
 	organizationMemberTable,
+	recruitmentApplicationTable,
 	recruitmentListingTable,
 	teamRosterTable,
 } from "@/db/schema";
@@ -58,6 +59,34 @@ export async function canManageRecruitmentListing(
 		return permissions.canManage;
 	}
 	return false;
+}
+
+export async function countManagedPendingApplications(userId: string) {
+	const listings = await db.query.recruitmentListingTable.findMany({
+		columns: {
+			id: true,
+			userId: true,
+			ownerType: true,
+			teamId: true,
+			organizationId: true,
+		},
+		with: {
+			applications: {
+				where: eq(recruitmentApplicationTable.status, "pending"),
+				columns: { id: true },
+			},
+		},
+	});
+
+	let pendingCount = 0;
+	for (const listing of listings) {
+		if (listing.applications.length === 0) continue;
+		if (await canManageRecruitmentListing(listing, userId)) {
+			pendingCount += listing.applications.length;
+		}
+	}
+
+	return pendingCount;
 }
 
 export async function ensureOrganizationMembership(
@@ -557,11 +586,14 @@ export async function sendRecruitmentSystemMessage(channelId: string, content: s
 	});
 }
 
-export async function getPublicRecruitmentListings(filters?: {
-	category?: "lft" | "lfp" | "lfr" | "lfs";
-	memberType?: "player" | "staff";
-	region?: string;
-}) {
+export async function getPublicRecruitmentListings(
+	filters?: {
+		category?: "lft" | "lfp" | "lfr" | "lfs";
+		memberType?: "player" | "staff";
+		region?: string;
+	},
+	viewerId?: string | null
+) {
 	const now = new Date();
 	const rows = await db.query.recruitmentListingTable.findMany({
 		where: and(
@@ -585,10 +617,10 @@ export async function getPublicRecruitmentListings(filters?: {
 		limit: 100,
 	});
 
-	return rows.map((row) => mapRecruitmentListing(row));
+	return rows.map((row) => mapRecruitmentListing(row, { viewerId: viewerId ?? null }));
 }
 
-export async function getPublicRecruitmentListingById(id: string) {
+export async function getPublicRecruitmentListingById(id: string, viewerId?: string | null) {
 	const row = await db.query.recruitmentListingTable.findFirst({
 		where: eq(recruitmentListingTable.id, id),
 		with: {
@@ -604,5 +636,5 @@ export async function getPublicRecruitmentListingById(id: string) {
 	});
 
 	if (!row) return null;
-	return mapRecruitmentListing(row);
+	return mapRecruitmentListing(row, { viewerId: viewerId ?? null });
 }

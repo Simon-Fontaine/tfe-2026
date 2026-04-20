@@ -9,17 +9,19 @@ const publicRecruitmentListingsRoutes = new Hono<AuthEnv>();
 publicRecruitmentListingsRoutes.use("*", optionalAuth);
 
 publicRecruitmentListingsRoutes.get("/", async (c) => {
+	const user = c.get("user");
 	const category = c.req.query("category") as "lft" | "lfp" | "lfr" | "lfs" | undefined;
 	const memberType = c.req.query("memberType") as "player" | "staff" | undefined;
 	const region = c.req.query("region") as string | undefined;
 
 	return c.json({
-		data: await getPublicRecruitmentListings({ category, memberType, region }),
+		data: await getPublicRecruitmentListings({ category, memberType, region }, user?.id ?? null),
 	});
 });
 
 publicRecruitmentListingsRoutes.get("/:id", async (c) => {
-	const listing = await getPublicRecruitmentListingById(c.req.param("id"));
+	const user = c.get("user");
+	const listing = await getPublicRecruitmentListingById(c.req.param("id"), user?.id ?? null);
 	if (!listing) return c.json({ error: "Listing not found." }, 404);
 	return c.json({ data: listing });
 });
