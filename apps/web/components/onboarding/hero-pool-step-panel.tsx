@@ -2,7 +2,7 @@
 
 import { ArrowLeft01Icon, GameController01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createPlayerProfileAction } from "@/app/onboarding/actions";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
@@ -22,10 +22,18 @@ export function HeroPoolStepPanel({ heroes }: HeroPoolStepPanelProps) {
 	const [selectedHeroes, setSelectedHeroes] = useState<Set<string>>(new Set(data.heroPool));
 	const [heroError, setHeroError] = useState<string | null>(null);
 
-	const { submit, isPending } = useOnboardingAction(createPlayerProfileAction, {
+	const { state, submit, isPending } = useOnboardingAction(createPlayerProfileAction, {
 		loadingMessage: "Setting up your profile…",
 		successMessage: "Profile set up!",
 	});
+
+	useEffect(() => {
+		if (state?.fieldErrors?.heroPool?.[0]) {
+			setHeroError(state.fieldErrors.heroPool[0]);
+		} else if (state?.error) {
+			setHeroError(state.error);
+		}
+	}, [state]);
 
 	function toggleHero(heroId: string) {
 		setHeroError(null);
