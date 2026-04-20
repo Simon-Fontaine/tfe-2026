@@ -1,17 +1,21 @@
+import type { RealtimeSessionInvalidationReason } from "@scrimflow/shared";
 import Redis from "ioredis";
 import logger from "@/utils/logger";
 
 type RealtimeSocket = {
 	send: (payload: string) => unknown;
+	close?: (code?: number, reason?: string) => unknown;
 };
 
 type SocketMeta = {
+	sessionId: string;
 	userId: string;
 	scrimSubscriptions: Set<string>;
 	teamSubscriptions: Set<string>;
 };
 
 const socketMeta = new Map<RealtimeSocket, SocketMeta>();
+const sessionSockets = new Map<string, Set<RealtimeSocket>>();
 const userSockets = new Map<string, Set<RealtimeSocket>>();
 const scrimSockets = new Map<string, Set<RealtimeSocket>>();
 const teamSockets = new Map<string, Set<RealtimeSocket>>();
@@ -135,8 +139,23 @@ if (redisSubscriber) {
 	});
 }
 
-export function registerRealtimeSocket(ws: RealtimeSocket, userId: string) {
-	socketMeta.set(ws, { userId, scrimSubscriptions: new Set(), teamSubscriptions: new Set() });
+function notifySessionInvalidation(ws: RealtimeSocket, reason: RealtimeSessionInvalidationReason) {
+	send(ws, { type: "realtime:session-invalidated", reason });
+	try {
+		ws.close?.(4401, reason);
+	} catch {
+		// Ignore close failures from stale sockets.
+	}
+}
+
+export function registerRealtimeSocket(ws: RealtimeSocket, userId: string, sessionId: string) {
+	socketMeta.set(ws, {
+		sessionId,
+		userId,
+		scrimSubscriptions: new Set(),
+		teamSubscriptions: new Set(),
+	});
+	getOrCreateSet(sessionSockets, sessionId).add(ws);
 	getOrCreateSet(userSockets, userId).add(ws);
 	send(ws, { type: "realtime:connected", userId });
 }
@@ -173,6 +192,14 @@ export function unregisterRealtimeSocket(ws: RealtimeSocket) {
 		}
 	}
 
+	const socketsForSession = sessionSockets.get(meta.sessionId);
+	if (socketsForSession) {
+		socketsForSession.delete(ws);
+		if (socketsForSession.size === 0) {
+			sessionSockets.delete(meta.sessionId);
+		}
+	}
+
 	const socketsForUser = userSockets.get(meta.userId);
 	if (socketsForUser) {
 		socketsForUser.delete(ws);
@@ -182,6 +209,32 @@ export function unregisterRealtimeSocket(ws: RealtimeSocket) {
 	}
 
 	socketMeta.delete(ws);
+}
+
+export function disconnectRealtimeSession(
+	sessionId: string,
+	reason: RealtimeSessionInvalidationReason
+) {
+	const sockets = sessionSockets.get(sessionId);
+	if (!sockets || sockets.size === 0) return;
+
+	for (const ws of [...sockets]) {
+		notifySessionInvalidation(ws, reason);
+		unregisterRealtimeSocket(ws);
+	}
+}
+
+export function disconnectRealtimeUserSessions(
+	userId: string,
+	reason: RealtimeSessionInvalidationReason
+) {
+	const sockets = userSockets.get(userId);
+	if (!sockets || sockets.size === 0) return;
+
+	for (const ws of [...sockets]) {
+		notifySessionInvalidation(ws, reason);
+		unregisterRealtimeSocket(ws);
+	}
 }
 
 export function subscribeSocketToScrim(ws: RealtimeSocket, scrimId: string) {

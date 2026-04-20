@@ -1,10 +1,12 @@
 import type { AppRealtimeClientCommand } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { validateSessionById } from "@/auth/session";
 import { db } from "@/db";
 import { scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import {
+	disconnectRealtimeSession,
 	registerRealtimeSocket,
 	subscribeSocketToScrim,
 	subscribeSocketToTeam,
@@ -16,6 +18,29 @@ import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
 import { upgradeWebSocket } from "@/websocket";
 
 const realtimeRoutes = new Hono<AuthEnv>();
+
+type RealtimeRouteSocket = {
+	send: (value: string) => void;
+	close?: (code?: number, reason?: string) => void;
+};
+
+function sendRealtimeError(
+	ws: RealtimeRouteSocket,
+	params: {
+		error: string;
+		code:
+			| "access_denied"
+			| "internal_error"
+			| "invalid_payload"
+			| "missing_field"
+			| "session_invalid";
+		retryable: boolean;
+		scrimId?: string;
+		teamId?: string;
+	}
+) {
+	ws.send(JSON.stringify({ type: "realtime:error", ...params }));
+}
 
 async function canAccessScrim(userId: string, scrimId: string) {
 	const scrim = await db.query.scrimTable.findFirst({
@@ -46,82 +71,122 @@ realtimeRoutes.get(
 	"/ws",
 	upgradeWebSocket((c) => {
 		const user = c.get("user");
+		const session = c.get("session");
 
-		async function handleCommand(raw: string, ws: { send: (value: string) => void }) {
-			const parsed = JSON.parse(raw) as AppRealtimeClientCommand;
+		async function ensureActiveSession() {
+			const validation = await validateSessionById(session.id);
+			if (validation.valid) return true;
+
+			disconnectRealtimeSession(session.id, validation.reason);
+			return false;
+		}
+
+		async function handleCommand(raw: string, ws: RealtimeRouteSocket) {
+			let parsed: AppRealtimeClientCommand;
+			try {
+				parsed = JSON.parse(raw) as AppRealtimeClientCommand;
+			} catch {
+				sendRealtimeError(ws, {
+					error: "Invalid websocket payload.",
+					code: "invalid_payload",
+					retryable: false,
+				});
+				return;
+			}
+
 			if (!parsed?.type) {
-				ws.send(JSON.stringify({ type: "realtime:error", error: "Invalid websocket payload." }));
+				sendRealtimeError(ws, {
+					error: "Invalid websocket payload.",
+					code: "invalid_payload",
+					retryable: false,
+				});
 				return;
 			}
 
 			if (parsed.type === "ping") {
+				if (!(await ensureActiveSession())) return;
 				ws.send(JSON.stringify({ type: "realtime:pong" }));
 				return;
 			}
 
 			if (parsed.type === "subscribe:scrim") {
+				if (!(await ensureActiveSession())) return;
+
 				const scrimId = parsed.scrimId;
 				if (!scrimId) {
-					ws.send(JSON.stringify({ type: "realtime:error", error: "scrimId is required." }));
+					sendRealtimeError(ws, {
+						error: "scrimId is required.",
+						code: "missing_field",
+						retryable: false,
+					});
 					return;
 				}
 
 				const hasAccess = await canAccessScrim(user.id, scrimId);
 				if (!hasAccess) {
-					ws.send(
-						JSON.stringify({
-							type: "realtime:error",
-							error: "You do not have access to this scrim.",
-							scrimId,
-						})
-					);
+					sendRealtimeError(ws, {
+						error: "You do not have access to this scrim.",
+						code: "access_denied",
+						retryable: false,
+						scrimId,
+					});
 					return;
 				}
 
-				subscribeSocketToScrim(ws as { send: (payload: string) => unknown }, scrimId);
+				subscribeSocketToScrim(ws, scrimId);
 				return;
 			}
 
 			if (parsed.type === "unsubscribe:scrim") {
-				unsubscribeSocketFromScrim(ws as { send: (payload: string) => unknown }, parsed.scrimId);
+				unsubscribeSocketFromScrim(ws, parsed.scrimId);
 				return;
 			}
 
 			if (parsed.type === "subscribe:team") {
+				if (!(await ensureActiveSession())) return;
+
 				const teamId = parsed.teamId;
 				if (!teamId) {
-					ws.send(JSON.stringify({ type: "realtime:error", error: "teamId is required." }));
+					sendRealtimeError(ws, {
+						error: "teamId is required.",
+						code: "missing_field",
+						retryable: false,
+					});
 					return;
 				}
 
 				const hasAccess = await canAccessTeam(user.id, teamId);
 				if (!hasAccess) {
-					ws.send(
-						JSON.stringify({
-							type: "realtime:error",
-							error: "You do not have access to this team.",
-						})
-					);
+					sendRealtimeError(ws, {
+						error: "You do not have access to this team.",
+						code: "access_denied",
+						retryable: false,
+						teamId,
+					});
 					return;
 				}
 
-				subscribeSocketToTeam(ws as { send: (payload: string) => unknown }, teamId);
+				subscribeSocketToTeam(ws, teamId);
 				return;
 			}
 
 			if (parsed.type === "unsubscribe:team") {
-				unsubscribeSocketFromTeam(ws as { send: (payload: string) => unknown }, parsed.teamId);
+				unsubscribeSocketFromTeam(ws, parsed.teamId);
 				return;
 			}
 		}
 
 		return {
 			onOpen(_event, ws) {
-				registerRealtimeSocket(ws, user.id);
+				registerRealtimeSocket(ws, user.id, session.id);
 			},
 			onMessage(event, ws) {
 				void handleCommand(event.data.toString(), ws).catch(() => {
-					ws.send(JSON.stringify({ type: "realtime:error", error: "Unable to process command." }));
+					sendRealtimeError(ws, {
+						error: "Unable to process command.",
+						code: "internal_error",
+						retryable: true,
+					});
 				});
 			},
 			onClose(_event, ws) {

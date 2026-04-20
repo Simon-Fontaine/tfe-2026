@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
 import { appRoutes } from "@/lib/routes";
+import { useRecruitingStore } from "@/stores/recruiting";
 import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
 
 interface WorkspaceSidebarProps {
@@ -62,7 +63,9 @@ export function WorkspaceSidebar({
 	pendingApplicationCount,
 }: WorkspaceSidebarProps) {
 	const pathname = usePathname();
+	const livePendingApplicationCount = useRecruitingStore((state) => state.pendingApplicationCount);
 	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
+	const displayPendingApplicationCount = livePendingApplicationCount ?? pendingApplicationCount;
 
 	const activeOrg = activeOrgId ? contextOrgs.find((o) => o.id === activeOrgId) : null;
 	const activeTeam = activeTeamId ? contextTeams.find((t) => t.id === activeTeamId) : null;
@@ -198,7 +201,7 @@ export function WorkspaceSidebar({
 								label: "Marketplace",
 								href: appRoutes.recruiting.root,
 								icon: UserSearch01Icon,
-								badge: pendingApplicationCount,
+								badge: displayPendingApplicationCount,
 							},
 							{
 								label: "Conversations",

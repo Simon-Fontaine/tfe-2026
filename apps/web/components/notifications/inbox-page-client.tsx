@@ -93,7 +93,7 @@ export function InboxPageClient({
 				return;
 			}
 
-			markAllNotificationsRead();
+			markAllNotificationsRead(0);
 		} catch {
 			toast.error("Unable to reach the API server.");
 		} finally {

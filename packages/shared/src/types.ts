@@ -680,6 +680,18 @@ export type CreateDirectConversationResult = {
 	isNew: boolean;
 };
 
+export type RealtimeErrorCode =
+	| "access_denied"
+	| "internal_error"
+	| "invalid_payload"
+	| "missing_field"
+	| "session_invalid";
+
+export type RealtimeSessionInvalidationReason =
+	| "session_expired"
+	| "session_revoked"
+	| "unauthorized";
+
 export type ChatClientCommand =
 	| { type: "subscribe"; conversationId: string }
 	| { type: "unsubscribe"; conversationId: string }
@@ -691,7 +703,14 @@ export type ChatClientCommand =
 export type ChatRealtimeEvent =
 	| { type: "chat:connected"; userId: string }
 	| { type: "chat:pong" }
-	| { type: "chat:error"; error: string; conversationId?: string }
+	| {
+			type: "chat:error";
+			error: string;
+			code: RealtimeErrorCode;
+			retryable: boolean;
+			conversationId?: string;
+	  }
+	| { type: "chat:session-invalidated"; reason: RealtimeSessionInvalidationReason }
 	| { type: "conversation:subscribed"; conversationId: string }
 	| { type: "conversation:unsubscribed"; conversationId: string }
 	| { type: "message:new"; conversationId: string; message: ChatMessage }
@@ -707,6 +726,7 @@ export type ChatRealtimeEvent =
 			conversationId: string;
 			message: ChatMessage;
 			senderId: string;
+			conversation: ChatConversationSummary;
 	  };
 
 export type ScrimOcrJobRealtimePayload = {
@@ -730,7 +750,15 @@ export type AppRealtimeClientCommand =
 export type AppRealtimeEvent =
 	| { type: "realtime:connected"; userId: string }
 	| { type: "realtime:pong" }
-	| { type: "realtime:error"; error: string; scrimId?: string }
+	| {
+			type: "realtime:error";
+			error: string;
+			code: RealtimeErrorCode;
+			retryable: boolean;
+			scrimId?: string;
+			teamId?: string;
+	  }
+	| { type: "realtime:session-invalidated"; reason: RealtimeSessionInvalidationReason }
 	| { type: "scrim:subscribed"; scrimId: string }
 	| { type: "scrim:unsubscribed"; scrimId: string }
 	| { type: "team:subscribed"; teamId: string }
@@ -773,6 +801,10 @@ export type AppRealtimeEvent =
 			type: "recruit:application-received";
 			listingId: string;
 			application: RecruitmentApplicationSummary;
+	  }
+	| {
+			type: "recruit:managed-pending-count";
+			pendingCount: number;
 	  }
 	| { type: "recruit:application-decided"; applicationId: string; status: "accepted" | "rejected" };
 

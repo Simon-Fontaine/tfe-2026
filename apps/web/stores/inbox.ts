@@ -40,7 +40,7 @@ interface InboxActions {
 	hydrateNotifications(notifications: NotificationSummary[]): void;
 	prependNotification(notification: NotificationSummary, unreadCount: number): void;
 	markNotificationRead(notificationId: string, unreadCount: number): void;
-	markAllNotificationsRead(): void;
+	markAllNotificationsRead(unreadCount: number): void;
 }
 
 export const useInboxStore = create<InboxState & InboxActions>((set) => ({
@@ -81,13 +81,13 @@ export const useInboxStore = create<InboxState & InboxActions>((set) => ({
 		}));
 	},
 
-	markAllNotificationsRead() {
+	markAllNotificationsRead(unreadCount) {
 		set((state) => ({
 			notifications: state.notifications.map((notification) => ({
 				...notification,
 				isRead: true,
 			})),
-			unreadCount: 0,
+			unreadCount,
 		}));
 	},
 }));

@@ -1,4 +1,5 @@
 import {
+	type ChatClientCommand,
 	CreateDirectConversationSchema,
 	EditChatMessageSchema,
 	ReadConversationSchema,
@@ -6,10 +7,11 @@ import {
 } from "@scrimflow/shared";
 import { Hono } from "hono";
 import * as v from "valibot";
-
+import { validateSessionById } from "@/auth/session";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import {
+	disconnectChatSession,
 	publishConversationEvent,
 	publishUserEvent,
 	refreshSocketPresence,
@@ -27,6 +29,7 @@ import {
 	ensureScrimConversationLifecycle,
 	findOrCreateDirectConversation,
 	getConversationDetailForUser,
+	getConversationSummaryForUser,
 	getMessageByIdForConversation,
 	hasConversationAccess,
 	listConversationMembers,
@@ -45,66 +48,104 @@ const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
-type ChatSocketCommand =
-	| { type: "subscribe"; conversationId: string }
-	| { type: "unsubscribe"; conversationId: string }
-	| { type: "typing:start"; conversationId: string }
-	| { type: "typing:stop"; conversationId: string }
-	| { type: "presence:heartbeat" }
-	| { type: "ping" };
+type ChatRouteSocket = {
+	send: (value: string) => void;
+	close?: (code?: number, reason?: string) => void;
+};
+
+function sendChatError(
+	ws: ChatRouteSocket,
+	params: {
+		error: string;
+		code:
+			| "access_denied"
+			| "internal_error"
+			| "invalid_payload"
+			| "missing_field"
+			| "session_invalid";
+		retryable: boolean;
+		conversationId?: string;
+	}
+) {
+	ws.send(JSON.stringify({ type: "chat:error", ...params }));
+}
 
 chatRoutes.get(
 	"/ws",
 	upgradeWebSocket((c) => {
 		const user = c.get("user");
+		const session = c.get("session");
 
-		async function handleCommand(raw: string, ws: { send: (value: string) => void }) {
-			const parsed = JSON.parse(raw) as ChatSocketCommand;
+		async function ensureActiveSession() {
+			const validation = await validateSessionById(session.id);
+			if (validation.valid) return true;
+
+			disconnectChatSession(session.id, validation.reason);
+			return false;
+		}
+
+		async function handleCommand(raw: string, ws: ChatRouteSocket) {
+			let parsed: ChatClientCommand;
+			try {
+				parsed = JSON.parse(raw) as ChatClientCommand;
+			} catch {
+				sendChatError(ws, {
+					error: "Invalid websocket payload.",
+					code: "invalid_payload",
+					retryable: false,
+				});
+				return;
+			}
 			if (!parsed?.type) {
-				ws.send(JSON.stringify({ type: "chat:error", error: "Invalid websocket payload." }));
+				sendChatError(ws, {
+					error: "Invalid websocket payload.",
+					code: "invalid_payload",
+					retryable: false,
+				});
 				return;
 			}
 
 			if (parsed.type === "ping") {
+				if (!(await ensureActiveSession())) return;
 				ws.send(JSON.stringify({ type: "chat:pong" }));
 				return;
 			}
 
 			if (parsed.type === "presence:heartbeat") {
-				refreshSocketPresence(ws as { send: (payload: string) => unknown });
+				if (!(await ensureActiveSession())) return;
+				refreshSocketPresence(ws);
 				return;
 			}
 
 			if (!("conversationId" in parsed) || !parsed.conversationId) {
-				ws.send(JSON.stringify({ type: "chat:error", error: "conversationId is required." }));
+				sendChatError(ws, {
+					error: "conversationId is required.",
+					code: "missing_field",
+					retryable: false,
+				});
 				return;
 			}
 
+			if (parsed.type === "subscribe" && !(await ensureActiveSession())) return;
+
 			const hasAccess = await hasConversationAccess(parsed.conversationId, user.id);
 			if (!hasAccess) {
-				ws.send(
-					JSON.stringify({
-						type: "chat:error",
-						error: "You do not have access to this conversation.",
-						conversationId: parsed.conversationId,
-					})
-				);
+				sendChatError(ws, {
+					error: "You do not have access to this conversation.",
+					code: "access_denied",
+					retryable: false,
+					conversationId: parsed.conversationId,
+				});
 				return;
 			}
 
 			if (parsed.type === "subscribe") {
-				subscribeSocketToConversation(
-					ws as { send: (payload: string) => unknown },
-					parsed.conversationId
-				);
+				subscribeSocketToConversation(ws, parsed.conversationId);
 				return;
 			}
 
 			if (parsed.type === "unsubscribe") {
-				unsubscribeSocketFromConversation(
-					ws as { send: (payload: string) => unknown },
-					parsed.conversationId
-				);
+				unsubscribeSocketFromConversation(ws, parsed.conversationId);
 				return;
 			}
 
@@ -130,11 +171,15 @@ chatRoutes.get(
 
 		return {
 			onOpen(_event, ws) {
-				registerChatSocket(ws, user.id);
+				registerChatSocket(ws, user.id, session.id);
 			},
 			onMessage(event, ws) {
 				void handleCommand(event.data.toString(), ws).catch(() => {
-					ws.send(JSON.stringify({ type: "chat:error", error: "Unable to process command." }));
+					sendChatError(ws, {
+						error: "Unable to process command.",
+						code: "internal_error",
+						retryable: true,
+					});
 				});
 			},
 			onClose(_event, ws) {
@@ -285,6 +330,9 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 		});
 
 		if (message) {
+			const conversation = await getConversationSummaryForUser(conversationId, member.userId);
+			if (!conversation) continue;
+
 			publishUserEvent({
 				userId: member.userId,
 				event: "notification:new",
@@ -293,6 +341,7 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 					conversationId,
 					message,
 					senderId: user.id,
+					conversation,
 				},
 			});
 		}

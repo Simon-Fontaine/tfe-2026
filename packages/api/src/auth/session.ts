@@ -1,5 +1,6 @@
 import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from "@oslojs/encoding";
+import type { RealtimeSessionInvalidationReason } from "@scrimflow/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { type sessionRevocationReasonEnum, sessionTable, userTable } from "@/db/schema";
@@ -55,6 +56,10 @@ export interface SessionUser {
 export type SessionValidationResult =
 	| { session: Session; user: SessionUser }
 	| { session: null; user: null };
+
+export type SessionSocketValidationResult =
+	| { valid: true }
+	| { valid: false; reason: RealtimeSessionInvalidationReason };
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -158,6 +163,29 @@ export async function validateSessionToken(token: string): Promise<SessionValida
 			...twoFactor,
 		},
 	};
+}
+
+export async function validateSessionById(
+	sessionId: string
+): Promise<SessionSocketValidationResult> {
+	const row = await db
+		.select({
+			expiresAt: sessionTable.expiresAt,
+			revokedAt: sessionTable.revokedAt,
+			isBanned: userTable.isBanned,
+		})
+		.from(sessionTable)
+		.innerJoin(userTable, eq(sessionTable.userId, userTable.id))
+		.where(eq(sessionTable.id, sessionId))
+		.limit(1)
+		.then((rows) => rows[0] ?? null);
+
+	if (!row) return { valid: false, reason: "unauthorized" };
+	if (Date.now() >= row.expiresAt.getTime()) return { valid: false, reason: "session_expired" };
+	if (row.revokedAt !== null) return { valid: false, reason: "session_revoked" };
+	if (row.isBanned) return { valid: false, reason: "unauthorized" };
+
+	return { valid: true };
 }
 
 // ─── Session revocation ──────────────────────────────────────────────────────

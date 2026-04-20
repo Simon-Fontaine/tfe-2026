@@ -9,6 +9,8 @@ import { sessionTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import { disconnectChatSession } from "@/realtime/chat-hub";
+import { disconnectRealtimeSession } from "@/realtime/scrim-hub";
 
 const sessionRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
@@ -89,6 +91,8 @@ sessionRoutes.delete("/:id", async (c) => {
 	if (!target) return c.json({ error: "Session not found." }, 404);
 
 	await invalidateSession(sessionId, "manual_logout");
+	disconnectRealtimeSession(sessionId, "session_revoked");
+	disconnectChatSession(sessionId, "session_revoked");
 
 	const client = c.get("client");
 	writeAuditLog(session.userId, "logout", client.ip, client.userAgent, null, null, {
@@ -116,6 +120,18 @@ sessionRoutes.delete("/", async (c) => {
 		);
 	}
 
+	const revokedSessionIds = await db
+		.select({ id: sessionTable.id })
+		.from(sessionTable)
+		.where(
+			and(
+				eq(sessionTable.userId, session.userId),
+				ne(sessionTable.id, session.id),
+				isNull(sessionTable.revokedAt)
+			)
+		)
+		.then((rows) => rows.map((row) => row.id));
+
 	await db
 		.update(sessionTable)
 		.set({ revokedAt: new Date(), revocationReason: "logout_all_devices" })
@@ -126,6 +142,11 @@ sessionRoutes.delete("/", async (c) => {
 				isNull(sessionTable.revokedAt)
 			)
 		);
+
+	for (const revokedSessionId of revokedSessionIds) {
+		disconnectRealtimeSession(revokedSessionId, "session_revoked");
+		disconnectChatSession(revokedSessionId, "session_revoked");
+	}
 
 	const client = c.get("client");
 	writeAuditLog(
@@ -146,6 +167,8 @@ sessionRoutes.post("/logout", async (c) => {
 	const session = c.get("session");
 
 	await invalidateSession(session.id, "manual_logout");
+	disconnectRealtimeSession(session.id, "session_revoked");
+	disconnectChatSession(session.id, "session_revoked");
 	deleteCookie(c, "session_token", { path: "/" });
 
 	return c.json({ success: true });

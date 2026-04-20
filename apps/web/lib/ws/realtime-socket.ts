@@ -4,12 +4,14 @@ import { apiRoutes } from "@/lib/routes";
 type RealtimeListener = (event: AppRealtimeEvent) => void;
 
 const BASE_RECONNECT_MS = 1_000;
+const HEARTBEAT_INTERVAL_MS = 30_000;
 const MAX_RECONNECT_MS = 30_000;
 
 class RealtimeSocketService {
 	private ws: WebSocket | null = null;
 	private reconnectAttempts = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private intentionalClose = false;
 	private scrimSubscriptions = new Set<string>();
 	private teamSubscriptions = new Set<string>();
@@ -43,6 +45,7 @@ class RealtimeSocketService {
 			for (const teamId of this.teamSubscriptions) {
 				this.sendCommand({ type: "subscribe:team", teamId });
 			}
+			this.startHeartbeat();
 		};
 
 		this.ws.onmessage = (event) => {
@@ -55,6 +58,7 @@ class RealtimeSocketService {
 		};
 
 		this.ws.onclose = () => {
+			this.stopHeartbeat();
 			if (!this.intentionalClose) {
 				this.scheduleReconnect();
 			}
@@ -63,6 +67,7 @@ class RealtimeSocketService {
 
 	disconnect(): void {
 		this.intentionalClose = true;
+		this.stopHeartbeat();
 		if (this.reconnectTimer) {
 			clearTimeout(this.reconnectTimer);
 			this.reconnectTimer = null;
@@ -116,7 +121,29 @@ class RealtimeSocketService {
 		}, delay);
 	}
 
+	private startHeartbeat(): void {
+		this.stopHeartbeat();
+		this.heartbeatTimer = setInterval(() => {
+			this.sendCommand({ type: "ping" });
+		}, HEARTBEAT_INTERVAL_MS);
+	}
+
+	private stopHeartbeat(): void {
+		if (this.heartbeatTimer) {
+			clearInterval(this.heartbeatTimer);
+			this.heartbeatTimer = null;
+		}
+	}
+
 	private handleEvent(event: AppRealtimeEvent): void {
+		if (event.type === "realtime:session-invalidated") {
+			this.disconnect();
+			if (typeof window !== "undefined") {
+				window.location.reload();
+			}
+			return;
+		}
+
 		for (const listener of this.listeners) {
 			listener(event);
 		}

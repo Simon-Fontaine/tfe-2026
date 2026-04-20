@@ -1,7 +1,6 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound, redirect } from "next/navigation";
-import { RecruitingRealtimeBootstrap } from "@/components/recruit/recruiting-realtime-bootstrap";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -53,7 +52,6 @@ export default async function AppOrgRecruitingPage({
 
 	return (
 		<PageContainer>
-			<RecruitingRealtimeBootstrap initialPendingCount={0} />
 			<PageHeader
 				title="Recruiting"
 				description={`Manage recruiting listings owned directly by ${org.name}.`}

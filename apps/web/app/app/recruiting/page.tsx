@@ -1,7 +1,6 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { RecruitingRealtimeBootstrap } from "@/components/recruit/recruiting-realtime-bootstrap";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { RecruitmentSentApplicationsPanel } from "@/components/recruit/recruitment-sent-applications-panel";
@@ -60,7 +59,6 @@ export default async function AppRecruitingPage({ searchParams }: AppRecruitingP
 
 	return (
 		<PageContainer>
-			<RecruitingRealtimeBootstrap initialPendingCount={0} />
 			<PageHeader
 				title="Recruiting"
 				description="Manage your own recruiting listings, track applications, and browse the wider marketplace from one workspace."

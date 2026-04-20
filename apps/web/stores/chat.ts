@@ -1,6 +1,14 @@
 import type { ChatConversationSummary, ChatMessage, UserPresence } from "@scrimflow/shared";
 import { create } from "zustand";
 
+function sortConversations(conversations: ChatConversationSummary[]) {
+	return [...conversations].sort((left, right) => {
+		const leftTime = left.lastMessageAt ? new Date(left.lastMessageAt).getTime() : 0;
+		const rightTime = right.lastMessageAt ? new Date(right.lastMessageAt).getTime() : 0;
+		return rightTime - leftTime;
+	});
+}
+
 // ─── State shape ──────────────────────────────────────────────────────────────
 
 interface ChatState {
@@ -61,7 +69,7 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 	typing: {},
 
 	setConversations(conversations) {
-		set({ conversations });
+		set({ conversations: sortConversations(conversations) });
 	},
 
 	setMessages(conversationId, messages, nextCursor) {
@@ -95,14 +103,16 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 		});
 		// Bump conversation unread count and last preview for non-active conversations
 		set((s) => ({
-			conversations: s.conversations.map((conv) => {
-				if (conv.id !== conversationId) return conv;
-				return {
-					...conv,
-					lastMessagePreview: message.content.slice(0, 100),
-					lastMessageAt: message.createdAt,
-				};
-			}),
+			conversations: sortConversations(
+				s.conversations.map((conv) => {
+					if (conv.id !== conversationId) return conv;
+					return {
+						...conv,
+						lastMessagePreview: message.content.slice(0, 100),
+						lastMessageAt: message.createdAt,
+					};
+				})
+			),
 		}));
 	},
 
@@ -132,11 +142,11 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 		set((s) => {
 			const exists = s.conversations.some((c) => c.id === conversation.id);
 			if (!exists) {
-				return { conversations: [conversation, ...s.conversations] };
+				return { conversations: sortConversations([conversation, ...s.conversations]) };
 			}
 			return {
-				conversations: s.conversations.map((c) =>
-					c.id === conversation.id ? { ...c, ...conversation } : c
+				conversations: sortConversations(
+					s.conversations.map((c) => (c.id === conversation.id ? { ...c, ...conversation } : c))
 				),
 			};
 		});

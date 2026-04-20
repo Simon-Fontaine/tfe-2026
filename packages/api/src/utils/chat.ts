@@ -1,3 +1,4 @@
+import type { ChatConversationSummary } from "@scrimflow/shared";
 import { and, count, desc, eq, gt, inArray, isNull, lt, ne, or } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -506,6 +507,17 @@ export async function getConversationDetailForUser(conversationId: string, userI
 			leftAt: member.leftAt?.toISOString() ?? null,
 		})),
 	};
+}
+
+export async function getConversationSummaryForUser(
+	conversationId: string,
+	userId: string
+): Promise<ChatConversationSummary | null> {
+	const detail = await getConversationDetailForUser(conversationId, userId);
+	if (!detail) return null;
+
+	const { participants: _participants, ...summary } = detail;
+	return summary;
 }
 
 export async function listMessagesForUser(params: {

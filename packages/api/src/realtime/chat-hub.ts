@@ -1,3 +1,4 @@
+import type { RealtimeSessionInvalidationReason } from "@scrimflow/shared";
 import Redis from "ioredis";
 import logger from "@/utils/logger";
 import { refreshPresence, setUserOffline, setUserOnline } from "./presence";
@@ -16,9 +17,11 @@ import { refreshPresence, setUserOffline, setUserOnline } from "./presence";
 
 type ChatSocket = {
 	send: (payload: string) => unknown;
+	close?: (code?: number, reason?: string) => unknown;
 };
 
 type SocketMeta = {
+	sessionId: string;
 	userId: string;
 	subscriptions: Set<string>;
 };
@@ -26,6 +29,7 @@ type SocketMeta = {
 // ─── In-memory state ─────────────────────────────────────────────────────────
 
 const socketMeta = new Map<ChatSocket, SocketMeta>();
+const sessionSockets = new Map<string, Set<ChatSocket>>();
 const userSockets = new Map<string, Set<ChatSocket>>();
 const conversationSockets = new Map<string, Set<ChatSocket>>();
 
@@ -144,8 +148,18 @@ async function redisPublishUser(userId: string, event: string, payload: Record<s
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function registerChatSocket(ws: ChatSocket, userId: string) {
-	socketMeta.set(ws, { userId, subscriptions: new Set() });
+function notifySessionInvalidation(ws: ChatSocket, reason: RealtimeSessionInvalidationReason) {
+	send(ws, { type: "chat:session-invalidated", reason });
+	try {
+		ws.close?.(4401, reason);
+	} catch {
+		// Ignore close failures from stale sockets.
+	}
+}
+
+export function registerChatSocket(ws: ChatSocket, userId: string, sessionId: string) {
+	socketMeta.set(ws, { sessionId, userId, subscriptions: new Set() });
+	getOrCreateSet(sessionSockets, sessionId).add(ws);
 	getOrCreateSet(userSockets, userId).add(ws);
 	send(ws, { type: "chat:connected", userId });
 	void setUserOnline(userId);
@@ -162,6 +176,14 @@ export function unregisterChatSocket(ws: ChatSocket) {
 		if (sockets.size === 0) conversationSockets.delete(conversationId);
 	}
 
+	const socketsForSession = sessionSockets.get(meta.sessionId);
+	if (socketsForSession) {
+		socketsForSession.delete(ws);
+		if (socketsForSession.size === 0) {
+			sessionSockets.delete(meta.sessionId);
+		}
+	}
+
 	const socketsForUser = userSockets.get(meta.userId);
 	if (socketsForUser) {
 		socketsForUser.delete(ws);
@@ -173,6 +195,32 @@ export function unregisterChatSocket(ws: ChatSocket) {
 	}
 
 	socketMeta.delete(ws);
+}
+
+export function disconnectChatSession(
+	sessionId: string,
+	reason: RealtimeSessionInvalidationReason
+) {
+	const sockets = sessionSockets.get(sessionId);
+	if (!sockets || sockets.size === 0) return;
+
+	for (const ws of [...sockets]) {
+		notifySessionInvalidation(ws, reason);
+		unregisterChatSocket(ws);
+	}
+}
+
+export function disconnectChatUserSessions(
+	userId: string,
+	reason: RealtimeSessionInvalidationReason
+) {
+	const sockets = userSockets.get(userId);
+	if (!sockets || sockets.size === 0) return;
+
+	for (const ws of [...sockets]) {
+		notifySessionInvalidation(ws, reason);
+		unregisterChatSocket(ws);
+	}
 }
 
 export function subscribeSocketToConversation(ws: ChatSocket, conversationId: string) {

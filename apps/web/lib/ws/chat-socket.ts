@@ -89,6 +89,7 @@ class ChatSocketService {
 
 	subscribe(conversationId: string): void {
 		this.subscriptions.add(conversationId);
+		this.connect();
 		this.sendCommand({ type: "subscribe", conversationId });
 	}
 
@@ -138,6 +139,14 @@ class ChatSocketService {
 	}
 
 	private handleEvent(event: ChatRealtimeEvent): void {
+		if (event.type === "chat:session-invalidated") {
+			this.disconnect();
+			if (typeof window !== "undefined") {
+				window.location.reload();
+			}
+			return;
+		}
+
 		const store = useChatStore.getState();
 
 		switch (event.type) {
@@ -170,11 +179,7 @@ class ChatSocketService {
 				break;
 
 			case "notification:new":
-				// Bump unread count for the conversation
-				store.upsertConversation({
-					id: event.conversationId,
-					// Minimal shape — the store merges this with existing data
-				} as Parameters<typeof store.upsertConversation>[0]);
+				store.upsertConversation(event.conversation);
 				break;
 
 			default:

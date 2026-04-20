@@ -16,6 +16,8 @@ import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import { disconnectChatSession } from "@/realtime/chat-hub";
+import { disconnectRealtimeSession } from "@/realtime/scrim-hub";
 import { fetchGeoData } from "@/utils/geo";
 
 const passwordRoutes = new Hono<RequestContextEnv & AuthEnv>();
@@ -120,6 +122,18 @@ passwordRoutes.post("/confirm", async (c) => {
 	const newHash = await hashPassword(body.newPassword);
 	await db.update(userTable).set({ passwordHash: newHash }).where(eq(userTable.id, session.userId));
 
+	const revokedSessionIds = await db
+		.select({ id: sessionTable.id })
+		.from(sessionTable)
+		.where(
+			and(
+				eq(sessionTable.userId, session.userId),
+				ne(sessionTable.id, session.id),
+				isNull(sessionTable.revokedAt)
+			)
+		)
+		.then((rows) => rows.map((row) => row.id));
+
 	await db
 		.update(sessionTable)
 		.set({ revokedAt: new Date(), revocationReason: "password_change" })
@@ -130,6 +144,11 @@ passwordRoutes.post("/confirm", async (c) => {
 				isNull(sessionTable.revokedAt)
 			)
 		);
+
+	for (const revokedSessionId of revokedSessionIds) {
+		disconnectRealtimeSession(revokedSessionId, "session_revoked");
+		disconnectChatSession(revokedSessionId, "session_revoked");
+	}
 
 	await deleteSensitiveActionVerification(session.userId, "password_change");
 

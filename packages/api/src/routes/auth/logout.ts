@@ -4,6 +4,8 @@ import { deleteCookie } from "hono/cookie";
 import { invalidateSession } from "@/auth/session";
 import { type AuthEnv, requireAuth } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { disconnectChatSession } from "@/realtime/chat-hub";
+import { disconnectRealtimeSession } from "@/realtime/scrim-hub";
 
 const logoutRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
@@ -13,6 +15,8 @@ logoutRoutes.post("/", async (c) => {
 	const session = c.get("session");
 
 	await invalidateSession(session.id);
+	disconnectRealtimeSession(session.id, "session_revoked");
+	disconnectChatSession(session.id, "session_revoked");
 
 	deleteCookie(c, "session_token");
 

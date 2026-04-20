@@ -16,6 +16,7 @@ import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
 import {
 	canManageRecruitmentListing,
+	countManagedPendingApplications,
 	ensureOrganizationMembership,
 	ensureTeamMembership,
 	mapRecruitmentApplication,
@@ -88,6 +89,15 @@ recruitmentApplicationsRoutes.delete("/:id", async (c) => {
 			title: `An application on "${application.listing.title}" was withdrawn.`,
 			referenceType: "recruitment_application",
 			referenceId: application.id,
+		});
+
+		const pendingCount = await countManagedPendingApplications(application.listing.userId);
+		void publishUserRealtimeEvent({
+			userId: application.listing.userId,
+			event: "recruit:managed-pending-count",
+			payload: {
+				pendingCount,
+			},
 		});
 	}
 
@@ -177,6 +187,14 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 			userId: application.applicantUserId,
 			event: "recruit:application-decided",
 			payload: { applicationId: application.id, status: "rejected" },
+		});
+		const pendingCount = await countManagedPendingApplications(application.listing.userId);
+		void publishUserRealtimeEvent({
+			userId: application.listing.userId,
+			event: "recruit:managed-pending-count",
+			payload: {
+				pendingCount,
+			},
 		});
 
 		return c.json({ success: true });
@@ -358,6 +376,14 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 		userId: application.applicantUserId,
 		event: "recruit:application-decided",
 		payload: { applicationId: application.id, status: "accepted" },
+	});
+	const pendingCount = await countManagedPendingApplications(application.listing.userId);
+	void publishUserRealtimeEvent({
+		userId: application.listing.userId,
+		event: "recruit:managed-pending-count",
+		payload: {
+			pendingCount,
+		},
 	});
 
 	return c.json({ success: true });

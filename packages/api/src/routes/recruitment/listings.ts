@@ -20,6 +20,7 @@ import { extractErrors } from "@/routes/auth/utils";
 import { getOrgPermissions } from "@/utils/org";
 import {
 	canManageRecruitmentListing,
+	countManagedPendingApplications,
 	createRecruitmentConversation,
 	mapRecruitmentApplication,
 	mapRecruitmentListing,
@@ -462,6 +463,8 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 	});
 
 	if (fullApplication) {
+		const pendingCount = await countManagedPendingApplications(listing.userId);
+
 		void publishUserRealtimeEvent({
 			userId: listing.userId,
 			event: "recruit:application-received",
@@ -471,6 +474,13 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 					...fullApplication,
 					chatChannels: [{ id: conversationId }],
 				}),
+			},
+		});
+		void publishUserRealtimeEvent({
+			userId: listing.userId,
+			event: "recruit:managed-pending-count",
+			payload: {
+				pendingCount,
 			},
 		});
 	}
