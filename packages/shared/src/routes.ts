@@ -250,7 +250,7 @@ export const appRoutes = {
 		byId: (listingId: string) => `/app/recruiting/${listingId}`,
 	},
 	teams: {
-		byId: (teamId: string) => `/app/teams/${teamId}/overview`,
+		byId: (teamId: string) => `/app/teams/${teamId}`,
 		scrimById: (teamId: string, scrimId: string) => `/app/teams/${teamId}/scrims/${scrimId}`,
 		roster: (teamId: string) => `/app/teams/${teamId}/roster`,
 		calendar: (teamId: string) => `/app/teams/${teamId}/calendar`,
