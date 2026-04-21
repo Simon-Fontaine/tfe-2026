@@ -21,11 +21,30 @@ export default async function PlayerProfilePage({
 	params: Promise<{ username: string }>;
 }) {
 	const { username } = await params;
-	const player = await getPublicPlayerByUsername(username);
-	if (!player) notFound();
+
+	let player: Awaited<ReturnType<typeof getPublicPlayerByUsername>>;
+	try {
+		const result = await getPublicPlayerByUsername(username);
+		if (!result) {
+			notFound();
+			return null;
+		}
+		player = result;
+	} catch {
+		return (
+			<div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+				<EmptyStateBlock
+					icon={UserSearch01Icon}
+					title="Could not load this page"
+					description="Something went wrong. Please go back and try again."
+					variant="page"
+				/>
+			</div>
+		);
+	}
 
 	const { user } = await getCurrentSession();
-	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
+	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">

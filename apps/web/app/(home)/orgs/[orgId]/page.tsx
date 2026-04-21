@@ -13,17 +13,36 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export default async function OrgProfilePage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { orgId } = await params;
-	const org = await getPublicOrgByIdOrSlug(orgId);
-	if (!org) notFound();
+
+	let org: Awaited<ReturnType<typeof getPublicOrgByIdOrSlug>>;
+	try {
+		const result = await getPublicOrgByIdOrSlug(orgId);
+		if (!result) {
+			notFound();
+			return null;
+		}
+		org = result;
+	} catch {
+		return (
+			<div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+				<EmptyStateBlock
+					icon={GameController01Icon}
+					title="Could not load this page"
+					description="Something went wrong. Please go back and try again."
+					variant="page"
+				/>
+			</div>
+		);
+	}
 
 	const { user } = await getCurrentSession();
 	const userOrgRole = user ? await getUserOrgRole(org.id, user.id).catch(() => null) : null;
 	const isMember = userOrgRole !== null;
-	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
+	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
@@ -70,7 +89,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				</Button>
 				{isMember && (
 					<Button asChild size="sm" variant="outline">
-						<Link href={`/app/orgs/${org.id}/overview`}>Open workspace</Link>
+						<Link href={appRoutes.orgs.byId(org.id)}>Open workspace</Link>
 					</Button>
 				)}
 			</div>

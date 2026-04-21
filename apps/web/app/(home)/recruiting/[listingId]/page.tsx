@@ -19,7 +19,12 @@ import { publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({ params }: { params: Promise<{ listingId: string }> }) {
 	const { listingId } = await params;
-	const listing = await getPublicRecruitmentListingById(listingId);
+	let listing: Awaited<ReturnType<typeof getPublicRecruitmentListingById>> | null = null;
+	try {
+		listing = await getPublicRecruitmentListingById(listingId);
+	} catch {
+		// metadata fetch failed — return fallback
+	}
 
 	if (!listing) {
 		return { title: "Listing not found" };
@@ -37,15 +42,30 @@ export default async function PublicRecruitingListingDetailPage({
 	params: Promise<{ listingId: string }>;
 }) {
 	const { listingId } = await params;
-	const listingResult = await getPublicRecruitmentListingById(listingId);
-	if (!listingResult) {
-		notFound();
-		return null;
+
+	let listing: Awaited<ReturnType<typeof getPublicRecruitmentListingById>>;
+	try {
+		const result = await getPublicRecruitmentListingById(listingId);
+		if (!result) {
+			notFound();
+			return null;
+		}
+		listing = result;
+	} catch {
+		return (
+			<PublicPageShell title="Listing" description="" maxWidth="4xl" contentClassName="space-y-6">
+				<EmptyStateBlock
+					icon={UserSearch01Icon}
+					title="Could not load this page"
+					description="Something went wrong. Please go back and try again."
+					variant="page"
+				/>
+			</PublicPageShell>
+		);
 	}
-	const listing = listingResult;
 
 	const { user } = await getCurrentSession();
-	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
+	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
 	const ownerLabel = formatRecruitmentOwner(listing);
 	const compRange = formatRecruitmentCompRange(listing);
 	const ownerHref = listing.teamId

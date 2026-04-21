@@ -15,12 +15,31 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicTeamPreview } from "@/lib/data/team";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export default async function TeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
 	const { teamId } = await params;
-	const team = await getPublicTeamPreview(teamId);
-	if (!team) notFound();
+
+	let team: Awaited<ReturnType<typeof getPublicTeamPreview>>;
+	try {
+		const result = await getPublicTeamPreview(teamId);
+		if (!result) {
+			notFound();
+			return null;
+		}
+		team = result;
+	} catch {
+		return (
+			<div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+				<EmptyStateBlock
+					icon={UserGroupIcon}
+					title="Could not load this page"
+					description="Something went wrong. Please go back and try again."
+					variant="page"
+				/>
+			</div>
+		);
+	}
 
 	const { user } = await getCurrentSession();
 	const userOrgRole = user
@@ -28,7 +47,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 		: null;
 	const canManageInWorkspace = userOrgRole === "owner" || userOrgRole === "admin";
 	const isOrgMember = userOrgRole !== null;
-	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
+	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
@@ -100,7 +119,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 					</Button>
 					{isOrgMember && (
 						<Button asChild size="sm" variant="outline">
-							<Link href={`/app/teams/${team.id}/overview`}>
+							<Link href={appRoutes.teams.byId(team.id)}>
 								{canManageInWorkspace ? "Manage in workspace" : "Open workspace"}
 							</Link>
 						</Button>
