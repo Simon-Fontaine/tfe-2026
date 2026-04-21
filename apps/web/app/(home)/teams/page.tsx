@@ -6,6 +6,8 @@ export const metadata: Metadata = {
 	description: "Browse Overwatch 2 teams and find your next roster.",
 };
 
+import { Suspense } from "react";
+import { PublicGridLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamDiscoveryCard } from "@/components/teams/discovery/team-discovery-card";
@@ -20,7 +22,6 @@ export default async function TeamsDirectoryPage({ searchParams }: TeamsDirector
 	const { recruiting } = await searchParams;
 	const recruitingFilter =
 		recruiting === "true" ? true : recruiting === "false" ? false : undefined;
-	const teams = await getTeamsForDiscovery({ recruiting: recruitingFilter });
 
 	return (
 		<PublicPageShell
@@ -31,20 +32,49 @@ export default async function TeamsDirectoryPage({ searchParams }: TeamsDirector
 		>
 			<TeamDiscoveryFilters recruitingFilter={recruitingFilter} />
 
-			{teams.length === 0 ? (
-				<EmptyStateBlock
-					icon={GameController01Icon}
-					title="No teams matched this filter"
-					description="Try changing filters or check back as new teams are published."
-					variant="page"
-				/>
-			) : (
-				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-					{teams.map((team) => (
-						<TeamDiscoveryCard key={team.id} team={team} />
-					))}
-				</div>
-			)}
+			<Suspense fallback={<PublicGridLoading />}>
+				<TeamListSection recruitingFilter={recruitingFilter} />
+			</Suspense>
 		</PublicPageShell>
+	);
+}
+
+async function TeamListSection({ recruitingFilter }: { recruitingFilter: boolean | undefined }) {
+	let teams: Awaited<ReturnType<typeof getTeamsForDiscovery>> = [];
+	let hasError = false;
+	try {
+		teams = await getTeamsForDiscovery({ recruiting: recruitingFilter });
+	} catch {
+		hasError = true;
+	}
+
+	if (hasError) {
+		return (
+			<EmptyStateBlock
+				icon={GameController01Icon}
+				title="Could not load content"
+				description="Something went wrong loading this page. Please refresh to try again."
+				variant="page"
+			/>
+		);
+	}
+
+	if (teams.length === 0) {
+		return (
+			<EmptyStateBlock
+				icon={GameController01Icon}
+				title="No public teams yet"
+				description="Check back later as teams publish their profiles."
+				variant="page"
+			/>
+		);
+	}
+
+	return (
+		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			{teams.map((team) => (
+				<TeamDiscoveryCard key={team.id} team={team} />
+			))}
+		</div>
 	);
 }

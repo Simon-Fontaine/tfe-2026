@@ -7,6 +7,8 @@ export const metadata: Metadata = {
 	description: "Discover Overwatch 2 players by role and rank.",
 };
 
+import { Suspense } from "react";
+import { PublicGridLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,8 +19,6 @@ import { ROLE_LABELS } from "@/lib/recruitment";
 import { publicRoutes } from "@/lib/routes";
 
 export default async function PlayersDirectoryPage() {
-	const players = await getPublicPlayers();
-
 	return (
 		<PublicPageShell
 			title="Players"
@@ -31,52 +31,81 @@ export default async function PlayersDirectoryPage() {
 				</Button>
 			}
 		>
-			{players.length === 0 ? (
-				<EmptyStateBlock
-					icon={UserSearch01Icon}
-					title="No players yet"
-					description="Players will appear here once they complete their profile."
-					variant="page"
-				/>
-			) : (
-				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-					{players.map((player) => (
-						<Link
-							key={player.id}
-							href={publicRoutes.players.byUsername(player.username)}
-							className="flex flex-col gap-3 border p-4 transition-colors hover:bg-muted/50"
-						>
-							<div className="flex items-center gap-3">
-								<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
-									<AvatarImage src={player.avatarUrl ?? undefined} className="rounded-none" />
-									<AvatarFallback className="rounded-none text-xs font-bold">
-										{player.displayName.slice(0, 2).toUpperCase()}
-									</AvatarFallback>
-								</Avatar>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold">{player.displayName}</p>
-									<p className="text-xs text-muted-foreground">@{player.username}</p>
-								</div>
-							</div>
-							<div className="flex flex-wrap gap-2">
-								{player.primaryRole && (
-									<Badge variant="outline" className="text-[10px]">
-										{ROLE_LABELS[player.primaryRole]}
-									</Badge>
-								)}
-								{player.rank && (
-									<Badge variant="secondary" className="text-[10px]">
-										{player.rank}
-									</Badge>
-								)}
-							</div>
-							{player.bio ? (
-								<p className="line-clamp-3 text-xs text-muted-foreground">{player.bio}</p>
-							) : null}
-						</Link>
-					))}
-				</div>
-			)}
+			<Suspense fallback={<PublicGridLoading />}>
+				<PlayerListSection />
+			</Suspense>
 		</PublicPageShell>
+	);
+}
+
+async function PlayerListSection() {
+	let players: Awaited<ReturnType<typeof getPublicPlayers>> = [];
+	let hasError = false;
+	try {
+		players = await getPublicPlayers();
+	} catch {
+		hasError = true;
+	}
+
+	if (hasError) {
+		return (
+			<EmptyStateBlock
+				icon={UserSearch01Icon}
+				title="Could not load content"
+				description="Something went wrong loading this page. Please refresh to try again."
+				variant="page"
+			/>
+		);
+	}
+
+	if (players.length === 0) {
+		return (
+			<EmptyStateBlock
+				icon={UserSearch01Icon}
+				title="No public players yet"
+				description="Check back later as players set up their profiles."
+				variant="page"
+			/>
+		);
+	}
+
+	return (
+		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			{players.map((player) => (
+				<Link
+					key={player.id}
+					href={publicRoutes.players.byUsername(player.username)}
+					className="flex flex-col gap-3 border p-4 transition-colors hover:bg-muted/50"
+				>
+					<div className="flex items-center gap-3">
+						<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage src={player.avatarUrl ?? undefined} className="rounded-none" />
+							<AvatarFallback className="rounded-none text-xs font-bold">
+								{player.displayName.slice(0, 2).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<div className="min-w-0 flex-1">
+							<p className="truncate text-sm font-semibold">{player.displayName}</p>
+							<p className="text-xs text-muted-foreground">@{player.username}</p>
+						</div>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						{player.primaryRole && (
+							<Badge variant="outline" className="text-[10px]">
+								{ROLE_LABELS[player.primaryRole]}
+							</Badge>
+						)}
+						{player.rank && (
+							<Badge variant="secondary" className="text-[10px]">
+								{player.rank}
+							</Badge>
+						)}
+					</div>
+					{player.bio ? (
+						<p className="line-clamp-3 text-xs text-muted-foreground">{player.bio}</p>
+					) : null}
+				</Link>
+			))}
+		</div>
 	);
 }
