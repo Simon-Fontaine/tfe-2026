@@ -1,6 +1,8 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -30,15 +32,6 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 	)
 		? ((categoryParam ?? "all") as (typeof CATEGORY_FILTERS)[number])
 		: "all";
-	const entityOptions = user ? await getManageableRecruitEntities(user.id) : [];
-	const listings = await getPublicRecruitmentListings({
-		category: category === "all" ? undefined : category,
-		memberType:
-			memberType === "player" || memberType === "staff"
-				? (memberType as "player" | "staff")
-				: undefined,
-		region: region || undefined,
-	});
 
 	return (
 		<PublicPageShell
@@ -71,26 +64,79 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 				))}
 			</div>
 
-			{listings.length === 0 ? (
-				<EmptyStateBlock
-					icon={UserSearch01Icon}
-					title="No public listings match this filter"
-					description="Check another category or create a recruiting listing from your team workspace."
-					variant="page"
+			<Suspense fallback={<PublicListLoading />}>
+				<RecruitingListSection
+					category={category}
+					memberType={memberType}
+					region={region}
+					userId={user?.id ?? null}
 				/>
-			) : (
-				<div className="space-y-4">
-					{listings.map((listing) => (
-						<RecruitmentListingCard
-							key={listing.id}
-							listing={listing}
-							currentUserId={user?.id ?? null}
-							entityOptions={entityOptions}
-							detailHref={publicRoutes.recruiting.byId(listing.id)}
-						/>
-					))}
-				</div>
-			)}
+			</Suspense>
 		</PublicPageShell>
+	);
+}
+
+async function RecruitingListSection({
+	category,
+	memberType,
+	region,
+	userId,
+}: {
+	category: (typeof CATEGORY_FILTERS)[number];
+	memberType?: string;
+	region?: string;
+	userId: string | null;
+}) {
+	const entityOptions = userId ? await getManageableRecruitEntities(userId).catch(() => []) : [];
+
+	let listings: Awaited<ReturnType<typeof getPublicRecruitmentListings>> = [];
+	let hasError = false;
+	try {
+		listings = await getPublicRecruitmentListings({
+			category: category === "all" ? undefined : category,
+			memberType:
+				memberType === "player" || memberType === "staff"
+					? (memberType as "player" | "staff")
+					: undefined,
+			region: region || undefined,
+		});
+	} catch {
+		hasError = true;
+	}
+
+	if (hasError) {
+		return (
+			<EmptyStateBlock
+				icon={UserSearch01Icon}
+				title="Could not load content"
+				description="Something went wrong loading this page. Please refresh to try again."
+				variant="page"
+			/>
+		);
+	}
+
+	if (listings.length === 0) {
+		return (
+			<EmptyStateBlock
+				icon={UserSearch01Icon}
+				title="No open listings"
+				description="Check back later — new recruiting listings are added regularly."
+				variant="page"
+			/>
+		);
+	}
+
+	return (
+		<div className="space-y-4">
+			{listings.map((listing) => (
+				<RecruitmentListingCard
+					key={listing.id}
+					listing={listing}
+					currentUserId={userId}
+					entityOptions={entityOptions}
+					detailHref={publicRoutes.recruiting.byId(listing.id)}
+				/>
+			))}
+		</div>
 	);
 }
