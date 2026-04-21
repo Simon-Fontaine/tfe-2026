@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -10,6 +10,7 @@ import {
 	recruitmentListingTable,
 	teamRosterTable,
 } from "@/db/schema";
+import { listConversationsForUser } from "@/utils/chat";
 import { getOrgPermissions } from "@/utils/org";
 import { getTeamAccessContext } from "@/utils/team";
 
@@ -430,113 +431,115 @@ export function mapRecruitmentApplication(row: {
 }
 
 export async function getRecruitmentConversationsForUser(userId: string) {
-	const rows = await db.query.chatChannelMemberTable.findMany({
-		where: and(eq(chatChannelMemberTable.userId, userId), isNull(chatChannelMemberTable.leftAt)),
+	const conversations = await listConversationsForUser(userId);
+	const recruitmentConversations = conversations.filter(
+		(conversation) =>
+			conversation.type === "recruitment" && conversation.recruitmentApplicationId !== null
+	);
+
+	if (recruitmentConversations.length === 0) return [];
+
+	const applicationIds = recruitmentConversations
+		.map((conversation) => conversation.recruitmentApplicationId)
+		.filter((value): value is string => !!value);
+
+	const applications = await db.query.recruitmentApplicationTable.findMany({
+		where: inArray(recruitmentApplicationTable.id, applicationIds),
 		with: {
-			channel: {
+			listing: {
 				with: {
-					recruitmentApplication: {
-						with: {
-							listing: {
-								with: {
-									user: {
-										columns: { id: true, username: true, displayName: true, avatarUrl: true },
-									},
-									organization: {
-										columns: { id: true, name: true, slug: true, avatarUrl: true },
-									},
-									team: {
-										columns: {
-											id: true,
-											name: true,
-											tag: true,
-											avatarUrl: true,
-											rating: true,
-										},
-									},
-								},
-							},
-							applicant: {
-								columns: { id: true, username: true, displayName: true, avatarUrl: true },
-								with: {
-									profile: { columns: { primaryRole: true, rank: true } },
-								},
-							},
-							applicantTeam: {
-								columns: { id: true, name: true, tag: true },
-							},
-							applicantOrganization: {
-								columns: { id: true, name: true, slug: true },
-							},
-						},
+					user: {
+						columns: { id: true, username: true, displayName: true, avatarUrl: true },
 					},
-					members: {
-						where: isNull(chatChannelMemberTable.leftAt),
-						with: {
-							user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
-						},
+					organization: {
+						columns: { id: true, name: true, slug: true, avatarUrl: true },
 					},
-					messages: {
-						orderBy: [desc(chatMessageTable.createdAt)],
-						limit: 1,
-						with: {
-							sender: { columns: { id: true, displayName: true, avatarUrl: true } },
+					team: {
+						columns: {
+							id: true,
+							name: true,
+							tag: true,
+							avatarUrl: true,
+							rating: true,
 						},
 					},
 				},
 			},
+			applicant: {
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
+				with: {
+					profile: { columns: { primaryRole: true, rank: true } },
+				},
+			},
+			applicantTeam: {
+				columns: { id: true, name: true, tag: true },
+			},
+			applicantOrganization: {
+				columns: { id: true, name: true, slug: true },
+			},
 		},
-		orderBy: [desc(chatChannelMemberTable.createdAt)],
 	});
 
-	return rows
-		.map((row) => {
-			const channel = row.channel;
-			if (!channel?.recruitmentApplication?.listing) return null;
-			const listing = mapRecruitmentListing(channel.recruitmentApplication.listing, {
+	const applicationsById = new Map(
+		applications.map((application) => [application.id, application])
+	);
+
+	return recruitmentConversations
+		.map((conversation) => {
+			const applicationRow = conversation.recruitmentApplicationId
+				? applicationsById.get(conversation.recruitmentApplicationId)
+				: null;
+			if (!applicationRow?.listing) return null;
+
+			const listing = mapRecruitmentListing(applicationRow.listing, {
 				viewerId: userId,
 			});
-			const application = mapRecruitmentApplication(channel.recruitmentApplication);
-			const otherMember = channel.members.find((member) => member.user.id !== userId);
-			const lastMessage = channel.messages[0];
-
-			// If the current user is the applicant (sender), counterpart is the listing owner.
-			// If the current user owns the listing, counterpart is the applicant.
+			const application = mapRecruitmentApplication(applicationRow);
 			const currentUserIsSender = application.senderUserId === userId;
 			const counterpartType = currentUserIsSender ? listing.ownerType : application.senderType;
+			const counterpartLabel = currentUserIsSender
+				? counterpartType === "organization"
+					? listing.organizationName
+					: counterpartType === "team"
+						? listing.teamName
+						: listing.ownerDisplayName
+				: application.senderDisplayName;
+			const counterpartAvatarUrl = currentUserIsSender
+				? counterpartType === "organization"
+					? listing.organizationAvatarUrl
+					: counterpartType === "team"
+						? listing.teamAvatarUrl
+						: listing.ownerAvatarUrl
+				: application.senderAvatarUrl;
 			const counterpartUsername = currentUserIsSender
 				? counterpartType === "player"
-					? channel.recruitmentApplication.listing.user.username
+					? applicationRow.listing.user.username
 					: null
 				: counterpartType === "player"
-					? channel.recruitmentApplication.applicant.username
+					? applicationRow.applicant.username
 					: null;
 			const counterpartOrgSlug = currentUserIsSender
 				? listing.organizationSlug
 				: application.senderOrganizationSlug;
 
 			return {
-				conversationId: channel.id,
+				conversationId: conversation.id,
 				applicationId: application.id,
 				listingId: application.listingId,
 				listingCategory: listing.category,
 				listingTitle: listing.title,
 				listingStatus: listing.status,
-				counterpartLabel:
-					otherMember?.user.displayName ??
-					(currentUserIsSender ? listing.ownerDisplayName : application.senderDisplayName),
-				counterpartAvatarUrl:
-					otherMember?.user.avatarUrl ??
-					(currentUserIsSender ? listing.ownerAvatarUrl : application.senderAvatarUrl),
+				counterpartLabel: counterpartLabel ?? "Recruitment conversation",
+				counterpartAvatarUrl: counterpartAvatarUrl,
 				counterpartType,
 				counterpartUsername,
 				counterpartOrgSlug,
 				organizationId: listing.organizationId,
 				teamId: listing.teamId,
-				lastMessagePreview: lastMessage?.content ?? application.message ?? null,
-				lastMessageAt: lastMessage?.createdAt?.toISOString() ?? null,
-				unreadCount: 0,
-				isArchived: channel.isArchived,
+				lastMessagePreview: conversation.lastMessagePreview ?? application.message ?? null,
+				lastMessageAt: conversation.lastMessageAt,
+				unreadCount: conversation.unreadCount,
+				isArchived: conversation.isArchived,
 			};
 		})
 		.filter((row): row is NonNullable<typeof row> => row !== null);
