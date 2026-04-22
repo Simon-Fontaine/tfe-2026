@@ -1,0 +1,176 @@
+import type { ScrimDetail, ScrimOcrJobRealtimePayload, ScrimSummary } from "@scrimflow/shared";
+import { publishScrimEvent } from "@/realtime/scrim-hub";
+import { mapBaseScrimSummary, type ScrimRow, type ScrimSummaryRow, toIsoDate } from "./shared";
+
+export function mapScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
+	return mapBaseScrimSummary(scrim);
+}
+
+export function mapOcrJob(job: ScrimRow["ocrJobs"][number]): ScrimDetail["ocrJobs"][number] {
+	return {
+		id: job.id,
+		scrimId: job.scrimId,
+		screenshotType: job.screenshotType,
+		imageUrl: job.imageUrl,
+		status: job.status,
+		progressStage: job.progressStage as ScrimDetail["ocrJobs"][number]["progressStage"],
+		errorMessage: job.errorMessage ?? null,
+		errorCode: job.errorCode ?? null,
+		retryCount: job.retryCount,
+		submittedByUserId: job.submittedByUserId,
+		submittedByDisplayName: job.submittedBy?.displayName ?? null,
+		providerName: job.providerName ?? null,
+		providerModel: job.providerModel ?? null,
+		promptVersion: job.promptVersion ?? null,
+		runAfter: toIsoDate(job.runAfter),
+		processingTimeMs: job.processingTimeMs ?? null,
+		confidenceFlags: (job.confidenceFlags ??
+			[]) as ScrimDetail["ocrJobs"][number]["confidenceFlags"],
+		validatedOutput:
+			(job.validatedOutput as ScrimDetail["ocrJobs"][number]["validatedOutput"]) ?? null,
+		startedAt: toIsoDate(job.startedAt),
+		completedAt: toIsoDate(job.completedAt),
+		createdAt: job.createdAt.toISOString(),
+		updatedAt: job.updatedAt.toISOString(),
+	};
+}
+
+function mapOcrJobRealtimePayload(
+	job: Pick<
+		ScrimDetail["ocrJobs"][number],
+		| "id"
+		| "scrimId"
+		| "status"
+		| "progressStage"
+		| "errorMessage"
+		| "retryCount"
+		| "processingTimeMs"
+		| "updatedAt"
+	>
+): ScrimOcrJobRealtimePayload {
+	return {
+		jobId: job.id,
+		scrimId: job.scrimId,
+		status: job.status,
+		progressStage: job.progressStage,
+		errorMessage: job.errorMessage,
+		retryCount: job.retryCount,
+		processingTimeMs: job.processingTimeMs,
+		updatedAt: job.updatedAt,
+	};
+}
+
+export function publishOcrJobRealtimeUpdate(
+	job: Pick<
+		ScrimDetail["ocrJobs"][number],
+		| "id"
+		| "scrimId"
+		| "status"
+		| "progressStage"
+		| "errorMessage"
+		| "retryCount"
+		| "processingTimeMs"
+		| "updatedAt"
+	>
+) {
+	publishScrimEvent({
+		scrimId: job.scrimId,
+		event: "scrim:ocr-job-updated",
+		payload: {
+			job: mapOcrJobRealtimePayload(job),
+		},
+	});
+}
+
+function mapScrimMap(map: ScrimRow["maps"][number]): ScrimDetail["maps"][number] {
+	return {
+		id: map.id,
+		mapOrder: map.mapOrder,
+		mapName: map.mapName,
+		mapType: map.mapType as ScrimDetail["maps"][number]["mapType"],
+		gameMode: map.gameMode as ScrimDetail["maps"][number]["gameMode"],
+		durationSeconds: map.durationSeconds ?? null,
+		result: map.result,
+		homeScore: map.homeScore,
+		awayScore: map.awayScore,
+		ocrJobId: map.ocrJobId ?? null,
+		players: map.playerStats.map((player) => ({
+			id: player.id,
+			side: player.side as ScrimDetail["maps"][number]["players"][number]["side"],
+			userId: player.userId ?? null,
+			teamId: player.teamId ?? null,
+			playerName: player.playerName,
+			hero: player.hero ?? null,
+			role: player.role ?? null,
+			eliminations: player.eliminations ?? null,
+			assists: player.assists ?? null,
+			deaths: player.deaths ?? null,
+			damage: player.damage ?? null,
+			healing: player.healing ?? null,
+			mitigation: player.mitigation ?? null,
+		})),
+	};
+}
+
+function mapScrimResultRevision(
+	revision: ScrimRow["resultRevisions"][number]
+): ScrimDetail["resultRevisions"][number] {
+	return {
+		id: revision.id,
+		revisionNumber: revision.revisionNumber,
+		reportingTeamId: revision.reportingTeamId ?? null,
+		reportingTeamName: revision.reportingTeam?.name ?? null,
+		reportingTeamTag: revision.reportingTeam?.tag ?? null,
+		submittedByUserId: revision.submittedByUserId ?? null,
+		submittedByDisplayName: revision.submittedBy?.displayName ?? null,
+		sourceOcrJobId: revision.sourceOcrJobId ?? null,
+		homeMapScore: revision.homeMapScore,
+		awayMapScore: revision.awayMapScore,
+		startedAt: toIsoDate(revision.startedAt),
+		endedAt: toIsoDate(revision.endedAt),
+		snapshot: revision.snapshot as ScrimDetail["resultRevisions"][number]["snapshot"],
+		changeSummary:
+			revision.changeSummary as ScrimDetail["resultRevisions"][number]["changeSummary"],
+		createdAt: revision.createdAt.toISOString(),
+	};
+}
+
+export function mapScrimDetail(scrim: ScrimRow): ScrimDetail {
+	return {
+		...mapScrimSummary(scrim),
+		confirmations: scrim.confirmations.map((confirmation) => ({
+			id: confirmation.id,
+			teamId: confirmation.teamId,
+			teamName: confirmation.team.name,
+			teamTag: confirmation.team.tag,
+			status: confirmation.status,
+			disputeReason: confirmation.disputeReason ?? null,
+			confirmedByUserId: confirmation.confirmedByUserId ?? null,
+			confirmedByDisplayName: confirmation.confirmedBy?.displayName ?? null,
+			confirmedAt: toIsoDate(confirmation.confirmedAt),
+			updatedAt: confirmation.updatedAt.toISOString(),
+		})),
+		ratingEvents: scrim.ratingEvents.map((event) => ({
+			id: event.id,
+			teamId: event.teamId,
+			teamName: event.team.name,
+			teamTag: event.team.tag,
+			ratingBefore: event.ratingBefore,
+			ratingAfter: event.ratingAfter,
+			ratingDelta: event.ratingDelta,
+			ratingDeviationBefore: event.ratingDeviationBefore ?? null,
+			ratingDeviationAfter: event.ratingDeviationAfter ?? null,
+			createdAt: event.createdAt.toISOString(),
+		})),
+		ocrJobs: scrim.ocrJobs.map(mapOcrJob),
+		maps: scrim.maps.map(mapScrimMap),
+		resultRevisions: scrim.resultRevisions.map(mapScrimResultRevision),
+		dispute: {
+			resolution: scrim.disputeResolution ?? null,
+			resolvedByUserId: scrim.disputeResolvedByUserId ?? null,
+			resolvedByDisplayName: scrim.disputeResolvedBy?.displayName ?? null,
+			resolvedAt: toIsoDate(scrim.disputeResolvedAt),
+			notes: scrim.disputeNotes ?? null,
+		},
+	};
+}

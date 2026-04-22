@@ -24,6 +24,7 @@ async function revalidateOrg(orgId: string) {
 	revalidatePath(appRoutes.orgs.byId(orgId));
 	revalidatePath(appRoutes.orgs.teams(orgId));
 	revalidatePath(appRoutes.orgs.staff(orgId));
+	revalidatePath(appRoutes.orgs.invites(orgId));
 	revalidatePath(appRoutes.orgs.brand(orgId));
 	revalidatePath(appRoutes.orgs.settings(orgId));
 	revalidatePath(publicRoutes.orgs.root);

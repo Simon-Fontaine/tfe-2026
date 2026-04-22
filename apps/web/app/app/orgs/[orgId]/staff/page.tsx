@@ -1,10 +1,9 @@
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { MemberActionsDropdown } from "@/components/orgs/member-actions-dropdown";
-import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
+import { OrgWorkspaceMissingState } from "@/components/orgs/org-workspace-state";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +13,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams, type OrgMemberSummary } from "@/lib/data/orgs";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -75,7 +74,7 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 
 	const { orgId } = await params;
 	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) notFound();
+	if (!org) return <OrgWorkspaceMissingState />;
 
 	const canManage = org.currentUser.canManage;
 	const leadershipAndStaff = org.members.filter(
@@ -101,6 +100,21 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 					) : undefined
 				}
 			/>
+
+			{canManage && (
+				<PageSection
+					title="Invites"
+					description="Pending invites are managed in a dedicated workspace so active staff and outreach stay separate."
+				>
+					<EmptyStateBlock
+						title={`${org.pendingInvites.length} pending invite${org.pendingInvites.length === 1 ? "" : "s"}`}
+						description="Review pending invites, resend outreach, or cancel stale requests from the invites workspace."
+						actionHref={appRoutes.orgs.invites(org.id)}
+						actionLabel="Open invites"
+						variant="card"
+					/>
+				</PageSection>
+			)}
 
 			<PageSection
 				title="Leadership & staff"
@@ -145,15 +159,6 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 							/>
 						))}
 					</div>
-				</PageSection>
-			)}
-
-			{org.pendingInvites.length > 0 && (
-				<PageSection
-					title="Pending invites"
-					description="Outstanding org invites that still need a response."
-				>
-					<OrgPendingInvitesSection orgId={org.id} invites={org.pendingInvites} />
 				</PageSection>
 			)}
 		</PageContainer>

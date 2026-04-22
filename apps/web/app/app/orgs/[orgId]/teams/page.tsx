@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { OrgWorkspaceMissingState } from "@/components/orgs/org-workspace-state";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
@@ -15,7 +15,7 @@ export default async function AppOrgTeamsPage({ params }: { params: Promise<{ or
 
 	const { orgId } = await params;
 	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) notFound();
+	if (!org) return <OrgWorkspaceMissingState />;
 
 	return (
 		<PageContainer>

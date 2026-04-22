@@ -28,7 +28,7 @@ export default async function AppOrgsPage() {
 					<CreateOrgDialog>
 						<Button size="sm">
 							<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-							New organisation
+							Create organisation
 						</Button>
 					</CreateOrgDialog>
 				}
@@ -38,7 +38,7 @@ export default async function AppOrgsPage() {
 				<EmptyStateBlock
 					icon={UserGroupIcon}
 					title="No organisations yet"
-					description="Create one to manage your teams and start scheduling scrims."
+					description="Create an organisation to manage teams, staff, brand assets, and recruiting from one workspace."
 					variant="card"
 				/>
 			) : (

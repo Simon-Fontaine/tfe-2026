@@ -118,7 +118,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={isPending}>
 							{isPending && <Spinner className="mr-1.5" />}
-							Create
+							Create organisation
 						</Button>
 					</div>
 				</form>

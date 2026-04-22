@@ -142,6 +142,15 @@ export function WorkspaceSidebar({
 								href: appRoutes.orgs.staff(activeOrgId),
 								icon: UserGroupIcon,
 							},
+							...(canManageOrg
+								? [
+										{
+											label: "Invites",
+											href: appRoutes.orgs.invites(activeOrgId),
+											icon: Mail01Icon,
+										},
+									]
+								: []),
 							{
 								label: "Brand",
 								href: appRoutes.orgs.brand(activeOrgId),

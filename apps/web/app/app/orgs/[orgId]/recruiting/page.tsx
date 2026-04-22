@@ -1,6 +1,9 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { notFound, redirect } from "next/navigation";
+import {
+	OrgWorkspaceMissingState,
+	OrgWorkspaceNoAccessState,
+} from "@/components/orgs/org-workspace-state";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -25,13 +28,16 @@ export default async function AppOrgRecruitingPage({
 	if (!user) return null;
 
 	const { orgId } = await params;
-	const orgResult = await getOrgWithTeams(orgId, user.id);
-	if (!orgResult) {
-		notFound();
-		return null;
+	const org = await getOrgWithTeams(orgId, user.id);
+	if (!org) return <OrgWorkspaceMissingState />;
+	if (!org.currentUser.canManage) {
+		return (
+			<OrgWorkspaceNoAccessState
+				title="Recruiting"
+				description="You don't have permission to manage this organisation's recruiting workspace."
+			/>
+		);
 	}
-	const org = orgResult;
-	if (!org.currentUser.canManage) redirect(appRoutes.orgs.byId(orgId));
 
 	const [entityOptions, allManageableListings] = await Promise.all([
 		getManageableRecruitEntities(user.id),

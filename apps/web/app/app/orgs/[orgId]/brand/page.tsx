@@ -1,7 +1,8 @@
-import { LockIcon } from "@hugeicons/core-free-icons";
-import { notFound } from "next/navigation";
 import { OrgProfilePanel } from "@/components/orgs/org-profile-panel";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import {
+	OrgWorkspaceMissingState,
+	OrgWorkspaceNoAccessState,
+} from "@/components/orgs/org-workspace-state";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -13,19 +14,14 @@ export default async function AppOrgBrandPage({ params }: { params: Promise<{ or
 
 	const { orgId } = await params;
 	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) notFound();
+	if (!org) return <OrgWorkspaceMissingState />;
 
 	if (!org.currentUser.canManage) {
 		return (
-			<PageContainer>
-				<PageHeader title="Brand" />
-				<EmptyStateBlock
-					icon={LockIcon}
-					title="No access"
-					description="You don't have permission to manage this organisation's brand profile."
-					variant="card"
-				/>
-			</PageContainer>
+			<OrgWorkspaceNoAccessState
+				title="Brand"
+				description="You don't have permission to manage this organisation's brand profile."
+			/>
 		);
 	}
 

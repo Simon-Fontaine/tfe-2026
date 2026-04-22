@@ -2,7 +2,7 @@
 
 import { PageError } from "@/components/workspace/page-error";
 
-export default function AppError({
+export default function OrgWorkspaceError({
 	error,
 	reset,
 	unstable_retry,
@@ -11,5 +11,12 @@ export default function AppError({
 	reset?: () => void;
 	unstable_retry?: () => void;
 }) {
-	return <PageError error={error} retry={unstable_retry} reset={reset} />;
+	return (
+		<PageError
+			error={error}
+			retry={unstable_retry}
+			reset={reset}
+			title="Failed to load organisation"
+		/>
+	);
 }

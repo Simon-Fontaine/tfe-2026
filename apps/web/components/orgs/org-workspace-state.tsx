@@ -1,0 +1,47 @@
+import { AlertCircleIcon, LockIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { PageContainer } from "@/components/workspace/page-container";
+import { PageHeader } from "@/components/workspace/page-header";
+import { appRoutes } from "@/lib/routes";
+
+export function OrgWorkspaceMissingState() {
+	return (
+		<PageContainer>
+			<PageHeader title="Organization" description="We couldn't open this workspace." />
+			<EmptyStateBlock
+				icon={AlertCircleIcon}
+				title="Organisation unavailable"
+				description="This organisation no longer exists for your account, or you no longer have access. Return to Organizations and open another workspace."
+				actionHref={appRoutes.orgs.root}
+				actionLabel="Back to organizations"
+				variant="page"
+			/>
+		</PageContainer>
+	);
+}
+
+export function OrgWorkspaceNoAccessState({
+	title,
+	description,
+}: {
+	title: string;
+	description: string;
+}) {
+	return (
+		<PageContainer>
+			<PageHeader title={title} />
+			<EmptyStateBlock icon={LockIcon} title="No access" description={description} variant="card" />
+		</PageContainer>
+	);
+}
+
+export function OrgWorkspaceInvitesEmptyState() {
+	return (
+		<EmptyStateBlock
+			icon={UserGroupIcon}
+			title="No pending invites"
+			description="Invite a player, coach, or staff member from the staff workspace to see outstanding invites here."
+			variant="card"
+		/>
+	);
+}

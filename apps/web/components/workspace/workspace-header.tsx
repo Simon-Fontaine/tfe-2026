@@ -38,7 +38,6 @@ const SUB_PAGE_LABELS: Record<string, string> = {
 	invites: "Invites",
 	roster: "Roster",
 	recruiting: "Recruiting",
-	overview: "Overview",
 	calendar: "Calendar",
 	scrims: "Scrims",
 	chat: "Chat",
@@ -59,7 +58,7 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 		const team = teams.find((t) => t.id === teamId);
 		if (team) {
 			const teamLabel = `[${team.tag}] ${team.name}`;
-			if (!subPage || subPage === "overview") {
+			if (!subPage) {
 				crumbs.push({ label: teamLabel });
 			} else if (SUB_PAGE_LABELS[subPage]) {
 				crumbs.push({ label: teamLabel, href: appRoutes.teams.byId(teamId) });
@@ -74,7 +73,7 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 		const [, orgId, subPage] = appOrgMatch;
 		const org = orgs.find((o) => o.id === orgId);
 		if (org) {
-			if (!subPage || subPage === "overview") {
+			if (!subPage) {
 				crumbs.push({ label: org.name });
 			} else if (SUB_PAGE_LABELS[subPage]) {
 				crumbs.push({ label: org.name, href: appRoutes.orgs.byId(orgId) });

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { OrgWorkspaceMissingState } from "@/components/orgs/org-workspace-state";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,7 +27,7 @@ export default async function AppOrgOverviewPage({
 
 	const { orgId } = await params;
 	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) notFound();
+	if (!org) return <OrgWorkspaceMissingState />;
 
 	const totalTeams = org.activeTeams.length + org.archivedTeams.length;
 	const openListingCount = org.ownedListings.filter((post) => post.status === "open").length;
@@ -41,6 +41,9 @@ export default async function AppOrgOverviewPage({
 					<Badge variant="outline" className="text-[10px]">
 						{ROLE_LABELS[org.currentUser.role ?? "member"] ?? org.currentUser.role}
 					</Badge>
+				}
+				actions={
+					org.currentUser.canManage ? <CreateTeamDialog orgId={org.id} showTrigger /> : undefined
 				}
 			>
 				<div className="flex items-center gap-3 pt-1">
@@ -66,9 +69,6 @@ export default async function AppOrgOverviewPage({
 			<PageSection
 				title="Active teams"
 				description="Your active rosters and their current competitive footprint."
-				actions={
-					org.currentUser.canManage ? <CreateTeamDialog orgId={org.id} showTrigger /> : undefined
-				}
 			>
 				{org.activeTeams.length === 0 ? (
 					<p className="text-xs text-muted-foreground">

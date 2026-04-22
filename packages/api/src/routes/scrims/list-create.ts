@@ -1,0 +1,224 @@
+import { CreateScrimSchema } from "@scrimflow/shared";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
+import type { Hono } from "hono";
+import * as v from "valibot";
+import { db } from "@/db";
+import {
+	ocrJobTable,
+	scrimConfirmationTable,
+	scrimTable,
+	teamRosterTable,
+	teamTable,
+} from "@/db/schema";
+import type { AuthEnv } from "@/middleware/auth";
+import { extractErrors } from "@/routes/auth/utils";
+import { ensureScrimConversationLifecycle } from "@/utils/chat";
+import { verifyTeamManager } from "@/utils/team";
+import { canAccessScrim, canViewTeam, notifyTeamAdmins } from "./access";
+import { TEAM_VIEWABLE_STATUSES } from "./constants";
+import { mapScrimDetail, mapScrimSummary } from "./detail";
+import { findScrimWithRelations, toIsoDate } from "./shared";
+
+export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
+	scrimRoutes.get("/", async (c) => {
+		const user = c.get("user");
+		const requestedTeamId = c.req.query("teamId");
+
+		let teamIds: string[] = [];
+
+		if (requestedTeamId) {
+			const allowed = await canViewTeam(requestedTeamId, user.id);
+			if (!allowed) {
+				return c.json({ error: "You do not have access to this team's scrims." }, 403);
+			}
+			teamIds = [requestedTeamId];
+		} else {
+			const memberships = await db.query.teamRosterTable.findMany({
+				where: and(
+					eq(teamRosterTable.userId, user.id),
+					inArray(teamRosterTable.status, TEAM_VIEWABLE_STATUSES)
+				),
+				columns: { teamId: true },
+			});
+			teamIds = [...new Set(memberships.map((membership) => membership.teamId))];
+		}
+
+		if (teamIds.length === 0) {
+			return c.json({ data: [] });
+		}
+
+		const rows = await db.query.scrimTable.findMany({
+			where: or(inArray(scrimTable.homeTeamId, teamIds), inArray(scrimTable.awayTeamId, teamIds)),
+			with: {
+				homeTeam: {
+					columns: {
+						id: true,
+						name: true,
+						tag: true,
+						organizationId: true,
+						avatarUrl: true,
+						rating: true,
+					},
+					with: {
+						organization: { columns: { name: true } },
+					},
+				},
+				awayTeam: {
+					columns: {
+						id: true,
+						name: true,
+						tag: true,
+						organizationId: true,
+						avatarUrl: true,
+						rating: true,
+					},
+					with: {
+						organization: { columns: { name: true } },
+					},
+				},
+				createdBy: {
+					columns: { id: true, displayName: true },
+				},
+				confirmations: {
+					columns: {
+						id: true,
+						teamId: true,
+						status: true,
+						disputeReason: true,
+						confirmedByUserId: true,
+						confirmedAt: true,
+						updatedAt: true,
+					},
+					with: {
+						team: {
+							columns: { id: true, name: true, tag: true },
+						},
+						confirmedBy: {
+							columns: { id: true, displayName: true },
+						},
+					},
+				},
+				ocrJobs: {
+					columns: {
+						id: true,
+						scrimId: true,
+						screenshotType: true,
+						imageUrl: true,
+						status: true,
+						progressStage: true,
+						errorCode: true,
+						errorMessage: true,
+						retryCount: true,
+						submittedByUserId: true,
+						providerName: true,
+						providerModel: true,
+						promptVersion: true,
+						runAfter: true,
+						processingTimeMs: true,
+						confidenceFlags: true,
+						validatedOutput: true,
+						startedAt: true,
+						completedAt: true,
+						createdAt: true,
+						updatedAt: true,
+					},
+					with: {
+						submittedBy: {
+							columns: { id: true, displayName: true },
+						},
+					},
+					orderBy: [desc(ocrJobTable.createdAt)],
+				},
+			},
+			orderBy: [desc(scrimTable.scheduledAt), desc(scrimTable.createdAt)],
+			limit: 100,
+		});
+
+		return c.json({ data: rows.map(mapScrimSummary) });
+	});
+
+	scrimRoutes.get("/:id", async (c) => {
+		const user = c.get("user");
+		const scrim = await findScrimWithRelations(c.req.param("id"));
+		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+		if (!(await canAccessScrim(user.id, scrim))) {
+			return c.json({ error: "You do not have access to this scrim." }, 403);
+		}
+
+		return c.json({ data: mapScrimDetail(scrim) });
+	});
+
+	scrimRoutes.post("/", async (c) => {
+		const user = c.get("user");
+		const body = await c.req.json().catch(() => null);
+		if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+		const parsed = v.safeParse(CreateScrimSchema, body);
+		if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+		if (parsed.output.awayTeamId && parsed.output.awayTeamId === parsed.output.homeTeamId) {
+			return c.json({ error: "Home and away teams must be different." }, 400);
+		}
+
+		if (!(await verifyTeamManager(parsed.output.homeTeamId, user.id))) {
+			return c.json({ error: "You do not have permission to create scrims for this team." }, 403);
+		}
+
+		if (parsed.output.awayTeamId) {
+			const awayTeam = await db.query.teamTable.findFirst({
+				where: eq(teamTable.id, parsed.output.awayTeamId),
+				columns: { id: true },
+			});
+			if (!awayTeam) return c.json({ error: "Away team not found." }, 404);
+		}
+
+		const scrim = await db.transaction(async (tx) => {
+			const [inserted] = await tx
+				.insert(scrimTable)
+				.values({
+					homeTeamId: parsed.output.homeTeamId,
+					awayTeamId: parsed.output.awayTeamId ?? null,
+					status: "pending",
+					message: parsed.output.message ?? null,
+					scheduledAt: parsed.output.scheduledAt ? new Date(parsed.output.scheduledAt) : null,
+					config: parsed.output.config ?? {},
+					createdByUserId: user.id,
+				})
+				.returning({ id: scrimTable.id });
+
+			const confirmationTeamIds = [
+				parsed.output.homeTeamId,
+				...(parsed.output.awayTeamId ? [parsed.output.awayTeamId] : []),
+			];
+
+			if (confirmationTeamIds.length > 0) {
+				await tx.insert(scrimConfirmationTable).values(
+					confirmationTeamIds.map((teamId) => ({
+						scrimId: inserted.id,
+						teamId,
+						status: "pending" as const,
+					}))
+				);
+			}
+
+			return inserted;
+		});
+
+		const detail = await findScrimWithRelations(scrim.id);
+		if (!detail) return c.json({ error: "Scrim not found after creation." }, 500);
+
+		await ensureScrimConversationLifecycle(scrim.id);
+		if (detail.awayTeam) {
+			await notifyTeamAdmins({
+				teamId: detail.awayTeam.id,
+				actorUserId: user.id,
+				type: "scrim_request",
+				title: "New scrim request",
+				body: `${detail.homeTeam.name} sent a scrim request for ${toIsoDate(detail.scheduledAt) ?? "an unscheduled slot"}.`,
+				scrimId: detail.id,
+			});
+		}
+
+		return c.json({ data: mapScrimDetail(detail) }, 201);
+	});
+}

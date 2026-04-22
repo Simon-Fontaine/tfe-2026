@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 
 interface PageErrorProps {
 	error: Error & { digest?: string };
-	reset: () => void;
+	reset?: () => void;
+	retry?: () => void;
 	title?: string;
 }
 
-export function PageError({ error, reset, title = "Failed to load" }: PageErrorProps) {
+export function PageError({ error, reset, retry, title = "Failed to load" }: PageErrorProps) {
+	const action = retry ?? reset;
+
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
 			<div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
@@ -22,9 +25,11 @@ export function PageError({ error, reset, title = "Failed to load" }: PageErrorP
 					{error.message || "Something went wrong while loading this page."}
 				</p>
 			</div>
-			<Button onClick={reset} variant="outline" size="sm">
-				Try again
-			</Button>
+			{action ? (
+				<Button onClick={action} variant="outline" size="sm">
+					Try again
+				</Button>
+			) : null}
 		</div>
 	);
 }

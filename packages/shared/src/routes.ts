@@ -262,9 +262,10 @@ export const appRoutes = {
 	},
 	orgs: {
 		root: "/app/orgs",
-		byId: (orgId: string) => `/app/orgs/${orgId}/overview`,
+		byId: (orgId: string) => `/app/orgs/${orgId}`,
 		teams: (orgId: string) => `/app/orgs/${orgId}/teams`,
 		staff: (orgId: string) => `/app/orgs/${orgId}/staff`,
+		invites: (orgId: string) => `/app/orgs/${orgId}/invites`,
 		brand: (orgId: string) => `/app/orgs/${orgId}/brand`,
 		recruiting: (orgId: string) => `/app/orgs/${orgId}/recruiting`,
 		settings: (orgId: string) => `/app/orgs/${orgId}/settings`,

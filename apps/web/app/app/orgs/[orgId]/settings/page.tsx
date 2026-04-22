@@ -1,7 +1,8 @@
-import { LockIcon } from "@hugeicons/core-free-icons";
-import { notFound } from "next/navigation";
 import { OrgSettingsPanel } from "@/components/orgs/org-settings-panel";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import {
+	OrgWorkspaceMissingState,
+	OrgWorkspaceNoAccessState,
+} from "@/components/orgs/org-workspace-state";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -17,19 +18,14 @@ export default async function AppOrgSettingsPage({
 
 	const { orgId } = await params;
 	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) notFound();
+	if (!org) return <OrgWorkspaceMissingState />;
 
 	if (!org.currentUser.canManage && !org.currentUser.canLeave && !org.currentUser.canDelete) {
 		return (
-			<PageContainer>
-				<PageHeader title="Settings" />
-				<EmptyStateBlock
-					icon={LockIcon}
-					title="No access"
-					description="You don't have permission to manage this organisation's settings."
-					variant="card"
-				/>
-			</PageContainer>
+			<OrgWorkspaceNoAccessState
+				title="Settings"
+				description="You don't have permission to manage this organisation's settings."
+			/>
 		);
 	}
 
