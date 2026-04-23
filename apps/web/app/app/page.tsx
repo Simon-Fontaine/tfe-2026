@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgsForUser } from "@/lib/data/orgs";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppHomePage() {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const orgs = await getOrgsForUser(user.id);
 	const firstTeam = orgs

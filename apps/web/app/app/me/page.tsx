@@ -3,12 +3,11 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ProfileSummaryCard } from "@/components/workspace/profile-summary-card";
 import { StatsOverview } from "@/components/workspace/stats-overview";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getPlayerProfileFull, getPlayerStats } from "@/lib/data/player";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppMePage() {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const [profile, stats] = await Promise.all([
 		getPlayerProfileFull(user.id),

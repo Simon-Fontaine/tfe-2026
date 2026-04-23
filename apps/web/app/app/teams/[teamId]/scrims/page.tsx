@@ -13,11 +13,11 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
 import { getTeamScrims, type ScrimSummary } from "@/lib/data/scrims";
 import { getTeamWithRoster } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 function formatScheduledAt(value: string | null) {
 	if (!value) return "Scheduling in progress";
@@ -32,8 +32,7 @@ function getOpponent(scrim: ScrimSummary, teamId: string) {
 }
 
 export default async function TeamScrimsPage({ params }: { params: Promise<{ teamId: string }> }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
 	const [team, scrims, discoveryTeams] = await Promise.all([

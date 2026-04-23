@@ -6,9 +6,9 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getTeamWithRoster } from "@/lib/data/teams";
 import { appRoutes, publicRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 function formatSignedRatingDelta(value: number) {
 	return value > 0 ? `+${value}` : `${value}`;
@@ -26,8 +26,7 @@ export default async function AppTeamOverviewPage({
 }: {
 	params: Promise<{ teamId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
 	const team = await getTeamWithRoster(teamId, user.id);

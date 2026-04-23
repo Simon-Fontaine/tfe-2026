@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import {
 	listPasskeysAction,
 	listSecurityKeysAction,
@@ -13,13 +12,12 @@ import { SecuritySettingsPageShell } from "@/components/settings/security-settin
 import { TotpManagementSection } from "@/components/settings/totp-management-section";
 import { TwoFactorMethodsSection } from "@/components/settings/two-factor-methods-section";
 import { apiGet } from "@/lib/api-client";
-import { getCurrentSession } from "@/lib/auth/session";
 import { apiRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 import { SecurityStatusProvider } from "@/stores/security-status";
 
 export default async function AppSecuritySettingsPage() {
-	const { session, user } = await getCurrentSession();
-	if (!session || !user) redirect("/auth");
+	const { user } = await requireWorkspaceSession();
 
 	const [securityRes, passkeys, securityKeys, pending] = await Promise.all([
 		apiGet<{ hasPassword: boolean }>(apiRoutes.settings.security.summary),

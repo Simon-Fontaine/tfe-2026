@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getCurrentSession } from "@/lib/auth/session";
 import {
 	getManageableRecruitEntities,
 	getMyRecruitmentApplications,
@@ -19,6 +18,7 @@ import {
 } from "@/lib/data/recruit";
 import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const CATEGORY_FILTERS = ["all", "lft", "lfp", "lfr", "lfs"] as const;
 
@@ -27,8 +27,7 @@ interface AppRecruitingPageProps {
 }
 
 export default async function AppRecruitingPage({ searchParams }: AppRecruitingPageProps) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { category: categoryParam } = await searchParams;
 	const category = CATEGORY_FILTERS.includes(

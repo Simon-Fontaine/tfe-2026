@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getTeamWithRoster } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppTeamRosterPage({
 	searchParams,
@@ -21,8 +21,7 @@ export default async function AppTeamRosterPage({
 	searchParams: Promise<{ type?: string }>;
 	params: Promise<{ teamId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const [{ type }, { teamId }] = await Promise.all([searchParams, params]);
 	const team = await getTeamWithRoster(teamId, user.id);

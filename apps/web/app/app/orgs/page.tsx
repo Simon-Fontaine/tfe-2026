@@ -6,12 +6,11 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgsForUser } from "@/lib/data/orgs";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgsPage() {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const orgs = await getOrgsForUser(user.id);
 

@@ -1,14 +1,12 @@
-import { redirect } from "next/navigation";
 import { getPendingVerificationsAction } from "@/app/actions/settings/pending-verifications";
 import { ChangeEmailSection } from "@/components/settings/change-email-section";
 import { ChangeUsernameSection } from "@/components/settings/change-username-section";
 import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
-import { getCurrentSession } from "@/lib/auth/session";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppAccountSettingsPage() {
-	const { session, user } = await getCurrentSession();
-	if (!session || !user) redirect("/auth");
+	const { user } = await requireWorkspaceSession();
 
 	const pending = await getPendingVerificationsAction();
 

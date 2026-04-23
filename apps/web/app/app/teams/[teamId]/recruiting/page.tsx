@@ -6,18 +6,17 @@ import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-l
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
 import { getTeamWithRoster } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function TeamRecruitingPage({
 	params,
 }: {
 	params: Promise<{ teamId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
 	const team = await getTeamWithRoster(teamId, user.id);

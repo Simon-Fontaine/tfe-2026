@@ -1,10 +1,9 @@
 import { InboxPageClient } from "@/components/notifications/inbox-page-client";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getNotificationsForUser } from "@/lib/data/notifications";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function InboxPage() {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const notifications = await getNotificationsForUser(user.id);
 	const unreadCount = notifications.filter((notification) => !notification.isRead).length;

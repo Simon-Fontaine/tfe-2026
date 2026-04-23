@@ -7,9 +7,9 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -22,8 +22,7 @@ export default async function AppOrgOverviewPage({
 }: {
 	params: Promise<{ orgId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { orgId } = await params;
 	const org = await getOrgWithTeams(orgId, user.id);

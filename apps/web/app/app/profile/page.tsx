@@ -5,10 +5,10 @@ import { GameProfileSection } from "@/components/profile/game-profile-section";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { apiGet } from "@/lib/api-client";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getActiveHeroes } from "@/lib/data/heroes";
 import { getPlayerProfileFull } from "@/lib/data/player";
 import { apiRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 type UserInfo = {
 	displayName: string;
@@ -19,8 +19,7 @@ type UserInfo = {
 };
 
 export default async function AppProfilePage() {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const [profile, userInfoRes, heroes] = await Promise.all([
 		getPlayerProfileFull(user.id),

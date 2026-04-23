@@ -1,8 +1,8 @@
 import { ChatWorkspace } from "@/components/chat/chat-workspace";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getCurrentSession } from "@/lib/auth/session";
 import { getRecruitmentChatConversations } from "@/lib/data/chat";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 interface AppRecruitingConversationsPageProps {
 	searchParams: Promise<{ conversation?: string }>;
@@ -11,8 +11,7 @@ interface AppRecruitingConversationsPageProps {
 export default async function AppRecruitingConversationsPage({
 	searchParams,
 }: AppRecruitingConversationsPageProps) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { conversation } = await searchParams;
 	const conversations = await getRecruitmentChatConversations();
