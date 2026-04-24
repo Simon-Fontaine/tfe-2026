@@ -7,7 +7,7 @@ import { and, asc, eq, ne } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { recruitmentListingTable, teamRosterTable, teamTable } from "@/db/schema";
+import { recruitmentListingTable, scrimTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
 import { mapRecruitmentListing } from "@/utils/recruit";
@@ -119,10 +119,101 @@ publicTeamRoutes.get("/:id", async (c) => {
 					applications: { columns: { id: true, status: true, applicantUserId: true } },
 				},
 			},
+			homeScrims: {
+				where: eq(scrimTable.status, "completed"),
+				columns: {
+					id: true,
+					homeTeamId: true,
+					awayTeamId: true,
+					homeMapScore: true,
+					awayMapScore: true,
+					scheduledAt: true,
+				},
+				with: {
+					awayTeam: { columns: { name: true, tag: true } },
+				},
+				orderBy: (s, { desc: d }) => [d(s.scheduledAt)],
+				limit: 10,
+			},
+			awayScrims: {
+				where: eq(scrimTable.status, "completed"),
+				columns: {
+					id: true,
+					homeTeamId: true,
+					awayTeamId: true,
+					homeMapScore: true,
+					awayMapScore: true,
+					scheduledAt: true,
+				},
+				with: {
+					homeTeam: { columns: { name: true, tag: true } },
+				},
+				orderBy: (s, { desc: d }) => [d(s.scheduledAt)],
+				limit: 10,
+			},
 		},
 	});
 
 	if (!team) return c.json({ error: "Team not found." }, 404);
+
+	// Derive win/loss/draw and recentScrims from completed scrim results
+	let wins = 0;
+	let losses = 0;
+	let draws = 0;
+
+	type RecentScrim = TeamPublicPreview["recentScrims"][number];
+	const allScrims: RecentScrim[] = [];
+
+	for (const scrim of team.homeScrims ?? []) {
+		const h = scrim.homeMapScore;
+		const a = scrim.awayMapScore;
+		if (h === a) draws++;
+		else if (h > a) wins++;
+		else losses++;
+		allScrims.push({
+			id: scrim.id,
+			opponentName: scrim.awayTeam?.name ?? "TBD",
+			opponentTag: scrim.awayTeam?.tag ?? "???",
+			result: h === a ? "draw" : h > a ? "win" : "loss",
+			homeMapScore: h,
+			awayMapScore: a,
+			scheduledAt: scrim.scheduledAt ? scrim.scheduledAt.toISOString() : null,
+		});
+	}
+
+	for (const scrim of team.awayScrims ?? []) {
+		const h = scrim.homeMapScore;
+		const a = scrim.awayMapScore;
+		if (h === a) draws++;
+		else if (a > h) wins++;
+		else losses++;
+		allScrims.push({
+			id: scrim.id,
+			opponentName: scrim.homeTeam?.name ?? "TBD",
+			opponentTag: scrim.homeTeam?.tag ?? "???",
+			result: h === a ? "draw" : a > h ? "win" : "loss",
+			homeMapScore: h,
+			awayMapScore: a,
+			scheduledAt: scrim.scheduledAt ? scrim.scheduledAt.toISOString() : null,
+		});
+	}
+
+	const recentScrims = allScrims
+		.sort((a, b) => {
+			if (!a.scheduledAt && !b.scheduledAt) return 0;
+			if (!a.scheduledAt) return 1;
+			if (!b.scheduledAt) return -1;
+			return b.scheduledAt.localeCompare(a.scheduledAt);
+		})
+		.slice(0, 10);
+
+	// Derive role breakdown from active roster
+	const roleBreakdown = { tank: 0, damage: 0, support: 0 };
+	for (const member of team.roster) {
+		if (member.roleInTeam === "tank") roleBreakdown.tank++;
+		else if (member.roleInTeam === "damage") roleBreakdown.damage++;
+		else if (member.roleInTeam === "support") roleBreakdown.support++;
+	}
 
 	const data: TeamPublicPreview = {
 		id: team.id,
@@ -157,6 +248,11 @@ publicTeamRoutes.get("/:id", async (c) => {
 		listings: team.recruitmentListings.map((listing) =>
 			mapRecruitmentListing(listing, { viewerId: user?.id ?? null })
 		),
+		wins,
+		losses,
+		draws,
+		roleBreakdown,
+		recentScrims,
 	};
 
 	return c.json({ data });

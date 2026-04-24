@@ -21,6 +21,7 @@ import {
 import { scheduleRoutes } from "@/routes/schedule";
 import { publicScrimRoutes, scrimRoutes } from "@/routes/scrims";
 import { settingsRoutes } from "@/routes/settings";
+import { publicStatsRoutes } from "@/routes/stats/public";
 import { teamRoutes } from "@/routes/teams";
 import { publicTeamRoutes } from "@/routes/teams/public";
 import { publicUpdatesRoutes, updatesRoutes } from "@/routes/updates";
@@ -89,6 +90,7 @@ app.route("/api/heroes", heroRoutes);
 app.route("/api/public/teams", publicTeamRoutes);
 app.route("/api/public/orgs", publicOrgRoutes);
 app.route("/api/public/players", publicPlayerRoutes);
+app.route("/api/public/stats", publicStatsRoutes);
 app.route("/api/public/recruitment/listings", publicRecruitmentListingsRoutes);
 app.route("/api/public/scrims", publicScrimRoutes);
 app.route("/api/public/updates", publicUpdatesRoutes);
