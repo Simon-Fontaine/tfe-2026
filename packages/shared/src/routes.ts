@@ -218,6 +218,7 @@ export const apiRoutes = {
 		publicRoot: "/api/public/players",
 		publicByUsername: (username: string) => `/api/public/players/${username}`,
 	},
+	publicStats: "/api/public/stats",
 	chat: {
 		conversations: "/api/chat/conversations",
 		createDirect: "/api/chat/conversations/direct",

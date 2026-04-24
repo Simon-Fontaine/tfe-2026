@@ -334,6 +334,19 @@ export type TeamPublicPreview = {
 	hasOpenListing: boolean;
 	roster: PublicRosterMemberSummary[];
 	listings: RecruitmentListingSummary[];
+	wins: number;
+	losses: number;
+	draws: number;
+	roleBreakdown: { tank: number; damage: number; support: number };
+	recentScrims: {
+		id: string;
+		opponentName: string;
+		opponentTag: string;
+		result: "win" | "loss" | "draw";
+		homeMapScore: number;
+		awayMapScore: number;
+		scheduledAt: IsoDateString | null;
+	}[];
 };
 
 // ─── Organization types ────────────────────────────────────────────────────
@@ -461,6 +474,10 @@ export type PublicOrgDetail = {
 	activeRosterCount: number;
 	teams: OrgTeamSummary[];
 	openListings: RecruitmentListingSummary[];
+	totalScrims: number;
+	website: string | null;
+	discord: string | null;
+	twitter: string | null;
 };
 
 // ─── Discovery types ───────────────────────────────────────────────────────
@@ -1200,6 +1217,21 @@ export type TeamSchedule = {
 
 // ─── Public player types ───────────────────────────────────────────────────
 
+export type PublicHeroPoolEntry = {
+	heroId: string;
+	displayName: string;
+	role: OW2Role;
+	imageUrl: string | null;
+};
+
+export type PublicPlayerTeamMembership = {
+	id: string;
+	name: string;
+	tag: string;
+	organizationName: string;
+	organizationSlug: string;
+};
+
 export type PublicPlayerSummary = {
 	id: string;
 	username: string;
@@ -1215,6 +1247,10 @@ export type PublicPlayerSummary = {
 
 export type PublicPlayerDetail = PublicPlayerSummary & {
 	bannerUrl: string | null;
+	battletag: string | null;
+	heroPool: PublicHeroPoolEntry[];
+	teams: PublicPlayerTeamMembership[];
+	scrimStats: { scrimsPlayed: number; wins: number; losses: number; draws: number } | null;
 };
 
 // ─── Hero types ────────────────────────────────────────────────────────────

@@ -214,6 +214,15 @@ export const organizationTable = pgTable(
 		avatarUrl: text("avatar_url"),
 		bannerUrl: text("banner_url"),
 
+		/** Optional public website URL for the organization (e.g. "https://example.com"). */
+		website: text("website"),
+
+		/** Optional Discord server invite URL or handle. */
+		discord: text("discord"),
+
+		/** Optional Twitter/X username or profile URL. */
+		twitter: text("twitter"),
+
 		/** Org creator. Denormalized for fast access. */
 		ownerId: uuid("owner_id")
 			.notNull()
