@@ -6,6 +6,7 @@ import { db } from "@/db";
 import {
 	organizationTable,
 	recruitmentListingTable,
+	scrimTable,
 	teamRosterTable,
 	teamTable,
 } from "@/db/schema";
@@ -79,6 +80,9 @@ publicOrgRoutes.get("/:id", async (c) => {
 			avatarUrl: true,
 			bannerUrl: true,
 			description: true,
+			website: true,
+			discord: true,
+			twitter: true,
 		},
 		with: {
 			teams: {
@@ -99,6 +103,14 @@ publicOrgRoutes.get("/:id", async (c) => {
 				with: {
 					roster: {
 						columns: { id: true, userId: true, permissionRole: true, status: true },
+					},
+					homeScrims: {
+						where: eq(scrimTable.status, "completed"),
+						columns: { id: true },
+					},
+					awayScrims: {
+						where: eq(scrimTable.status, "completed"),
+						columns: { id: true },
 					},
 				},
 				orderBy: [asc(teamTable.name)],
@@ -153,6 +165,15 @@ publicOrgRoutes.get("/:id", async (c) => {
 		openListings: org.recruitmentListings.map((listing) =>
 			mapRecruitmentListing(listing, { viewerId: user?.id ?? null })
 		),
+		totalScrims: new Set(
+			org.teams.flatMap((team) => [
+				...(team.homeScrims ?? []).map((s) => s.id),
+				...(team.awayScrims ?? []).map((s) => s.id),
+			])
+		).size,
+		website: org.website ?? null,
+		discord: org.discord ?? null,
+		twitter: org.twitter ?? null,
 	};
 
 	return c.json({ data });
