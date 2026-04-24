@@ -3,8 +3,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
 import { PublicPageSection } from "@/components/home/public-page-section";
+import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,19 +23,24 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 		const result = await getPublicOrgByIdOrSlug(orgId);
 		if (!result) {
 			notFound();
-			return null;
 		}
 		org = result;
 	} catch {
 		return (
-			<div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+			<PublicPageShell
+				title="Organization"
+				description="Public teams and recruiting listings published by this organization."
+				maxWidth="5xl"
+			>
 				<EmptyStateBlock
 					icon={GameController01Icon}
 					title="Could not load this page"
-					description="Something went wrong. Please go back and try again."
+					description="The organization profile could not be loaded right now. Browse public organizations or try again in a moment."
+					actionHref={publicRoutes.orgs.root}
+					actionLabel="Browse organizations"
 					variant="page"
 				/>
-			</div>
+			</PublicPageShell>
 		);
 	}
 
@@ -92,7 +97,124 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						<Link href={appRoutes.orgs.byId(org.id)}>Open workspace</Link>
 					</Button>
 				)}
+				{!isMember && (
+					<Button asChild size="sm" variant="outline">
+						<Link href="/auth?step=register">Create an account</Link>
+					</Button>
+				)}
+				<Button asChild size="sm" variant="outline">
+					<Link href={publicRoutes.orgs.root}>Back to organizations</Link>
+				</Button>
 			</div>
+
+			<div className="border p-5">
+				<div className="flex flex-wrap gap-6">
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Teams
+						</p>
+						<p className="mt-1 text-sm font-semibold">{org.teamCount}</p>
+					</div>
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Active members
+						</p>
+						<p className="mt-1 text-sm font-semibold">{org.activeRosterCount}</p>
+					</div>
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Scrims played
+						</p>
+						<p className="mt-1 text-sm font-semibold">{org.totalScrims}</p>
+					</div>
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Open listings
+						</p>
+						<p className="mt-1 text-sm font-semibold">{org.openListings.length}</p>
+					</div>
+				</div>
+				{(org.website || org.discord || org.twitter) && (
+					<div className="mt-4 flex flex-wrap gap-4 border-t pt-4">
+						{org.website && (
+							<a
+								href={org.website}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"
+							>
+								Website
+							</a>
+						)}
+						{org.discord && (
+							<a
+								href={org.discord}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"
+							>
+								Discord
+							</a>
+						)}
+						{org.twitter && (
+							<a
+								href={org.twitter}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"
+							>
+								Twitter / X
+							</a>
+						)}
+					</div>
+				)}
+			</div>
+
+			{(() => {
+				const topTeam = org.teams.reduce(
+					(best, t) => (!best || t.rating > best.rating ? t : best),
+					null as (typeof org.teams)[number] | null
+				);
+				if (!topTeam) return null;
+				return (
+					<div>
+						<p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Top-rated team
+						</p>
+						<Link
+							href={publicRoutes.teams.byId(topTeam.id)}
+							className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
+						>
+							<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+								<AvatarImage src={topTeam.avatarUrl ?? undefined} className="rounded-none" />
+								<AvatarFallback className="rounded-none text-xs font-bold">
+									{topTeam.tag}
+								</AvatarFallback>
+							</Avatar>
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-medium">{topTeam.name}</p>
+								<p className="text-xs text-muted-foreground">Rating {topTeam.rating}</p>
+							</div>
+							{topTeam.isRecruiting && (
+								<Badge variant="secondary" className="text-[10px]">
+									Recruiting
+								</Badge>
+							)}
+						</Link>
+					</div>
+				);
+			})()}
+
+			{org.openListings.length > 0 && (
+				<div className="border p-4">
+					<p className="text-xs font-medium text-muted-foreground">
+						Currently recruiting ·{" "}
+						<span className="font-semibold text-foreground">
+							{org.openListings.length} open listing{org.openListings.length === 1 ? "" : "s"}
+						</span>
+					</p>
+				</div>
+			)}
 
 			<PublicPageSection
 				title="Open organisation listings"
@@ -119,7 +241,16 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				)}
 			</PublicPageSection>
 
-			<PublicPageSection title="Teams" className="space-y-3">
+			<PublicPageSection
+				title="Teams"
+				description="Follow these public team routes to inspect roster depth, recruiting status, and player surfaces."
+				className="space-y-3"
+				actions={
+					<Button asChild size="sm" variant="outline">
+						<Link href={publicRoutes.teams.root}>Browse all teams</Link>
+					</Button>
+				}
+			>
 				{org.teams.length === 0 ? (
 					<EmptyStateBlock
 						icon={GameController01Icon}
@@ -157,6 +288,42 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						))}
 					</div>
 				)}
+			</PublicPageSection>
+
+			<PublicPageSection
+				title="Next public routes"
+				description="Keep moving through the public funnel without losing context."
+			>
+				<div className="grid gap-3 md:grid-cols-3">
+					<Link
+						href={publicRoutes.updates.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Updates</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Check recent public announcements from orgs and teams across the platform.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.scrims.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Scrims</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							See whether the broader competitive ecosystem is active and publishing recent results.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.recruiting.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Recruiting</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Return to the full directory if you want to compare this org with other active
+							listings.
+						</p>
+					</Link>
+				</div>
 			</PublicPageSection>
 		</div>
 	);

@@ -14,33 +14,37 @@ const features = [
 		icon: Calendar01Icon,
 		title: "Scrim scheduling",
 		description:
-			"Schedule scrims with availability tracking and timezone-aware coordination tools.",
+			"Request scrims directly from team pages, set availability windows, and confirm results — no Discord back-and-forth needed.",
 	},
 	{
 		icon: UserGroupIcon,
 		title: "Team management",
-		description: "Manage rosters, roles, and permissions. Invite players and organize your lineup.",
+		description:
+			"Manage rosters with role assignments, issue invites, set permissions per member, and track active vs. inactive status.",
 	},
 	{
 		icon: ChartLineData01Icon,
-		title: "Recruitment & discovery",
+		title: "Recruiting market",
 		description:
-			"Post recruitment listings, browse players and teams, and manage conversations in one place.",
+			"Post open player, staff, and org listings. Browse by role, rank, and region. Apply directly through the platform.",
 	},
 	{
 		icon: Message01Icon,
 		title: "Team communication",
-		description: "Built-in messaging for recruitment conversations with threaded discussions.",
+		description:
+			"Built-in team chat with scrim-linked channels. Keep match discussions attached to the scrim they belong to.",
 	},
 	{
 		icon: SecurityCheckIcon,
 		title: "Secure by default",
-		description: "Two-factor authentication, passkey support, and session management baked in.",
+		description:
+			"Passkeys, TOTP, hardware security key, and recovery code support. Session management and device verification built in.",
 	},
 	{
 		icon: FlashIcon,
-		title: "Fast & responsive",
-		description: "Optimized for speed on any device with a lightweight, modern interface.",
+		title: "Rating system",
+		description:
+			"Glicko-based team ratings update automatically after both teams confirm a scrim result. Track momentum over time.",
 	},
 ];
 

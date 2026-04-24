@@ -2,8 +2,8 @@ import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
 import { PublicPageSection } from "@/components/home/public-page-section";
+import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,19 +27,24 @@ export default async function PlayerProfilePage({
 		const result = await getPublicPlayerByUsername(username);
 		if (!result) {
 			notFound();
-			return null;
 		}
 		player = result;
 	} catch {
 		return (
-			<div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+			<PublicPageShell
+				title="Player"
+				description="Public player profile, role focus, and currently open listings."
+				maxWidth="4xl"
+			>
 				<EmptyStateBlock
 					icon={UserSearch01Icon}
 					title="Could not load this page"
-					description="Something went wrong. Please go back and try again."
+					description="The player profile could not be loaded right now. Browse public players or try again in a moment."
+					actionHref={publicRoutes.players.root}
+					actionLabel="Browse players"
 					variant="page"
 				/>
-			</div>
+			</PublicPageShell>
 		);
 	}
 
@@ -101,7 +106,117 @@ export default async function PlayerProfilePage({
 				<Button asChild size="sm">
 					<Link href={publicRoutes.recruiting.root}>Browse all listings</Link>
 				</Button>
+				{user ? (
+					<Button asChild size="sm" variant="outline">
+						<Link href="/app/profile">Open your profile workspace</Link>
+					</Button>
+				) : (
+					<Button asChild size="sm" variant="outline">
+						<Link href="/auth?step=register">Create an account</Link>
+					</Button>
+				)}
 			</div>
+
+			{(player.battletag || player.scrimStats) && (
+				<div className="border p-5">
+					<div className="flex flex-wrap gap-6">
+						{player.battletag && (
+							<div>
+								<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+									Battletag
+								</p>
+								<p className="mt-1 text-sm font-semibold">{player.battletag}</p>
+							</div>
+						)}
+						{player.scrimStats && (
+							<>
+								<div>
+									<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+										Scrims
+									</p>
+									<p className="mt-1 text-sm font-semibold">{player.scrimStats.scrimsPlayed}</p>
+								</div>
+								<div>
+									<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+										Record
+									</p>
+									<p className="mt-1 text-sm font-semibold">
+										<span className="text-green-600">{player.scrimStats.wins}W</span>
+										{" / "}
+										<span className="text-red-600">{player.scrimStats.losses}L</span>
+										{" / "}
+										<span className="text-muted-foreground">{player.scrimStats.draws}D</span>
+									</p>
+								</div>
+							</>
+						)}
+					</div>
+				</div>
+			)}
+
+			<PublicPageSection
+				title="Hero pool"
+				description="Heroes this player has selected, grouped by role."
+			>
+				{player.heroPool.length === 0 ? (
+					<EmptyStateBlock
+						icon={UserSearch01Icon}
+						title="No hero pool set"
+						description="This player has not selected any heroes yet."
+						variant="card"
+					/>
+				) : (
+					<div className="space-y-4">
+						{(["tank", "damage", "support"] as const).map((role) => {
+							const heroes = player.heroPool.filter((h) => h.role === role);
+							if (heroes.length === 0) return null;
+							const roleLabel = role === "tank" ? "Tank" : role === "damage" ? "Damage" : "Support";
+							return (
+								<div key={role}>
+									<p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+										{roleLabel}
+									</p>
+									<div className="flex flex-wrap gap-2">
+										{heroes.map((h) => (
+											<Badge key={h.heroId} variant="outline" className="text-[10px]">
+												{h.displayName}
+											</Badge>
+										))}
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</PublicPageSection>
+
+			<PublicPageSection title="Active teams" description="Teams this player is currently on.">
+				{player.teams.length === 0 ? (
+					<EmptyStateBlock
+						icon={UserSearch01Icon}
+						title="No active team memberships"
+						description="This player is not currently listed on any public teams."
+						variant="card"
+					/>
+				) : (
+					<div className="divide-y border">
+						{player.teams.map((team) => (
+							<Link
+								key={team.id}
+								href={publicRoutes.teams.byId(team.id)}
+								className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
+							>
+								<div>
+									<p className="text-sm font-medium">{team.name}</p>
+									<p className="text-xs text-muted-foreground">
+										[{team.tag}] · {team.organizationName}
+									</p>
+								</div>
+							</Link>
+						))}
+					</div>
+				)}
+			</PublicPageSection>
 
 			<PublicPageSection
 				title="Open listings"
@@ -126,6 +241,42 @@ export default async function PlayerProfilePage({
 						))}
 					</div>
 				)}
+			</PublicPageSection>
+
+			<PublicPageSection
+				title="Related public routes"
+				description="Use these routes to keep browsing without losing the player-recruiting context."
+			>
+				<div className="grid gap-3 md:grid-cols-3">
+					<Link
+						href={publicRoutes.players.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">More players</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Return to the player directory to compare role coverage and visible rank context.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.teams.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Browse teams</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							See which teams are actively publishing public profiles and recruiting posture.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.recruiting.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Open recruiting</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Jump straight into the broader recruiting market to evaluate other active
+							opportunities.
+						</p>
+					</Link>
+				</div>
 			</PublicPageSection>
 		</div>
 	);

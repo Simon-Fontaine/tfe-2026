@@ -4,8 +4,8 @@ import type { OW2Role } from "@scrimflow/shared";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
 import { PublicPageSection } from "@/components/home/public-page-section";
+import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,19 +25,24 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 		const result = await getPublicTeamPreview(teamId);
 		if (!result) {
 			notFound();
-			return null;
 		}
 		team = result;
 	} catch {
 		return (
-			<div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+			<PublicPageShell
+				title="Team"
+				description="Public team profile, roster, and active recruiting listings."
+				maxWidth="4xl"
+			>
 				<EmptyStateBlock
 					icon={UserGroupIcon}
 					title="Could not load this page"
-					description="Something went wrong. Please go back and try again."
+					description="The team profile could not be loaded right now. Browse public teams or try again in a moment."
+					actionHref={publicRoutes.teams.root}
+					actionLabel="Browse teams"
 					variant="page"
 				/>
-			</div>
+			</PublicPageShell>
 		);
 	}
 
@@ -124,8 +129,99 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 							</Link>
 						</Button>
 					)}
+					{!isOrgMember && (
+						<Button asChild size="sm" variant="outline">
+							<Link href="/auth?step=register">Create an account</Link>
+						</Button>
+					)}
+					<Button asChild size="sm" variant="outline">
+						<Link href={publicRoutes.teams.root}>Back to teams</Link>
+					</Button>
 				</div>
 			</div>
+
+			<div className="border p-5">
+				<div className="flex flex-wrap gap-6">
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Record
+						</p>
+						<p className="mt-1 text-sm font-semibold">
+							<span className="text-green-600">{team.wins}W</span>
+							{" / "}
+							<span className="text-red-600">{team.losses}L</span>
+							{" / "}
+							<span className="text-muted-foreground">{team.draws}D</span>
+						</p>
+					</div>
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Roster composition
+						</p>
+						<p className="mt-1 text-sm font-semibold">
+							{team.roleBreakdown.tank}T · {team.roleBreakdown.damage}D ·{" "}
+							{team.roleBreakdown.support}S
+						</p>
+					</div>
+					<div>
+						<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							Rating
+						</p>
+						<p className="mt-1 text-sm font-semibold">{team.rating}</p>
+					</div>
+				</div>
+			</div>
+
+			<PublicPageSection
+				title="Recent scrims"
+				description="Last completed matches with opponent and result."
+			>
+				{team.recentScrims.length === 0 ? (
+					<EmptyStateBlock
+						icon={UserGroupIcon}
+						title="No completed scrims yet"
+						description="This team has not completed any public scrims yet."
+						variant="card"
+					/>
+				) : (
+					<div className="divide-y border">
+						{team.recentScrims.map((scrim) => {
+							const resultVariant =
+								scrim.result === "win"
+									? "default"
+									: scrim.result === "loss"
+										? "destructive"
+										: "outline";
+							const resultLabel =
+								scrim.result === "win" ? "W" : scrim.result === "loss" ? "L" : "D";
+							return (
+								<div key={scrim.id} className="flex items-center justify-between px-4 py-3">
+									<div>
+										<p className="text-sm font-medium">
+											[{scrim.opponentTag}] {scrim.opponentName}
+										</p>
+										{scrim.scheduledAt && (
+											<p className="text-xs text-muted-foreground">
+												{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+													new Date(scrim.scheduledAt)
+												)}
+											</p>
+										)}
+									</div>
+									<div className="flex items-center gap-3">
+										<span className="text-xs text-muted-foreground">
+											{scrim.homeMapScore}–{scrim.awayMapScore}
+										</span>
+										<Badge variant={resultVariant} className="w-6 justify-center text-[10px]">
+											{resultLabel}
+										</Badge>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</PublicPageSection>
 
 			<PublicPageSection
 				title="Open listings"
@@ -196,6 +292,41 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 						})}
 					</div>
 				)}
+			</PublicPageSection>
+
+			<PublicPageSection
+				title="Related public routes"
+				description="Keep browsing the same competitive context without jumping back to the home page."
+			>
+				<div className="grid gap-3 md:grid-cols-3">
+					<Link
+						href={publicRoutes.orgs.bySlug(team.organizationSlug)}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Organization profile</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							See the parent org, related teams, and broader recruiting posture.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.players.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Players directory</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Compare this roster with the broader player pool and public role coverage.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.recruiting.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">Recruiting directory</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Return to the wider recruiting market to compare other active opportunities.
+						</p>
+					</Link>
+				</div>
 			</PublicPageSection>
 		</div>
 	);

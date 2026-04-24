@@ -2,6 +2,7 @@ import { ArrowRight01Icon, LockIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 
 const highlights = [
@@ -11,7 +12,8 @@ const highlights = [
 	{ value: "OW2", label: "Built for comp" },
 ];
 
-export function LandingHeroSection() {
+export async function LandingHeroSection() {
+	const { user } = await getCurrentSession();
 	return (
 		<section className="border-b px-4 py-14 md:py-20" aria-labelledby="hero-heading">
 			<div className="mx-auto max-w-6xl">
@@ -34,16 +36,29 @@ export function LandingHeroSection() {
 							competitive OW2 teams. Schedule, communicate, and improve — all in one place.
 						</p>
 						<div className="mt-6 flex items-center gap-2">
-							<Button asChild>
-								<Link href="/auth?step=register">
-									Get started free
-									<HugeiconsIcon
-										icon={ArrowRight01Icon}
-										strokeWidth={2}
-										className="ml-1.5 size-3.5"
-									/>
-								</Link>
-							</Button>
+							{user ? (
+								<Button asChild>
+									<Link href="/app">
+										Open workspace
+										<HugeiconsIcon
+											icon={ArrowRight01Icon}
+											strokeWidth={2}
+											className="ml-1.5 size-3.5"
+										/>
+									</Link>
+								</Button>
+							) : (
+								<Button asChild>
+									<Link href="/auth?step=register">
+										Get started free
+										<HugeiconsIcon
+											icon={ArrowRight01Icon}
+											strokeWidth={2}
+											className="ml-1.5 size-3.5"
+										/>
+									</Link>
+								</Button>
+							)}
 							<Button asChild variant="outline">
 								<Link href="#features">See features</Link>
 							</Button>
