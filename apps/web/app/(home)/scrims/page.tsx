@@ -1,9 +1,11 @@
 import { Calendar03Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { ScrimStatus } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PublicListLoading } from "@/components/home/public-page-loading";
+import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
@@ -35,8 +37,18 @@ export const metadata: Metadata = {
 	description: "Browse recent and upcoming Overwatch 2 scrims on Scrimflow.",
 };
 
-export default async function ScrimsDirectoryPage() {
+const SCRIM_FILTERS = ["all", "scheduled", "completed", "disputed"] as const;
+
+interface ScrimsDirectoryPageProps {
+	searchParams: Promise<{ status?: string }>;
+}
+
+export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirectoryPageProps) {
 	const { user } = await getCurrentSession();
+	const { status: statusParam } = await searchParams;
+	const status = SCRIM_FILTERS.includes((statusParam ?? "all") as (typeof SCRIM_FILTERS)[number])
+		? ((statusParam ?? "all") as (typeof SCRIM_FILTERS)[number])
+		: "all";
 
 	return (
 		<PublicPageShell
@@ -52,14 +64,52 @@ export default async function ScrimsDirectoryPage() {
 				</Button>
 			}
 		>
+			<div className="flex flex-wrap gap-2">
+				{SCRIM_FILTERS.map((filter) => (
+					<Link key={filter} href={filter === "all" ? "/scrims" : `/scrims?status=${filter}`}>
+						<Badge variant={status === filter ? "default" : "outline"}>
+							{filter === "all" ? "All scrims" : SCRIM_STATUS_LABELS[filter]}
+						</Badge>
+					</Link>
+				))}
+			</div>
 			<Suspense fallback={<PublicListLoading />}>
-				<ScrimsListSection />
+				<ScrimsListSection status={status} />
 			</Suspense>
+			<PublicPageSection
+				title="Related public routes"
+				description="Keep the competitive context intact while moving through the public product."
+			>
+				<div className="grid gap-3 md:grid-cols-3">
+					<Link href="/teams" className="border p-4 transition-colors hover:bg-muted/50">
+						<p className="text-sm font-semibold">Teams</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Inspect the teams behind public scrims and see whether they are actively recruiting.
+						</p>
+					</Link>
+					<Link href="/updates" className="border p-4 transition-colors hover:bg-muted/50">
+						<p className="text-sm font-semibold">Updates</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Read public team and org announcements alongside the competitive match feed.
+						</p>
+					</Link>
+					<Link href="/recruiting" className="border p-4 transition-colors hover:bg-muted/50">
+						<p className="text-sm font-semibold">Recruiting</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Move from recent public competition into current roster and staffing opportunities.
+						</p>
+					</Link>
+				</div>
+			</PublicPageSection>
 		</PublicPageShell>
 	);
 }
 
-async function ScrimsListSection() {
+async function ScrimsListSection({
+	status,
+}: {
+	status: "all" | Extract<ScrimStatus, "scheduled" | "completed" | "disputed">;
+}) {
 	let scrims: Awaited<ReturnType<typeof getPublicScrims>> = [];
 	let hasError = false;
 	try {
@@ -90,9 +140,23 @@ async function ScrimsListSection() {
 		);
 	}
 
+	const filteredScrims =
+		status === "all" ? scrims : scrims.filter((scrim) => scrim.status === status);
+
+	if (filteredScrims.length === 0) {
+		return (
+			<EmptyStateBlock
+				icon={Calendar03Icon}
+				title="No scrims match this filter"
+				description="Switch the filter or return to all public scrims to browse more activity."
+				variant="page"
+			/>
+		);
+	}
+
 	return (
 		<div className="space-y-3">
-			{scrims.map((scrim) => (
+			{filteredScrims.map((scrim) => (
 				<div key={scrim.id} className="border p-4">
 					<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 						<div className="space-y-2">

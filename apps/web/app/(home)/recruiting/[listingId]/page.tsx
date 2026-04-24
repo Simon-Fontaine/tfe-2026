@@ -1,7 +1,10 @@
+import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentApplicationDialog } from "@/components/recruit/recruitment-application-dialog";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,16 +51,22 @@ export default async function PublicRecruitingListingDetailPage({
 		const result = await getPublicRecruitmentListingById(listingId);
 		if (!result) {
 			notFound();
-			return null;
 		}
 		listing = result;
 	} catch {
 		return (
-			<PublicPageShell title="Listing" description="" maxWidth="4xl" contentClassName="space-y-6">
+			<PublicPageShell
+				title="Listing"
+				description="Public recruitment details and application actions for this opportunity."
+				maxWidth="4xl"
+				contentClassName="space-y-6"
+			>
 				<EmptyStateBlock
 					icon={UserSearch01Icon}
 					title="Could not load this page"
-					description="Something went wrong. Please go back and try again."
+					description="The listing could not be loaded right now. Browse open recruiting listings or try again in a moment."
+					actionHref={publicRoutes.recruiting.root}
+					actionLabel="Browse listings"
 					variant="page"
 				/>
 			</PublicPageShell>
@@ -162,6 +171,42 @@ export default async function PublicRecruitingListingDetailPage({
 					</p>
 				)}
 			</div>
+
+			<PublicPageSection
+				title="Related public routes"
+				description="Keep the recruiting context intact while exploring the rest of the public product."
+			>
+				<div className="grid gap-3 md:grid-cols-3">
+					<Link href={ownerHref} className="border p-4 transition-colors hover:bg-muted/50">
+						<p className="text-sm font-semibold">Open source profile</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Review the org, team, or player behind this listing before deciding how to proceed.
+						</p>
+					</Link>
+					<Link
+						href={publicRoutes.recruiting.root}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">More listings</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Return to the recruiting directory to compare other open opportunities.
+						</p>
+					</Link>
+					<Link
+						href={user ? "/app/recruiting" : "/auth?step=login"}
+						className="border p-4 transition-colors hover:bg-muted/50"
+					>
+						<p className="text-sm font-semibold">
+							{user ? "Open recruiting workspace" : "Sign in to continue"}
+						</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							{user
+								? "Move into the authenticated recruiting workspace if you need the managed view."
+								: "Authenticate to apply, manage profile context, or continue inside the workspace."}
+						</p>
+					</Link>
+				</div>
+			</PublicPageSection>
 		</PublicPageShell>
 	);
 }
