@@ -12,13 +12,36 @@ import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 function getNotificationHref(notification: NotificationSummary): string | null {
-	if (notification.referenceType === "recruitment_listing") {
-		return appRoutes.recruiting.root;
+	const { referenceType, referenceId } = notification;
+
+	switch (referenceType) {
+		case "recruitment_listing":
+			return appRoutes.recruiting.root;
+		case "recruitment_application":
+			return appRoutes.recruiting.conversations;
+		case "team_invite":
+			return referenceId ? appRoutes.teams.roster(referenceId) : null;
+		case "org_invite":
+			return referenceId ? appRoutes.orgs.byId(referenceId) : null;
+		case "scrim":
+			// teamId is not available in notification data — cannot build scrimById route
+			// Deliberate null per RESEARCH.md open question A2 — revisit in future phase
+			return null;
+		case "ocr_job":
+			// Same constraint as scrim — teamId required for route
+			return null;
+		default:
+			// Security notification types have no referenceType; route by notification.type
+			if (
+				notification.type === "new_device_login" ||
+				notification.type === "session_revoked_alert" ||
+				notification.type === "new_location_login" ||
+				notification.type === "email_change_requested"
+			) {
+				return appRoutes.settings.security;
+			}
+			return null;
 	}
-	if (notification.referenceType === "recruitment_application") {
-		return appRoutes.recruiting.conversations;
-	}
-	return null;
 }
 
 interface NotificationItemProps {
@@ -88,7 +111,15 @@ export function NotificationItem({
 			</div>
 
 			{href ? (
-				<Link href={href} className="min-w-0 flex-1">
+				<Link
+					href={href}
+					className="min-w-0 flex-1"
+					onClick={() => {
+						if (!notification.isRead && onMarkRead) {
+							void onMarkRead(notification.id);
+						}
+					}}
+				>
 					<p className="text-sm font-medium">{notification.title}</p>
 					{notification.body && (
 						<p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{notification.body}</p>
