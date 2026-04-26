@@ -6,6 +6,7 @@ import type { HeroRow } from "@/lib/data/heroes";
 import { useOnboardingFlow } from "@/stores/onboarding-flow";
 import { BattletagStepPanel } from "./battletag-step-panel";
 import { HeroPoolStepPanel } from "./hero-pool-step-panel";
+import { OnboardingCompletePanel } from "./onboarding-complete-panel";
 import { RolesAndRankStepPanel } from "./roles-rank-step-panel";
 
 interface OnboardingStepRouterProps {
@@ -29,6 +30,8 @@ export function OnboardingStepRouter({ heroes }: OnboardingStepRouterProps) {
 				return <RolesAndRankStepPanel />;
 			case "hero-pool":
 				return <HeroPoolStepPanel heroes={heroes} />;
+			case "complete":
+				return <OnboardingCompletePanel />;
 			default:
 				return <BattletagStepPanel />;
 		}

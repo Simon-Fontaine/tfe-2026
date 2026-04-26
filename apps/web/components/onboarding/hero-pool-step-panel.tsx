@@ -24,7 +24,7 @@ export function HeroPoolStepPanel({ heroes }: HeroPoolStepPanelProps) {
 
 	const { state, submit, isPending } = useOnboardingAction(createPlayerProfileAction, {
 		loadingMessage: "Setting up your profile…",
-		successMessage: "Profile set up!",
+		onSuccess: () => transitionTo("complete"),
 	});
 
 	useEffect(() => {

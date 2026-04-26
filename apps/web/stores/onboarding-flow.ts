@@ -6,7 +6,7 @@ export type { OW2Rank, OW2Role };
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
 
-export type OnboardingStep = "battletag" | "roles-and-rank" | "hero-pool";
+export type OnboardingStep = "battletag" | "roles-and-rank" | "hero-pool" | "complete";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 

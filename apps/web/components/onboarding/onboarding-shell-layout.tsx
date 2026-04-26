@@ -13,12 +13,14 @@ const STEP_PROGRESS = {
 	battletag: 33,
 	"roles-and-rank": 66,
 	"hero-pool": 100,
+	complete: 100,
 } as const;
 
 const STEP_LABELS = {
 	battletag: "Step 1 of 3",
 	"roles-and-rank": "Step 2 of 3",
 	"hero-pool": "Step 3 of 3",
+	complete: "Complete",
 } as const;
 
 export function OnboardingShellLayout({ children }: { children: ReactNode }) {
