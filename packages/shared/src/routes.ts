@@ -91,6 +91,7 @@ export const apiRoutes = {
 		},
 		security: {
 			summary: "/api/settings/security/summary",
+			recoveryCodeRegenerate: "/api/settings/security/recovery-code/regenerate",
 		},
 		sessions: {
 			root: "/api/settings/sessions",
@@ -105,6 +106,9 @@ export const apiRoutes = {
 		verifications: {
 			pending: "/api/settings/verifications/pending",
 		},
+		notificationPreferences: "/api/settings/notifications",
+		privacy: "/api/settings/privacy",
+		dataExport: "/api/settings/data-export",
 	},
 	schedule: {
 		availability: {
@@ -244,6 +248,8 @@ export const appRoutes = {
 		root: "/app/settings",
 		account: "/app/settings/account",
 		security: "/app/settings/security",
+		notifications: "/app/settings/notifications",
+		privacy: "/app/settings/privacy",
 	},
 	recruiting: {
 		root: "/app/recruiting",
