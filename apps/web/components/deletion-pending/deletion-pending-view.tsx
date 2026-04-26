@@ -24,6 +24,11 @@ function formatDate(iso: string): string {
 	});
 }
 
+function getDaysRemaining(iso: string): string {
+	const days = Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+	return days <= 0 ? "Less than 1 day remaining" : `${days} days remaining`;
+}
+
 export function DeletionPendingView({ scheduledAt }: DeletionPendingViewProps) {
 	const router = useRouter();
 	const [cancelling, startCancelling] = useTransition();
@@ -55,6 +60,7 @@ export function DeletionPendingView({ scheduledAt }: DeletionPendingViewProps) {
 				</div>
 				<div className="space-y-1">
 					<h1 className="text-sm font-semibold">Account deletion scheduled</h1>
+					<p className="text-sm font-semibold text-destructive">{getDaysRemaining(scheduledAt)}</p>
 					<p className="text-xs text-muted-foreground">
 						Your account is scheduled for permanent deletion on{" "}
 						<span className="font-medium text-foreground">{formatDate(scheduledAt)}</span>. You can
