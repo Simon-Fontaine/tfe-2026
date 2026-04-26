@@ -6,6 +6,7 @@ import { getPendingVerificationsAction } from "@/app/actions/settings/pending-ve
 import { ActiveSessionsSection } from "@/components/settings/active-sessions-section";
 import { ChangePasswordSection } from "@/components/settings/change-password-section";
 import { PasskeyManagementSection } from "@/components/settings/passkey-management-section";
+import { RecoveryCodeManagementSection } from "@/components/settings/recovery-code-management-section";
 import { SecurityAccountSummaryCard } from "@/components/settings/security-account-summary-card";
 import { SecurityKeyManagementSection } from "@/components/settings/security-key-management-section";
 import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
@@ -20,13 +21,14 @@ export default async function AppSecuritySettingsPage() {
 	const { user } = await requireWorkspaceSession();
 
 	const [securityRes, passkeys, securityKeys, pending] = await Promise.all([
-		apiGet<{ hasPassword: boolean }>(apiRoutes.settings.security.summary),
+		apiGet<{ hasPassword: boolean; hasRecoveryCode: boolean }>(apiRoutes.settings.security.summary),
 		listPasskeysAction(),
 		listSecurityKeysAction(),
 		getPendingVerificationsAction(),
 	]);
 
 	const hasPassword = "data" in securityRes ? securityRes.data.hasPassword : false;
+	const hasRecoveryCode = "data" in securityRes ? securityRes.data.hasRecoveryCode : false;
 
 	return (
 		<SecurityStatusProvider
@@ -40,6 +42,8 @@ export default async function AppSecuritySettingsPage() {
 				<ChangePasswordSection initialStep={pending.passwordChange ? "code-sent" : "idle"} />
 
 				<TwoFactorMethodsSection />
+
+				<RecoveryCodeManagementSection hasRecoveryCode={hasRecoveryCode} />
 
 				<TotpManagementSection initialDisableConfirm={pending.twoFactorDisable} />
 
