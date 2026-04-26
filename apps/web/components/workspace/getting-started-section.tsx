@@ -74,11 +74,15 @@ function ChecklistCard({
 
 interface GettingStartedSectionProps {
 	profile: PlayerProfileFull | null;
+	orgDone: boolean;
+	teamDone: boolean;
 }
 
-export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
+export function GettingStartedSection({ profile, orgDone, teamDone }: GettingStartedSectionProps) {
 	// Profile is "complete" if the user has a battletag set
 	const profileDone = !!profile?.battletag;
+	const allDone = profileDone && orgDone && teamDone;
+	if (allDone) return null;
 
 	return (
 		<Card>
@@ -100,6 +104,7 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 					description="Organisations manage one or more teams and handle scrim invitations."
 					ctaLabel="Open Workspace"
 					ctaHref={appRoutes.orgs.root}
+					done={orgDone}
 				/>
 				<ChecklistCard
 					icon={Search01Icon}
@@ -107,6 +112,7 @@ export function GettingStartedSection({ profile }: GettingStartedSectionProps) {
 					description="Browse recruiting listings or publish your own availability to connect with the right team."
 					ctaLabel="Open Recruit"
 					ctaHref={appRoutes.recruiting.root}
+					done={teamDone}
 				/>
 			</CardContent>
 		</Card>
