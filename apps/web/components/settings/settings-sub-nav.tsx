@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 const TABS = [
 	{ label: "Account", href: appRoutes.settings.account },
 	{ label: "Security", href: appRoutes.settings.security },
+	{ label: "Notifications", href: appRoutes.settings.notifications },
+	{ label: "Privacy", href: appRoutes.settings.privacy },
 ] as const;
 
 export function SettingsSubNav() {
