@@ -88,7 +88,11 @@ export function TwoFactorStepPanel() {
 				toast.success("Signed in");
 				return;
 			}
-			toast.error("Authentication cancelled or failed.");
+			toast.error(
+				type === "passkey"
+					? "Passkey authentication cancelled or failed."
+					: "Security key authentication cancelled or failed."
+			);
 		} finally {
 			setWebauthnLoading(false);
 		}

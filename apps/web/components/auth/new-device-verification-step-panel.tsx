@@ -120,6 +120,10 @@ export function NewDeviceVerificationStepPanel() {
 					{resending ? "Sending…" : "Resend code"}
 				</Button>
 			</p>
+
+			<p className="text-center text-xs text-muted-foreground">
+				Can&apos;t access this email? Contact support for assistance.
+			</p>
 		</div>
 	);
 }

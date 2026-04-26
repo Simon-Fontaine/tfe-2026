@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
+import { useAuthFlow } from "@/stores/auth-flow";
 
 export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
+	const { goToForgotPassword } = useAuthFlow();
 	const { state, submit, isPending } = useAuthAction(resetPasswordAction, {
 		loadingMessage: "Resetting password…",
 		successMessage: "Password reset. Please sign in.",
@@ -108,6 +110,19 @@ export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
 					Reset password
 				</Button>
 			</form>
+
+			<p className="text-center text-xs text-muted-foreground">
+				Need a new link?{" "}
+				<Button
+					type="button"
+					variant="link"
+					className="h-auto p-0"
+					onClick={goToForgotPassword}
+					disabled={isPending}
+				>
+					Request password reset
+				</Button>
+			</p>
 		</div>
 	);
 }

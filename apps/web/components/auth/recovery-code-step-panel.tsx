@@ -125,6 +125,11 @@ export function RecoveryCodeStepPanel() {
 					/>
 				</FieldGroup>
 
+				<p className="text-xs text-muted-foreground">
+					Lost your recovery code? You will not be able to recover your account without it. Contact
+					support for assistance.
+				</p>
+
 				<Button type="submit" variant="destructive" className="w-full" disabled={isPending}>
 					{isPending && <Spinner className="mr-2" />}
 					Use recovery code
