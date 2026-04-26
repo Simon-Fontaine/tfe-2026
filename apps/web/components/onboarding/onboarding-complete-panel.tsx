@@ -19,11 +19,7 @@ export function OnboardingCompletePanel() {
 				centered
 			/>
 
-			<Button
-				type="button"
-				className="w-full"
-				onClick={() => router.push(appRoutes.root)}
-			>
+			<Button type="button" className="w-full" onClick={() => router.push(appRoutes.root)}>
 				Go to Scrimflow
 			</Button>
 		</div>
