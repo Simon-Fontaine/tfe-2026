@@ -5,6 +5,7 @@ import { requireAuth } from "@/middleware/auth";
 import { accountRoutes } from "./account";
 import { credentialRoutes } from "./credentials";
 import { emailRoutes } from "./email";
+import { notificationPreferencesRoutes } from "./notifications";
 import { passwordRoutes } from "./password";
 import { securityRoutes } from "./security";
 import { sessionRoutes } from "./sessions";
@@ -26,5 +27,6 @@ settingsRoutes.route("/sessions", sessionRoutes);
 settingsRoutes.route("/account", accountRoutes);
 settingsRoutes.route("/verifications", verificationRoutes);
 settingsRoutes.route("/security", securityRoutes);
+settingsRoutes.route("/notifications", notificationPreferencesRoutes);
 
 export { settingsRoutes };

@@ -57,6 +57,11 @@ export const userTable = pgTable(
 		 */
 		socialLinks: jsonb("social_links").$type<Record<string, string>>().default({}),
 
+		/** Email notification preferences as JSONB key-value booleans per category. */
+		notificationPreferences: jsonb("notification_preferences")
+			.$type<Record<string, boolean>>()
+			.default({}),
+
 		/** Platform-wide ban flag. Checked at auth time. */
 		isBanned: boolean("is_banned").notNull().default(false),
 
