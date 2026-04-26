@@ -27,6 +27,7 @@ export function RegisterStepPanel() {
 	const { goToLogin } = useAuthFlow();
 	const { state, submit, isPending } = useAuthAction(registerAction, {
 		loadingMessage: "Creating account…",
+		successMessage: "Account created — check your email to verify.",
 	});
 	const [pwStrength, setPwStrength] = useState<PasswordStrength | null>(null);
 	const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">(

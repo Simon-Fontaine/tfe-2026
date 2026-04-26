@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function ForgotPasswordSentStepPanel() {
-	const { email, goToLogin } = useAuthFlow();
+	const { email, goToLogin, goToForgotPassword } = useAuthFlow();
 
 	return (
 		<div className="space-y-4">
@@ -31,6 +31,13 @@ export function ForgotPasswordSentStepPanel() {
 			<Button type="button" className="w-full" onClick={goToLogin}>
 				Back to sign in
 			</Button>
+
+			<p className="text-center text-xs text-muted-foreground">
+				Wrong email?{" "}
+				<Button type="button" variant="link" className="h-auto p-0" onClick={goToForgotPassword}>
+					Try again
+				</Button>
+			</p>
 		</div>
 	);
 }
