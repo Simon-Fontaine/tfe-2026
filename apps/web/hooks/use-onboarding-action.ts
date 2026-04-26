@@ -15,7 +15,11 @@ export function useOnboardingAction(
 		prev: OnboardingActionResult | null,
 		formData: FormData
 	) => Promise<OnboardingActionResult>,
-	{ loadingMessage, successMessage }: { loadingMessage?: string; successMessage?: string } = {}
+	{
+		loadingMessage,
+		successMessage,
+		onSuccess,
+	}: { loadingMessage?: string; successMessage?: string; onSuccess?: () => void } = {}
 ) {
 	const router = useRouter();
 
@@ -28,7 +32,11 @@ export function useOnboardingAction(
 				} else {
 					toast.dismiss(toastId);
 				}
-				router.push(result.redirect);
+				if (onSuccess) {
+					onSuccess();
+				} else {
+					router.push(result.redirect);
+				}
 			}
 		},
 	});
