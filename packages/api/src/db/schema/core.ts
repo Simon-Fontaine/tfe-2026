@@ -73,6 +73,9 @@ export const playerProfileTable = pgTable(
 		/** Rank division 1-5 within the tier (1 = highest). */
 		rankDivision: smallint("rank_division"),
 
+		/** Controls public profile visibility. Values: "public" | "teams_only" | "private". */
+		profileVisibility: text("profile_visibility").notNull().default("public"),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()

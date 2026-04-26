@@ -7,6 +7,7 @@ import { credentialRoutes } from "./credentials";
 import { emailRoutes } from "./email";
 import { notificationPreferencesRoutes } from "./notifications";
 import { passwordRoutes } from "./password";
+import { dataExportRoute, privacyRoutes } from "./privacy";
 import { securityRoutes } from "./security";
 import { sessionRoutes } from "./sessions";
 import { twoFactorDisableRoutes } from "./two-factor";
@@ -28,5 +29,7 @@ settingsRoutes.route("/account", accountRoutes);
 settingsRoutes.route("/verifications", verificationRoutes);
 settingsRoutes.route("/security", securityRoutes);
 settingsRoutes.route("/notifications", notificationPreferencesRoutes);
+settingsRoutes.route("/privacy", privacyRoutes);
+settingsRoutes.route("/data-export", dataExportRoute);
 
 export { settingsRoutes };
