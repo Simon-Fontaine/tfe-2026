@@ -3,17 +3,17 @@ import { notFound } from "next/navigation";
 import { RecruitmentApplicationDialog } from "@/components/recruit/recruitment-application-dialog";
 import { RecruitmentApplicationsPanel } from "@/components/recruit/recruitment-applications-panel";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getCurrentSession } from "@/lib/auth/session";
 import {
 	getManageableRecruitEntities,
 	getRecruitmentApplicationsForListing,
-	getRecruitmentListingById,
+	getRecruitmentListingRouteState,
 } from "@/lib/data/recruit";
 import {
 	formatRecruitmentAudience,
@@ -24,22 +24,37 @@ import {
 	RECRUITMENT_CATEGORY_LABELS,
 } from "@/lib/recruitment";
 import { publicRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppRecruitingListingDetailPage({
 	params,
 }: {
 	params: Promise<{ listingId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { listingId } = await params;
-	const listingResult = await getRecruitmentListingById(listingId);
-	if (!listingResult) {
+	const listingResult = await getRecruitmentListingRouteState(listingId);
+	if (listingResult.kind === "missing") {
 		notFound();
-		return null;
 	}
-	const listing = listingResult;
+	if (listingResult.kind === "no-access") {
+		return (
+			<PageContainer maxWidth="4xl">
+				<PageHeader
+					title="Recruiting"
+					detail="Listing detail"
+					description="Review recruiting details from the current workspace without leaving the app shell."
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="You can only open listing details that belong to a workspace you can manage or apply from."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+	const listing = listingResult.data;
 
 	const [entityOptions, applications] = await Promise.all([
 		getManageableRecruitEntities(user.id),
@@ -59,6 +74,7 @@ export default async function AppRecruitingListingDetailPage({
 		<PageContainer maxWidth="4xl">
 			<PageHeader
 				title={listing.title}
+				detail={`Listing ${listing.id}`}
 				description={RECRUITMENT_CATEGORY_DESCRIPTIONS[listing.category]}
 				actions={
 					listing.canManage ? (

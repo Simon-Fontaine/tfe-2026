@@ -16,7 +16,7 @@ export default function OnboardingError({
 				<div className="space-y-1">
 					<h2 className="text-lg font-semibold">Setup error</h2>
 					<p className="text-sm text-muted-foreground">
-						{error.message || "Something went wrong loading your setup. Please try again."}
+						{error.message || "We could not finish loading your player setup. Try this step again."}
 					</p>
 				</div>
 				<Button onClick={reset} variant="outline" size="sm">

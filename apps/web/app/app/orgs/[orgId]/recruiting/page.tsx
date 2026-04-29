@@ -1,43 +1,44 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-	OrgWorkspaceMissingState,
-	OrgWorkspaceNoAccessState,
-} from "@/components/orgs/org-workspace-state";
+import { notFound } from "next/navigation";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getCurrentSession } from "@/lib/auth/session";
-import { getOrgWithTeams } from "@/lib/data/orgs";
+import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
 import {
 	getManageableRecruitEntities,
 	getMyRecruitmentListings,
 	getRecruitmentApplicationsForListing,
 } from "@/lib/data/recruit";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgRecruitingPage({
 	params,
 }: {
 	params: Promise<{ orgId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { orgId } = await params;
-	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) return <OrgWorkspaceMissingState />;
-	if (!org.currentUser.canManage) {
+	const org = await getOrgWithTeamsRouteState(orgId, user.id);
+	if (org.kind === "missing") notFound();
+	if (org.kind !== "success" || !org.data.currentUser.canManage) {
 		return (
-			<OrgWorkspaceNoAccessState
-				title="Recruiting"
-				description="You don't have permission to manage this organisation's recruiting workspace."
-			/>
+			<PageContainer>
+				<PageHeader title="Recruiting" detail={`Organization ${orgId}`} />
+				<EmptyStateBlock
+					title="No access"
+					description="You don't have permission to manage this organisation's recruiting workspace."
+					variant="card"
+				/>
+			</PageContainer>
 		);
 	}
+	const orgDetail = org.data;
 
 	const [entityOptions, allManageableListings] = await Promise.all([
 		getManageableRecruitEntities(user.id),
@@ -60,7 +61,8 @@ export default async function AppOrgRecruitingPage({
 		<PageContainer>
 			<PageHeader
 				title="Recruiting"
-				description={`Manage recruiting listings owned directly by ${org.name}.`}
+				detail={`/${orgDetail.slug}`}
+				description={`Manage recruiting listings owned directly by ${orgDetail.name}.`}
 				actions={
 					<RecruitmentListingFormDialog
 						ownerOptions={entityOptions}

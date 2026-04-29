@@ -11,6 +11,12 @@ import type {
 } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
+import {
+	type RouteStateResult,
+	routeStateMissing,
+	routeStateNoAccess,
+	routeStateSuccess,
+} from "@/lib/route-state";
 import { apiRoutes } from "@/lib/routes";
 
 export type {
@@ -42,9 +48,17 @@ export const getOrgsForUser = cache(async (_userId: string): Promise<UserOrg[]> 
 
 export const getOrgWithTeams = cache(
 	async (orgId: string, _userId: string): Promise<OrgWithTeams | null> => {
+		const result = await getOrgWithTeamsRouteState(orgId, _userId);
+		return result.kind === "success" ? result.data : null;
+	}
+);
+
+export const getOrgWithTeamsRouteState = cache(
+	async (orgId: string, _userId: string): Promise<RouteStateResult<OrgWithTeams>> => {
 		const res = await apiGet<OrgWithTeams>(apiRoutes.orgs.byId(orgId));
-		if ("data" in res) return res.data;
-		if (res.status === 404) return null;
+		if ("data" in res) return routeStateSuccess(res.data);
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
 		throw new Error(res.error);
 	}
 );

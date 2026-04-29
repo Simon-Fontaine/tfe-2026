@@ -7,7 +7,7 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
-import { getTeamWithRoster } from "@/lib/data/teams";
+import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -19,12 +19,28 @@ export default async function TeamRecruitingPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
-	const team = await getTeamWithRoster(teamId, user.id);
-	if (!team) notFound();
+	const team = await getTeamWithRosterRouteState(teamId, user.id);
+	if (team.kind === "missing") notFound();
+	if (team.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Recruiting"
+					detail={`Team ${teamId}`}
+					description="Team-owned listings and applicant review live in this workspace."
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="You need an active team membership before you can review this team's recruiting workspace."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
 
 	const applicationsByListing = new Map(
 		await Promise.all(
-			team.ownedListings.map(
+			team.data.ownedListings.map(
 				async (listing) =>
 					[listing.id, await getRecruitmentApplicationsForListing(listing.id)] as const
 			)
@@ -35,12 +51,13 @@ export default async function TeamRecruitingPage({
 		<PageContainer>
 			<PageHeader
 				title="Recruiting"
-				description={`Manage ${team.name}'s player, ringer, and staff listings from one team workspace.`}
+				detail={`[${team.data.tag}] ${team.data.name}`}
+				description={`Manage ${team.data.name}'s player, ringer, and staff listings from one team workspace.`}
 				actions={
-					team.currentUser.canManage ? (
+					team.data.currentUser.canManage ? (
 						<RecruitmentListingFormDialog
 							fixedOwnerType="team"
-							fixedTeamId={team.id}
+							fixedTeamId={team.data.id}
 							triggerContent={
 								<>
 									<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
@@ -52,11 +69,11 @@ export default async function TeamRecruitingPage({
 				}
 			/>
 
-			{team.ownedListings.length === 0 ? (
+			{team.data.ownedListings.length === 0 ? (
 				<EmptyStateBlock
 					title="No team listings yet"
 					description={
-						team.currentUser.canManage
+						team.data.currentUser.canManage
 							? "Create a recruiting listing here to replace scattered team outreach."
 							: "This team has not published any recruiting listings yet."
 					}
@@ -64,14 +81,14 @@ export default async function TeamRecruitingPage({
 				/>
 			) : (
 				<div className="space-y-4">
-					{team.ownedListings.map((listing) => (
+					{team.data.ownedListings.map((listing) => (
 						<RecruitmentListingCard
 							key={listing.id}
 							listing={listing}
 							currentUserId={user.id}
 							applications={applicationsByListing.get(listing.id) ?? []}
-							teamId={team.id}
-							organizationId={team.organizationId}
+							teamId={team.data.id}
+							organizationId={team.data.organizationId}
 							conversationHrefBase={appRoutes.recruiting.conversations}
 						/>
 					))}

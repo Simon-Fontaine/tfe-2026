@@ -8,6 +8,12 @@ import type {
 import { cache } from "react";
 
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api-client";
+import {
+	type RouteStateResult,
+	routeStateMissing,
+	routeStateNoAccess,
+	routeStateSuccess,
+} from "@/lib/route-state";
 import { apiRoutes } from "@/lib/routes";
 
 export const getChatConversations = cache(async (): Promise<ChatConversationSummary[]> => {
@@ -25,18 +31,34 @@ export const getRecruitmentChatConversations = cache(
 
 export const getTeamChatConversations = cache(
 	async (teamId: string): Promise<ChatConversationSummary[]> => {
+		const result = await getTeamChatRouteState(teamId);
+		return result.kind === "success" ? result.data : [];
+	}
+);
+
+export const getTeamChatRouteState = cache(
+	async (teamId: string): Promise<RouteStateResult<ChatConversationSummary[]>> => {
 		const res = await apiGet<ChatConversationSummary[]>(apiRoutes.chat.teamConversations(teamId));
-		if ("data" in res) return res.data;
-		if (res.status === 403 || res.status === 404) return [];
+		if ("data" in res) return routeStateSuccess(res.data);
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
 		throw new Error(res.error);
 	}
 );
 
 export const getScrimChatConversations = cache(
 	async (scrimId: string): Promise<ChatConversationSummary[]> => {
+		const result = await getScrimChatRouteState(scrimId);
+		return result.kind === "success" ? result.data : [];
+	}
+);
+
+export const getScrimChatRouteState = cache(
+	async (scrimId: string): Promise<RouteStateResult<ChatConversationSummary[]>> => {
 		const res = await apiGet<ChatConversationSummary[]>(apiRoutes.chat.scrimConversations(scrimId));
-		if ("data" in res) return res.data;
-		if (res.status === 403 || res.status === 404) return [];
+		if ("data" in res) return routeStateSuccess(res.data);
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
 		throw new Error(res.error);
 	}
 );

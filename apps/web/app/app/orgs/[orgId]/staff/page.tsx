@@ -1,9 +1,9 @@
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { MemberActionsDropdown } from "@/components/orgs/member-actions-dropdown";
-import { OrgWorkspaceMissingState } from "@/components/orgs/org-workspace-state";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getCurrentSession } from "@/lib/auth/session";
-import { getOrgWithTeams, type OrgMemberSummary } from "@/lib/data/orgs";
+import { getOrgWithTeamsRouteState, type OrgMemberSummary } from "@/lib/data/orgs";
 import { appRoutes, publicRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const ROLE_LABELS: Record<string, string> = {
 	owner: "Owner",
@@ -69,18 +69,34 @@ function MemberRow({
 }
 
 export default async function AppOrgStaffPage({ params }: { params: Promise<{ orgId: string }> }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { orgId } = await params;
-	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) return <OrgWorkspaceMissingState />;
+	const org = await getOrgWithTeamsRouteState(orgId, user.id);
+	if (org.kind === "missing") notFound();
+	if (org.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Staff"
+					detail={`Organization ${orgId}`}
+					description="Org admins, coaches, and operational members for this workspace."
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="You do not have permission to open this organization staff workspace."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+	const orgDetail = org.data;
 
-	const canManage = org.currentUser.canManage;
-	const leadershipAndStaff = org.members.filter(
+	const canManage = orgDetail.currentUser.canManage;
+	const leadershipAndStaff = orgDetail.members.filter(
 		(member) => member.role !== "member" || member.memberType === "staff"
 	);
-	const rosterPlayers = org.members.filter(
+	const rosterPlayers = orgDetail.members.filter(
 		(member) => !leadershipAndStaff.some((staffMember) => staffMember.id === member.id)
 	);
 
@@ -88,10 +104,11 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 		<PageContainer>
 			<PageHeader
 				title="Staff"
-				description={`Org admins, coaches, and operational members for ${org.name}.`}
+				detail={`/${orgDetail.slug}`}
+				description={`Org admins, coaches, and operational members for ${orgDetail.name}.`}
 				actions={
 					canManage ? (
-						<InviteMemberDialog orgId={org.id}>
+						<InviteMemberDialog orgId={orgDetail.id}>
 							<Button size="sm">
 								<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 								Invite member
@@ -107,9 +124,9 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 					description="Pending invites are managed in a dedicated workspace so active staff and outreach stay separate."
 				>
 					<EmptyStateBlock
-						title={`${org.pendingInvites.length} pending invite${org.pendingInvites.length === 1 ? "" : "s"}`}
+						title={`${orgDetail.pendingInvites.length} pending invite${orgDetail.pendingInvites.length === 1 ? "" : "s"}`}
 						description="Review pending invites, resend outreach, or cancel stale requests from the invites workspace."
-						actionHref={appRoutes.orgs.invites(org.id)}
+						actionHref={appRoutes.orgs.invites(orgDetail.id)}
 						actionLabel="Open invites"
 						variant="card"
 					/>
@@ -133,8 +150,8 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 								key={member.id}
 								member={member}
 								canManage={canManage}
-								orgId={org.id}
-								viewerRole={org.currentUser.role ?? "member"}
+								orgId={orgDetail.id}
+								viewerRole={orgDetail.currentUser.role ?? "member"}
 								userId={user.id}
 							/>
 						))}
@@ -153,8 +170,8 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 								key={member.id}
 								member={member}
 								canManage={canManage}
-								orgId={org.id}
-								viewerRole={org.currentUser.role ?? "member"}
+								orgId={orgDetail.id}
+								viewerRole={orgDetail.currentUser.role ?? "member"}
 								userId={user.id}
 							/>
 						))}

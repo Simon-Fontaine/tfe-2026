@@ -6,7 +6,12 @@ import { getOrgsForUser } from "@/lib/data/orgs";
 import { getMyRecruitmentListings, getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
 import { apiRoutes } from "@/lib/routes";
 
-export async function requireWorkspaceSession() {
+export type WorkspaceSession = Awaited<ReturnType<typeof getCurrentSession>> & {
+	session: NonNullable<Awaited<ReturnType<typeof getCurrentSession>>["session"]>;
+	user: NonNullable<Awaited<ReturnType<typeof getCurrentSession>>["user"]>;
+};
+
+export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 	if (user.registered2FA && !session.twoFactorVerified) redirect("/auth");

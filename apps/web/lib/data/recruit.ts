@@ -7,6 +7,12 @@ import { cache } from "react";
 
 import { apiGet } from "@/lib/api-client";
 import type { RecruitEntityOption } from "@/lib/recruitment";
+import {
+	type RouteStateResult,
+	routeStateMissing,
+	routeStateNoAccess,
+	routeStateSuccess,
+} from "@/lib/route-state";
 import { apiRoutes } from "@/lib/routes";
 import { getOrgsForUser } from "./organization";
 
@@ -117,11 +123,19 @@ export const getPublicRecruitmentListings = cache(
 
 export const getRecruitmentListingById = cache(
 	async (listingId: string): Promise<RecruitmentListingSummary | null> => {
+		const result = await getRecruitmentListingRouteState(listingId);
+		return result.kind === "success" ? result.data : null;
+	}
+);
+
+export const getRecruitmentListingRouteState = cache(
+	async (listingId: string): Promise<RouteStateResult<RecruitmentListingSummary>> => {
 		const res = await apiGet<RecruitmentListingSummary>(
 			apiRoutes.recruitment.listings.byId(listingId)
 		);
-		if ("data" in res) return res.data;
-		if (res.status === 404) return null;
+		if ("data" in res) return routeStateSuccess(res.data);
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
 		throw new Error(res.error);
 	}
 );

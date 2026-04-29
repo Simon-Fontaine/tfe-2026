@@ -15,7 +15,7 @@ interface AuthPageProps {
 export default async function AuthPage({ searchParams }: AuthPageProps) {
 	const { session, user } = await getCurrentSession();
 	if (session && user && (!user.registered2FA || session.twoFactorVerified)) {
-		redirect(appRoutes.root);
+		redirect(appRoutes.me);
 	}
 
 	const { reset_token, next, step } = await searchParams;

@@ -18,7 +18,20 @@ import { getPublicPlayers } from "@/lib/data/player";
 import { ROLE_LABELS } from "@/lib/recruitment";
 import { publicRoutes } from "@/lib/routes";
 
-export default async function PlayersDirectoryPage() {
+type PlayerRoleFilter = "all" | "tank" | "damage" | "support";
+
+interface PlayersDirectoryPageProps {
+	searchParams: Promise<{ role?: string }>;
+}
+
+export default async function PlayersDirectoryPage({ searchParams }: PlayersDirectoryPageProps) {
+	const { role: roleParam } = await searchParams;
+	const role = (["all", "tank", "damage", "support"] as const).includes(
+		(roleParam ?? "all") as PlayerRoleFilter
+	)
+		? ((roleParam ?? "all") as PlayerRoleFilter)
+		: "all";
+
 	return (
 		<PublicPageShell
 			title="Players"
@@ -31,14 +44,28 @@ export default async function PlayersDirectoryPage() {
 				</Button>
 			}
 		>
+			<div className="flex flex-wrap gap-2">
+				{(
+					[
+						["all", "All players"],
+						["tank", "Tank"],
+						["damage", "DPS"],
+						["support", "Support"],
+					] as const
+				).map(([value, label]) => (
+					<Link key={value} href={value === "all" ? "/players" : `/players?role=${value}`}>
+						<Badge variant={role === value ? "default" : "outline"}>{label}</Badge>
+					</Link>
+				))}
+			</div>
 			<Suspense fallback={<PublicGridLoading />}>
-				<PlayerListSection />
+				<PlayerListSection role={role} />
 			</Suspense>
 		</PublicPageShell>
 	);
 }
 
-async function PlayerListSection() {
+async function PlayerListSection({ role }: { role: PlayerRoleFilter }) {
 	let players: Awaited<ReturnType<typeof getPublicPlayers>> = [];
 	let hasError = false;
 	try {
@@ -69,9 +96,25 @@ async function PlayerListSection() {
 		);
 	}
 
+	const filteredPlayers =
+		role === "all"
+			? players
+			: players.filter((player) => player.primaryRole === role || player.secondaryRole === role);
+
+	if (filteredPlayers.length === 0) {
+		return (
+			<EmptyStateBlock
+				icon={UserSearch01Icon}
+				title="No players match this role yet"
+				description="Try another role filter or browse the full recruiting directory for active opportunities."
+				variant="page"
+			/>
+		);
+	}
+
 	return (
 		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{players.map((player) => (
+			{filteredPlayers.map((player) => (
 				<Link
 					key={player.id}
 					href={publicRoutes.players.byUsername(player.username)}

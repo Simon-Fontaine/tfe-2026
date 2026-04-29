@@ -1,4 +1,5 @@
-import { OrgWorkspaceMissingState } from "@/components/orgs/org-workspace-state";
+import { notFound } from "next/navigation";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,7 +8,7 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
-import { getOrgWithTeams } from "@/lib/data/orgs";
+import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -25,43 +26,63 @@ export default async function AppOrgOverviewPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { orgId } = await params;
-	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) return <OrgWorkspaceMissingState />;
+	const org = await getOrgWithTeamsRouteState(orgId, user.id);
+	if (org.kind === "missing") notFound();
+	if (org.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Organization"
+					detail={`Organization ${orgId}`}
+					description="Overview, roster health, and recruiting activity for this workspace."
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="You do not have permission to open this organization workspace."
+					variant="page"
+				/>
+			</PageContainer>
+		);
+	}
+	const orgDetail = org.data;
 
-	const totalTeams = org.activeTeams.length + org.archivedTeams.length;
-	const openListingCount = org.ownedListings.filter((post) => post.status === "open").length;
+	const totalTeams = orgDetail.activeTeams.length + orgDetail.archivedTeams.length;
+	const openListingCount = orgDetail.ownedListings.filter((post) => post.status === "open").length;
 
 	return (
 		<PageContainer>
 			<PageHeader
-				title={org.name}
-				description={org.description || `/${org.slug}`}
+				title={orgDetail.name}
+				detail={`/${orgDetail.slug}`}
+				description={orgDetail.description || `/${orgDetail.slug}`}
 				badge={
 					<Badge variant="outline" className="text-[10px]">
-						{ROLE_LABELS[org.currentUser.role ?? "member"] ?? org.currentUser.role}
+						{ROLE_LABELS[orgDetail.currentUser.role ?? "member"] ?? orgDetail.currentUser.role}
 					</Badge>
 				}
 				actions={
-					org.currentUser.canManage ? <CreateTeamDialog orgId={org.id} showTrigger /> : undefined
+					orgDetail.currentUser.canManage ? (
+						<CreateTeamDialog orgId={orgDetail.id} showTrigger />
+					) : undefined
 				}
 			>
 				<div className="flex items-center gap-3 pt-1">
 					<Avatar className="size-10 overflow-hidden rounded-none after:rounded-none">
-						<AvatarImage src={org.avatarUrl ?? undefined} className="rounded-none" />
+						<AvatarImage src={orgDetail.avatarUrl ?? undefined} className="rounded-none" />
 						<AvatarFallback className="rounded-none text-xs font-bold">
-							{org.name.substring(0, 2).toUpperCase()}
+							{orgDetail.name.substring(0, 2).toUpperCase()}
 						</AvatarFallback>
 					</Avatar>
-					<p className="text-xs text-muted-foreground">/{org.slug}</p>
+					<p className="text-xs text-muted-foreground">/{orgDetail.slug}</p>
 				</div>
 			</PageHeader>
 
 			<StatsGrid
 				stats={[
 					{ label: "Teams", value: totalTeams },
-					{ label: "Members", value: org.members.length },
+					{ label: "Members", value: orgDetail.members.length },
 					{ label: "Open listings", value: openListingCount },
-					{ label: "Pending invites", value: org.pendingInvites.length },
+					{ label: "Pending invites", value: orgDetail.pendingInvites.length },
 				]}
 			/>
 
@@ -69,17 +90,17 @@ export default async function AppOrgOverviewPage({
 				title="Active teams"
 				description="Your active rosters and their current competitive footprint."
 			>
-				{org.activeTeams.length === 0 ? (
+				{orgDetail.activeTeams.length === 0 ? (
 					<p className="text-xs text-muted-foreground">
 						No active teams yet. Create a team to start organizing scrims and recruiting.
 					</p>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2">
-						{org.activeTeams.map((team) => (
+						{orgDetail.activeTeams.map((team) => (
 							<TeamCard
 								key={team.id}
 								team={team}
-								orgId={org.id}
+								orgId={orgDetail.id}
 								href={appRoutes.teams.byId(team.id)}
 							/>
 						))}

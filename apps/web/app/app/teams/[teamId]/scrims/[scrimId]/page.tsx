@@ -14,15 +14,17 @@ import { ScrimOcrJobsPanel } from "@/components/scrims/scrim-ocr-jobs-panel";
 import { ScrimRespondActions } from "@/components/scrims/scrim-respond-actions";
 import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
 import { UploadScrimEvidenceDialog } from "@/components/scrims/upload-scrim-evidence-dialog";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getCurrentSession } from "@/lib/auth/session";
-import { getScrimChatConversations } from "@/lib/data/chat";
-import { getScrimById } from "@/lib/data/scrims";
-import { getTeamWithRoster } from "@/lib/data/teams";
+import { getScrimChatRouteState } from "@/lib/data/chat";
+import { getScrimRouteState } from "@/lib/data/scrims";
+import { getTeamWithRosterRouteState } from "@/lib/data/teams";
+import { routeStateWrongContext } from "@/lib/route-state";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 	if (!value) return emptyLabel;
@@ -94,20 +96,74 @@ export default async function TeamScrimDetailPage({
 }: {
 	params: Promise<{ teamId: string; scrimId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { teamId, scrimId } = await params;
-	const [team, scrim, chatConversations] = await Promise.all([
-		getTeamWithRoster(teamId, user.id),
-		getScrimById(scrimId),
-		getScrimChatConversations(scrimId),
+	const [teamState, scrimState, chatConversationsState] = await Promise.all([
+		getTeamWithRosterRouteState(teamId, user.id),
+		getScrimRouteState(scrimId),
+		getScrimChatRouteState(scrimId),
 	]);
 
-	if (!team || !scrim) notFound();
-	if (scrim.homeTeam.id !== team.id && scrim.awayTeam?.id !== team.id) {
+	if (teamState.kind === "missing" || scrimState.kind === "missing") notFound();
+	if (teamState.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader title="Scrim detail" detail={`Team ${teamId}`} />
+				<EmptyStateBlock
+					title="No access"
+					description="You need an active team membership before you can open this scrim workspace."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+	if (scrimState.kind === "no-access") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Scrim detail"
+					detail={`[${teamState.data.tag}] ${teamState.data.name}`}
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="This scrim belongs to a workspace you cannot review from the current team shell."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+
+	const scrimContext =
+		scrimState.data.homeTeam.id !== teamState.data.id &&
+		scrimState.data.awayTeam?.id !== teamState.data.id
+			? routeStateWrongContext("team", teamId)
+			: null;
+	if (scrimContext) {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Scrim detail"
+					detail={`[${teamState.data.tag}] ${teamState.data.name}`}
+				/>
+				<EmptyStateBlock
+					title="Wrong team context"
+					description="This scrim exists, but it does not belong to the team workspace in the current URL. Return to the scrim queue and open it from the matching team."
+					actionHref={appRoutes.teams.scrims(teamState.data.id)}
+					actionLabel="Back to scrim queue"
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+
+	if (chatConversationsState.kind === "missing") {
 		notFound();
 	}
+	const team = teamState.data;
+	const scrim = scrimState.data;
+	const availableChatConversations =
+		chatConversationsState.kind === "success" ? chatConversationsState.data : [];
 
 	const currentConfirmation =
 		scrim.confirmations.find((confirmation) => confirmation.teamId === team.id) ?? null;
@@ -133,14 +189,15 @@ export default async function TeamScrimDetailPage({
 		? `[${scrim.homeTeam.tag}] ${scrim.homeTeam.name} vs [${scrim.awayTeam.tag}] ${scrim.awayTeam.name}`
 		: `[${scrim.homeTeam.tag}] ${scrim.homeTeam.name} vs Open opponent`;
 	const primaryChatConversation =
-		chatConversations.find((conversation) => conversation.type === "scrim_lobby") ??
-		chatConversations[0] ??
+		availableChatConversations.find((conversation) => conversation.type === "scrim_lobby") ??
+		availableChatConversations[0] ??
 		null;
 
 	return (
 		<PageContainer>
 			<PageHeader
 				title={title}
+				detail={`[${team.tag}] ${team.name}`}
 				description={`Scheduled ${formatTimestamp(scrim.scheduledAt, "when both teams lock a time")}. Result reporting, confirmations, and evidence for this matchup all live here.`}
 				badge={<ScrimStatusBadge status={scrim.status} />}
 				actions={
@@ -595,7 +652,7 @@ export default async function TeamScrimDetailPage({
 							Chat channels
 						</p>
 						<div className="mt-4 space-y-3">
-							{chatConversations.length === 0 ? (
+							{availableChatConversations.length === 0 ? (
 								<div className="border p-3">
 									<p className="text-sm font-semibold">No scrim channels yet</p>
 									<p className="mt-1 text-xs text-muted-foreground">
@@ -604,7 +661,7 @@ export default async function TeamScrimDetailPage({
 									</p>
 								</div>
 							) : (
-								chatConversations.map((conversation) => (
+								availableChatConversations.map((conversation) => (
 									<div key={conversation.id} className="border p-3">
 										<div className="flex flex-wrap items-center justify-between gap-2">
 											<div>

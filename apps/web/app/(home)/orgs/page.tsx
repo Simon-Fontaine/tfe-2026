@@ -1,5 +1,8 @@
 import { GameController01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
 	title: "Organizations",
@@ -7,7 +10,6 @@ export const metadata: Metadata = {
 };
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 import { Suspense } from "react";
 import { PublicGridLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
@@ -16,22 +18,51 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getPublicOrgs } from "@/lib/data/organization";
 import { publicRoutes } from "@/lib/routes";
 
-export default async function OrgsDirectoryPage() {
+type OrgSort = "teams" | "roster" | "name";
+
+interface OrgsDirectoryPageProps {
+	searchParams: Promise<{ sort?: string }>;
+}
+
+export default async function OrgsDirectoryPage({ searchParams }: OrgsDirectoryPageProps) {
+	const { sort: sortParam } = await searchParams;
+	const sort = (["teams", "roster", "name"] as const).includes((sortParam ?? "teams") as OrgSort)
+		? ((sortParam ?? "teams") as OrgSort)
+		: "teams";
+
 	return (
 		<PublicPageShell
 			title="Organizations"
 			description="Discover organizations and the teams they operate."
 			maxWidth="6xl"
 			contentClassName="space-y-6"
+			actions={
+				<Button asChild size="sm" variant="outline">
+					<Link href="/updates">See public updates</Link>
+				</Button>
+			}
 		>
+			<div className="flex flex-wrap gap-2">
+				{(
+					[
+						["teams", "Most teams"],
+						["roster", "Largest rosters"],
+						["name", "A to Z"],
+					] as const
+				).map(([value, label]) => (
+					<Link key={value} href={value === "teams" ? "/orgs" : `/orgs?sort=${value}`}>
+						<Badge variant={sort === value ? "default" : "outline"}>{label}</Badge>
+					</Link>
+				))}
+			</div>
 			<Suspense fallback={<PublicGridLoading />}>
-				<OrgListSection />
+				<OrgListSection sort={sort} />
 			</Suspense>
 		</PublicPageShell>
 	);
 }
 
-async function OrgListSection() {
+async function OrgListSection({ sort }: { sort: OrgSort }) {
 	let orgs: Awaited<ReturnType<typeof getPublicOrgs>> = [];
 	let hasError = false;
 	try {
@@ -62,9 +93,15 @@ async function OrgListSection() {
 		);
 	}
 
+	const sortedOrgs = [...orgs].sort((a, b) => {
+		if (sort === "name") return a.name.localeCompare(b.name);
+		if (sort === "roster") return b.activeRosterCount - a.activeRosterCount;
+		return b.teamCount - a.teamCount;
+	});
+
 	return (
 		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{orgs.map((org) => (
+			{sortedOrgs.map((org) => (
 				<Link
 					key={org.id}
 					href={publicRoutes.orgs.bySlug(org.slug)}

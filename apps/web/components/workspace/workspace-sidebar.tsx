@@ -36,6 +36,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
+import { getWorkspacePathContext } from "@/lib/route-state";
 import { appRoutes } from "@/lib/routes";
 import { useRecruitingStore } from "@/stores/recruiting";
 import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
@@ -47,13 +48,17 @@ interface WorkspaceSidebarProps {
 	pendingApplicationCount: number;
 }
 
-function useActiveContext(pathname: string) {
-	const teamMatch = pathname.match(/^\/app\/teams\/([^/]+)/);
-	const orgMatch = pathname.match(/^\/app\/orgs\/([^/]+)/);
-	return {
-		activeOrgId: orgMatch?.[1] ?? null,
-		activeTeamId: teamMatch?.[1] ?? null,
-	};
+function isSidebarLinkActive(pathname: string, href: string, exact?: boolean) {
+	if (exact) return pathname === href;
+
+	if (href === appRoutes.recruiting.root) {
+		return (
+			pathname === href ||
+			(pathname.startsWith(`${href}/`) && !pathname.startsWith(appRoutes.recruiting.conversations))
+		);
+	}
+
+	return pathname.startsWith(href);
 }
 
 export function WorkspaceSidebar({
@@ -64,7 +69,7 @@ export function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
 	const pathname = usePathname();
 	const livePendingApplicationCount = useRecruitingStore((state) => state.pendingApplicationCount);
-	const { activeOrgId, activeTeamId } = useActiveContext(pathname);
+	const { activeOrgId, activeTeamId } = getWorkspacePathContext(pathname);
 	const displayPendingApplicationCount = livePendingApplicationCount ?? pendingApplicationCount;
 
 	const activeOrg = activeOrgId ? contextOrgs.find((o) => o.id === activeOrgId) : null;
@@ -234,9 +239,7 @@ export function WorkspaceSidebar({
 							<SidebarMenu>
 								{group.links.map((link) => {
 									const isExact = "exact" in link && link.exact;
-									const isActive = isExact
-										? pathname === link.href
-										: pathname.startsWith(link.href);
+									const isActive = isSidebarLinkActive(pathname, link.href, isExact);
 									return (
 										<SidebarMenuItem key={link.href}>
 											<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>

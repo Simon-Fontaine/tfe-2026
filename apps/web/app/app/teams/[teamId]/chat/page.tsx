@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getCurrentSession } from "@/lib/auth/session";
-import { getTeamChatConversations } from "@/lib/data/chat";
-import { getTeamWithRoster } from "@/lib/data/teams";
+import { getTeamChatRouteState } from "@/lib/data/chat";
+import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 function formatConversationTypeLabel(type: string) {
 	switch (type) {
@@ -33,27 +33,73 @@ export default async function TeamChatPage({
 	params: Promise<{ teamId: string }>;
 	searchParams: Promise<{ conversation?: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const [{ teamId }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-	const [team, conversations] = await Promise.all([
-		getTeamWithRoster(teamId, user.id),
-		getTeamChatConversations(teamId),
+	const [teamState, conversationsState] = await Promise.all([
+		getTeamWithRosterRouteState(teamId, user.id),
+		getTeamChatRouteState(teamId),
 	]);
-	if (!team) notFound();
+	if (teamState.kind === "missing") notFound();
+	if (teamState.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Chat"
+					detail={`Team ${teamId}`}
+					description="Persistent roster and scrim-linked channels for this team workspace."
+				/>
+				<EmptyStateBlock
+					icon={MessageNotification02Icon}
+					title="No access"
+					description="You need an active roster seat before you can open this team chat workspace."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+	if (conversationsState.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Chat"
+					detail={`[${teamState.data.tag}] ${teamState.data.name}`}
+					description={`Persistent team room plus scrim negotiation and lobby channels for ${teamState.data.name}.`}
+					actions={
+						<Button asChild size="sm" variant="outline">
+							<Link href={appRoutes.teams.byId(teamState.data.id)}>Back to team overview</Link>
+						</Button>
+					}
+				/>
+				<EmptyStateBlock
+					icon={MessageNotification02Icon}
+					title={conversationsState.kind === "no-access" ? "No access" : "Chat unavailable"}
+					description={
+						conversationsState.kind === "no-access"
+							? "This team chat workspace is only available to active roster members."
+							: "This team chat route does not match an available channel context."
+					}
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+	const team = teamState.data;
+	const availableConversations = conversationsState.data;
 
 	const initialConversationId =
 		typeof resolvedSearchParams.conversation === "string"
 			? resolvedSearchParams.conversation
 			: null;
-	const teamRoom = conversations.find((conversation) => conversation.type === "team") ?? null;
-	const scrimRooms = conversations.filter((conversation) => conversation.scrimId);
+	const teamRoom =
+		availableConversations.find((conversation) => conversation.type === "team") ?? null;
+	const scrimRooms = availableConversations.filter((conversation) => conversation.scrimId);
 
 	return (
 		<PageContainer>
 			<PageHeader
 				title="Chat"
+				detail={`[${team.tag}] ${team.name}`}
 				description={`Persistent team room plus scrim negotiation and lobby channels for ${team.name}.`}
 				actions={
 					<Button asChild size="sm" variant="outline">
@@ -68,10 +114,13 @@ export default async function TeamChatPage({
 						Channel overview
 					</p>
 					<div className="mt-4 flex flex-wrap gap-2">
-						<Badge variant="outline">{conversations.length} channel(s)</Badge>
+						<Badge variant="outline">{availableConversations.length} channel(s)</Badge>
 						<Badge variant="outline">{scrimRooms.length} scrim-linked</Badge>
 						<Badge variant="outline">
-							{conversations.reduce((total, conversation) => total + conversation.unreadCount, 0)}{" "}
+							{availableConversations.reduce(
+								(total, conversation) => total + conversation.unreadCount,
+								0
+							)}{" "}
 							unread
 						</Badge>
 					</div>
@@ -91,7 +140,7 @@ export default async function TeamChatPage({
 					<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 						Recent channels
 					</p>
-					{conversations.length === 0 ? (
+					{availableConversations.length === 0 ? (
 						<div className="mt-4">
 							<EmptyStateBlock
 								icon={MessageNotification02Icon}
@@ -102,7 +151,7 @@ export default async function TeamChatPage({
 						</div>
 					) : (
 						<div className="mt-4 space-y-2">
-							{conversations.slice(0, 3).map((conversation) => (
+							{availableConversations.slice(0, 3).map((conversation) => (
 								<div key={conversation.id} className="border p-3">
 									<div className="flex items-center justify-between gap-2">
 										<p className="line-clamp-1 text-sm font-semibold">{conversation.name}</p>
@@ -131,7 +180,7 @@ export default async function TeamChatPage({
 			<ChatWorkspace
 				contextKey={`team:${team.id}`}
 				currentUserId={user.id}
-				conversations={conversations}
+				conversations={availableConversations}
 				initialConversationId={initialConversationId}
 				emptyTitle="No team chat channels yet"
 				emptyDescription="Team-wide chat, scrim negotiations, and live lobby threads will appear here as soon as they are created."

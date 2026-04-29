@@ -1,44 +1,47 @@
+import { notFound } from "next/navigation";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
-import {
-	OrgWorkspaceInvitesEmptyState,
-	OrgWorkspaceMissingState,
-	OrgWorkspaceNoAccessState,
-} from "@/components/orgs/org-workspace-state";
+import { OrgWorkspaceInvitesEmptyState } from "@/components/orgs/org-workspace-state";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getCurrentSession } from "@/lib/auth/session";
-import { getOrgWithTeams } from "@/lib/data/orgs";
+import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
+import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgInvitesPage({
 	params,
 }: {
 	params: Promise<{ orgId: string }>;
 }) {
-	const { user } = await getCurrentSession();
-	if (!user) return null;
+	const { user } = await requireWorkspaceSession();
 
 	const { orgId } = await params;
-	const org = await getOrgWithTeams(orgId, user.id);
-	if (!org) return <OrgWorkspaceMissingState />;
-	if (!org.currentUser.canManage) {
+	const org = await getOrgWithTeamsRouteState(orgId, user.id);
+	if (org.kind === "missing") notFound();
+	if (org.kind !== "success" || !org.data.currentUser.canManage) {
 		return (
-			<OrgWorkspaceNoAccessState
-				title="Invites"
-				description="You don't have permission to manage this organisation's invites."
-			/>
+			<PageContainer>
+				<PageHeader title="Invites" detail={`Organization ${orgId}`} />
+				<EmptyStateBlock
+					title="No access"
+					description="You don't have permission to manage this organisation's invites."
+					variant="card"
+				/>
+			</PageContainer>
 		);
 	}
+	const orgDetail = org.data;
 
 	return (
 		<PageContainer>
 			<PageHeader
 				title="Invites"
-				description={`Outstanding organisation invites for ${org.name}.`}
+				detail={`/${orgDetail.slug}`}
+				description={`Outstanding organisation invites for ${orgDetail.name}.`}
 				actions={
-					<InviteMemberDialog orgId={org.id}>
+					<InviteMemberDialog orgId={orgDetail.id}>
 						<Button size="sm">Invite member</Button>
 					</InviteMemberDialog>
 				}
@@ -48,10 +51,10 @@ export default async function AppOrgInvitesPage({
 				title="Pending invites"
 				description="Track invite status, resend outreach, and cancel stale invitations."
 			>
-				{org.pendingInvites.length === 0 ? (
+				{orgDetail.pendingInvites.length === 0 ? (
 					<OrgWorkspaceInvitesEmptyState />
 				) : (
-					<OrgPendingInvitesSection orgId={org.id} invites={org.pendingInvites} />
+					<OrgPendingInvitesSection orgId={orgDetail.id} invites={orgDetail.pendingInvites} />
 				)}
 			</PageSection>
 		</PageContainer>

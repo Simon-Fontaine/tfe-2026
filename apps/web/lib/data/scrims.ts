@@ -1,6 +1,12 @@
 import type { OcrJobSummary, ScrimDetail, ScrimSummary } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
+import {
+	type RouteStateResult,
+	routeStateMissing,
+	routeStateNoAccess,
+	routeStateSuccess,
+} from "@/lib/route-state";
 import { apiRoutes } from "@/lib/routes";
 
 export type { OcrJobSummary, ScrimDetail, ScrimSummary };
@@ -14,11 +20,19 @@ export const getTeamScrims = cache(async (teamId: string): Promise<ScrimSummary[
 });
 
 export const getScrimById = cache(async (scrimId: string): Promise<ScrimDetail | null> => {
-	const res = await apiGet<ScrimDetail>(apiRoutes.scrims.byId(scrimId));
-	if ("data" in res) return res.data;
-	if (res.status === 404) return null;
-	throw new Error(res.error);
+	const result = await getScrimRouteState(scrimId);
+	return result.kind === "success" ? result.data : null;
 });
+
+export const getScrimRouteState = cache(
+	async (scrimId: string): Promise<RouteStateResult<ScrimDetail>> => {
+		const res = await apiGet<ScrimDetail>(apiRoutes.scrims.byId(scrimId));
+		if ("data" in res) return routeStateSuccess(res.data);
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
+		throw new Error(res.error);
+	}
+);
 
 export const getPublicScrims = cache(async (): Promise<ScrimSummary[]> => {
 	const res = await apiGet<ScrimSummary[]>(apiRoutes.scrims.publicRoot);

@@ -64,6 +64,34 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 				))}
 			</div>
 
+			<div className="flex flex-wrap gap-2">
+				{(
+					[
+						["all", "All member types"],
+						["player", "Players"],
+						["staff", "Staff"],
+					] as const
+				).map(([value, label]) => {
+					const href =
+						value === "all"
+							? category === "all"
+								? publicRoutes.recruiting.root
+								: `${publicRoutes.recruiting.root}?category=${category}`
+							: `${publicRoutes.recruiting.root}?${new URLSearchParams({
+									...(category !== "all" ? { category } : {}),
+									memberType: value,
+								}).toString()}`;
+
+					return (
+						<Link key={value} href={href}>
+							<Badge variant={(memberType ?? "all") === value ? "default" : "outline"}>
+								{label}
+							</Badge>
+						</Link>
+					);
+				})}
+			</div>
+
 			<Suspense fallback={<PublicListLoading />}>
 				<RecruitingListSection
 					category={category}

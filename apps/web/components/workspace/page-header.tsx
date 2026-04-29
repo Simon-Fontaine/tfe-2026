@@ -4,6 +4,7 @@ interface PageHeaderProps {
 	title: string;
 	description?: string;
 	badge?: React.ReactNode;
+	detail?: React.ReactNode;
 	actions?: React.ReactNode;
 	children?: React.ReactNode;
 	className?: string;
@@ -13,6 +14,7 @@ export function PageHeader({
 	title,
 	description,
 	badge,
+	detail,
 	actions,
 	children,
 	className,
@@ -29,6 +31,11 @@ export function PageHeader({
 					<h1 className="text-xl font-semibold tracking-tight">{title}</h1>
 					{badge}
 				</div>
+				{detail ? (
+					<div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+						{detail}
+					</div>
+				) : null}
 				{description && <p className="max-w-3xl text-sm text-muted-foreground">{description}</p>}
 				{children}
 			</div>

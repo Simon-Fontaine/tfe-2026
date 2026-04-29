@@ -30,6 +30,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { getWorkspacePathContext } from "@/lib/route-state";
 import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useWorkspaceContextStore } from "@/stores/workspace-context";
@@ -54,30 +55,25 @@ interface ContextSwitcherProps {
 	teams: SwitcherTeam[];
 }
 
-function getActiveContext(pathname: string) {
-	const teamMatch = pathname.match(/^\/app\/teams\/([^/]+)/);
-	const orgMatch = pathname.match(/^\/app\/orgs\/([^/]+)/);
-	return {
-		activeOrgId: orgMatch?.[1] ?? null,
-		activeTeamId: teamMatch?.[1] ?? null,
-		isPersonal: !pathname.startsWith("/app/orgs/") && !pathname.startsWith("/app/teams/"),
-	};
+function getActiveLabel(activeOrg: SwitcherOrg | null, activeTeam: SwitcherTeam | null) {
+	if (activeTeam) {
+		return `[${activeTeam.tag}] ${activeTeam.name}`;
+	}
+
+	if (activeOrg) {
+		return activeOrg.name;
+	}
+
+	return "Personal";
 }
 
-function getActiveLabel(
-	activeOrgId: string | null,
-	activeTeamId: string | null,
-	orgs: SwitcherOrg[],
-	teams: SwitcherTeam[]
-) {
+function getUnknownContextLabel(activeOrgId: string | null, activeTeamId: string | null) {
 	if (activeTeamId) {
-		const team = teams.find((item) => item.id === activeTeamId);
-		return team ? `[${team.tag}] ${team.name}` : "Team";
+		return `Wrong team context (${activeTeamId})`;
 	}
 
 	if (activeOrgId) {
-		const org = orgs.find((item) => item.id === activeOrgId);
-		return org ? org.name : "Organization";
+		return `Wrong organization context (${activeOrgId})`;
 	}
 
 	return "Personal";
@@ -91,10 +87,8 @@ function getActiveIcon(activeOrgId: string | null, activeTeamId: string | null) 
 
 export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 	const pathname = usePathname();
-	const { activeOrgId, activeTeamId, isPersonal } = getActiveContext(pathname);
+	const { activeOrgId, activeTeamId, scope } = getWorkspacePathContext(pathname);
 	const { isMobile } = useSidebar();
-	const label = getActiveLabel(activeOrgId, activeTeamId, orgs, teams);
-	const icon = getActiveIcon(activeOrgId, activeTeamId);
 	const { setScope, selectOrg, selectTeam } = useWorkspaceContextStore();
 	const [open, setOpen] = useState(false);
 	const [createTeamOpen, setCreateTeamOpen] = useState(false);
@@ -110,8 +104,23 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 	}, [teams]);
 
 	const activeOrg = activeOrgId ? (orgs.find((org) => org.id === activeOrgId) ?? null) : null;
+	const activeTeam = activeTeamId ? (teams.find((team) => team.id === activeTeamId) ?? null) : null;
+	const isWrongContext =
+		(scope === "org" && activeOrgId !== null && activeOrg === null) ||
+		(scope === "team" && activeTeamId !== null && activeTeam === null);
+	const isPersonal = scope === "personal";
+	const label = isWrongContext
+		? getUnknownContextLabel(activeOrgId, activeTeamId)
+		: getActiveLabel(activeOrg, activeTeam);
+	const icon = getActiveIcon(activeOrgId, activeTeamId);
 
 	useEffect(() => {
+		if (isWrongContext) {
+			selectOrg(null);
+			selectTeam(null);
+			setScope("personal");
+			return;
+		}
 		if (activeTeamId) {
 			selectTeam(activeTeamId);
 			setScope("team");
@@ -125,7 +134,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 		selectOrg(null);
 		selectTeam(null);
 		setScope("personal");
-	}, [activeOrgId, activeTeamId, selectOrg, selectTeam, setScope]);
+	}, [activeOrgId, activeTeamId, isWrongContext, selectOrg, selectTeam, setScope]);
 
 	return (
 		<>
@@ -144,6 +153,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 									icon={icon}
 									activeOrgId={activeOrgId}
 									activeTeamId={activeTeamId}
+									isWrongContext={isWrongContext}
 								/>
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
@@ -170,6 +180,18 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 							{orgs.length > 0 ? <DropdownMenuSeparator /> : null}
 
 							<div className="max-h-96 overflow-y-auto">
+								{isWrongContext ? (
+									<>
+										<DropdownMenuLabel className="pb-1 text-destructive">
+											Wrong context
+										</DropdownMenuLabel>
+										<div className="px-2 pb-2 text-xs text-muted-foreground">
+											This URL points to an org or team workspace that is not available in your
+											current shell. Open another workspace instead of silently switching contexts.
+										</div>
+										<DropdownMenuSeparator />
+									</>
+								) : null}
 								{orgs.map((org, index) => {
 									const orgTeams = teamsByOrg.get(org.id) ?? [];
 									return (
@@ -226,9 +248,9 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 										variant="outline"
 										className="w-full justify-start"
 									>
-										<Link href={appRoutes.root} onClick={() => setOpen(false)}>
+										<Link href={appRoutes.me} onClick={() => setOpen(false)}>
 											<HugeiconsIcon icon={Home01Icon} strokeWidth={2} className="size-4" />
-											Open app
+											Open personal workspace
 										</Link>
 									</Button>
 								)}
@@ -254,6 +276,7 @@ function ContextSwitcherTriggerContent({
 	icon,
 	activeOrgId,
 	activeTeamId,
+	isWrongContext,
 	textClassName,
 	metaClassName,
 }: {
@@ -261,6 +284,7 @@ function ContextSwitcherTriggerContent({
 	icon: typeof UserCircle02Icon;
 	activeOrgId: string | null;
 	activeTeamId: string | null;
+	isWrongContext: boolean;
 	textClassName?: string;
 	metaClassName?: string;
 }) {
@@ -272,11 +296,13 @@ function ContextSwitcherTriggerContent({
 			<div className="grid min-w-0 flex-1 gap-0.5 text-left leading-tight">
 				<span className={cn("truncate text-sm font-medium", textClassName)}>{label}</span>
 				<span className={cn("truncate text-xs text-muted-foreground", metaClassName)}>
-					{activeTeamId
-						? "Team workspace"
-						: activeOrgId
-							? "Organization workspace"
-							: "Personal workspace"}
+					{isWrongContext
+						? "Wrong context"
+						: activeTeamId
+							? "Team workspace"
+							: activeOrgId
+								? "Organization workspace"
+								: "Personal workspace"}
 				</span>
 			</div>
 			<HugeiconsIcon
