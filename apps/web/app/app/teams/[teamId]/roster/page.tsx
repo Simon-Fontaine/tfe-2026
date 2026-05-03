@@ -49,6 +49,7 @@ export default async function AppTeamRosterPage({
 	const canManageAdmins = team.data.currentUser.canManageAdmins;
 	const canManageInvites = team.data.currentUser.canManageInvites;
 	const isStaffTab = activeTab === "staff";
+	const activeRoster = isStaffTab ? team.data.staff : team.data.players;
 
 	return (
 		<PageContainer>
@@ -90,20 +91,47 @@ export default async function AppTeamRosterPage({
 				</div>
 			</PageSection>
 
-			<RosterTable
-				roster={isStaffTab ? team.data.staff : team.data.players}
-				canManage={canManage}
-				canManageAdmins={canManageAdmins}
-				teamId={team.data.id}
-				emptyLabel={
-					isStaffTab ? "No staff members on this team yet" : "No players on this team yet"
-				}
-				emptyDescription={
-					isStaffTab
-						? "Invite coaches, analysts, or managers to build out the staff group."
-						: "Invite players to start building the roster."
-				}
-			/>
+			{activeRoster.length === 0 ? (
+				<>
+					<EmptyStateBlock
+						title={isStaffTab ? "No staff members yet" : "No players yet"}
+						description={
+							isStaffTab
+								? "Invite coaches, analysts, or managers to the staff group."
+								: "Invite players to start building the team roster."
+						}
+						variant="card"
+					/>
+					{canManage ? (
+						<div className="flex justify-start mt-4">
+							<InvitePlayerDialog
+								teamId={team.data.id}
+								canManageAdmins={canManageAdmins}
+								defaultMemberType={isStaffTab ? "staff" : "player"}
+								title={isStaffTab ? "Invite staff" : "Invite player"}
+							>
+								<Button size="sm">
+									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									{isStaffTab ? "Invite staff" : "Invite player"}
+								</Button>
+							</InvitePlayerDialog>
+						</div>
+					) : (
+						<p className="mt-4 text-sm text-muted-foreground">
+							{isStaffTab
+								? "This team hasn't added any staff yet."
+								: "This team hasn't added any players yet."}
+						</p>
+					)}
+				</>
+			) : (
+				<RosterTable
+					roster={activeRoster}
+					canManage={canManage}
+					canManageAdmins={canManageAdmins}
+					teamId={team.data.id}
+				/>
+			)}
 
 			{canManageInvites ? (
 				<PageSection

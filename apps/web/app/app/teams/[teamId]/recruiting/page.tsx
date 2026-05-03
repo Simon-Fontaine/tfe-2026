@@ -74,8 +74,8 @@ export default async function TeamRecruitingPage({
 					title="No team listings yet"
 					description={
 						team.data.currentUser.canManage
-							? "Create a recruiting listing here to replace scattered team outreach."
-							: "This team has not published any recruiting listings yet."
+							? "Create a recruiting listing to find players, ringers, or staff."
+							: "This team hasn't published any recruiting listings yet."
 					}
 					variant="card"
 				/>
