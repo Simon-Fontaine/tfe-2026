@@ -79,6 +79,7 @@ export function TeamUpdatesPageClient({
 			const response = await fetch(apiRoutes.updates.byId(updateId), {
 				method: "DELETE",
 				credentials: "include",
+				headers: { "X-Requested-With": "XMLHttpRequest" },
 			});
 
 			if (!response.ok) {
