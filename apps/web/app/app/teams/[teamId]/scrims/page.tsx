@@ -68,12 +68,19 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 			/>
 
 			{scrims.length === 0 ? (
-				<EmptyStateBlock
-					icon={Calendar03Icon}
-					title="No scrims yet"
-					description="Scrim requests, scheduled matches, and result confirmations will appear here once your team starts using the scrim workspace."
-					variant="card"
-				/>
+				<>
+					<EmptyStateBlock
+						icon={Calendar03Icon}
+						title="No scrims scheduled"
+						description="Scrim requests and scheduled matches will appear here once your team is active."
+						variant="card"
+					/>
+					{!team.currentUser.canManage && (
+						<p className="text-center text-sm text-muted-foreground">
+							Ask a team manager to schedule your first scrim.
+						</p>
+					)}
+				</>
 			) : (
 				<div className="space-y-3">
 					{scrims.map((scrim) => {

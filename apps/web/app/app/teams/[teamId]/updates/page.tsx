@@ -21,7 +21,7 @@ export default async function TeamUpdatesPage({ params }: { params: Promise<{ te
 		<PageContainer>
 			<PageHeader
 				title="Updates"
-				description={`Team announcements, roster notes, and scrim recaps for ${team.name} now live in their own feed instead of being mixed into recruiting.`}
+				description="Announcements, roster news, and scrim recaps posted by your team's managers."
 			/>
 
 			<TeamUpdatesPageClient

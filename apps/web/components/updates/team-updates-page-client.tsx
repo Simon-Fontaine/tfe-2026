@@ -107,8 +107,8 @@ export function TeamUpdatesPageClient({
 		return (
 			<div className="space-y-4">
 				<EmptyStateBlock
-					title="No team updates yet"
-					description="Use updates for roster notices, scrim recaps, schedule changes, and team announcements."
+					title="No updates posted"
+					description="Team announcements and scrim recaps will appear here when managers post them."
 					variant="card"
 				/>
 				{canManage ? (
@@ -119,10 +119,12 @@ export function TeamUpdatesPageClient({
 								setUpdates((current) => sortUpdates([update, ...current]));
 							}}
 						>
-							<Button size="sm">Publish first update</Button>
+							<Button size="sm">Post an update</Button>
 						</CreateUpdatePostDialog>
 					</div>
-				) : null}
+				) : (
+					<p className="text-sm text-muted-foreground">No team updates have been posted yet.</p>
+				)}
 			</div>
 		);
 	}
