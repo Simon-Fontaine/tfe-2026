@@ -147,8 +147,8 @@ export default async function TeamScrimDetailPage({
 					detail={`[${teamState.data.tag}] ${teamState.data.name}`}
 				/>
 				<EmptyStateBlock
-					title="Wrong team context"
-					description="This scrim exists, but it does not belong to the team workspace in the current URL. Return to the scrim queue and open it from the matching team."
+					title="Scrim belongs to another team"
+					description="This scrim exists, but it is not part of the team workspace in the current URL. Return to this team's scrims and open the matching workspace entry."
 					actionHref={appRoutes.teams.scrims(teamState.data.id)}
 					actionLabel="Back to scrim queue"
 					variant="card"

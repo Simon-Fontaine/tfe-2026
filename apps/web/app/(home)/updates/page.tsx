@@ -5,11 +5,13 @@ import { Suspense } from "react";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { UpdatePostCard } from "@/components/updates/update-post-card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicUpdates } from "@/lib/data/updates";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Updates",
@@ -37,7 +39,7 @@ export default async function UpdatesPage({ searchParams }: UpdatesPageProps) {
 			contentClassName="space-y-6"
 			actions={
 				<Button asChild size="sm">
-					<Link href={user ? "/app" : "/auth?step=login"}>
+					<Link href={user ? appRoutes.root : publicRoutes.auth.step("login")}>
 						{user ? "Open app workspace" : "Sign in to publish updates"}
 					</Link>
 				</Button>
@@ -45,7 +47,7 @@ export default async function UpdatesPage({ searchParams }: UpdatesPageProps) {
 		>
 			<div className="flex flex-wrap gap-2">
 				{UPDATE_FILTERS.map((filter) => (
-					<Link key={filter} href={filter === "all" ? "/updates" : `/updates?scope=${filter}`}>
+					<Link key={filter} href={publicRoutes.updates.withScope(filter)}>
 						<Button size="sm" variant={scope === filter ? "default" : "outline"}>
 							{filter === "all" ? "All updates" : `${filter} updates`}
 						</Button>
@@ -59,27 +61,28 @@ export default async function UpdatesPage({ searchParams }: UpdatesPageProps) {
 				title="Related public routes"
 				description="Use adjacent routes to move from announcements into the rest of the public funnel."
 			>
-				<div className="grid gap-3 md:grid-cols-3">
-					<Link href="/orgs" className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Organizations</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Jump into the org surfaces behind multi-team announcements and staff operations.
-						</p>
-					</Link>
-					<Link href="/teams" className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Teams</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Open team profiles when an update makes you want roster, recruiting, or activity
-							context.
-						</p>
-					</Link>
-					<Link href="/scrims" className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Scrims</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Pair public announcements with recent match activity for a clearer read on momentum.
-						</p>
-					</Link>
-				</div>
+				<PublicRelatedRouteCards
+					cards={[
+						{
+							label: "Organizations",
+							href: publicRoutes.orgs.root,
+							description:
+								"Jump into the org surfaces behind multi-team announcements and staff operations.",
+						},
+						{
+							label: "Teams",
+							href: publicRoutes.teams.root,
+							description:
+								"Open team profiles when an update makes you want roster, recruiting, or activity context.",
+						},
+						{
+							label: "Scrims",
+							href: publicRoutes.scrims.root,
+							description:
+								"Pair public announcements with recent match activity for a clearer read on momentum.",
+						},
+					]}
+				/>
 			</PublicPageSection>
 		</PublicPageShell>
 	);

@@ -96,7 +96,7 @@ export function WorkspaceSidebar({
 							icon: UserGroupIcon,
 						},
 						{
-							label: "Calendar",
+							label: "Team schedule",
 							href: appRoutes.teams.calendar(activeTeamId),
 							icon: Calendar03Icon,
 						},
@@ -200,7 +200,7 @@ export function WorkspaceSidebar({
 								icon: Mail01Icon,
 							},
 							{
-								label: "Calendar",
+								label: "Personal schedule",
 								href: appRoutes.calendar,
 								icon: Calendar03Icon,
 							},

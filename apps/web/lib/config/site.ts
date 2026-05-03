@@ -1,5 +1,6 @@
 import { Sword03Icon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export type NavLink = {
 	label: string;
@@ -36,21 +37,21 @@ export const siteConfig: SiteConfig = {
 	nav: {
 		// Desktop-only nav bar links. Signed-in users also see the app workspace entry here.
 		primary: [
-			{ label: "Home", href: "/", visibility: "all" },
-			{ label: "Players", href: "/players", visibility: "all" },
-			{ label: "Teams", href: "/teams", visibility: "all" },
-			{ label: "Orgs", href: "/orgs", visibility: "all" },
-			{ label: "Recruiting", href: "/recruiting", visibility: "all" },
-			{ label: "Scrims", href: "/scrims", visibility: "all" },
-			{ label: "Updates", href: "/updates", visibility: "all" },
-			{ label: "App", href: "/app", visibility: "auth" },
+			{ label: "Home", href: publicRoutes.home, visibility: "all" },
+			{ label: "Players", href: publicRoutes.players.root, visibility: "all" },
+			{ label: "Teams", href: publicRoutes.teams.root, visibility: "all" },
+			{ label: "Orgs", href: publicRoutes.orgs.root, visibility: "all" },
+			{ label: "Recruiting", href: publicRoutes.recruiting.root, visibility: "all" },
+			{ label: "Scrims", href: publicRoutes.scrims.root, visibility: "all" },
+			{ label: "Updates", href: publicRoutes.updates.root, visibility: "all" },
+			{ label: "App", href: appRoutes.root, visibility: "auth" },
 		],
 		// Shown in the header for guests only (auth users have the user dropdown).
-		user: [{ label: "Sign in", href: "/auth?step=login", visibility: "guest" }],
+		user: [{ label: "Sign in", href: publicRoutes.auth.step("login"), visibility: "guest" }],
 	},
 	cta: {
 		label: "Get started",
-		href: "/auth?step=register",
+		href: publicRoutes.auth.step("register"),
 	},
 	footer: {
 		copyright: "Scrimflow",

@@ -69,11 +69,11 @@ function getActiveLabel(activeOrg: SwitcherOrg | null, activeTeam: SwitcherTeam 
 
 function getUnknownContextLabel(activeOrgId: string | null, activeTeamId: string | null) {
 	if (activeTeamId) {
-		return `Wrong team context (${activeTeamId})`;
+		return "Unavailable team workspace";
 	}
 
 	if (activeOrgId) {
-		return `Wrong organization context (${activeOrgId})`;
+		return "Unavailable organization workspace";
 	}
 
 	return "Personal";
@@ -183,11 +183,11 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 								{isWrongContext ? (
 									<>
 										<DropdownMenuLabel className="pb-1 text-destructive">
-											Wrong context
+											Workspace unavailable
 										</DropdownMenuLabel>
 										<div className="px-2 pb-2 text-xs text-muted-foreground">
-											This URL points to an org or team workspace that is not available in your
-											current shell. Open another workspace instead of silently switching contexts.
+											This URL points to a workspace that is not available to your account. Open a
+											workspace below or return to your personal home.
 										</div>
 										<DropdownMenuSeparator />
 									</>
@@ -297,7 +297,7 @@ function ContextSwitcherTriggerContent({
 				<span className={cn("truncate text-sm font-medium", textClassName)}>{label}</span>
 				<span className={cn("truncate text-xs text-muted-foreground", metaClassName)}>
 					{isWrongContext
-						? "Wrong context"
+						? "Choose another workspace"
 						: activeTeamId
 							? "Team workspace"
 							: activeOrgId

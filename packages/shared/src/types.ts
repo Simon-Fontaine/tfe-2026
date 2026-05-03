@@ -1152,6 +1152,7 @@ export type NotificationSummary = {
 	body: string | null;
 	referenceType: string | null;
 	referenceId: string | null;
+	destinationHref: string | null;
 	isRead: boolean;
 	createdAt: IsoDateString;
 };

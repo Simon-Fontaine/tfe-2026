@@ -38,7 +38,7 @@ const SUB_PAGE_LABELS: Record<string, string> = {
 	invites: "Invites",
 	roster: "Roster",
 	recruiting: "Recruiting",
-	calendar: "Calendar",
+	calendar: "Personal Schedule",
 	scrims: "Scrims",
 	chat: "Chat",
 	updates: "Updates",
@@ -58,11 +58,18 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 		const team = teams.find((t) => t.id === teamId);
 		if (team) {
 			const teamLabel = `[${team.tag}] ${team.name}`;
+			const subPageLabel = subPage === "calendar" ? "Team Schedule" : SUB_PAGE_LABELS[subPage];
 			if (!subPage) {
 				crumbs.push({ label: teamLabel });
-			} else if (SUB_PAGE_LABELS[subPage]) {
+			} else if (subPageLabel) {
 				crumbs.push({ label: teamLabel, href: appRoutes.teams.byId(teamId) });
-				crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
+				const scrimDetailMatch = pathname.match(/^\/app\/teams\/[^/]+\/scrims\/([^/]+)/);
+				if (scrimDetailMatch) {
+					crumbs.push({ label: "Scrims", href: appRoutes.teams.scrims(teamId) });
+					crumbs.push({ label: "Scrim Detail" });
+				} else {
+					crumbs.push({ label: subPageLabel });
+				}
 			}
 		}
 		return crumbs;
@@ -106,8 +113,11 @@ function useBreadcrumbs(pathname: string, orgs: SwitcherOrg[], teams: SwitcherTe
 		if (subPage && SUB_PAGE_LABELS[subPage]) {
 			crumbs.push({ label: "Recruiting", href: appRoutes.recruiting.root });
 			crumbs.push({ label: SUB_PAGE_LABELS[subPage] });
+		} else if (subPage) {
+			crumbs.push({ label: "Recruiting", href: appRoutes.recruiting.root });
+			crumbs.push({ label: "Listing Detail" });
 		} else {
-			crumbs.push({ label: "Recruiting" });
+			crumbs.push({ label: "Marketplace" });
 		}
 		return crumbs;
 	}

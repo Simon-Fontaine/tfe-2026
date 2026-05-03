@@ -9,7 +9,7 @@ import { LandingPrimaryCTASection } from "@/components/home/landing-primary-cta-
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { Button } from "@/components/ui/button";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes, publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Scrimflow — Overwatch 2 Team Management",
@@ -39,7 +39,7 @@ export default function Page() {
 						description="Scrimflow is not just a sign-up page. Teams, orgs, players, recruiting, scrims, and updates all have public surfaces that help visitors understand the ecosystem before they join."
 						actions={
 							<Button asChild size="sm" variant="outline">
-								<Link href="/recruiting">
+								<Link href={publicRoutes.recruiting.root}>
 									Start with recruiting
 									<HugeiconsIcon
 										icon={ArrowRight01Icon}
@@ -54,24 +54,32 @@ export default function Page() {
 							{[
 								[
 									"Recruiting",
-									"/recruiting",
+									publicRoutes.recruiting.root,
 									"Browse open player, team, and staff opportunities with clear next actions.",
 								],
-								["Teams", "/teams", "See team profiles, recruiting status, and roster depth."],
+								[
+									"Teams",
+									publicRoutes.teams.root,
+									"See team profiles, recruiting status, and roster depth.",
+								],
 								[
 									"Organizations",
-									"/orgs",
+									publicRoutes.orgs.root,
 									"Discover org-backed programs and the teams they operate.",
 								],
-								["Players", "/players", "Evaluate role focus, rank, and current availability."],
+								[
+									"Players",
+									publicRoutes.players.root,
+									"Evaluate role focus, rank, and current availability.",
+								],
 								[
 									"Scrims",
-									"/scrims",
+									publicRoutes.scrims.root,
 									"Follow public scheduling, scorelines, and confirmation state.",
 								],
 								[
 									"Updates",
-									"/updates",
+									publicRoutes.updates.root,
 									"Track team and org announcements outside recruiting noise.",
 								],
 							].map(([label, href, description]) => (
@@ -102,22 +110,22 @@ export default function Page() {
 							{[
 								[
 									"About",
-									"/about",
+									publicRoutes.about,
 									"Product scope, who it is for, and how the public/app surfaces fit together.",
 								],
 								[
 									"Contact",
-									"/contact",
+									publicRoutes.contact,
 									"Support path, account-first reporting flow, and how to get unblocked quickly.",
 								],
 								[
 									"Privacy",
-									"/privacy",
+									publicRoutes.privacy,
 									"What account, profile, and workspace information is stored to run the product.",
 								],
 								[
 									"Terms",
-									"/terms",
+									publicRoutes.terms,
 									"The operating rules for using the platform and keeping team spaces healthy.",
 								],
 							].map(([label, href, description]) => (

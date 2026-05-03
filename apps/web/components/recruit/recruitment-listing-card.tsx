@@ -174,10 +174,10 @@ export function RecruitmentListingCard({
 
 					{!currentUserId && (
 						<Button asChild size="sm" variant="outline">
-							<a href="/auth?step=login">
+							<Link href={publicRoutes.auth.step("login")}>
 								<HugeiconsIcon icon={LinkIcon} strokeWidth={2} className="mr-1.5 size-4" />
 								Sign in to apply
-							</a>
+							</Link>
 						</Button>
 					)}
 

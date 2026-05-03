@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { Button } from "@/components/ui/button";
+import { publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "About",
@@ -18,7 +19,7 @@ export default function AboutPage() {
 			contentClassName="space-y-8"
 			actions={
 				<Button asChild size="sm">
-					<Link href="/auth?step=register">Create an account</Link>
+					<Link href={publicRoutes.auth.step("register")}>Create an account</Link>
 				</Button>
 			}
 		>
@@ -59,10 +60,10 @@ export default function AboutPage() {
 				actions={
 					<div className="flex flex-wrap gap-2">
 						<Button asChild size="sm" variant="outline">
-							<Link href="/recruiting">Browse recruiting</Link>
+							<Link href={publicRoutes.recruiting.root}>Browse recruiting</Link>
 						</Button>
 						<Button asChild size="sm" variant="outline">
-							<Link href="/teams">Browse teams</Link>
+							<Link href={publicRoutes.teams.root}>Browse teams</Link>
 						</Button>
 					</div>
 				}

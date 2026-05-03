@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getManageableRecruitEntities, getPublicRecruitmentListings } from "@/lib/data/recruit";
 import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Recruiting",
@@ -41,7 +41,7 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 			contentClassName="space-y-6"
 			actions={
 				<Button asChild size="sm">
-					<Link href={user ? "/app/recruiting" : "/auth?step=login"}>
+					<Link href={user ? appRoutes.recruiting.root : publicRoutes.auth.step("login")}>
 						{user ? "Open recruiting workspace" : "Sign in to apply"}
 					</Link>
 				</Button>

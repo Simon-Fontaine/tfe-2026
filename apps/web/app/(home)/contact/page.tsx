@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { Button } from "@/components/ui/button";
+import { publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Contact",
@@ -17,7 +18,7 @@ export default function ContactPage() {
 			contentClassName="space-y-8"
 			actions={
 				<Button asChild size="sm">
-					<Link href="/auth?step=login">Sign in first</Link>
+					<Link href={publicRoutes.auth.step("login")}>Sign in first</Link>
 				</Button>
 			}
 		>
@@ -73,10 +74,10 @@ export default function ContactPage() {
 				actions={
 					<div className="flex flex-wrap gap-2">
 						<Button asChild size="sm" variant="outline">
-							<Link href="/teams">Browse teams</Link>
+							<Link href={publicRoutes.teams.root}>Browse teams</Link>
 						</Button>
 						<Button asChild size="sm" variant="outline">
-							<Link href="/about">Read about the platform</Link>
+							<Link href={publicRoutes.about}>Read about the platform</Link>
 						</Button>
 					</div>
 				}

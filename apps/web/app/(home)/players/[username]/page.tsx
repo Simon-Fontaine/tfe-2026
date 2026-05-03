@@ -13,7 +13,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicPlayerByUsername } from "@/lib/data/player";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { ROLE_LABELS } from "@/lib/recruitment";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export default async function PlayerProfilePage({
 	params,
@@ -108,11 +108,11 @@ export default async function PlayerProfilePage({
 				</Button>
 				{user ? (
 					<Button asChild size="sm" variant="outline">
-						<Link href="/app/profile">Open your profile workspace</Link>
+						<Link href={appRoutes.profile}>Open your profile workspace</Link>
 					</Button>
 				) : (
 					<Button asChild size="sm" variant="outline">
-						<Link href="/auth?step=register">Create an account</Link>
+						<Link href={publicRoutes.auth.step("register")}>Create an account</Link>
 					</Button>
 				)}
 			</div>

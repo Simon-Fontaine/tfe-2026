@@ -18,7 +18,7 @@ import {
 	RECRUITMENT_CATEGORY_DESCRIPTIONS,
 	RECRUITMENT_CATEGORY_LABELS,
 } from "@/lib/recruitment";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({ params }: { params: Promise<{ listingId: string }> }) {
 	const { listingId } = await params;
@@ -98,7 +98,7 @@ export default async function PublicRecruitingListingDetailPage({
 						</RecruitmentApplicationDialog>
 					) : (
 						<Button asChild size="sm">
-							<Link href="/auth?step=login">Sign in to apply</Link>
+							<Link href={publicRoutes.auth.step("login")}>Sign in to apply</Link>
 						</Button>
 					)
 				) : undefined
@@ -193,7 +193,7 @@ export default async function PublicRecruitingListingDetailPage({
 						</p>
 					</Link>
 					<Link
-						href={user ? "/app/recruiting" : "/auth?step=login"}
+						href={user ? appRoutes.recruiting.root : publicRoutes.auth.step("login")}
 						className="border p-4 transition-colors hover:bg-muted/50"
 					>
 						<p className="text-sm font-semibold">

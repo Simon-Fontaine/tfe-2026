@@ -1,8 +1,9 @@
-import type { NotificationSummary } from "@scrimflow/shared";
+import { appRoutes, type NotificationSummary } from "@scrimflow/shared";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { notificationTable, type notificationTypeEnum } from "@/db/schema";
+import { notificationTable, type notificationTypeEnum, ocrJobTable, scrimTable } from "@/db/schema";
 import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
+import { isUserOnTeam } from "@/utils/team";
 
 type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
 
@@ -15,16 +16,61 @@ interface CreateNotificationInput {
 	referenceId?: string;
 }
 
-function mapNotification(row: {
+type NotificationRow = {
 	id: string;
-	type: NotificationType;
+	type: string;
 	title: string;
 	body: string | null;
 	referenceType: string | null;
 	referenceId: string | null;
 	isRead: boolean;
 	createdAt: Date;
-}): NotificationSummary {
+};
+
+async function resolveParticipantTeamId(
+	userId: string,
+	scrim: { homeTeamId: string; awayTeamId: string | null }
+) {
+	if (await isUserOnTeam(userId, scrim.homeTeamId)) return scrim.homeTeamId;
+	if (scrim.awayTeamId && (await isUserOnTeam(userId, scrim.awayTeamId))) return scrim.awayTeamId;
+	return null;
+}
+
+async function resolveNotificationDestinationHref(row: NotificationRow, userId: string) {
+	if (!row.referenceId) return null;
+
+	if (row.referenceType === "scrim") {
+		const scrim = await db.query.scrimTable.findFirst({
+			where: eq(scrimTable.id, row.referenceId),
+			columns: { id: true, homeTeamId: true, awayTeamId: true },
+		});
+		if (!scrim) return appRoutes.inbox;
+		const teamId = await resolveParticipantTeamId(userId, scrim);
+		return teamId ? appRoutes.teams.scrimById(teamId, scrim.id) : appRoutes.inbox;
+	}
+
+	if (row.referenceType === "ocr_job") {
+		const job = await db.query.ocrJobTable.findFirst({
+			where: eq(ocrJobTable.id, row.referenceId),
+			columns: { id: true, scrimId: true },
+		});
+		if (!job) return appRoutes.inbox;
+		const scrim = await db.query.scrimTable.findFirst({
+			where: eq(scrimTable.id, job.scrimId),
+			columns: { id: true, homeTeamId: true, awayTeamId: true },
+		});
+		if (!scrim) return appRoutes.inbox;
+		const teamId = await resolveParticipantTeamId(userId, scrim);
+		return teamId ? appRoutes.teams.scrimById(teamId, scrim.id) : appRoutes.inbox;
+	}
+
+	return null;
+}
+
+export async function mapNotification(
+	row: NotificationRow,
+	userId: string
+): Promise<NotificationSummary> {
 	return {
 		id: row.id,
 		type: row.type,
@@ -32,6 +78,7 @@ function mapNotification(row: {
 		body: row.body,
 		referenceType: row.referenceType,
 		referenceId: row.referenceId,
+		destinationHref: await resolveNotificationDestinationHref(row, userId),
 		isRead: row.isRead,
 		createdAt: row.createdAt.toISOString(),
 	};
@@ -79,7 +126,7 @@ export async function createNotification(
 
 	if (!created) return null;
 
-	const notification = mapNotification(created);
+	const notification = await mapNotification(created, input.userId);
 
 	// Skip realtime fan-out when called inside an explicit transaction. The
 	// caller can publish after commit if it needs strict transactional delivery.

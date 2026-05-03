@@ -7,11 +7,13 @@ import { Suspense } from "react";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicScrims } from "@/lib/data/scrims";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 const SCRIM_STATUS_LABELS = {
 	pending: "Pending",
@@ -58,7 +60,7 @@ export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirect
 			contentClassName="space-y-6"
 			actions={
 				<Button asChild size="sm">
-					<Link href={user ? "/app" : "/auth?step=login"}>
+					<Link href={user ? appRoutes.root : publicRoutes.auth.step("login")}>
 						{user ? "Open team workspace" : "Sign in to manage scrims"}
 					</Link>
 				</Button>
@@ -66,7 +68,7 @@ export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirect
 		>
 			<div className="flex flex-wrap gap-2">
 				{SCRIM_FILTERS.map((filter) => (
-					<Link key={filter} href={filter === "all" ? "/scrims" : `/scrims?status=${filter}`}>
+					<Link key={filter} href={publicRoutes.scrims.withStatus(filter)}>
 						<Badge variant={status === filter ? "default" : "outline"}>
 							{filter === "all" ? "All scrims" : SCRIM_STATUS_LABELS[filter]}
 						</Badge>
@@ -80,26 +82,28 @@ export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirect
 				title="Related public routes"
 				description="Keep the competitive context intact while moving through the public product."
 			>
-				<div className="grid gap-3 md:grid-cols-3">
-					<Link href="/teams" className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Teams</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Inspect the teams behind public scrims and see whether they are actively recruiting.
-						</p>
-					</Link>
-					<Link href="/updates" className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Updates</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Read public team and org announcements alongside the competitive match feed.
-						</p>
-					</Link>
-					<Link href="/recruiting" className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Recruiting</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Move from recent public competition into current roster and staffing opportunities.
-						</p>
-					</Link>
-				</div>
+				<PublicRelatedRouteCards
+					cards={[
+						{
+							label: "Teams",
+							href: publicRoutes.teams.root,
+							description:
+								"Inspect the teams behind public scrims and see whether they are actively recruiting.",
+						},
+						{
+							label: "Updates",
+							href: publicRoutes.updates.root,
+							description:
+								"Read public team and org announcements alongside the competitive match feed.",
+						},
+						{
+							label: "Recruiting",
+							href: publicRoutes.recruiting.root,
+							description:
+								"Move from recent public competition into current roster and staffing opportunities.",
+						},
+					]}
+				/>
 			</PublicPageSection>
 		</PublicPageShell>
 	);

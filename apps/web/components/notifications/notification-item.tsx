@@ -12,6 +12,8 @@ import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 function getNotificationHref(notification: NotificationSummary): string | null {
+	if (notification.destinationHref) return notification.destinationHref;
+
 	const { referenceType, referenceId } = notification;
 
 	switch (referenceType) {
@@ -23,13 +25,6 @@ function getNotificationHref(notification: NotificationSummary): string | null {
 			return referenceId ? appRoutes.teams.roster(referenceId) : null;
 		case "org_invite":
 			return referenceId ? appRoutes.orgs.byId(referenceId) : null;
-		case "scrim":
-			// teamId is not available in notification data — cannot build scrimById route
-			// Deliberate null per RESEARCH.md open question A2 — revisit in future phase
-			return null;
-		case "ocr_job":
-			// Same constraint as scrim — teamId required for route
-			return null;
 		default:
 			// Security notification types have no referenceType; route by notification.type
 			if (

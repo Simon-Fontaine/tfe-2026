@@ -99,7 +99,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				)}
 				{!isMember && (
 					<Button asChild size="sm" variant="outline">
-						<Link href="/auth?step=register">Create an account</Link>
+						<Link href={publicRoutes.auth.step("register")}>Create an account</Link>
 					</Button>
 				)}
 				<Button asChild size="sm" variant="outline">

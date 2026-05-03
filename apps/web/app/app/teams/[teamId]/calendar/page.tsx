@@ -27,7 +27,7 @@ export default async function AppTeamCalendarPage({
 		return (
 			<PageContainer>
 				<PageHeader
-					title="Calendar"
+					title="Team schedule"
 					detail={`Team ${teamId}`}
 					description="Team-wide availability, planning, and scheduling windows."
 				/>
@@ -44,7 +44,7 @@ export default async function AppTeamCalendarPage({
 		return (
 			<PageContainer>
 				<PageHeader
-					title="Calendar"
+					title="Team schedule"
 					detail={`[${team.data.tag}] ${team.data.name}`}
 					description="Team-wide availability, planning, and scheduling windows."
 				/>
@@ -66,7 +66,7 @@ export default async function AppTeamCalendarPage({
 	return (
 		<PageContainer>
 			<PageHeader
-				title="Calendar"
+				title="Team schedule"
 				detail={`[${team.data.tag}] ${team.data.name}`}
 				description="Team-wide availability with quick personal editing for recurring and one-off windows."
 			/>

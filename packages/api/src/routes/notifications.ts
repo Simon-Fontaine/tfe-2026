@@ -1,35 +1,13 @@
-import type { NotificationSummary } from "@scrimflow/shared";
 import { and, count, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
 import { notificationTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
+import { mapNotification } from "@/notifications";
 import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
 
 const notificationRoutes = new Hono<AuthEnv>();
-
-function mapNotification(row: {
-	id: string;
-	type: string;
-	title: string;
-	body: string | null;
-	referenceType: string | null;
-	referenceId: string | null;
-	isRead: boolean;
-	createdAt: Date;
-}): NotificationSummary {
-	return {
-		id: row.id,
-		type: row.type,
-		title: row.title,
-		body: row.body,
-		referenceType: row.referenceType,
-		referenceId: row.referenceId,
-		isRead: row.isRead,
-		createdAt: row.createdAt.toISOString(),
-	};
-}
 
 async function getUnreadNotificationCount(userId: string) {
 	const [result] = await db
@@ -51,7 +29,7 @@ notificationRoutes.get("/", async (c) => {
 	});
 
 	return c.json({
-		data: rows.map(mapNotification),
+		data: await Promise.all(rows.map((row) => mapNotification(row, user.id))),
 	});
 });
 

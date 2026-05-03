@@ -1,23 +1,24 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/config/site";
+import { publicRoutes } from "@/lib/routes";
 
 const FOOTER_GROUPS = [
 	{
 		title: "Product",
 		links: [
-			{ label: "Recruiting", href: "/recruiting" },
-			{ label: "Teams", href: "/teams" },
-			{ label: "Organizations", href: "/orgs" },
-			{ label: "Updates", href: "/updates" },
+			{ label: "Recruiting", href: publicRoutes.recruiting.root },
+			{ label: "Teams", href: publicRoutes.teams.root },
+			{ label: "Organizations", href: publicRoutes.orgs.root },
+			{ label: "Updates", href: publicRoutes.updates.root },
 		],
 	},
 	{
 		title: "Trust",
 		links: [
-			{ label: "About", href: "/about" },
-			{ label: "Contact", href: "/contact" },
-			{ label: "Terms", href: "/terms" },
-			{ label: "Privacy", href: "/privacy" },
+			{ label: "About", href: publicRoutes.about },
+			{ label: "Contact", href: publicRoutes.contact },
+			{ label: "Terms", href: publicRoutes.terms },
+			{ label: "Privacy", href: publicRoutes.privacy },
 		],
 	},
 ] as const;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
+import { appRoutes, publicRoutes } from "@/lib/routes";
 
 const highlights = [
 	{ value: "Free", label: "For all teams" },
@@ -38,7 +39,7 @@ export async function LandingHeroSection() {
 						<div className="mt-6 flex items-center gap-2">
 							{user ? (
 								<Button asChild>
-									<Link href="/app">
+									<Link href={appRoutes.root}>
 										Open workspace
 										<HugeiconsIcon
 											icon={ArrowRight01Icon}
@@ -49,7 +50,7 @@ export async function LandingHeroSection() {
 								</Button>
 							) : (
 								<Button asChild>
-									<Link href="/auth?step=register">
+									<Link href={publicRoutes.auth.step("register")}>
 										Get started free
 										<HugeiconsIcon
 											icon={ArrowRight01Icon}

@@ -131,7 +131,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 					)}
 					{!isOrgMember && (
 						<Button asChild size="sm" variant="outline">
-							<Link href="/auth?step=register">Create an account</Link>
+							<Link href={publicRoutes.auth.step("register")}>Create an account</Link>
 						</Button>
 					)}
 					<Button asChild size="sm" variant="outline">

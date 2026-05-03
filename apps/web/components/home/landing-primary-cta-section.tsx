@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config/site";
+import { publicRoutes } from "@/lib/routes";
 
 export function LandingPrimaryCTASection() {
 	return (
@@ -18,7 +19,7 @@ export function LandingPrimaryCTASection() {
 						</p>
 					</div>
 					<Button asChild>
-						<Link href="/auth?step=register">
+						<Link href={publicRoutes.auth.step("register")}>
 							Create your team
 							<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-1.5 size-3.5" />
 						</Link>

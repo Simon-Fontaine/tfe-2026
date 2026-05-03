@@ -1,3 +1,18 @@
+import type { AuthStep } from "./types";
+
+type AuthStepUrlOptions = {
+	next?: string | null;
+};
+
+const withQuery = (pathname: string, values: Record<string, string | null | undefined>) => {
+	const params = new URLSearchParams();
+	for (const [key, value] of Object.entries(values)) {
+		if (value) params.set(key, value);
+	}
+	const query = params.toString();
+	return query ? `${pathname}?${query}` : pathname;
+};
+
 export const apiRoutes = {
 	auth: {
 		session: "/api/auth/session",
@@ -280,9 +295,21 @@ export const appRoutes = {
 } as const;
 
 export const publicRoutes = {
+	home: "/",
+	about: "/about",
+	contact: "/contact",
+	privacy: "/privacy",
+	terms: "/terms",
+	auth: {
+		root: "/auth",
+		step: (step: AuthStep, options: AuthStepUrlOptions = {}) =>
+			withQuery("/auth", { step, next: options.next }),
+	},
 	orgs: {
 		root: "/orgs",
 		bySlug: (slug: string) => `/orgs/${slug}`,
+		withSort: (sort: "teams" | "roster" | "name") =>
+			sort === "teams" ? "/orgs" : withQuery("/orgs", { sort }),
 	},
 	teams: {
 		root: "/teams",
@@ -298,8 +325,12 @@ export const publicRoutes = {
 	},
 	scrims: {
 		root: "/scrims",
+		withStatus: (status: "all" | "scheduled" | "completed" | "disputed") =>
+			status === "all" ? "/scrims" : withQuery("/scrims", { status }),
 	},
 	updates: {
 		root: "/updates",
+		withScope: (scope: "all" | "team" | "organization") =>
+			scope === "all" ? "/updates" : withQuery("/updates", { scope }),
 	},
 } as const;

@@ -17,6 +17,7 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { type NavLink, siteConfig } from "@/lib/config/site";
+import { publicRoutes } from "@/lib/routes";
 
 interface SiteHeaderProps {
 	user?: { email: string; displayName: string; username: string; avatarUrl: string | null } | null;
@@ -74,7 +75,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
 						<>
 							<ThemeToggle />
 							<Button asChild variant="ghost" size="sm" className="hidden sm:flex">
-								<Link href="/auth?step=login">Sign in</Link>
+								<Link href={publicRoutes.auth.step("login")}>Sign in</Link>
 							</Button>
 							<Button asChild size="sm">
 								<Link href={siteConfig.cta.href}>{siteConfig.cta.label}</Link>

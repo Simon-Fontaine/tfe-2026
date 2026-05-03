@@ -38,7 +38,7 @@ export default async function OrgsDirectoryPage({ searchParams }: OrgsDirectoryP
 			contentClassName="space-y-6"
 			actions={
 				<Button asChild size="sm" variant="outline">
-					<Link href="/updates">See public updates</Link>
+					<Link href={publicRoutes.updates.root}>See public updates</Link>
 				</Button>
 			}
 		>
@@ -50,7 +50,7 @@ export default async function OrgsDirectoryPage({ searchParams }: OrgsDirectoryP
 						["name", "A to Z"],
 					] as const
 				).map(([value, label]) => (
-					<Link key={value} href={value === "teams" ? "/orgs" : `/orgs?sort=${value}`}>
+					<Link key={value} href={publicRoutes.orgs.withSort(value)}>
 						<Badge variant={sort === value ? "default" : "outline"}>{label}</Badge>
 					</Link>
 				))}
