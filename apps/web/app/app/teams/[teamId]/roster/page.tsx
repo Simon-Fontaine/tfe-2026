@@ -5,12 +5,13 @@ import { notFound } from "next/navigation";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { RosterTable } from "@/components/teams/roster-table";
 import { TeamInvitesSection } from "@/components/teams/team-invites-section";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { getTeamWithRoster } from "@/lib/data/teams";
+import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -24,13 +25,29 @@ export default async function AppTeamRosterPage({
 	const { user } = await requireWorkspaceSession();
 
 	const [{ type }, { teamId }] = await Promise.all([searchParams, params]);
-	const team = await getTeamWithRoster(teamId, user.id);
-	if (!team) notFound();
+	const team = await getTeamWithRosterRouteState(teamId, user.id);
+	if (team.kind === "missing") notFound();
+	if (team.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Roster"
+					detail={`Team ${teamId}`}
+					description="Manage rostered players, statuses, and incoming invites."
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="You are not a member of this team. Contact a team manager to request access."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
 
 	const activeTab = type === "staff" ? "staff" : "players";
-	const canManage = team.currentUser.canManage;
-	const canManageAdmins = team.currentUser.canManageAdmins;
-	const canManageInvites = team.currentUser.canManageInvites;
+	const canManage = team.data.currentUser.canManage;
+	const canManageAdmins = team.data.currentUser.canManageAdmins;
+	const canManageInvites = team.data.currentUser.canManageInvites;
 	const isStaffTab = activeTab === "staff";
 
 	return (
@@ -45,7 +62,7 @@ export default async function AppTeamRosterPage({
 				actions={
 					canManage ? (
 						<InvitePlayerDialog
-							teamId={team.id}
+							teamId={team.data.id}
 							canManageAdmins={canManageAdmins}
 							defaultMemberType={isStaffTab ? "staff" : "player"}
 							title={isStaffTab ? "Invite staff" : "Invite player"}
@@ -64,20 +81,20 @@ export default async function AppTeamRosterPage({
 				description="Players and staff are managed from one team roster surface."
 			>
 				<div className="flex gap-2">
-					<Link href={`${appRoutes.teams.roster(team.id)}?type=players`}>
+					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=players`}>
 						<Badge variant={!isStaffTab ? "default" : "outline"}>Players</Badge>
 					</Link>
-					<Link href={`${appRoutes.teams.roster(team.id)}?type=staff`}>
+					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=staff`}>
 						<Badge variant={isStaffTab ? "default" : "outline"}>Staff</Badge>
 					</Link>
 				</div>
 			</PageSection>
 
 			<RosterTable
-				roster={isStaffTab ? team.staff : team.players}
+				roster={isStaffTab ? team.data.staff : team.data.players}
 				canManage={canManage}
 				canManageAdmins={canManageAdmins}
-				teamId={team.id}
+				teamId={team.data.id}
 				emptyLabel={
 					isStaffTab ? "No staff members on this team yet" : "No players on this team yet"
 				}
@@ -93,7 +110,7 @@ export default async function AppTeamRosterPage({
 					title="Pending invites"
 					description="All outstanding team invites now live alongside the roster they will affect."
 				>
-					<TeamInvitesSection teamId={team.id} invites={team.pendingInvites} />
+					<TeamInvitesSection teamId={team.data.id} invites={team.data.pendingInvites} />
 				</PageSection>
 			) : null}
 		</PageContainer>
