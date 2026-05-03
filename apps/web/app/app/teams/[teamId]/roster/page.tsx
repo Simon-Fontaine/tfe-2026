@@ -78,7 +78,7 @@ export default async function AppTeamRosterPage({
 
 			<PageSection
 				title="Roster groups"
-				description="Players and staff are managed from one team roster surface."
+				description="Switch between the player roster and staff group."
 			>
 				<div className="flex gap-2">
 					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=players`}>
@@ -108,7 +108,7 @@ export default async function AppTeamRosterPage({
 			{canManageInvites ? (
 				<PageSection
 					title="Pending invites"
-					description="All outstanding team invites now live alongside the roster they will affect."
+					description="Invites that have been sent but not yet accepted or declined."
 				>
 					<TeamInvitesSection teamId={team.data.id} invites={team.data.pendingInvites} />
 				</PageSection>
