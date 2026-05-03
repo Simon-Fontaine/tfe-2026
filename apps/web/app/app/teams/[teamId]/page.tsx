@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
-import { getTeamWithRoster } from "@/lib/data/teams";
+import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes, publicRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -29,25 +30,37 @@ export default async function AppTeamOverviewPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
-	const team = await getTeamWithRoster(teamId, user.id);
-	if (!team) notFound();
+	const team = await getTeamWithRosterRouteState(teamId, user.id);
+	if (team.kind === "missing") notFound();
+	if (team.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader title="Overview" detail={`Team ${teamId}`} />
+				<EmptyStateBlock
+					title="No access"
+					description="You are not a member of this team. Contact a team manager to request access."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
 
-	const openListingCount = team.ownedListings.filter((post) => post.status === "open").length;
+	const openListingCount = team.data.ownedListings.filter((post) => post.status === "open").length;
 
 	return (
 		<PageContainer>
 			<PageHeader
-				title={team.name}
-				description={`Rating ${team.rating} · ${team.matchesPlayed} scrims played`}
+				title={team.data.name}
+				description={`Rating ${team.data.rating} · ${team.data.matchesPlayed} scrims played`}
 				badge={
 					<>
-						<span className="font-mono text-xs text-muted-foreground">[{team.tag}]</span>
-						{team.isArchived ? (
+						<span className="font-mono text-xs text-muted-foreground">[{team.data.tag}]</span>
+						{team.data.isArchived ? (
 							<Badge variant="outline" className="text-[10px]">
 								Archived
 							</Badge>
 						) : null}
-						{team.isRecruiting ? (
+						{team.data.isRecruiting ? (
 							<Badge variant="secondary" className="text-[10px] text-green-600">
 								Recruiting
 							</Badge>
@@ -55,16 +68,16 @@ export default async function AppTeamOverviewPage({
 					</>
 				}
 			>
-				{team.description ? (
-					<p className="text-xs text-muted-foreground">{team.description}</p>
+				{team.data.description ? (
+					<p className="text-xs text-muted-foreground">{team.data.description}</p>
 				) : null}
 			</PageHeader>
 
 			<StatsGrid
 				stats={[
-					{ label: "Players", value: team.players.length },
-					{ label: "Staff", value: team.staff.length },
-					{ label: "Pending invites", value: team.pendingInvites.length },
+					{ label: "Players", value: team.data.players.length },
+					{ label: "Staff", value: team.data.staff.length },
+					{ label: "Pending invites", value: team.data.pendingInvites.length },
 					{ label: "Open listings", value: openListingCount },
 				]}
 			/>
@@ -73,7 +86,7 @@ export default async function AppTeamOverviewPage({
 				title="Recent rating changes"
 				description="Ratings only change after both teams confirm the final scrim result."
 			>
-				{team.ratingHistory.length === 0 ? (
+				{team.data.ratingHistory.length === 0 ? (
 					<div className="border px-3 py-4">
 						<p className="text-sm font-semibold">No rated scrims yet</p>
 						<p className="mt-1 text-xs text-muted-foreground">
@@ -82,10 +95,10 @@ export default async function AppTeamOverviewPage({
 					</div>
 				) : (
 					<div className="space-y-2">
-						{team.ratingHistory.map((entry) => (
+						{team.data.ratingHistory.map((entry) => (
 							<Link
 								key={entry.id}
-								href={appRoutes.teams.scrimById(team.id, entry.scrimId)}
+								href={appRoutes.teams.scrimById(team.data.id, entry.scrimId)}
 								className="flex flex-wrap items-center justify-between gap-3 border px-3 py-3 transition-colors hover:bg-muted/50"
 							>
 								<div className="min-w-0 flex-1">
@@ -122,7 +135,7 @@ export default async function AppTeamOverviewPage({
 				description="Roster and workspace admins with the permissions to run this team day to day."
 			>
 				<div className="space-y-2">
-					{team.admins.map((admin) => (
+					{team.data.admins.map((admin) => (
 						<div
 							key={`${admin.source}-${admin.userId}`}
 							className="flex items-center gap-3 border px-3 py-2"
