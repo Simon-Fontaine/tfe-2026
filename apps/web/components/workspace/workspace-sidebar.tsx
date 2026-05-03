@@ -39,6 +39,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { getWorkspacePathContext } from "@/lib/route-state";
 import { appRoutes } from "@/lib/routes";
 import { useRecruitingStore } from "@/stores/recruiting";
+import { useScrimStore } from "@/stores/scrims";
 import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
 
 interface WorkspaceSidebarProps {
@@ -69,6 +70,7 @@ export function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
 	const pathname = usePathname();
 	const livePendingApplicationCount = useRecruitingStore((state) => state.pendingApplicationCount);
+	const liveScrimNeedsActionCount = useScrimStore((state) => state.needsActionCount);
 	const { activeOrgId, activeTeamId } = getWorkspacePathContext(pathname);
 	const displayPendingApplicationCount = livePendingApplicationCount ?? pendingApplicationCount;
 
@@ -102,6 +104,7 @@ export function WorkspaceSidebar({
 							label: "Scrims",
 							href: appRoutes.teams.scrims(activeTeamId),
 							icon: Sword03Icon,
+							badge: liveScrimNeedsActionCount ?? undefined,
 						},
 						{
 							label: "Recruiting",
