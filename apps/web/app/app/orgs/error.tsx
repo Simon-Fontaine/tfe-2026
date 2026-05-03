@@ -16,7 +16,7 @@ export default function OrganizationsError({
 			error={error}
 			retry={unstable_retry}
 			reset={reset}
-			title="Failed to load organisations"
+			title="Failed to load organizations"
 		/>
 	);
 }

@@ -16,7 +16,7 @@ export default function OrgWorkspaceError({
 			error={error}
 			retry={unstable_retry}
 			reset={reset}
-			title="Failed to load organisation"
+			title="Failed to load organization"
 		/>
 	);
 }

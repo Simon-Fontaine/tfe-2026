@@ -20,14 +20,14 @@ export default async function AppOrgsPage() {
 				title="Organizations"
 				description={
 					orgs.length === 0
-						? "Create an organisation to get started."
-						: `${orgs.length} organisation${orgs.length === 1 ? "" : "s"}`
+						? "Create an organization to get started."
+						: `${orgs.length} organization${orgs.length === 1 ? "" : "s"}`
 				}
 				actions={
 					<CreateOrgDialog>
 						<Button size="sm">
 							<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-							Create organisation
+							Create organization
 						</Button>
 					</CreateOrgDialog>
 				}
@@ -36,8 +36,8 @@ export default async function AppOrgsPage() {
 			{orgs.length === 0 ? (
 				<EmptyStateBlock
 					icon={UserGroupIcon}
-					title="No organisations yet"
-					description="Create an organisation to manage teams, staff, brand assets, and recruiting from one workspace."
+					title="No organizations yet"
+					description="Create an organization to manage teams, staff, brand assets, and recruiting from one workspace."
 					variant="card"
 				/>
 			) : (

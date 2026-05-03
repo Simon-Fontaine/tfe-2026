@@ -29,7 +29,7 @@ export const getManageableRecruitEntities = cache(
 			const orgOption: RecruitEntityOption = {
 				id: org.id,
 				type: "organization",
-				label: `${org.name} organisation`,
+				label: `${org.name} organization`,
 			};
 
 			const teamOptions: RecruitEntityOption[] = org.teams

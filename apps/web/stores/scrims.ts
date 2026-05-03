@@ -6,7 +6,7 @@ interface ScrimState {
 
 interface ScrimActions {
 	hydrateNeedsActionCount(needsActionCount: number): void;
-	setNeedsActionCount(needsActionCount: number): void;
+	resetNeedsActionCount(): void;
 }
 
 export const useScrimStore = create<ScrimState & ScrimActions>((set) => ({
@@ -16,7 +16,7 @@ export const useScrimStore = create<ScrimState & ScrimActions>((set) => ({
 		set({ needsActionCount });
 	},
 
-	setNeedsActionCount(needsActionCount) {
-		set({ needsActionCount });
+	resetNeedsActionCount() {
+		set({ needsActionCount: null });
 	},
 }));

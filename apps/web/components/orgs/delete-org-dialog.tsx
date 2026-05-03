@@ -29,7 +29,7 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 	const pendingRef = useRef(false);
 
 	const { state, submit, isPending } = useFormAction(deleteOrgAction, {
-		loadingMessage: "Deleting organisation…",
+		loadingMessage: "Deleting organization…",
 	});
 
 	useEffect(() => {
@@ -59,10 +59,10 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 			<AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>Delete organisation</AlertDialogTitle>
+					<AlertDialogTitle>Delete organization</AlertDialogTitle>
 					<AlertDialogDescription>
 						This will permanently delete <strong>{orgName}</strong> and all its teams. This action
-						cannot be undone. Type the organisation name below to confirm.
+						cannot be undone. Type the organization name below to confirm.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<Input
@@ -79,7 +79,7 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 						disabled={confirmName !== orgName || isPending}
 					>
 						{isPending && <Spinner className="mr-1.5" />}
-						Delete organisation
+						Delete organization
 					</Button>
 				</AlertDialogFooter>
 			</AlertDialogContent>

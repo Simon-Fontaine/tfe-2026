@@ -22,7 +22,7 @@ export default async function AppOrgSettingsPage({
 				<PageHeader title="Settings" detail={`Organization ${orgId}`} />
 				<EmptyStateBlock
 					title="No access"
-					description="You do not have permission to open this organisation settings workspace."
+					description="You do not have permission to open this organization settings workspace."
 					variant="card"
 				/>
 			</PageContainer>
@@ -39,7 +39,7 @@ export default async function AppOrgSettingsPage({
 				<PageHeader title="Settings" detail={`/${org.data.slug}`} />
 				<EmptyStateBlock
 					title="No access"
-					description="You don't have permission to manage this organisation's settings."
+					description="You don't have permission to manage this organization's settings."
 					variant="card"
 				/>
 			</PageContainer>

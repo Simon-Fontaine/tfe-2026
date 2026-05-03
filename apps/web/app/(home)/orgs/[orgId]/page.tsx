@@ -217,13 +217,13 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 			)}
 
 			<PublicPageSection
-				title="Open organisation listings"
-				description="Public organisation recruiting listings are surfaced here instead of join-request forms."
+				title="Open organization listings"
+				description="Public organization recruiting listings are surfaced here instead of join-request forms."
 			>
 				{org.openListings.length === 0 ? (
 					<EmptyStateBlock
 						icon={GameController01Icon}
-						title="No open organisation listings right now"
+						title="No open organization listings right now"
 						description="Explore team listings below or browse the full public recruiting directory."
 						variant="card"
 					/>
@@ -255,7 +255,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 					<EmptyStateBlock
 						icon={GameController01Icon}
 						title="No public teams yet"
-						description="This organisation has not published any teams yet."
+						description="This organization has not published any teams yet."
 						variant="card"
 					/>
 				) : (

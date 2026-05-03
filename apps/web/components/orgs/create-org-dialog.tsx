@@ -32,8 +32,8 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 	const pendingRef = useRef(false);
 
 	const { state, submit, isPending } = useFormAction(createOrgAction, {
-		loadingMessage: "Creating organisation…",
-		successMessage: "Organisation created",
+		loadingMessage: "Creating organization…",
+		successMessage: "Organization created",
 	});
 
 	const form = useForm<CreateOrgInput>({
@@ -71,12 +71,12 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 			<DialogTrigger asChild>{children}</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>Create organisation</DialogTitle>
+					<DialogTitle>Create organization</DialogTitle>
 				</DialogHeader>
 
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 					<Field>
-						<FieldLabel htmlFor="org-name">Organisation name</FieldLabel>
+						<FieldLabel htmlFor="org-name">Organization name</FieldLabel>
 						<Input
 							id="org-name"
 							placeholder="e.g. Team Liquid"
@@ -92,7 +92,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 						</FieldLabel>
 						<Textarea
 							id="org-description"
-							placeholder="A short description of your organisation"
+							placeholder="A short description of your organization"
 							maxLength={280}
 							rows={3}
 							{...form.register("description")}
@@ -118,7 +118,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={isPending}>
 							{isPending && <Spinner className="mr-1.5" />}
-							Create organisation
+							Create organization
 						</Button>
 					</div>
 				</form>

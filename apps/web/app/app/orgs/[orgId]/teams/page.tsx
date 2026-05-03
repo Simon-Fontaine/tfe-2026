@@ -1,3 +1,4 @@
+import { UserGroupIcon } from "@hugeicons/core-free-icons";
 import { notFound } from "next/navigation";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
@@ -48,11 +49,23 @@ export default async function AppOrgTeamsPage({ params }: { params: Promise<{ or
 
 			<PageSection title="Active teams" description="Current rosters that are still competing.">
 				{orgDetail.activeTeams.length === 0 ? (
-					<EmptyStateBlock
-						title="No active teams"
-						description="Create a team to get started."
-						variant="card"
-					/>
+					<div className="space-y-3">
+						<EmptyStateBlock
+							icon={UserGroupIcon}
+							title="No active teams"
+							description={
+								orgDetail.currentUser.canManage
+									? "Create the first team to start managing scrims, recruiting, and roster operations."
+									: "Active teams will appear here once an organization manager creates a roster."
+							}
+							variant="card"
+						/>
+						{orgDetail.currentUser.canManage ? (
+							<div className="flex justify-start">
+								<CreateTeamDialog orgId={orgDetail.id} showTrigger />
+							</div>
+						) : null}
+					</div>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2">
 						{orgDetail.activeTeams.map((team) => (
@@ -67,11 +80,18 @@ export default async function AppOrgTeamsPage({ params }: { params: Promise<{ or
 				)}
 			</PageSection>
 
-			{orgDetail.archivedTeams.length > 0 && (
-				<PageSection
-					title="Archived teams"
-					description="Historic rosters retained for context and recordkeeping."
-				>
+			<PageSection
+				title="Archived teams"
+				description="Historic rosters retained for context and recordkeeping."
+			>
+				{orgDetail.archivedTeams.length === 0 ? (
+					<EmptyStateBlock
+						icon={UserGroupIcon}
+						title="No archived teams"
+						description="Retired or archived rosters will appear here after teams are closed."
+						variant="card"
+					/>
+				) : (
 					<div className="grid gap-3 sm:grid-cols-2">
 						{orgDetail.archivedTeams.map((team) => (
 							<TeamCard
@@ -82,8 +102,8 @@ export default async function AppOrgTeamsPage({ params }: { params: Promise<{ or
 							/>
 						))}
 					</div>
-				</PageSection>
-			)}
+				)}
+			</PageSection>
 		</PageContainer>
 	);
 }

@@ -24,6 +24,7 @@ import { appRoutes, publicRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 function formatSignedRatingDelta(value: number) {
+	if (value === 0) return "+0";
 	return value > 0 ? `+${value}` : `${value}`;
 }
 

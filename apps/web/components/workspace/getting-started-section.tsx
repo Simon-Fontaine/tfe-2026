@@ -100,8 +100,8 @@ export function GettingStartedSection({ profile, orgDone, teamDone }: GettingSta
 				/>
 				<ChecklistCard
 					icon={UserGroupIcon}
-					title="Create or join an organisation"
-					description="Organisations manage one or more teams and handle scrim invitations."
+					title="Create or join an organization"
+					description="Organizations manage one or more teams and handle scrim invitations."
 					ctaLabel="Open Workspace"
 					ctaHref={appRoutes.orgs.root}
 					done={orgDone}

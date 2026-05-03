@@ -28,7 +28,7 @@ const CATEGORIES = [
 	{
 		key: "orgInvites",
 		label: "Org Invites",
-		description: "Invitations to join organisations.",
+		description: "Invitations to join organizations.",
 	},
 	{
 		key: "security",

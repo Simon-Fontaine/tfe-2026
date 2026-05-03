@@ -46,7 +46,7 @@ const CATEGORY_OPTIONS = ["lft", "lfp", "lfr", "lfs"] as const;
 const OWNER_OPTIONS = [
 	{ value: "player", label: "My profile" },
 	{ value: "team", label: "Team" },
-	{ value: "organization", label: "Organisation" },
+	{ value: "organization", label: "Organization" },
 ] as const;
 const STATUS_OPTIONS = ["open", "closed", "fulfilled"] as const;
 const ROLE_OPTIONS = ["tank", "damage", "support"] as const;
@@ -104,7 +104,7 @@ function validateRecruitmentListingRules(input: {
 		pushFieldError(
 			fieldErrors,
 			"organizationId",
-			"Select an organisation to publish this listing."
+			"Select an organization to publish this listing."
 		);
 	}
 
@@ -524,7 +524,7 @@ export function RecruitmentListingFormDialog({
 
 					{effectiveOwnerType !== "player" && (
 						<Field>
-							<FieldLabel>{effectiveOwnerType === "team" ? "Team" : "Organisation"}</FieldLabel>
+							<FieldLabel>{effectiveOwnerType === "team" ? "Team" : "Organization"}</FieldLabel>
 							{entityOptions.length > 1 && !fixedTeamId && !fixedOrganizationId ? (
 								<div className="grid gap-2">
 									{entityOptions.map((entity) => (
@@ -551,7 +551,7 @@ export function RecruitmentListingFormDialog({
 										? `This listing will publish from the current ${effectiveOwnerType} workspace.`
 										: entityOptions.length === 1
 											? `${entityOptions[0].label} is selected automatically.`
-											: `No ${effectiveOwnerType === "team" ? "team" : "organisation"} is available for this listing.`}
+											: `No ${effectiveOwnerType === "team" ? "team" : "organization"} is available for this listing.`}
 								</div>
 							)}
 							{effectiveOwnerType === "team" && ownerSelectionMissing ? (
@@ -559,7 +559,7 @@ export function RecruitmentListingFormDialog({
 							) : null}
 							{effectiveOwnerType === "organization" && ownerSelectionMissing ? (
 								<FieldDescription>
-									Select an organisation context before publishing.
+									Select an organization context before publishing.
 								</FieldDescription>
 							) : null}
 							<FieldError>

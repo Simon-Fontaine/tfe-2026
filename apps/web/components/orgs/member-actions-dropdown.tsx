@@ -218,7 +218,7 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 					<AlertDialogHeader>
 						<AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
 						<AlertDialogDescription>
-							They will be removed from the organisation and marked inactive on all team rosters.
+							They will be removed from the organization and marked inactive on all team rosters.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

@@ -1,3 +1,5 @@
+import { UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { notFound } from "next/navigation";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
@@ -26,7 +28,7 @@ export default async function AppOrgInvitesPage({
 				<PageHeader title="Invites" detail={`Organization ${orgId}`} />
 				<EmptyStateBlock
 					title="No access"
-					description="You don't have permission to manage this organisation's invites."
+					description="You don't have permission to manage this organization's invites."
 					variant="card"
 				/>
 			</PageContainer>
@@ -39,10 +41,13 @@ export default async function AppOrgInvitesPage({
 			<PageHeader
 				title="Invites"
 				detail={`/${orgDetail.slug}`}
-				description={`Outstanding organisation invites for ${orgDetail.name}.`}
+				description={`Outstanding organization invites for ${orgDetail.name}.`}
 				actions={
 					<InviteMemberDialog orgId={orgDetail.id}>
-						<Button size="sm">Invite member</Button>
+						<Button size="sm">
+							<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+							Invite member
+						</Button>
 					</InviteMemberDialog>
 				}
 			/>

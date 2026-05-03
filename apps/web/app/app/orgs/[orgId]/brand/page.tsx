@@ -31,7 +31,7 @@ export default async function AppOrgBrandPage({ params }: { params: Promise<{ or
 				<PageHeader title="Brand" detail={`/${org.data.slug}`} />
 				<EmptyStateBlock
 					title="No access"
-					description="You don't have permission to manage this organisation's brand profile."
+					description="You don't have permission to manage this organization's brand profile."
 					variant="card"
 				/>
 			</PageContainer>

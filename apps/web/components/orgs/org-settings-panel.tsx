@@ -16,8 +16,8 @@ interface OrgSettingsPanelProps {
 
 export function OrgSettingsPanel({ org, includeProfile = true }: OrgSettingsPanelProps) {
 	const leaveForm = useFormAction(leaveOrgAction, {
-		loadingMessage: "Leaving organisation…",
-		successMessage: "You left the organisation",
+		loadingMessage: "Leaving organization…",
+		successMessage: "You left the organization",
 	});
 	const transferForm = useFormAction(transferOrgOwnershipAction, {
 		loadingMessage: "Transferring ownership…",
@@ -37,13 +37,15 @@ export function OrgSettingsPanel({ org, includeProfile = true }: OrgSettingsPane
 		leaveForm.submit(fd);
 	}
 
+	const ownershipCandidates = org.members.filter((member) => member.userId !== org.ownerId);
+
 	return (
 		<div className="space-y-4">
 			{includeProfile ? (
 				<OrgProfilePanel
 					org={org}
 					title="Profile"
-					description="Manage the organisation profile, slug, and media assets."
+					description="Manage the organization profile, slug, and media assets."
 				/>
 			) : null}
 
@@ -56,10 +58,16 @@ export function OrgSettingsPanel({ org, includeProfile = true }: OrgSettingsPane
 						<p className="text-xs text-muted-foreground">
 							Transfer ownership to another member before leaving if needed.
 						</p>
-						<div className="space-y-2">
-							{org.members
-								.filter((member) => member.userId !== org.ownerId)
-								.map((member) => (
+						{ownershipCandidates.length === 0 ? (
+							<div className="border px-3 py-3">
+								<p className="text-xs font-medium">No eligible transfer target</p>
+								<p className="mt-1 text-[11px] text-muted-foreground">
+									Invite another organization member before transferring ownership.
+								</p>
+							</div>
+						) : (
+							<div className="space-y-2">
+								{ownershipCandidates.map((member) => (
 									<div
 										key={member.id}
 										className="flex items-center justify-between border px-3 py-2"
@@ -79,7 +87,8 @@ export function OrgSettingsPanel({ org, includeProfile = true }: OrgSettingsPane
 										</Button>
 									</div>
 								))}
-						</div>
+							</div>
+						)}
 					</CardContent>
 				</Card>
 			)}
@@ -88,20 +97,26 @@ export function OrgSettingsPanel({ org, includeProfile = true }: OrgSettingsPane
 				<CardHeader>
 					<CardTitle className="text-sm">Danger Zone</CardTitle>
 				</CardHeader>
-				<CardContent className="flex flex-wrap gap-2">
-					{org.currentUser.canLeave && (
-						<Button size="sm" variant="outline" onClick={leaveOrg} disabled={leaveForm.isPending}>
-							{leaveForm.isPending && <Spinner className="mr-1.5" />}
-							Leave organisation
-						</Button>
-					)}
-					{org.currentUser.canDelete && (
-						<DeleteOrgDialog orgId={org.id} orgName={org.name}>
-							<Button size="sm" variant="destructive">
-								Delete organisation
+				<CardContent className="space-y-3">
+					<p className="text-xs text-muted-foreground">
+						Leaving removes your workspace access. Deleting permanently removes the organization and
+						its teams after confirmation.
+					</p>
+					<div className="flex flex-wrap gap-2">
+						{org.currentUser.canLeave && (
+							<Button size="sm" variant="outline" onClick={leaveOrg} disabled={leaveForm.isPending}>
+								{leaveForm.isPending && <Spinner className="mr-1.5" />}
+								Leave organization
 							</Button>
-						</DeleteOrgDialog>
-					)}
+						)}
+						{org.currentUser.canDelete && (
+							<DeleteOrgDialog orgId={org.id} orgName={org.name}>
+								<Button size="sm" variant="destructive">
+									Delete organization
+								</Button>
+							</DeleteOrgDialog>
+						)}
+					</div>
 				</CardContent>
 			</Card>
 		</div>

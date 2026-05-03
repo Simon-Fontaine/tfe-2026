@@ -6,7 +6,7 @@ import { EntityImageUploadField } from "@/components/shared/entity-image-upload-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +33,7 @@ export function OrgProfilePanel({
 
 	const updateForm = useFormAction(updateOrgAction, {
 		loadingMessage: "Saving org profile…",
-		successMessage: "Organisation updated",
+		successMessage: "Organization updated",
 	});
 
 	function submitSettings(e: React.FormEvent) {
@@ -94,10 +94,16 @@ export function OrgProfilePanel({
 					<Field>
 						<FieldLabel>Name</FieldLabel>
 						<Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+						<FieldDescription>
+							Shown in app workspaces and public organization pages.
+						</FieldDescription>
 					</Field>
 					<Field>
 						<FieldLabel>Slug</FieldLabel>
 						<Input value={slug} onChange={(e) => setSlug(e.target.value)} maxLength={50} />
+						<FieldDescription>
+							Used for the public organization URL and workspace identity.
+						</FieldDescription>
 					</Field>
 					<Field>
 						<FieldLabel>Description</FieldLabel>
@@ -107,6 +113,9 @@ export function OrgProfilePanel({
 							rows={4}
 							maxLength={280}
 						/>
+						<FieldDescription>
+							Keep this short enough to scan in public discovery cards.
+						</FieldDescription>
 					</Field>
 					<Field>
 						<EntityImageUploadField

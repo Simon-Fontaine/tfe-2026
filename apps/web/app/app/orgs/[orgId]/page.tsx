@@ -1,3 +1,4 @@
+import { UserGroupIcon } from "@hugeicons/core-free-icons";
 import { notFound } from "next/navigation";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
@@ -91,9 +92,23 @@ export default async function AppOrgOverviewPage({
 				description="Your active rosters and their current competitive footprint."
 			>
 				{orgDetail.activeTeams.length === 0 ? (
-					<p className="text-xs text-muted-foreground">
-						No active teams yet. Create a team to start organizing scrims and recruiting.
-					</p>
+					<div className="space-y-3">
+						<EmptyStateBlock
+							icon={UserGroupIcon}
+							title="No active teams"
+							description={
+								orgDetail.currentUser.canManage
+									? "Create a team to start organizing scrims, recruiting, and roster work from this organization."
+									: "Active teams will appear here once an organization manager creates a roster."
+							}
+							variant="card"
+						/>
+						{orgDetail.currentUser.canManage ? (
+							<div className="flex justify-start">
+								<CreateTeamDialog orgId={orgDetail.id} showTrigger />
+							</div>
+						) : null}
+					</div>
 				) : (
 					<div className="grid gap-3 sm:grid-cols-2">
 						{orgDetail.activeTeams.map((team) => (

@@ -40,12 +40,12 @@ function isNeedsAction(scrim: ScrimSummary, teamId: string): boolean {
 	return false;
 }
 
-function renderScrimRow(scrim: ScrimSummary, teamId: string) {
+function ScrimRow({ scrim, teamId }: { scrim: ScrimSummary; teamId: string }) {
 	const opponent = getOpponent(scrim, teamId);
 	const pendingSteps = scrim.pendingConfirmationCount;
 
 	return (
-		<div key={scrim.id} className="border p-4">
+		<div className="border p-4">
 			<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 				<div className="space-y-2">
 					<div className="flex flex-wrap items-center gap-2">
@@ -167,7 +167,9 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 							</p>
 						) : (
 							<div className="space-y-3">
-								{needsActionScrims.map((scrim) => renderScrimRow(scrim, team.id))}
+								{needsActionScrims.map((scrim) => (
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
+								))}
 							</div>
 						)}
 					</PageSection>
@@ -184,7 +186,9 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 							<p className="py-4 text-center text-sm text-muted-foreground">No upcoming scrims.</p>
 						) : (
 							<div className="space-y-3">
-								{upcomingScrims.map((scrim) => renderScrimRow(scrim, team.id))}
+								{upcomingScrims.map((scrim) => (
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
+								))}
 							</div>
 						)}
 					</PageSection>
@@ -203,7 +207,9 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 							</p>
 						) : (
 							<div className="space-y-3">
-								{pastScrims.map((scrim) => renderScrimRow(scrim, team.id))}
+								{pastScrims.map((scrim) => (
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
+								))}
 							</div>
 						)}
 					</PageSection>

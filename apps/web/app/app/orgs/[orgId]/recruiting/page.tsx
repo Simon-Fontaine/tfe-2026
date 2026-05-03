@@ -32,7 +32,7 @@ export default async function AppOrgRecruitingPage({
 				<PageHeader title="Recruiting" detail={`Organization ${orgId}`} />
 				<EmptyStateBlock
 					title="No access"
-					description="You don't have permission to manage this organisation's recruiting workspace."
+					description="You don't have permission to manage this organization's recruiting workspace."
 					variant="card"
 				/>
 			</PageContainer>
@@ -50,10 +50,10 @@ export default async function AppOrgRecruitingPage({
 	);
 	const applicationsByListing = new Map(
 		await Promise.all(
-			listings.map(
-				async (listing) =>
-					[listing.id, await getRecruitmentApplicationsForListing(listing.id)] as const
-			)
+			listings.map(async (listing) => {
+				const applications = await getRecruitmentApplicationsForListing(listing.id).catch(() => []);
+				return [listing.id, applications] as const;
+			})
 		)
 	);
 
@@ -79,15 +79,30 @@ export default async function AppOrgRecruitingPage({
 			/>
 
 			<PageSection
-				title="Organisation listings"
+				title="Organization listings"
 				description="Org-owned recruiting listings, including entries that are no longer open."
 			>
 				{listings.length === 0 ? (
-					<EmptyStateBlock
-						title="No organisation listings yet"
-						description="Publish an organisation-owned listing to start managing recruiting from this workspace."
-						variant="card"
-					/>
+					<div className="space-y-3">
+						<EmptyStateBlock
+							title="No organization listings yet"
+							description="Publish an organization-owned listing to recruit players, ringers, or staff for the whole org."
+							variant="card"
+						/>
+						<div className="flex justify-start">
+							<RecruitmentListingFormDialog
+								ownerOptions={entityOptions}
+								fixedOwnerType="organization"
+								fixedOrganizationId={orgId}
+								triggerContent={
+									<>
+										<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+										New listing
+									</>
+								}
+							/>
+						</div>
+					</div>
 				) : (
 					<div className="space-y-4">
 						{listings.map((listing) => (

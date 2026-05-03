@@ -1,4 +1,4 @@
-import { UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { UserAdd01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -135,7 +135,7 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 
 			<PageSection
 				title="Leadership & staff"
-				description="Owners, admins, and non-player staff with organisation-level responsibilities."
+				description="Owners, admins, and non-player staff with organization-level responsibilities."
 			>
 				{leadershipAndStaff.length === 0 ? (
 					<EmptyStateBlock
@@ -159,11 +159,18 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 				)}
 			</PageSection>
 
-			{rosterPlayers.length > 0 && (
-				<PageSection
-					title="Roster-linked players"
-					description="Players currently attached to the organisation through active teams."
-				>
+			<PageSection
+				title="Roster-linked players"
+				description="Players currently attached to the organization through active teams."
+			>
+				{rosterPlayers.length === 0 ? (
+					<EmptyStateBlock
+						icon={UserGroupIcon}
+						title="No roster-linked players"
+						description="Players will appear here after they join teams under this organization."
+						variant="card"
+					/>
+				) : (
 					<div className="space-y-2">
 						{rosterPlayers.map((member) => (
 							<MemberRow
@@ -176,8 +183,8 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 							/>
 						))}
 					</div>
-				</PageSection>
-			)}
+				)}
+			</PageSection>
 		</PageContainer>
 	);
 }

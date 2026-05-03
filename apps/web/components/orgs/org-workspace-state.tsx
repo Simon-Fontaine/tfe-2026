@@ -10,8 +10,8 @@ export function OrgWorkspaceMissingState() {
 			<PageHeader title="Organization" description="We couldn't open this workspace." />
 			<EmptyStateBlock
 				icon={AlertCircleIcon}
-				title="Organisation unavailable"
-				description="This organisation no longer exists for your account, or you no longer have access. Return to Organizations and open another workspace."
+				title="Organization unavailable"
+				description="This organization no longer exists for your account, or you no longer have access. Return to Organizations and open another workspace."
 				actionHref={appRoutes.orgs.root}
 				actionLabel="Back to organizations"
 				variant="page"
@@ -40,7 +40,7 @@ export function OrgWorkspaceInvitesEmptyState() {
 		<EmptyStateBlock
 			icon={UserGroupIcon}
 			title="No pending invites"
-			description="Invite a player, coach, or staff member from the staff workspace to see outstanding invites here."
+			description="Invite a player, coach, or staff member to start tracking outstanding outreach here."
 			variant="card"
 		/>
 	);

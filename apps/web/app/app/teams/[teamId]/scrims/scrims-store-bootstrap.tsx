@@ -9,10 +9,14 @@ interface ScrimsStoreBootstrapProps {
 
 export function ScrimsStoreBootstrap({ needsActionCount }: ScrimsStoreBootstrapProps) {
 	const hydrateNeedsActionCount = useScrimStore((state) => state.hydrateNeedsActionCount);
+	const resetNeedsActionCount = useScrimStore((state) => state.resetNeedsActionCount);
 
 	useEffect(() => {
 		hydrateNeedsActionCount(needsActionCount);
-	}, [needsActionCount, hydrateNeedsActionCount]);
+		return () => {
+			resetNeedsActionCount();
+		};
+	}, [needsActionCount, hydrateNeedsActionCount, resetNeedsActionCount]);
 
 	return null;
 }

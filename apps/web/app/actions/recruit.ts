@@ -123,7 +123,7 @@ function validateRecruitmentListingRules(input: {
 		pushFieldError(
 			fieldErrors,
 			"organizationId",
-			"Select an organisation to publish this listing."
+			"Select an organization to publish this listing."
 		);
 	}
 
