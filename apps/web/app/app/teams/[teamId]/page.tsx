@@ -1,12 +1,24 @@
+import {
+	Mail01Icon,
+	Notification01Icon,
+	Settings01Icon,
+	Sword03Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CreateScrimDialog } from "@/components/scrims/create-scrim-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CreateUpdatePostDialog } from "@/components/updates/create-update-post-dialog";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
+import { getTeamsForDiscovery } from "@/lib/data/discovery";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes, publicRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
@@ -47,6 +59,9 @@ export default async function AppTeamOverviewPage({
 
 	const openListingCount = team.data.ownedListings.filter((post) => post.status === "open").length;
 
+	const discoveryTeams = await getTeamsForDiscovery();
+	const opponentOptions = discoveryTeams.filter((c) => c.id !== team.data.id);
+
 	return (
 		<PageContainer>
 			<PageHeader
@@ -66,6 +81,52 @@ export default async function AppTeamOverviewPage({
 							</Badge>
 						) : null}
 					</>
+				}
+				actions={
+					team.data.currentUser.canManage ? (
+						<div className="flex flex-wrap items-center gap-2 shrink-0">
+							{opponentOptions.length > 0 ? (
+								<CreateScrimDialog teamId={team.data.id} opponentOptions={opponentOptions}>
+									<Button size="sm">
+										<HugeiconsIcon icon={Sword03Icon} strokeWidth={2} className="mr-1.5 size-4" />
+										Schedule scrim
+									</Button>
+								</CreateScrimDialog>
+							) : (
+								<Button size="sm" disabled>
+									<HugeiconsIcon icon={Sword03Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									Schedule scrim
+								</Button>
+							)}
+							<InvitePlayerDialog
+								teamId={team.data.id}
+								canManageAdmins={team.data.currentUser.canManageAdmins}
+								defaultMemberType="player"
+								title="Invite player"
+							>
+								<Button size="sm" variant="outline">
+									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									Invite player
+								</Button>
+							</InvitePlayerDialog>
+							<CreateUpdatePostDialog teamId={team.data.id}>
+								<Button size="sm" variant="outline">
+									<HugeiconsIcon
+										icon={Notification01Icon}
+										strokeWidth={2}
+										className="mr-1.5 size-4"
+									/>
+									Post update
+								</Button>
+							</CreateUpdatePostDialog>
+							<Button size="sm" variant="ghost" asChild>
+								<Link href={appRoutes.teams.settings(team.data.id)}>
+									<HugeiconsIcon icon={Settings01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+									Edit profile
+								</Link>
+							</Button>
+						</div>
+					) : undefined
 				}
 			>
 				{team.data.description ? (
