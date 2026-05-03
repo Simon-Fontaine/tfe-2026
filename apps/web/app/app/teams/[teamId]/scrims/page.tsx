@@ -100,13 +100,10 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 
 	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, team.id));
 	const upcomingScrims = scrims.filter(
-		(s) =>
-			!isNeedsAction(s, team.id) &&
-			["accepted", "scheduled", "in_progress"].includes(s.status),
+		(s) => !isNeedsAction(s, team.id) && ["accepted", "scheduled", "in_progress"].includes(s.status)
 	);
 	const pastScrims = scrims.filter(
-		(s) =>
-			!isNeedsAction(s, team.id) && ["completed", "cancelled", "disputed"].includes(s.status),
+		(s) => !isNeedsAction(s, team.id) && ["completed", "cancelled", "disputed"].includes(s.status)
 	);
 	const needsActionCount = needsActionScrims.length;
 
