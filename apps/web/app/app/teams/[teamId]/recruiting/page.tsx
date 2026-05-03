@@ -40,10 +40,10 @@ export default async function TeamRecruitingPage({
 
 	const applicationsByListing = new Map(
 		await Promise.all(
-			team.data.ownedListings.map(
-				async (listing) =>
-					[listing.id, await getRecruitmentApplicationsForListing(listing.id)] as const
-			)
+			team.data.ownedListings.map(async (listing) => {
+				const apps = await getRecruitmentApplicationsForListing(listing.id).catch(() => []);
+				return [listing.id, apps] as const;
+			})
 		)
 	);
 
