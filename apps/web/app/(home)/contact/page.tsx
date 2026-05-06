@@ -15,7 +15,8 @@ export default function ContactPage() {
 		<PublicPageShell
 			title="Contact Scrimflow"
 			description="Use this channel for support, product feedback, and project coordination."
-			contentClassName="space-y-8"
+			maxWidth="6xl"
+			contentClassName="space-y-6"
 			actions={
 				<Button asChild size="sm">
 					<Link href={publicRoutes.auth.step("login")}>Sign in first</Link>
@@ -58,10 +59,10 @@ export default function ContactPage() {
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
 					Email{" "}
 					<a
-						href="mailto:support@scrimflow.gg"
+						href="mailto:support@scrimflow.com"
 						className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
 					>
-						support@scrimflow.gg
+						support@scrimflow.com
 					</a>{" "}
 					with your account username, the surface affected, and a brief description of the issue. We
 					aim to respond within 2 business days. For account-state or workspace-level issues,

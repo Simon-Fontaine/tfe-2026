@@ -26,6 +26,7 @@ export type SiteConfig = {
 		href: string;
 	};
 	footer: {
+		description: string;
 		copyright: string;
 	};
 };
@@ -54,6 +55,8 @@ export const siteConfig: SiteConfig = {
 		href: publicRoutes.auth.step("register"),
 	},
 	footer: {
+		description:
+			"Scrimflow is an Overwatch 2 team management and scrim coordination platform built to help players, teams, and orgs find each other and grow the competitive scene.",
 		copyright: "Scrimflow",
 	},
 };

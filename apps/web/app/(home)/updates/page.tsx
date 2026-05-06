@@ -3,9 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PublicListLoading } from "@/components/home/public-page-loading";
-import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
-import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { UpdatePostCard } from "@/components/updates/update-post-card";
@@ -57,33 +55,6 @@ export default async function UpdatesPage({ searchParams }: UpdatesPageProps) {
 			<Suspense fallback={<PublicListLoading />}>
 				<UpdatesListSection scope={scope} />
 			</Suspense>
-			<PublicPageSection
-				title="Related public routes"
-				description="Use adjacent routes to move from announcements into the rest of the public funnel."
-			>
-				<PublicRelatedRouteCards
-					cards={[
-						{
-							label: "Organizations",
-							href: publicRoutes.orgs.root,
-							description:
-								"Jump into the org surfaces behind multi-team announcements and staff operations.",
-						},
-						{
-							label: "Teams",
-							href: publicRoutes.teams.root,
-							description:
-								"Open team profiles when an update makes you want roster, recruiting, or activity context.",
-						},
-						{
-							label: "Scrims",
-							href: publicRoutes.scrims.root,
-							description:
-								"Pair public announcements with recent match activity for a clearer read on momentum.",
-						},
-					]}
-				/>
-			</PublicPageSection>
 		</PublicPageShell>
 	);
 }

@@ -5,9 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PublicListLoading } from "@/components/home/public-page-loading";
-import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
-import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,33 +76,6 @@ export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirect
 			<Suspense fallback={<PublicListLoading />}>
 				<ScrimsListSection status={status} />
 			</Suspense>
-			<PublicPageSection
-				title="Related public routes"
-				description="Keep the competitive context intact while moving through the public product."
-			>
-				<PublicRelatedRouteCards
-					cards={[
-						{
-							label: "Teams",
-							href: publicRoutes.teams.root,
-							description:
-								"Inspect the teams behind public scrims and see whether they are actively recruiting.",
-						},
-						{
-							label: "Updates",
-							href: publicRoutes.updates.root,
-							description:
-								"Read public team and org announcements alongside the competitive match feed.",
-						},
-						{
-							label: "Recruiting",
-							href: publicRoutes.recruiting.root,
-							description:
-								"Move from recent public competition into current roster and staffing opportunities.",
-						},
-					]}
-				/>
-			</PublicPageSection>
 		</PublicPageShell>
 	);
 }

@@ -1,8 +1,5 @@
 "use client";
 
-import { UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 import { useState } from "react";
 import {
 	archiveTeamAction,
@@ -14,21 +11,13 @@ import {
 import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { RecruitingToggle } from "@/components/teams/recruiting-toggle";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { TeamWithRoster } from "@/lib/data/team";
-import { appRoutes } from "@/lib/routes";
 
 interface TeamSettingsPanelProps {
 	team: TeamWithRoster;
@@ -186,32 +175,6 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 					</CardContent>
 				</Card>
 			)}
-
-			<Card>
-				<CardHeader>
-					{canManageSettings ? (
-						<CardAction>
-							<Button asChild size="sm">
-								<Link href={appRoutes.teams.roster(team.id)}>
-									<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Open roster
-								</Link>
-							</Button>
-						</CardAction>
-					) : null}
-					<CardTitle className="text-sm">Membership policy</CardTitle>
-					<CardDescription>
-						New team members must be invited. Pending invites and roster activation now live in the
-						roster workspace instead of a separate team invites page.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-2 text-xs text-muted-foreground">
-					<p>Use team invites to bring in players, coaches, analysts, managers, and admins.</p>
-					<p>
-						Roster edits here only apply to existing members after they have accepted an invite.
-					</p>
-				</CardContent>
-			</Card>
 
 			<Card>
 				<CardHeader>

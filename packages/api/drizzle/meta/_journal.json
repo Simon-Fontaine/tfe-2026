@@ -5,29 +5,8 @@
 		{
 			"idx": 0,
 			"version": "7",
-			"when": 1775297136338,
-			"tag": "0000_left_ghost_rider",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1776151200000,
-			"tag": "0001_recruitment_listing_hero_pool_gin",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1776500965164,
-			"tag": "0002_absent_pyro",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1777047402010,
-			"tag": "0003_previous_prowler",
+			"when": 1778065440386,
+			"tag": "0000_damp_susan_delgado",
 			"breakpoints": true
 		}
 	]

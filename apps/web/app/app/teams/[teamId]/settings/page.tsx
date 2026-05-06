@@ -50,7 +50,7 @@ export default async function AppTeamSettingsPage({
 			<PageHeader
 				title="Settings"
 				detail={`[${team.data.tag}] ${team.data.name}`}
-				description="Manage team profile, recruiting, membership policy, and workspace lifecycle actions."
+				description="Manage team profile, recruiting, and workspace lifecycle actions."
 			/>
 			<TeamSettingsPanel team={team.data} />
 		</PageContainer>

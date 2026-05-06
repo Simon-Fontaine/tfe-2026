@@ -12,7 +12,8 @@ export default function PrivacyPage() {
 		<PublicPageShell
 			title="Privacy Policy"
 			description="This page explains the current product-level data expectations for Scrimflow accounts, public profiles, and workspace activity."
-			contentClassName="space-y-8"
+			maxWidth="6xl"
+			contentClassName="space-y-6"
 		>
 			<PublicPageSection title="What data the product needs">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
@@ -119,10 +120,10 @@ export default function PrivacyPage() {
 					uploaded images. Email delivery uses an SMTP relay for verification and recovery flows
 					only — no marketing email is sent without your explicit consent. Contact{" "}
 					<a
-						href="mailto:support@scrimflow.gg"
+						href="mailto:support@scrimflow.com"
 						className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
 					>
-						support@scrimflow.gg
+						support@scrimflow.com
 					</a>{" "}
 					to request account data or deletion.
 				</p>

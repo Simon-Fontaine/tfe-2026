@@ -30,8 +30,7 @@ export function SiteFooter() {
 				<div className="space-y-3">
 					<p className="text-sm font-semibold">{siteConfig.name}</p>
 					<p className="max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
-						Public pages help visitors evaluate teams, orgs, players, recruiting, scrims, and
-						updates before they move into the authenticated workspace.
+						{siteConfig.footer.description}
 					</p>
 					<p className="text-muted-foreground">
 						&copy; {new Date().getFullYear()} {siteConfig.footer.copyright}

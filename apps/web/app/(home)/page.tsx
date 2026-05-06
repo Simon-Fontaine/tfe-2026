@@ -1,15 +1,10 @@
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { LandingFeatureGrid } from "@/components/home/landing-feature-grid";
 import { LandingHeroSection } from "@/components/home/landing-hero-section";
 import { LandingPrimaryCTASection } from "@/components/home/landing-primary-cta-section";
-import { PublicPageSection } from "@/components/home/public-page-section";
-import { Button } from "@/components/ui/button";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes, publicRoutes } from "@/lib/routes";
+import { apiRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Scrimflow — Overwatch 2 Team Management",
@@ -32,123 +27,6 @@ export default function Page() {
 				</div>
 			</section>
 			<LandingFeatureGrid />
-			<section className="border-b px-4 py-14 md:py-20" aria-labelledby="public-funnel-heading">
-				<div className="mx-auto max-w-6xl space-y-10">
-					<PublicPageSection
-						title="Explore the public product"
-						description="Scrimflow is not just a sign-up page. Teams, orgs, players, recruiting, scrims, and updates all have public surfaces that help visitors understand the ecosystem before they join."
-						actions={
-							<Button asChild size="sm" variant="outline">
-								<Link href={publicRoutes.recruiting.root}>
-									Start with recruiting
-									<HugeiconsIcon
-										icon={ArrowRight01Icon}
-										strokeWidth={2}
-										className="ml-1.5 size-3.5"
-									/>
-								</Link>
-							</Button>
-						}
-					>
-						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							{[
-								[
-									"Recruiting",
-									publicRoutes.recruiting.root,
-									"Browse open player, team, and staff opportunities with clear next actions.",
-								],
-								[
-									"Teams",
-									publicRoutes.teams.root,
-									"See team profiles, recruiting status, and roster depth.",
-								],
-								[
-									"Organizations",
-									publicRoutes.orgs.root,
-									"Discover org-backed programs and the teams they operate.",
-								],
-								[
-									"Players",
-									publicRoutes.players.root,
-									"Evaluate role focus, rank, and current availability.",
-								],
-								[
-									"Scrims",
-									publicRoutes.scrims.root,
-									"Follow public scheduling, scorelines, and confirmation state.",
-								],
-								[
-									"Updates",
-									publicRoutes.updates.root,
-									"Track team and org announcements outside recruiting noise.",
-								],
-							].map(([label, href, description]) => (
-								<Link
-									key={href}
-									href={href}
-									className="flex min-h-32 flex-col justify-between border p-4 transition-colors hover:bg-muted/50"
-								>
-									<div>
-										<p className="text-sm font-semibold">{label}</p>
-										<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-											{description}
-										</p>
-									</div>
-									<p className="mt-4 text-xs font-medium text-primary">
-										Open {label.toLowerCase()}
-									</p>
-								</Link>
-							))}
-						</div>
-					</PublicPageSection>
-
-					<PublicPageSection
-						title="Know how the platform works before you sign in"
-						description="The trust pages below explain what Scrimflow is, how support is handled, and what account and data expectations are today."
-					>
-						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-							{[
-								[
-									"About",
-									publicRoutes.about,
-									"Product scope, who it is for, and how the public/app surfaces fit together.",
-								],
-								[
-									"Contact",
-									publicRoutes.contact,
-									"Support path, account-first reporting flow, and how to get unblocked quickly.",
-								],
-								[
-									"Privacy",
-									publicRoutes.privacy,
-									"What account, profile, and workspace information is stored to run the product.",
-								],
-								[
-									"Terms",
-									publicRoutes.terms,
-									"The operating rules for using the platform and keeping team spaces healthy.",
-								],
-							].map(([label, href, description]) => (
-								<Link
-									key={href}
-									href={href}
-									className="flex min-h-32 flex-col justify-between border p-4 transition-colors hover:bg-muted/50"
-								>
-									<div>
-										<p className="text-sm font-semibold">{label}</p>
-										<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-											{description}
-										</p>
-									</div>
-									<p className="mt-4 text-xs font-medium text-primary">
-										Read {label.toLowerCase()}
-									</p>
-								</Link>
-							))}
-						</div>
-					</PublicPageSection>
-				</div>
-			</section>
 			<LandingPrimaryCTASection />
 		</>
 	);

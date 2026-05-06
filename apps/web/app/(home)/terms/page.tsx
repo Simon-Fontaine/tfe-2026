@@ -12,7 +12,8 @@ export default function TermsPage() {
 		<PublicPageShell
 			title="Terms of Service"
 			description="These terms describe the current operating rules for using Scrimflow public surfaces and authenticated workspaces."
-			contentClassName="space-y-8"
+			maxWidth="6xl"
+			contentClassName="space-y-6"
 		>
 			<PublicPageSection title="Use the product truthfully">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
@@ -94,10 +95,10 @@ export default function TermsPage() {
 							abuse will be permanently removed. Associated team and org memberships are also
 							terminated. Contact{" "}
 							<a
-								href="mailto:support@scrimflow.gg"
+								href="mailto:support@scrimflow.com"
 								className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
 							>
-								support@scrimflow.gg
+								support@scrimflow.com
 							</a>{" "}
 							to appeal.
 						</p>

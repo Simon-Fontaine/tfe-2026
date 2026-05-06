@@ -1,5 +1,5 @@
 {
-	"id": "99088f84-09f0-4123-9059-54bbd4eb3367",
+	"id": "b960ef49-2786-413f-94ca-c7fc78b3c962",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1437,6 +1437,13 @@
 					"notNull": false,
 					"default": "'{}'::jsonb"
 				},
+				"notification_preferences": {
+					"name": "notification_preferences",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'{}'::jsonb"
+				},
 				"is_banned": {
 					"name": "is_banned",
 					"type": "boolean",
@@ -2603,7 +2610,7 @@
 					"name": "submitted_by_user_id",
 					"type": "uuid",
 					"primaryKey": false,
-					"notNull": true
+					"notNull": false
 				},
 				"screenshot_type": {
 					"name": "screenshot_type",
@@ -2824,7 +2831,7 @@
 					"tableTo": "user",
 					"columnsFrom": ["submitted_by_user_id"],
 					"columnsTo": ["id"],
-					"onDelete": "restrict",
+					"onDelete": "set null",
 					"onUpdate": "no action"
 				}
 			},
@@ -2979,7 +2986,7 @@
 					"tableTo": "user",
 					"columnsFrom": ["inviter_user_id"],
 					"columnsTo": ["id"],
-					"onDelete": "restrict",
+					"onDelete": "cascade",
 					"onUpdate": "no action"
 				}
 			},
@@ -3162,6 +3169,24 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"website": {
+					"name": "website",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"discord": {
+					"name": "discord",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"twitter": {
+					"name": "twitter",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"owner_id": {
 					"name": "owner_id",
 					"type": "uuid",
@@ -3207,7 +3232,7 @@
 					"tableTo": "user",
 					"columnsFrom": ["owner_id"],
 					"columnsTo": ["id"],
-					"onDelete": "restrict",
+					"onDelete": "cascade",
 					"onUpdate": "no action"
 				}
 			},
@@ -3446,6 +3471,13 @@
 					"type": "smallint",
 					"primaryKey": false,
 					"notNull": false
+				},
+				"profile_visibility": {
+					"name": "profile_visibility",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'public'"
 				},
 				"created_at": {
 					"name": "created_at",
@@ -3921,6 +3953,22 @@
 					"isUnique": false,
 					"concurrently": false,
 					"method": "btree",
+					"with": {}
+				},
+				"recruitment_listing_hero_pool_gin_idx": {
+					"name": "recruitment_listing_hero_pool_gin_idx",
+					"columns": [
+						{
+							"expression": "hero_pool_filter",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last",
+							"opclass": "jsonb_ops"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "gin",
 					"with": {}
 				},
 				"recruitment_listing_user_idx": {
@@ -4843,7 +4891,7 @@
 					"name": "created_by_user_id",
 					"type": "uuid",
 					"primaryKey": false,
-					"notNull": true
+					"notNull": false
 				},
 				"message": {
 					"name": "message",
@@ -4995,7 +5043,7 @@
 					"tableTo": "user",
 					"columnsFrom": ["created_by_user_id"],
 					"columnsTo": ["id"],
-					"onDelete": "restrict",
+					"onDelete": "set null",
 					"onUpdate": "no action"
 				}
 			},
@@ -5150,7 +5198,7 @@
 					"tableTo": "user",
 					"columnsFrom": ["inviter_user_id"],
 					"columnsTo": ["id"],
-					"onDelete": "restrict",
+					"onDelete": "cascade",
 					"onUpdate": "no action"
 				}
 			},
@@ -5662,7 +5710,7 @@
 					"name": "author_user_id",
 					"type": "uuid",
 					"primaryKey": false,
-					"notNull": true
+					"notNull": false
 				},
 				"organization_id": {
 					"name": "organization_id",
@@ -5817,7 +5865,7 @@
 					"tableTo": "user",
 					"columnsFrom": ["author_user_id"],
 					"columnsTo": ["id"],
-					"onDelete": "restrict",
+					"onDelete": "set null",
 					"onUpdate": "no action"
 				},
 				"update_post_organization_id_organization_id_fk": {
