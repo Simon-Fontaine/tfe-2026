@@ -5,6 +5,7 @@ import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -30,20 +31,7 @@ export default async function AppOrgOverviewPage({
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
 	if (org.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Organization"
-					detail={`Organization ${orgId}`}
-					description="Overview, roster health, and recruiting activity for this workspace."
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You do not have permission to open this organization workspace."
-					variant="page"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Organization" resourceType="organization" />;
 	}
 	const orgDetail = org.data;
 

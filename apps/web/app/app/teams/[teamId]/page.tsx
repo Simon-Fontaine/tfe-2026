@@ -8,12 +8,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CreateScrimDialog } from "@/components/scrims/create-scrim-dialog";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreateUpdatePostDialog } from "@/components/updates/create-update-post-dialog";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -46,16 +46,7 @@ export default async function AppTeamOverviewPage({
 	const team = await getTeamWithRosterRouteState(teamId, user.id);
 	if (team.kind === "missing") notFound();
 	if (team.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader title="Overview" detail={`Team ${teamId}`} />
-				<EmptyStateBlock
-					title="No access"
-					description="You are not a member of this team. Contact a team manager to request access."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Overview" resourceType="team" />;
 	}
 
 	const openListingCount = team.data.ownedListings.filter((post) => post.status === "open").length;

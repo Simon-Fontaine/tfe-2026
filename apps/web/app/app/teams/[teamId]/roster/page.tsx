@@ -8,6 +8,7 @@ import { RosterTable } from "@/components/teams/roster-table";
 import { TeamInvitesSection } from "@/components/teams/team-invites-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -28,20 +29,7 @@ export default async function AppTeamRosterPage({
 	const team = await getTeamWithRosterRouteState(teamId, user.id);
 	if (team.kind === "missing") notFound();
 	if (team.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Roster"
-					detail={`Team ${teamId}`}
-					description="Manage rostered players, statuses, and incoming invites."
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You are not a member of this team. Contact a team manager to request access."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Roster" resourceType="team" />;
 	}
 
 	const activeTab = type === "staff" ? "staff" : "players";

@@ -20,7 +20,7 @@ export default async function AppTeamSettingsPage({
 	if (team.kind !== "success") {
 		return (
 			<PageContainer>
-				<PageHeader title="Settings" detail={`Team ${teamId}`} />
+				<PageHeader title="Settings" detail="team workspace" />
 				<EmptyStateBlock
 					icon={LockIcon}
 					title="No access"

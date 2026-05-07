@@ -58,14 +58,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
 			{team.bannerUrl && (
 				<div className="relative h-36 w-full overflow-hidden border">
-					<Image
-						src={team.bannerUrl}
-						alt=""
-						fill
-						unoptimized
-						className="object-cover"
-						sizes="100vw"
-					/>
+					<Image src={team.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
 				</div>
 			)}
 			<div className="border p-5">
