@@ -162,9 +162,11 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 						}
 					>
 						{needsActionScrims.length === 0 ? (
-							<p className="py-4 text-center text-sm text-muted-foreground">
-								Nothing needs your attention right now.
-							</p>
+							<EmptyStateBlock
+								title="Nothing needs attention"
+								description="Scrims waiting for your response or confirmation will appear here."
+								variant="inline"
+							/>
 						) : (
 							<div className="space-y-3">
 								{needsActionScrims.map((scrim) => (
@@ -183,7 +185,11 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 						}
 					>
 						{upcomingScrims.length === 0 ? (
-							<p className="py-4 text-center text-sm text-muted-foreground">No upcoming scrims.</p>
+							<EmptyStateBlock
+								title="No upcoming scrims"
+								description="Accepted and scheduled scrims will appear here."
+								variant="inline"
+							/>
 						) : (
 							<div className="space-y-3">
 								{upcomingScrims.map((scrim) => (
@@ -202,9 +208,11 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 						}
 					>
 						{pastScrims.length === 0 ? (
-							<p className="py-4 text-center text-sm text-muted-foreground">
-								No completed scrims yet.
-							</p>
+							<EmptyStateBlock
+								title="No completed scrims yet"
+								description="Finished, cancelled, and disputed scrims will appear here."
+								variant="inline"
+							/>
 						) : (
 							<div className="space-y-3">
 								{pastScrims.map((scrim) => (

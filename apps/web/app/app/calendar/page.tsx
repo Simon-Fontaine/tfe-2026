@@ -1,7 +1,7 @@
-import { Calendar03Icon } from "@hugeicons/core-free-icons";
+import { Calendar03Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { ScheduleNoTeams } from "@/components/schedule/schedule-no-teams";
+import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -20,7 +20,12 @@ export default async function AppCalendarPage() {
 					title="Personal schedule"
 					description="Team-scoped availability will appear here once you join a team."
 				/>
-				<ScheduleNoTeams />
+				<EmptyStateBlock
+					icon={UserGroup02Icon}
+					title="Nothing scheduled"
+					description="Your personal schedule will appear here once you join a team."
+					variant="card"
+				/>
 			</PageContainer>
 		);
 	}
