@@ -29,7 +29,7 @@ export default async function AppOrgRecruitingPage({
 	if (org.kind !== "success" || !org.data.currentUser.canManage) {
 		return (
 			<PageContainer>
-				<PageHeader title="Recruiting" detail={`Organization ${orgId}`} />
+				<PageHeader title="Recruiting" detail="organization workspace" />
 				<EmptyStateBlock
 					title="No access"
 					description="You don't have permission to manage this organization's recruiting workspace."

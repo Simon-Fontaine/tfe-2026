@@ -46,7 +46,7 @@ export default async function TeamChatPage({
 			<PageContainer>
 				<PageHeader
 					title="Chat"
-					detail={`Team ${teamId}`}
+					detail="team workspace"
 					description="Persistent roster and scrim-linked channels for this team workspace."
 				/>
 				<EmptyStateBlock
@@ -126,7 +126,7 @@ export default async function TeamChatPage({
 					</div>
 					{teamRoom ? (
 						<p className="mt-3 text-xs text-muted-foreground">
-							Your roster’s persistent room is live as{" "}
+							Your roster's persistent room is live as{" "}
 							<span className="font-medium text-foreground">{teamRoom.name}</span>.
 						</p>
 					) : (

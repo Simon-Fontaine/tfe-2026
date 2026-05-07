@@ -19,7 +19,7 @@ export default async function AppOrgSettingsPage({
 	if (org.kind !== "success") {
 		return (
 			<PageContainer>
-				<PageHeader title="Settings" detail={`Organization ${orgId}`} />
+				<PageHeader title="Settings" detail="organization workspace" />
 				<EmptyStateBlock
 					title="No access"
 					description="You do not have permission to open this organization settings workspace."

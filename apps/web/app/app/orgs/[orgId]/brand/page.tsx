@@ -15,7 +15,7 @@ export default async function AppOrgBrandPage({ params }: { params: Promise<{ or
 	if (org.kind !== "success") {
 		return (
 			<PageContainer>
-				<PageHeader title="Brand" detail={`Organization ${orgId}`} />
+				<PageHeader title="Brand" detail="organization workspace" />
 				<EmptyStateBlock
 					title="No access"
 					description="You do not have permission to manage this organization's brand profile."

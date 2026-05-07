@@ -21,7 +21,7 @@ export default async function AppOrgTeamsPage({ params }: { params: Promise<{ or
 			<PageContainer>
 				<PageHeader
 					title="Teams"
-					detail={`Organization ${orgId}`}
+					detail="organization workspace"
 					description="Active and archived rosters for this organization workspace."
 				/>
 				<EmptyStateBlock

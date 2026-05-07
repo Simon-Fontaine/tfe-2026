@@ -25,7 +25,7 @@ export default async function AppOrgInvitesPage({
 	if (org.kind !== "success" || !org.data.currentUser.canManage) {
 		return (
 			<PageContainer>
-				<PageHeader title="Invites" detail={`Organization ${orgId}`} />
+				<PageHeader title="Invites" detail="organization workspace" />
 				<EmptyStateBlock
 					title="No access"
 					description="You don't have permission to manage this organization's invites."

@@ -28,7 +28,7 @@ export default async function AppTeamCalendarPage({
 			<PageContainer>
 				<PageHeader
 					title="Team schedule"
-					detail={`Team ${teamId}`}
+					detail="team workspace"
 					description="Team-wide availability, planning, and scheduling windows."
 				/>
 				<EmptyStateBlock

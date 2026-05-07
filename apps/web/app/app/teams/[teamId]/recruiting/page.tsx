@@ -26,7 +26,7 @@ export default async function TeamRecruitingPage({
 			<PageContainer>
 				<PageHeader
 					title="Recruiting"
-					detail={`Team ${teamId}`}
+					detail="team workspace"
 					description="Team-owned listings and applicant review live in this workspace."
 				/>
 				<EmptyStateBlock

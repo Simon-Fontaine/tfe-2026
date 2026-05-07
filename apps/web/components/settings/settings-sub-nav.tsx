@@ -16,7 +16,7 @@ export function SettingsSubNav() {
 	const pathname = usePathname();
 
 	return (
-		<nav className="mb-6 flex gap-1 border-b" aria-label="Settings sections">
+		<nav className="mb-6 flex gap-1 overflow-x-auto border-b" aria-label="Settings sections">
 			{TABS.map((tab) => {
 				const isActive =
 					tab.href === appRoutes.settings.account

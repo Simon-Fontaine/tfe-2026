@@ -19,7 +19,7 @@ export default async function TeamUpdatesPage({ params }: { params: Promise<{ te
 			<PageContainer>
 				<PageHeader
 					title="Updates"
-					detail={`Team ${teamId}`}
+					detail="team workspace"
 					description="Announcements, roster news, and scrim recaps posted by team managers."
 				/>
 				<EmptyStateBlock

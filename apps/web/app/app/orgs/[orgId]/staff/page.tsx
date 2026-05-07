@@ -79,7 +79,7 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 			<PageContainer>
 				<PageHeader
 					title="Staff"
-					detail={`Organization ${orgId}`}
+					detail="organization workspace"
 					description="Org admins, coaches, and operational members for this workspace."
 				/>
 				<EmptyStateBlock
