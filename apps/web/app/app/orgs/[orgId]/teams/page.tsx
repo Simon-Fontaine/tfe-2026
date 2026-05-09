@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { CreateTeamDialog } from "@/components/teams/create-team-dialog";
 import { TeamCard } from "@/components/teams/team-card";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -17,20 +18,7 @@ export default async function AppOrgTeamsPage({ params }: { params: Promise<{ or
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
 	if (org.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Teams"
-					detail="organization workspace"
-					description="Active and archived rosters for this organization workspace."
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You do not have permission to open this organization teams workspace."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Teams" resourceType="organization" />;
 	}
 	const orgDetail = org.data;
 

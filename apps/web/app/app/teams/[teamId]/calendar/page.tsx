@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ScheduleGrid } from "@/components/schedule/schedule-grid";
 import { TeamScheduleBoard } from "@/components/schedule/team/team-schedule-board";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getPlayerAvailability } from "@/lib/data/player";
@@ -24,20 +25,7 @@ export default async function AppTeamCalendarPage({
 
 	if (team.kind === "missing") notFound();
 	if (team.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Team schedule"
-					detail="team workspace"
-					description="Team-wide availability, planning, and scheduling windows."
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You need an active team membership before you can open this calendar workspace."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Team schedule" resourceType="team" />;
 	}
 
 	if (schedule.kind !== "success") {

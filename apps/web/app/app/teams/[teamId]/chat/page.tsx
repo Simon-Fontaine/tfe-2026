@@ -6,6 +6,7 @@ import { ChatWorkspace } from "@/components/chat/chat-workspace";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getTeamChatRouteState } from "@/lib/data/chat";
@@ -42,21 +43,7 @@ export default async function TeamChatPage({
 	]);
 	if (teamState.kind === "missing") notFound();
 	if (teamState.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Chat"
-					detail="team workspace"
-					description="Persistent roster and scrim-linked channels for this team workspace."
-				/>
-				<EmptyStateBlock
-					icon={MessageNotification02Icon}
-					title="No access"
-					description="You need an active roster seat before you can open this team chat workspace."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Chat" resourceType="team" />;
 	}
 	if (conversationsState.kind !== "success") {
 		return (

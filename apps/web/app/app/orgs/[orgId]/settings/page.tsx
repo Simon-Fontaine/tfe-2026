@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { OrgSettingsPanel } from "@/components/orgs/org-settings-panel";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
@@ -17,16 +18,7 @@ export default async function AppOrgSettingsPage({
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
 	if (org.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader title="Settings" detail="organization workspace" />
-				<EmptyStateBlock
-					title="No access"
-					description="You do not have permission to open this organization settings workspace."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Settings" resourceType="organization" />;
 	}
 
 	if (
