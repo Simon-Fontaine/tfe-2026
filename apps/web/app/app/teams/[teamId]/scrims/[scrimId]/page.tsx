@@ -19,7 +19,6 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { getScrimChatRouteState } from "@/lib/data/chat";
 import { getScrimRouteState } from "@/lib/data/scrims";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
-import { routeStateWrongContext } from "@/lib/route-state";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -74,13 +73,7 @@ export default async function TeamScrimDetailPage({
 			</PageContainer>
 		);
 	}
-
-	const scrimContext =
-		scrimState.data.homeTeam.id !== teamState.data.id &&
-		scrimState.data.awayTeam?.id !== teamState.data.id
-			? routeStateWrongContext("team", teamId)
-			: null;
-	if (scrimContext) {
+	if (scrimState.kind === "wrong-context") {
 		return (
 			<PageContainer>
 				<PageHeader
@@ -106,7 +99,9 @@ export default async function TeamScrimDetailPage({
 		chatConversationsState.kind === "success" ? chatConversationsState.data : [];
 
 	const currentConfirmation =
-		scrim.confirmations.find((confirmation) => confirmation.teamId === team.id) ?? null;
+		scrim.confirmations.find(
+			(confirmation: (typeof scrim.confirmations)[number]) => confirmation.teamId === team.id
+		) ?? null;
 	const canReportResult =
 		team.currentUser.canManage &&
 		!!scrim.awayTeam &&

@@ -54,6 +54,22 @@ export default async function AppRecruitingListingDetailPage({
 			</PageContainer>
 		);
 	}
+	if (listingResult.kind === "wrong-context") {
+		return (
+			<PageContainer maxWidth="4xl">
+				<PageHeader
+					title="Recruiting"
+					detail="Listing detail"
+					description="Review recruiting details from the current workspace without leaving the app shell."
+				/>
+				<EmptyStateBlock
+					title="Listing not accessible from this context"
+					description="This listing belongs to a workspace you cannot access from the current shell."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
 	const listing = listingResult.data;
 
 	const [entityOptions, applications] = await Promise.all([
