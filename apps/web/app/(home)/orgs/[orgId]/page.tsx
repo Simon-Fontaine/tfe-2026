@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -287,36 +288,28 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				title="Next public routes"
 				description="Keep moving through the public funnel without losing context."
 			>
-				<div className="grid gap-3 md:grid-cols-3">
-					<Link
-						href={publicRoutes.updates.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Updates</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Check recent public announcements from orgs and teams across the platform.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.scrims.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Scrims</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							See whether the broader competitive ecosystem is active and publishing recent results.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.recruiting.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Recruiting</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Return to the full directory if you want to compare this org with other active
-							listings.
-						</p>
-					</Link>
-				</div>
+				<PublicRelatedRouteCards
+					cards={[
+						{
+							label: "Updates",
+							href: publicRoutes.updates.root,
+							description:
+								"Check recent public announcements from orgs and teams across the platform.",
+						},
+						{
+							label: "Scrims",
+							href: publicRoutes.scrims.root,
+							description:
+								"See whether the broader competitive ecosystem is active and publishing recent results.",
+						},
+						{
+							label: "Recruiting",
+							href: publicRoutes.recruiting.root,
+							description:
+								"Return to the full directory if you want to compare this org with other active listings.",
+						},
+					]}
+				/>
 			</PublicPageSection>
 		</div>
 	);

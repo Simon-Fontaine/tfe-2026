@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { RecruitmentApplicationDialog } from "@/components/recruit/recruitment-application-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -176,36 +177,29 @@ export default async function PublicRecruitingListingDetailPage({
 				title="Related public routes"
 				description="Keep the recruiting context intact while exploring the rest of the public product."
 			>
-				<div className="grid gap-3 md:grid-cols-3">
-					<Link href={ownerHref} className="border p-4 transition-colors hover:bg-muted/50">
-						<p className="text-sm font-semibold">Open source profile</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Review the org, team, or player behind this listing before deciding how to proceed.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.recruiting.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">More listings</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Return to the recruiting directory to compare other open opportunities.
-						</p>
-					</Link>
-					<Link
-						href={user ? appRoutes.recruiting.root : publicRoutes.auth.step("login")}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">
-							{user ? "Open recruiting workspace" : "Sign in to continue"}
-						</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							{user
+				<PublicRelatedRouteCards
+					cards={[
+						{
+							label: "Open source profile",
+							href: ownerHref,
+							description:
+								"Review the org, team, or player behind this listing before deciding how to proceed.",
+						},
+						{
+							label: "More listings",
+							href: publicRoutes.recruiting.root,
+							description:
+								"Return to the recruiting directory to compare other open opportunities.",
+						},
+						{
+							label: user ? "Open recruiting workspace" : "Sign in to continue",
+							href: user ? appRoutes.recruiting.root : publicRoutes.auth.step("login"),
+							description: user
 								? "Move into the authenticated recruiting workspace if you need the managed view."
-								: "Authenticate to apply, manage profile context, or continue inside the workspace."}
-						</p>
-					</Link>
-				</div>
+								: "Authenticate to apply, manage profile context, or continue inside the workspace.",
+						},
+					]}
+				/>
 			</PublicPageSection>
 		</PublicPageShell>
 	);

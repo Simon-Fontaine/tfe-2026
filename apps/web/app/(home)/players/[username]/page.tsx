@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -240,36 +241,28 @@ export default async function PlayerProfilePage({
 				title="Related public routes"
 				description="Use these routes to keep browsing without losing the player-recruiting context."
 			>
-				<div className="grid gap-3 md:grid-cols-3">
-					<Link
-						href={publicRoutes.players.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">More players</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Return to the player directory to compare role coverage and visible rank context.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.teams.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Browse teams</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							See which teams are actively publishing public profiles and recruiting posture.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.recruiting.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Open recruiting</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Jump straight into the broader recruiting market to evaluate other active
-							opportunities.
-						</p>
-					</Link>
-				</div>
+				<PublicRelatedRouteCards
+					cards={[
+						{
+							label: "More players",
+							href: publicRoutes.players.root,
+							description:
+								"Return to the player directory to compare role coverage and visible rank context.",
+						},
+						{
+							label: "Browse teams",
+							href: publicRoutes.teams.root,
+							description:
+								"See which teams are actively publishing public profiles and recruiting posture.",
+						},
+						{
+							label: "Open recruiting",
+							href: publicRoutes.recruiting.root,
+							description:
+								"Jump straight into the broader recruiting market to evaluate other active opportunities.",
+						},
+					]}
+				/>
 			</PublicPageSection>
 		</div>
 	);

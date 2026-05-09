@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
+import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -291,35 +292,27 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 				title="Related public routes"
 				description="Keep browsing the same competitive context without jumping back to the home page."
 			>
-				<div className="grid gap-3 md:grid-cols-3">
-					<Link
-						href={publicRoutes.orgs.bySlug(team.organizationSlug)}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Organization profile</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							See the parent org, related teams, and broader recruiting posture.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.players.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Players directory</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Compare this roster with the broader player pool and public role coverage.
-						</p>
-					</Link>
-					<Link
-						href={publicRoutes.recruiting.root}
-						className="border p-4 transition-colors hover:bg-muted/50"
-					>
-						<p className="text-sm font-semibold">Recruiting directory</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Return to the wider recruiting market to compare other active opportunities.
-						</p>
-					</Link>
-				</div>
+				<PublicRelatedRouteCards
+					cards={[
+						{
+							label: "Organization profile",
+							href: publicRoutes.orgs.bySlug(team.organizationSlug),
+							description: "See the parent org, related teams, and broader recruiting posture.",
+						},
+						{
+							label: "Players directory",
+							href: publicRoutes.players.root,
+							description:
+								"Compare this roster with the broader player pool and public role coverage.",
+						},
+						{
+							label: "Recruiting directory",
+							href: publicRoutes.recruiting.root,
+							description:
+								"Return to the wider recruiting market to compare other active opportunities.",
+						},
+					]}
+				/>
 			</PublicPageSection>
 		</div>
 	);
