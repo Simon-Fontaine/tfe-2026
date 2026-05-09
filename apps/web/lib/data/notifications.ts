@@ -8,9 +8,21 @@ export type { NotificationSummary };
 // ─── Queries ───────────────────────────────────────────────────────────────────
 
 export const getNotificationsForUser = cache(
-	async (_userId: string, _limit = 30): Promise<NotificationSummary[]> => {
-		const res = await apiGet<NotificationSummary[]>(apiRoutes.notifications.root);
-		if ("data" in res) return res.data;
+	async (
+		_userId: string,
+		cursor?: string
+	): Promise<{ notifications: NotificationSummary[]; nextCursor: string | null }> => {
+		const url = cursor
+			? `${apiRoutes.notifications.root}?cursor=${encodeURIComponent(cursor)}&limit=20`
+			: `${apiRoutes.notifications.root}?limit=20`;
+		const res = await apiGet<NotificationSummary[]>(url);
+		if ("data" in res) {
+			const paginated = res as unknown as {
+				data: NotificationSummary[];
+				nextCursor: string | null;
+			};
+			return { notifications: paginated.data, nextCursor: paginated.nextCursor ?? null };
+		}
 		throw new Error(res.error);
 	}
 );

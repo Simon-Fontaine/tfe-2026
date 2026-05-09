@@ -1,5 +1,5 @@
 import { CreateScrimSchema } from "@scrimflow/shared";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
 import { db } from "@/db";
@@ -44,97 +44,139 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 		}
 
 		if (teamIds.length === 0) {
-			return c.json({ data: [] });
+			return c.json({ data: [], nextCursor: null });
 		}
 
-		const rows = await db.query.scrimTable.findMany({
-			where: or(inArray(scrimTable.homeTeamId, teamIds), inArray(scrimTable.awayTeamId, teamIds)),
-			with: {
-				homeTeam: {
-					columns: {
-						id: true,
-						name: true,
-						tag: true,
-						organizationId: true,
-						avatarUrl: true,
-						rating: true,
-					},
-					with: {
-						organization: { columns: { name: true } },
-					},
+		const cursor = c.req.query("cursor") ?? null;
+		const limitParam = Number(c.req.query("limit") ?? "20");
+		const limit = Math.min(Math.max(1, limitParam), 50);
+
+		const ACTIVE_STATUSES = [
+			"pending",
+			"accepted",
+			"scheduled",
+			"in_progress",
+			"awaiting_confirmation",
+			"disputed",
+		] as const;
+		const PAST_STATUSES = ["completed", "cancelled"] as const;
+
+		const teamFilter = or(
+			inArray(scrimTable.homeTeamId, teamIds),
+			inArray(scrimTable.awayTeamId, teamIds)
+		);
+
+		const scrimWith = {
+			homeTeam: {
+				columns: {
+					id: true,
+					name: true,
+					tag: true,
+					organizationId: true,
+					avatarUrl: true,
+					rating: true,
 				},
-				awayTeam: {
-					columns: {
-						id: true,
-						name: true,
-						tag: true,
-						organizationId: true,
-						avatarUrl: true,
-						rating: true,
-					},
-					with: {
-						organization: { columns: { name: true } },
-					},
-				},
-				createdBy: {
-					columns: { id: true, displayName: true },
-				},
-				confirmations: {
-					columns: {
-						id: true,
-						teamId: true,
-						status: true,
-						disputeReason: true,
-						confirmedByUserId: true,
-						confirmedAt: true,
-						updatedAt: true,
-					},
-					with: {
-						team: {
-							columns: { id: true, name: true, tag: true },
-						},
-						confirmedBy: {
-							columns: { id: true, displayName: true },
-						},
-					},
-				},
-				ocrJobs: {
-					columns: {
-						id: true,
-						scrimId: true,
-						screenshotType: true,
-						imageUrl: true,
-						status: true,
-						progressStage: true,
-						errorCode: true,
-						errorMessage: true,
-						retryCount: true,
-						submittedByUserId: true,
-						providerName: true,
-						providerModel: true,
-						promptVersion: true,
-						runAfter: true,
-						processingTimeMs: true,
-						confidenceFlags: true,
-						validatedOutput: true,
-						startedAt: true,
-						completedAt: true,
-						createdAt: true,
-						updatedAt: true,
-					},
-					with: {
-						submittedBy: {
-							columns: { id: true, displayName: true },
-						},
-					},
-					orderBy: [desc(ocrJobTable.createdAt)],
+				with: {
+					organization: { columns: { name: true } },
 				},
 			},
-			orderBy: [desc(scrimTable.scheduledAt), desc(scrimTable.createdAt)],
-			limit: 100,
-		});
+			awayTeam: {
+				columns: {
+					id: true,
+					name: true,
+					tag: true,
+					organizationId: true,
+					avatarUrl: true,
+					rating: true,
+				},
+				with: {
+					organization: { columns: { name: true } },
+				},
+			},
+			createdBy: {
+				columns: { id: true, displayName: true },
+			},
+			confirmations: {
+				columns: {
+					id: true,
+					teamId: true,
+					status: true,
+					disputeReason: true,
+					confirmedByUserId: true,
+					confirmedAt: true,
+					updatedAt: true,
+				},
+				with: {
+					team: {
+						columns: { id: true, name: true, tag: true },
+					},
+					confirmedBy: {
+						columns: { id: true, displayName: true },
+					},
+				},
+			},
+			ocrJobs: {
+				columns: {
+					id: true,
+					scrimId: true,
+					screenshotType: true,
+					imageUrl: true,
+					status: true,
+					progressStage: true,
+					errorCode: true,
+					errorMessage: true,
+					retryCount: true,
+					submittedByUserId: true,
+					providerName: true,
+					providerModel: true,
+					promptVersion: true,
+					runAfter: true,
+					processingTimeMs: true,
+					confidenceFlags: true,
+					validatedOutput: true,
+					startedAt: true,
+					completedAt: true,
+					createdAt: true,
+					updatedAt: true,
+				},
+				with: {
+					submittedBy: {
+						columns: { id: true, displayName: true },
+					},
+				},
+				orderBy: [desc(ocrJobTable.createdAt)],
+			},
+		} as const;
 
-		return c.json({ data: rows.map(mapScrimSummary) });
+		const pastWhere = cursor
+			? and(
+					teamFilter,
+					inArray(scrimTable.status, [...PAST_STATUSES]),
+					lt(scrimTable.createdAt, new Date(cursor))
+				)
+			: and(teamFilter, inArray(scrimTable.status, [...PAST_STATUSES]));
+
+		const [activeRows, pastRows] = await Promise.all([
+			db.query.scrimTable.findMany({
+				where: and(teamFilter, inArray(scrimTable.status, [...ACTIVE_STATUSES])),
+				with: scrimWith,
+				orderBy: [desc(scrimTable.scheduledAt), desc(scrimTable.createdAt)],
+			}),
+			db.query.scrimTable.findMany({
+				where: pastWhere,
+				with: scrimWith,
+				orderBy: [desc(scrimTable.createdAt)],
+				limit: limit + 1,
+			}),
+		]);
+
+		const hasMore = pastRows.length > limit;
+		const pagedPastRows = hasMore ? pastRows.slice(0, limit) : pastRows;
+		const nextCursor = hasMore
+			? pagedPastRows[pagedPastRows.length - 1].createdAt.toISOString()
+			: null;
+
+		return c.json({ data: [...activeRows, ...pagedPastRows].map(mapScrimSummary), nextCursor });
 	});
 
 	scrimRoutes.get("/:id", async (c) => {

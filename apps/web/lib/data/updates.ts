@@ -14,12 +14,23 @@ function withQuery(path: string, params: Record<string, string | undefined>) {
 	return query ? `${path}?${query}` : path;
 }
 
-export const getTeamUpdates = cache(async (teamId: string): Promise<UpdatePostSummary[]> => {
-	const res = await apiGet<UpdatePostSummary[]>(withQuery(apiRoutes.updates.root, { teamId }));
-	if ("data" in res) return res.data;
-	if (res.status === 403 || res.status === 404) return [];
-	throw new Error(res.error);
-});
+export const getTeamUpdates = cache(
+	async (
+		teamId: string,
+		cursor?: string
+	): Promise<{ posts: UpdatePostSummary[]; nextCursor: string | null }> => {
+		const res = await apiGet<UpdatePostSummary[]>(
+			withQuery(apiRoutes.updates.root, { teamId, cursor })
+		);
+		if ("data" in res) {
+			const paginated = res as unknown as { data: UpdatePostSummary[]; nextCursor: string | null };
+			return { posts: paginated.data, nextCursor: paginated.nextCursor ?? null };
+		}
+		if ("status" in res && (res.status === 403 || res.status === 404))
+			return { posts: [], nextCursor: null };
+		throw new Error(res.error);
+	}
+);
 
 export const getPublicUpdates = cache(
 	async (filters?: { teamId?: string; organizationId?: string }): Promise<UpdatePostSummary[]> => {

@@ -6,4 +6,4 @@ export const PUBLIC_SCRIM_STATUSES = [
 	"disputed",
 ] as const;
 
-export const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
+export { TEAM_VIEWABLE_STATUSES } from "@scrimflow/shared";

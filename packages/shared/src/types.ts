@@ -147,6 +147,8 @@ export type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue
 
 export type OW2Role = "tank" | "damage" | "support";
 export type RosterStatus = "active" | "benched" | "trial" | "inactive";
+export const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
+export type TeamViewableStatus = (typeof TEAM_VIEWABLE_STATUSES)[number];
 export type OrgPermissionRole = "owner" | "admin" | "member";
 export type OrgRole = OrgPermissionRole;
 export type TeamPermissionRole = "admin" | "member";

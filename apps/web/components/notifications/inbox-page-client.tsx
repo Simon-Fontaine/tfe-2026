@@ -5,6 +5,7 @@ import type { NotificationSummary } from "@scrimflow/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { apiRoutes } from "@/lib/routes";
@@ -21,11 +22,13 @@ async function readApiError(response: Response): Promise<string | null> {
 interface InboxPageClientProps {
 	initialNotifications: NotificationSummary[];
 	initialUnreadCount: number;
+	nextCursor: string | null;
 }
 
 export function InboxPageClient({
 	initialNotifications,
 	initialUnreadCount,
+	nextCursor,
 }: InboxPageClientProps) {
 	const notifications = useInboxStore((state) => state.notifications);
 	const unreadCount = useInboxStore((state) => state.unreadCount);
@@ -125,16 +128,19 @@ export function InboxPageClient({
 					variant="card"
 				/>
 			) : (
-				<div className="border">
-					{displayNotifications.map((notification) => (
-						<NotificationItem
-							key={notification.id}
-							notification={notification}
-							onMarkRead={handleMarkRead}
-							isPending={pendingNotificationIds.includes(notification.id)}
-						/>
-					))}
-				</div>
+				<>
+					<div className="border">
+						{displayNotifications.map((notification) => (
+							<NotificationItem
+								key={notification.id}
+								notification={notification}
+								onMarkRead={handleMarkRead}
+								isPending={pendingNotificationIds.includes(notification.id)}
+							/>
+						))}
+					</div>
+					{nextCursor && <LoadMoreButton nextCursor={nextCursor} />}
+				</>
 			)}
 		</PageContainer>
 	);

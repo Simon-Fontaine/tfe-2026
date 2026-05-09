@@ -12,7 +12,7 @@ import { requireWorkspaceSession } from "@/lib/workspace-shell";
 export default async function AppMePage() {
 	const { user } = await requireWorkspaceSession();
 
-	const [profile, stats, orgs, teams, allNotifications] = await Promise.all([
+	const [profile, stats, orgs, teams, { notifications: allNotifications }] = await Promise.all([
 		getPlayerProfileFull(user.id),
 		getPlayerStats(user.id),
 		getOrgsForUser(user.id),

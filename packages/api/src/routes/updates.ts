@@ -1,9 +1,10 @@
 import {
 	CreateUpdatePostSchema,
+	TEAM_VIEWABLE_STATUSES,
 	type UpdatePostSummary,
 	UpdateUpdatePostSchema,
 } from "@scrimflow/shared";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -20,19 +21,21 @@ import { mapUpdatePost } from "@/utils/updates";
 const updatesRoutes = new Hono<AuthEnv>();
 const publicUpdatesRoutes = new Hono<AuthEnv>();
 
-const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
-
 async function listUpdatePosts(params: {
 	teamId?: string;
 	organizationId?: string;
 	publicOnly?: boolean;
 	canManage?: boolean;
-}): Promise<UpdatePostSummary[]> {
+	cursor?: string;
+	limit?: number;
+}): Promise<{ posts: UpdatePostSummary[]; nextCursor: string | null }> {
+	const limit = params.limit ?? 20;
 	const rows = await db.query.updatePostTable.findMany({
 		where: and(
 			params.teamId ? eq(updatePostTable.teamId, params.teamId) : undefined,
 			params.organizationId ? eq(updatePostTable.organizationId, params.organizationId) : undefined,
-			params.publicOnly ? eq(updatePostTable.visibility, "public") : undefined
+			params.publicOnly ? eq(updatePostTable.visibility, "public") : undefined,
+			params.cursor ? lt(updatePostTable.createdAt, new Date(params.cursor)) : undefined
 		),
 		with: {
 			author: {
@@ -58,10 +61,17 @@ async function listUpdatePosts(params: {
 			},
 		},
 		orderBy: [desc(updatePostTable.createdAt)],
-		limit: 50,
+		limit: limit + 1,
 	});
 
-	return rows.map((row) => mapUpdatePost(row, { canManage: params.canManage }));
+	const hasMore = rows.length > limit;
+	const items = hasMore ? rows.slice(0, limit) : rows;
+	const nextCursor = hasMore ? items[items.length - 1].createdAt.toISOString() : null;
+
+	return {
+		posts: items.map((row) => mapUpdatePost(row, { canManage: params.canManage })),
+		nextCursor,
+	};
 }
 
 async function getUpdatePost(updateId: string) {
@@ -102,6 +112,10 @@ updatesRoutes.get("/", async (c) => {
 		return c.json({ error: "teamId or organizationId is required." }, 400);
 	}
 
+	const cursor = c.req.query("cursor") ?? undefined;
+	const limitParam = Number(c.req.query("limit") ?? "20");
+	const limit = Math.min(Math.max(1, limitParam), 50);
+
 	if (teamId) {
 		const access = await getTeamAccessContext(teamId, user.id);
 		if (!access) return c.json({ error: "Team not found." }, 404);
@@ -118,12 +132,13 @@ updatesRoutes.get("/", async (c) => {
 			return c.json({ error: "You do not have access to this team's updates." }, 403);
 		}
 
-		return c.json({
-			data: await listUpdatePosts({
-				teamId,
-				canManage: access.canManageTeam,
-			}),
+		const { posts, nextCursor } = await listUpdatePosts({
+			teamId,
+			canManage: access.canManageTeam,
+			cursor,
+			limit,
 		});
+		return c.json({ data: posts, nextCursor });
 	}
 
 	if (!organizationId) {
@@ -135,12 +150,13 @@ updatesRoutes.get("/", async (c) => {
 		return c.json({ error: "You do not have access to this organization's updates." }, 403);
 	}
 
-	return c.json({
-		data: await listUpdatePosts({
-			organizationId,
-			canManage: permissions.canManage,
-		}),
+	const { posts, nextCursor } = await listUpdatePosts({
+		organizationId,
+		canManage: permissions.canManage,
+		cursor,
+		limit,
 	});
+	return c.json({ data: posts, nextCursor });
 });
 
 updatesRoutes.post("/", async (c) => {
@@ -317,13 +333,12 @@ publicUpdatesRoutes.get("/", async (c) => {
 	const teamId = c.req.query("teamId");
 	const organizationId = c.req.query("organizationId");
 
-	return c.json({
-		data: await listUpdatePosts({
-			teamId: teamId ?? undefined,
-			organizationId: organizationId ?? undefined,
-			publicOnly: true,
-		}),
+	const { posts } = await listUpdatePosts({
+		teamId: teamId ?? undefined,
+		organizationId: organizationId ?? undefined,
+		publicOnly: true,
 	});
+	return c.json({ data: posts });
 });
 
 export { publicUpdatesRoutes, updatesRoutes };

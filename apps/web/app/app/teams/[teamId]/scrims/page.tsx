@@ -12,6 +12,7 @@ import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -86,13 +87,20 @@ function ScrimRow({ scrim, teamId }: { scrim: ScrimSummary; teamId: string }) {
 	);
 }
 
-export default async function TeamScrimsPage({ params }: { params: Promise<{ teamId: string }> }) {
+export default async function TeamScrimsPage({
+	params,
+	searchParams,
+}: {
+	params: Promise<{ teamId: string }>;
+	searchParams: Promise<{ pastCursor?: string }>;
+}) {
 	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
-	const [team, scrims, discoveryTeams] = await Promise.all([
+	const { pastCursor } = await searchParams;
+	const [team, { scrims, nextCursor }, discoveryTeams] = await Promise.all([
 		getTeamWithRoster(teamId, user.id),
-		getTeamScrims(teamId),
+		getTeamScrims(teamId, pastCursor),
 		getTeamsForDiscovery(),
 	]);
 	if (!team) notFound();
@@ -143,7 +151,7 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 					/>
 					{!team.currentUser.canManage && (
 						<p className="text-center text-sm text-muted-foreground">
-							Ask a team manager to schedule your first scrim.
+							Team managers can schedule scrims from this page.
 						</p>
 					)}
 				</>
@@ -218,6 +226,13 @@ export default async function TeamScrimsPage({ params }: { params: Promise<{ tea
 								{pastScrims.map((scrim) => (
 									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
 								))}
+								{nextCursor && (
+									<LoadMoreButton
+										nextCursor={nextCursor}
+										cursorParam="pastCursor"
+										label="Load more past scrims"
+									/>
+								)}
 							</div>
 						)}
 					</PageSection>

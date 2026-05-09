@@ -3,7 +3,7 @@
 import { MoreHorizontalIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
 	removeRosterMemberAction,
 	updateRosterStatusAction,
@@ -11,6 +11,16 @@ import {
 	updateTeamMemberPermissionAction,
 } from "@/app/actions/team";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -67,6 +77,7 @@ interface RosterRowProps {
 
 function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProps) {
 	const [isPending, startTransition] = useTransition();
+	const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
 	function changeStatus(status: RosterStatus) {
 		const fd = new FormData();
@@ -155,89 +166,106 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 			)}
 
 			{canManage && (
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<button
-							type="button"
-							className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-						>
-							<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-						</button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" className="w-40">
-						<DropdownMenuLabel className="text-xs">Member type</DropdownMenuLabel>
-						<DropdownMenuItem
-							className="text-xs"
-							onSelect={() =>
-								updateMemberDetails({
-									memberType: member.memberType === "player" ? "staff" : "player",
-									roleInTeam: member.memberType === "staff" ? "damage" : undefined,
-									staffRole: member.memberType === "player" ? "staff" : undefined,
-								})
-							}
-						>
-							{member.memberType === "player" ? "Convert to staff" : "Convert to player"}
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel className="text-xs">
-							{member.memberType === "player" ? "Game role" : "Staff role"}
-						</DropdownMenuLabel>
-						{member.memberType === "player"
-							? (Object.entries(ROLE_LABELS) as Array<["tank" | "damage" | "support", string]>)
-									.filter(([role]) => role !== member.roleInTeam)
-									.map(([role, label]) => (
-										<DropdownMenuItem
-											key={role}
-											className="text-xs"
-											onSelect={() => updateMemberDetails({ roleInTeam: role })}
-										>
-											{label}
-										</DropdownMenuItem>
-									))
-							: STAFF_ROLE_OPTIONS.filter((option) => option.value !== member.staffRole).map(
-									(option) => (
-										<DropdownMenuItem
-											key={option.value}
-											className="text-xs"
-											onSelect={() => updateMemberDetails({ staffRole: option.value })}
-										>
-											{option.label}
-										</DropdownMenuItem>
-									)
-								)}
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel className="text-xs">Change status</DropdownMenuLabel>
-						{STATUS_OPTIONS.filter((o) => o.value !== member.status).map((opt) => (
-							<DropdownMenuItem
-								key={opt.value}
-								className="text-xs"
-								onSelect={() => changeStatus(opt.value)}
+				<>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 							>
-								{opt.label}
+								<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-40">
+							<DropdownMenuLabel className="text-xs">Member type</DropdownMenuLabel>
+							<DropdownMenuItem
+								className="text-xs"
+								onSelect={() =>
+									updateMemberDetails({
+										memberType: member.memberType === "player" ? "staff" : "player",
+										roleInTeam: member.memberType === "staff" ? "damage" : undefined,
+										staffRole: member.memberType === "player" ? "staff" : undefined,
+									})
+								}
+							>
+								{member.memberType === "player" ? "Convert to staff" : "Convert to player"}
 							</DropdownMenuItem>
-						))}
-						{canManageAdmins && (
-							<>
-								<DropdownMenuSeparator />
+							<DropdownMenuSeparator />
+							<DropdownMenuLabel className="text-xs">
+								{member.memberType === "player" ? "Game role" : "Staff role"}
+							</DropdownMenuLabel>
+							{member.memberType === "player"
+								? (Object.entries(ROLE_LABELS) as Array<["tank" | "damage" | "support", string]>)
+										.filter(([role]) => role !== member.roleInTeam)
+										.map(([role, label]) => (
+											<DropdownMenuItem
+												key={role}
+												className="text-xs"
+												onSelect={() => updateMemberDetails({ roleInTeam: role })}
+											>
+												{label}
+											</DropdownMenuItem>
+										))
+								: STAFF_ROLE_OPTIONS.filter((option) => option.value !== member.staffRole).map(
+										(option) => (
+											<DropdownMenuItem
+												key={option.value}
+												className="text-xs"
+												onSelect={() => updateMemberDetails({ staffRole: option.value })}
+											>
+												{option.label}
+											</DropdownMenuItem>
+										)
+									)}
+							<DropdownMenuSeparator />
+							<DropdownMenuLabel className="text-xs">Change status</DropdownMenuLabel>
+							{STATUS_OPTIONS.filter((o) => o.value !== member.status).map((opt) => (
 								<DropdownMenuItem
+									key={opt.value}
 									className="text-xs"
-									onSelect={() =>
-										changePermissionRole(member.permissionRole === "admin" ? "member" : "admin")
-									}
+									onSelect={() => changeStatus(opt.value)}
 								>
-									{member.permissionRole === "admin" ? "Remove admin" : "Make admin"}
+									{opt.label}
 								</DropdownMenuItem>
-							</>
-						)}
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							className="text-xs text-destructive focus:text-destructive"
-							onSelect={remove}
-						>
-							Remove from team
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+							))}
+							{canManageAdmins && (
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										className="text-xs"
+										onSelect={() =>
+											changePermissionRole(member.permissionRole === "admin" ? "member" : "admin")
+										}
+									>
+										{member.permissionRole === "admin" ? "Remove admin" : "Make admin"}
+									</DropdownMenuItem>
+								</>
+							)}
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								className="text-xs text-destructive focus:text-destructive"
+								onSelect={() => setRemoveDialogOpen(true)}
+							>
+								Remove from team
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+
+					<AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
+								<AlertDialogDescription>
+									This will remove them from the team roster. This action cannot be undone.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogAction onClick={remove}>Remove member</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</>
 			)}
 		</div>
 	);

@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, lt } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
@@ -21,15 +21,27 @@ async function getUnreadNotificationCount(userId: string) {
 // GET / — List user's notifications
 notificationRoutes.get("/", async (c) => {
 	const user = c.get("user");
+	const cursor = c.req.query("cursor") ?? null;
+	const limitParam = Number(c.req.query("limit") ?? "20");
+	const limit = Math.min(Math.max(1, limitParam), 50);
+
+	const whereClause = cursor
+		? and(eq(notificationTable.userId, user.id), lt(notificationTable.createdAt, new Date(cursor)))
+		: eq(notificationTable.userId, user.id);
 
 	const rows = await db.query.notificationTable.findMany({
-		where: eq(notificationTable.userId, user.id),
+		where: whereClause,
 		orderBy: [desc(notificationTable.createdAt)],
-		limit: 30,
+		limit: limit + 1,
 	});
 
+	const hasMore = rows.length > limit;
+	const items = hasMore ? rows.slice(0, limit) : rows;
+	const nextCursor = hasMore ? items[items.length - 1].createdAt.toISOString() : null;
+
 	return c.json({
-		data: await Promise.all(rows.map((row) => mapNotification(row, user.id))),
+		data: await Promise.all(items.map((row) => mapNotification(row, user.id))),
+		nextCursor,
 	});
 });
 

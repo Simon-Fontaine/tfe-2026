@@ -11,13 +11,22 @@ import { apiRoutes } from "@/lib/routes";
 
 export type { OcrJobSummary, ScrimDetail, ScrimSummary };
 
-export const getTeamScrims = cache(async (teamId: string): Promise<ScrimSummary[]> => {
-	const res = await apiGet<ScrimSummary[]>(
-		`${apiRoutes.scrims.root}?teamId=${encodeURIComponent(teamId)}`
-	);
-	if ("data" in res) return res.data;
-	throw new Error(res.error);
-});
+export const getTeamScrims = cache(
+	async (
+		teamId: string,
+		pastCursor?: string
+	): Promise<{ scrims: ScrimSummary[]; nextCursor: string | null }> => {
+		const url = pastCursor
+			? `${apiRoutes.scrims.root}?teamId=${encodeURIComponent(teamId)}&cursor=${encodeURIComponent(pastCursor)}&limit=20`
+			: `${apiRoutes.scrims.root}?teamId=${encodeURIComponent(teamId)}&limit=20`;
+		const res = await apiGet<ScrimSummary[]>(url);
+		if ("data" in res) {
+			const paginated = res as unknown as { data: ScrimSummary[]; nextCursor: string | null };
+			return { scrims: paginated.data, nextCursor: paginated.nextCursor ?? null };
+		}
+		throw new Error(res.error);
+	}
+);
 
 export const getScrimById = cache(async (scrimId: string): Promise<ScrimDetail | null> => {
 	const result = await getScrimRouteState(scrimId);

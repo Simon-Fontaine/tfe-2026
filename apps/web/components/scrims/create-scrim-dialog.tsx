@@ -144,8 +144,8 @@ export function CreateScrimDialog({ children, teamId, opponentOptions }: CreateS
 				<DialogHeader>
 					<DialogTitle>New scrim request</DialogTitle>
 					<DialogDescription>
-						Create a direct team-to-team scrim request. Open marketplace listings are being rebuilt
-						separately, so this flow targets a specific opponent team.
+						Send a direct scrim request to another team. Set your preferred schedule, format, and
+						any notes for the team manager.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -170,10 +170,7 @@ export function CreateScrimDialog({ children, teamId, opponentOptions }: CreateS
 								</option>
 							))}
 						</select>
-						<FieldDescription>
-							Direct requests keep this slice coherent while open scrim discovery is still being
-							rebuilt.
-						</FieldDescription>
+						<FieldDescription>Choose the team you want to scrim against.</FieldDescription>
 						<FieldError>{getFieldErrorText(fieldErrors, "awayTeamId")}</FieldError>
 					</Field>
 
