@@ -3,8 +3,7 @@ import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getOrgsForUser } from "@/lib/data/orgs";
-import { getMyRecruitmentListings, getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export type WorkspaceSession = Awaited<ReturnType<typeof getCurrentSession>> & {
 	session: NonNullable<Awaited<ReturnType<typeof getCurrentSession>>["session"]>;
@@ -22,7 +21,7 @@ export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
 	const deletionRes = await apiGet<{ isPending: boolean }>(
 		apiRoutes.settings.account.deletion.root
 	);
-	if ("data" in deletionRes && deletionRes.data.isPending) redirect("/deletion-pending");
+	if ("data" in deletionRes && deletionRes.data.isPending) redirect(appRoutes.deletionPending);
 
 	return { session, user };
 }
@@ -50,13 +49,10 @@ export async function getWorkspaceShellData(userId: string) {
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));
 
-	const myListings = await getMyRecruitmentListings();
-	const applicationsByListing = await Promise.all(
-		myListings.map((l) => getRecruitmentApplicationsForListing(l.id))
+	const pendingRes = await apiGet<{ count: number }>(
+		apiRoutes.recruitment.applications.pendingCount
 	);
-	const pendingApplicationCount = applicationsByListing
-		.flat()
-		.filter((a) => a.status === "pending").length;
+	const pendingApplicationCount = "data" in pendingRes ? pendingRes.data.count : 0;
 
 	return {
 		unreadCount,

@@ -1,3 +1,4 @@
+import { appRoutes } from "@scrimflow/shared";
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
@@ -5,7 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
  * Fast cookie presence check only; deep DB validation happens in Server Components.
  */
 
-const PROTECTED_PREFIXES = ["/app", "/onboarding", "/deletion-pending"];
+const PROTECTED_PREFIXES = ["/app", "/onboarding", appRoutes.deletionPending];
 const AUTH_PATH = "/auth";
 
 export function proxy(request: NextRequest) {

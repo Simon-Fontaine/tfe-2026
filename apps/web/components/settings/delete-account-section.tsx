@@ -4,6 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+	appRoutes,
 	type DeleteAccountInput,
 	DeleteAccountSchema,
 	type VerifyCodeInput,
@@ -69,7 +70,7 @@ export function DeleteAccountSection() {
 			if (result.error) {
 				toast.error(result.error);
 			} else {
-				router.push("/deletion-pending");
+				router.push(appRoutes.deletionPending);
 			}
 		});
 	}
