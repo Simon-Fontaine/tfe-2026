@@ -174,13 +174,13 @@ emailRoutes.post("/verify", async (c) => {
 	const client = c.get("client");
 	const geo = await fetchGeoData(client.ip);
 
-	sendSecurityAlertEmail({
+	void sendSecurityAlertEmail({
 		to: user.email,
 		ip: client.ip,
 		device: client.deviceName,
 		geo,
 		alertType: "email_changed",
-	}).catch(() => {});
+	});
 
 	writeAuditLog(
 		session.userId,

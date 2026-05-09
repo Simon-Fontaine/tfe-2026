@@ -115,14 +115,14 @@ credentialRoutes.post("/passkey/disable/confirm", async (c) => {
 	const client = c.get("client");
 	const geo = await fetchGeoData(client.ip);
 
-	sendSecurityAlertEmail({
+	void sendSecurityAlertEmail({
 		to: user.email,
 		ip: client.ip,
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_disabled",
 		twoFactorMethod: "passkey",
-	}).catch(() => {});
+	});
 
 	writeAuditLog(
 		session.userId,
@@ -237,14 +237,14 @@ credentialRoutes.post("/security-key/disable/confirm", async (c) => {
 	const client = c.get("client");
 	const geo = await fetchGeoData(client.ip);
 
-	sendSecurityAlertEmail({
+	void sendSecurityAlertEmail({
 		to: user.email,
 		ip: client.ip,
 		device: client.deviceName,
 		geo,
 		alertType: "two_factor_disabled",
 		twoFactorMethod: "security_key",
-	}).catch(() => {});
+	});
 
 	writeAuditLog(
 		session.userId,
