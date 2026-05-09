@@ -196,6 +196,7 @@ export const apiRoutes = {
 			byId: (applicationId: string) => `/api/recruitment/applications/${applicationId}`,
 			decision: (applicationId: string) =>
 				`/api/recruitment/applications/${applicationId}/decision`,
+			pendingCount: "/api/recruitment/applications/pending-count",
 		},
 	},
 	scrims: {
@@ -259,6 +260,7 @@ export const appRoutes = {
 	inbox: "/app/inbox",
 	calendar: "/app/calendar",
 	profile: "/app/profile",
+	deletionPending: "/deletion-pending",
 	settings: {
 		root: "/app/settings",
 		account: "/app/settings/account",
