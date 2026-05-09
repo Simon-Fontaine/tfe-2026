@@ -4,10 +4,10 @@ import {
 	EditChatMessageSchema,
 	ReadConversationSchema,
 	SendChatMessageSchema,
+	TEAM_VIEWABLE_STATUSES,
 } from "@scrimflow/shared";
 import { Hono } from "hono";
 import * as v from "valibot";
-import { validateSessionById } from "@/auth/session";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import {
@@ -41,28 +41,23 @@ import {
 	markMessagesReadForUser,
 } from "@/utils/chat";
 import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
+import {
+	createWsSessionGuard,
+	parseWsCommand,
+	type WsErrorCode,
+	type WsRouteSocket,
+} from "@/utils/ws-session";
 import { upgradeWebSocket } from "@/websocket";
 
 const chatRoutes = new Hono<AuthEnv>();
-const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
-type ChatRouteSocket = {
-	send: (value: string) => void;
-	close?: (code?: number, reason?: string) => void;
-};
-
 function sendChatError(
-	ws: ChatRouteSocket,
+	ws: WsRouteSocket,
 	params: {
 		error: string;
-		code:
-			| "access_denied"
-			| "internal_error"
-			| "invalid_payload"
-			| "missing_field"
-			| "session_invalid";
+		code: WsErrorCode;
 		retryable: boolean;
 		conversationId?: string;
 	}
@@ -76,34 +71,11 @@ chatRoutes.get(
 		const user = c.get("user");
 		const session = c.get("session");
 
-		async function ensureActiveSession() {
-			const validation = await validateSessionById(session.id);
-			if (validation.valid) return true;
+		const ensureActiveSession = createWsSessionGuard(session.id, disconnectChatSession);
 
-			disconnectChatSession(session.id, validation.reason);
-			return false;
-		}
-
-		async function handleCommand(raw: string, ws: ChatRouteSocket) {
-			let parsed: ChatClientCommand;
-			try {
-				parsed = JSON.parse(raw) as ChatClientCommand;
-			} catch {
-				sendChatError(ws, {
-					error: "Invalid websocket payload.",
-					code: "invalid_payload",
-					retryable: false,
-				});
-				return;
-			}
-			if (!parsed?.type) {
-				sendChatError(ws, {
-					error: "Invalid websocket payload.",
-					code: "invalid_payload",
-					retryable: false,
-				});
-				return;
-			}
+		async function handleCommand(raw: string, ws: WsRouteSocket) {
+			const parsed = parseWsCommand<ChatClientCommand>(raw, ws, sendChatError);
+			if (!parsed) return;
 
 			if (parsed.type === "ping") {
 				if (!(await ensureActiveSession())) return;

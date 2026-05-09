@@ -1,7 +1,6 @@
 import type { AppRealtimeClientCommand } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { validateSessionById } from "@/auth/session";
 import { db } from "@/db";
 import { scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
@@ -15,25 +14,21 @@ import {
 	unsubscribeSocketFromTeam,
 } from "@/realtime/scrim-hub";
 import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
+import {
+	createWsSessionGuard,
+	parseWsCommand,
+	type WsErrorCode,
+	type WsRouteSocket,
+} from "@/utils/ws-session";
 import { upgradeWebSocket } from "@/websocket";
 
 const realtimeRoutes = new Hono<AuthEnv>();
 
-type RealtimeRouteSocket = {
-	send: (value: string) => void;
-	close?: (code?: number, reason?: string) => void;
-};
-
 function sendRealtimeError(
-	ws: RealtimeRouteSocket,
+	ws: WsRouteSocket,
 	params: {
 		error: string;
-		code:
-			| "access_denied"
-			| "internal_error"
-			| "invalid_payload"
-			| "missing_field"
-			| "session_invalid";
+		code: WsErrorCode;
 		retryable: boolean;
 		scrimId?: string;
 		teamId?: string;
@@ -73,35 +68,11 @@ realtimeRoutes.get(
 		const user = c.get("user");
 		const session = c.get("session");
 
-		async function ensureActiveSession() {
-			const validation = await validateSessionById(session.id);
-			if (validation.valid) return true;
+		const ensureActiveSession = createWsSessionGuard(session.id, disconnectRealtimeSession);
 
-			disconnectRealtimeSession(session.id, validation.reason);
-			return false;
-		}
-
-		async function handleCommand(raw: string, ws: RealtimeRouteSocket) {
-			let parsed: AppRealtimeClientCommand;
-			try {
-				parsed = JSON.parse(raw) as AppRealtimeClientCommand;
-			} catch {
-				sendRealtimeError(ws, {
-					error: "Invalid websocket payload.",
-					code: "invalid_payload",
-					retryable: false,
-				});
-				return;
-			}
-
-			if (!parsed?.type) {
-				sendRealtimeError(ws, {
-					error: "Invalid websocket payload.",
-					code: "invalid_payload",
-					retryable: false,
-				});
-				return;
-			}
+		async function handleCommand(raw: string, ws: WsRouteSocket) {
+			const parsed = parseWsCommand<AppRealtimeClientCommand>(raw, ws, sendRealtimeError);
+			if (!parsed) return;
 
 			if (parsed.type === "ping") {
 				if (!(await ensureActiveSession())) return;
