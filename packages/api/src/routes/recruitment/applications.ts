@@ -206,6 +206,15 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 		return c.json({ success: true });
 	}
 
+	// CR-04: Validate LFT applicantTeamId before entering the transaction to avoid unhandled throws.
+	if (
+		parsed.output.action === "accept" &&
+		application.listing.type === "lft" &&
+		!application.applicantTeamId
+	) {
+		return c.json({ error: "LFT listings require an applicant team to accept." }, 400);
+	}
+
 	await db.transaction(async (tx) => {
 		const preferredGameRole =
 			parsed.output.gameRole ??
