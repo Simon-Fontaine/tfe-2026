@@ -25,6 +25,12 @@ import {
 
 const recruitmentApplicationsRoutes = new Hono<AuthEnv>();
 
+recruitmentApplicationsRoutes.get("/pending-count", async (c) => {
+	const user = c.get("user");
+	const count = await countManagedPendingApplications(user.id);
+	return c.json({ data: { count } });
+});
+
 recruitmentApplicationsRoutes.get("/mine", async (c) => {
 	const user = c.get("user");
 	const rows = await db.query.recruitmentApplicationTable.findMany({

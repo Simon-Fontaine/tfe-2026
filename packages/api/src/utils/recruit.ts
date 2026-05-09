@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -62,32 +62,40 @@ export async function canManageRecruitmentListing(
 	return false;
 }
 
-export async function countManagedPendingApplications(userId: string) {
-	const listings = await db.query.recruitmentListingTable.findMany({
-		columns: {
-			id: true,
-			userId: true,
-			ownerType: true,
-			teamId: true,
-			organizationId: true,
-		},
-		with: {
-			applications: {
-				where: eq(recruitmentApplicationTable.status, "pending"),
-				columns: { id: true },
-			},
-		},
-	});
+export async function countManagedPendingApplications(userId: string): Promise<number> {
+	// Step 1: Get all team IDs the user belongs to
+	const teamMemberships = await db
+		.select({ teamId: teamRosterTable.teamId })
+		.from(teamRosterTable)
+		.where(eq(teamRosterTable.userId, userId));
+	const ownedTeamIds = teamMemberships.map((m) => m.teamId);
 
-	let pendingCount = 0;
-	for (const listing of listings) {
-		if (listing.applications.length === 0) continue;
-		if (await canManageRecruitmentListing(listing, userId)) {
-			pendingCount += listing.applications.length;
-		}
+	// Step 2: Get all org IDs the user belongs to
+	const orgMemberships = await db
+		.select({ orgId: organizationMemberTable.organizationId })
+		.from(organizationMemberTable)
+		.where(eq(organizationMemberTable.userId, userId));
+	const ownedOrgIds = orgMemberships.map((m) => m.orgId);
+
+	// Step 3: Count pending applications for listings owned by the user (directly, via team, or via org)
+	const ownershipConditions = [eq(recruitmentListingTable.userId, userId)];
+	if (ownedTeamIds.length > 0) {
+		ownershipConditions.push(inArray(recruitmentListingTable.teamId, ownedTeamIds));
+	}
+	if (ownedOrgIds.length > 0) {
+		ownershipConditions.push(inArray(recruitmentListingTable.organizationId, ownedOrgIds));
 	}
 
-	return pendingCount;
+	const [result] = await db
+		.select({ count: count() })
+		.from(recruitmentApplicationTable)
+		.innerJoin(
+			recruitmentListingTable,
+			eq(recruitmentApplicationTable.listingId, recruitmentListingTable.id)
+		)
+		.where(and(eq(recruitmentApplicationTable.status, "pending"), or(...ownershipConditions)));
+
+	return result?.count ?? 0;
 }
 
 export async function ensureOrganizationMembership(
