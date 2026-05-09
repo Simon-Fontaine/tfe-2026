@@ -18,9 +18,12 @@ export function proxy(request: NextRequest) {
 	const hasToken = request.cookies.has("session_token");
 	if (hasToken) return NextResponse.next();
 
-	// Preserve destination for post-login redirect
+	// Preserve destination for post-login redirect.
+	// Only forward a next destination that is a same-origin relative path.
+	// Reject protocol-relative paths (//host/...) to prevent open redirect.
 	const loginUrl = new URL(AUTH_PATH, request.url);
-	loginUrl.searchParams.set("next", pathname);
+	const safePath = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/app";
+	loginUrl.searchParams.set("next", safePath);
 	return NextResponse.redirect(loginUrl);
 }
 
