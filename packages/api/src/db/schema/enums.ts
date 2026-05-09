@@ -210,6 +210,9 @@ export const auditActionEnum = pgEnum("audit_action", [
 	"new_location_detected",
 ]);
 
+/** Player stat side in a scrim map — which team perspective the OCR extracted. */
+export const playerStatSideEnum = pgEnum("player_stat_side", ["home", "away", "unknown"]);
+
 /** Notification delivery channel. */
 export const notificationTypeEnum = pgEnum("notification_type", [
 	"scrim_request",

@@ -28,6 +28,7 @@ import {
 	orgRoleEnum,
 	ow2RankEnum,
 	ow2RoleEnum,
+	playerStatSideEnum,
 	recruitmentApplicationStatusEnum,
 	recruitmentListingCategoryEnum,
 	recruitmentListingStatusEnum,
@@ -891,7 +892,7 @@ export const scrimPlayerStatTable = pgTable(
 			.references(() => scrimMapTable.id, { onDelete: "cascade" }),
 
 		/** Which side: home or away. */
-		side: text("side").notNull(), // "home" | "away"
+		side: playerStatSideEnum("side").notNull(),
 
 		/** Resolved platform user. Null for unregistered opponents. */
 		userId: uuid("user_id").references(() => userTable.id, { onDelete: "set null" }),
