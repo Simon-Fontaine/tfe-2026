@@ -215,6 +215,27 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 		return c.json({ error: "LFT listings require an applicant team to accept." }, 400);
 	}
 
+	if (
+		parsed.output.action === "accept" &&
+		application.listing.type === "lfp" &&
+		(!application.listing.teamId || !application.listing.organizationId)
+	) {
+		return c.json({ error: "LFP listings require a team and organisation to accept." }, 400);
+	}
+
+	if (
+		parsed.output.action === "accept" &&
+		application.listing.type === "lfs" &&
+		application.listing.ownerType === "player" &&
+		!application.applicantTeamId &&
+		!application.applicantOrganizationId
+	) {
+		return c.json(
+			{ error: "Accepting this listing requires the applicant to specify a team or organisation." },
+			400
+		);
+	}
+
 	await db.transaction(async (tx) => {
 		const preferredGameRole =
 			parsed.output.gameRole ??
@@ -227,10 +248,6 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 
 		switch (application.listing.type) {
 			case "lfp": {
-				if (!application.listing.teamId || !application.listing.organizationId) {
-					throw new Error("Team recruitment listings require a team and organisation.");
-				}
-
 				await ensureOrganizationMembership(tx, {
 					organizationId: application.listing.organizationId,
 					userId: application.applicantUserId,
@@ -335,6 +352,10 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 							memberType: "staff",
 							staffRole: preferredStaffRole,
 						});
+					} else {
+						throw new Error(
+							"LFS player-owner acceptance requires an applicant team or organisation."
+						);
 					}
 				}
 				break;
