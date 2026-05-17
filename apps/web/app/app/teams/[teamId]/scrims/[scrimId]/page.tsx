@@ -116,7 +116,10 @@ export default async function TeamScrimDetailPage({
 		scrim.status === "disputed" &&
 		(team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin");
 	const canUploadEvidence =
-		!!scrim.awayTeam && scrim.status !== "pending" && scrim.status !== "cancelled";
+		team.currentUser.canManage &&
+		!!scrim.awayTeam &&
+		scrim.status !== "pending" &&
+		scrim.status !== "cancelled";
 	const disputeResolution =
 		scrim.dispute.resolution ?? (scrim.status === "disputed" ? "pending" : null);
 
@@ -251,7 +254,7 @@ export default async function TeamScrimDetailPage({
 								<p className="mt-1 text-xs text-muted-foreground">
 									{team.currentUser.canManage
 										? "You can accept requests, report results, and review confirmations from this team workspace."
-										: "You can review scrim details here and upload evidence once the match is active."}
+										: "You can review scrim details and follow match status from this team workspace."}
 								</p>
 							</div>
 						</div>
