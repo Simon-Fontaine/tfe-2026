@@ -70,11 +70,16 @@ export async function countManagedPendingApplications(userId: string): Promise<n
 		.where(eq(teamRosterTable.userId, userId));
 	const ownedTeamIds = teamMemberships.map((m) => m.teamId);
 
-	// Step 2: Get all org IDs the user belongs to
+	// Step 2: Get all org IDs the user can manage
 	const orgMemberships = await db
 		.select({ orgId: organizationMemberTable.organizationId })
 		.from(organizationMemberTable)
-		.where(eq(organizationMemberTable.userId, userId));
+		.where(
+			and(
+				eq(organizationMemberTable.userId, userId),
+				inArray(organizationMemberTable.role, ["owner", "admin"])
+			)
+		);
 	const ownedOrgIds = orgMemberships.map((m) => m.orgId);
 
 	// Step 3: Count pending applications for listings owned by the user (directly, via team, or via org)

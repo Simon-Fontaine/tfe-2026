@@ -16,7 +16,8 @@
 			"!**/next-env.d.ts",
 			"!**/.agents",
 			"!**/.claude",
-			"!**/.codex"
+			"!**/.codex",
+			"!**/drizzle/meta"
 		]
 	},
 	"formatter": {

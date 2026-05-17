@@ -1,6 +1,7 @@
-import { rateLimits } from "@scrimflow/shared";
+import { ChangePasswordSchema, rateLimits } from "@scrimflow/shared";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
+import * as v from "valibot";
 import { writeAuditLog } from "@/auth/audit";
 import { sendSecurityAlertEmail } from "@/auth/email-security";
 import { hashPassword, verifyPasswordHash } from "@/auth/password";
@@ -18,6 +19,7 @@ import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { disconnectChatSession } from "@/realtime/chat-hub";
 import { disconnectRealtimeSession } from "@/realtime/scrim-hub";
+import { extractErrors } from "@/routes/auth/utils";
 import { fetchGeoData } from "@/utils/geo";
 
 const passwordRoutes = new Hono<RequestContextEnv & AuthEnv>();
@@ -107,19 +109,20 @@ passwordRoutes.post("/confirm", async (c) => {
 		);
 	}
 
-	const body = await c.req.json<{ code: string; newPassword: string }>().catch(() => null);
-	if (!body?.code || !body?.newPassword) {
-		return c.json({ error: "Code and new password are required." }, 400);
-	}
+	const rawBody = await c.req.json().catch(() => null);
+	if (!rawBody) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(ChangePasswordSchema, rawBody);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const result = await validateAndConsumeSensitiveAction(
 		session.userId,
 		"password_change",
-		body.code
+		parsed.output.code
 	);
 	if (!result.success) return c.json({ error: "Invalid or expired verification code." }, 400);
 
-	const newHash = await hashPassword(body.newPassword);
+	const newHash = await hashPassword(parsed.output.newPassword);
 	await db.update(userTable).set({ passwordHash: newHash }).where(eq(userTable.id, session.userId));
 
 	const revokedSessionIds = await db
