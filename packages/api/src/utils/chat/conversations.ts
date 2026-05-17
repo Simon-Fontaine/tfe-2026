@@ -22,7 +22,7 @@ async function computeUnreadCount(
 		.where(
 			and(
 				eq(chatMessageTable.channelId, channelId),
-				ne(chatMessageTable.senderId, userId),
+				or(isNull(chatMessageTable.senderId), ne(chatMessageTable.senderId, userId)),
 				lastReadAt ? gt(chatMessageTable.createdAt, lastReadAt) : undefined
 			)
 		);

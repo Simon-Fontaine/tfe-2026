@@ -63,11 +63,11 @@ export async function canManageRecruitmentListing(
 }
 
 export async function countManagedPendingApplications(userId: string): Promise<number> {
-	// Step 1: Get all team IDs the user belongs to
+	// Step 1: Get all team IDs the user can manage (admin only)
 	const teamMemberships = await db
 		.select({ teamId: teamRosterTable.teamId })
 		.from(teamRosterTable)
-		.where(eq(teamRosterTable.userId, userId));
+		.where(and(eq(teamRosterTable.userId, userId), eq(teamRosterTable.permissionRole, "admin")));
 	const ownedTeamIds = teamMemberships.map((m) => m.teamId);
 
 	// Step 2: Get all org IDs the user can manage
@@ -588,15 +588,9 @@ export async function sendRecruitmentSystemMessage(channelId: string, content: s
 	});
 	if (!channel) return;
 
-	const firstMember = await db.query.chatChannelMemberTable.findFirst({
-		where: eq(chatChannelMemberTable.channelId, channelId),
-		columns: { userId: true },
-	});
-	if (!firstMember) return;
-
 	await db.insert(chatMessageTable).values({
 		channelId,
-		senderId: firstMember.userId,
+		senderId: null,
 		content,
 		isSystemMessage: true,
 	});

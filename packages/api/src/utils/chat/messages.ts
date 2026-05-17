@@ -147,7 +147,8 @@ export async function editMessageForUser(params: {
 	});
 
 	if (!message) return { status: "not_found" };
-	if (message.senderId !== params.userId) return { status: "forbidden" };
+	if (message.senderId === null || message.senderId !== params.userId)
+		return { status: "forbidden" };
 	if (message.deletedAt) return { status: "deleted" };
 
 	await db
@@ -173,7 +174,8 @@ export async function deleteMessageForUser(params: {
 	});
 
 	if (!message) return { status: "not_found" };
-	if (message.senderId !== params.userId) return { status: "forbidden" };
+	if (message.senderId === null || message.senderId !== params.userId)
+		return { status: "forbidden" };
 
 	await db
 		.update(chatMessageTable)
