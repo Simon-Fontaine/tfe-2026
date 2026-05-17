@@ -1272,9 +1272,7 @@ export const chatMessageTable = pgTable(
 		channelId: uuid("channel_id")
 			.notNull()
 			.references(() => chatChannelTable.id, { onDelete: "cascade" }),
-		senderId: uuid("sender_id")
-			.notNull()
-			.references(() => userTable.id, { onDelete: "cascade" }),
+		senderId: uuid("sender_id").references(() => userTable.id, { onDelete: "set null" }),
 
 		/** Message content (markdown-lite). */
 		content: text("content").notNull(),

@@ -214,9 +214,9 @@ export async function listMessagesForUser(params: {
 			items: items.map((message) => ({
 				id: message.id,
 				conversationId: message.channelId,
-				senderId: message.sender.id,
-				senderDisplayName: message.sender.displayName,
-				senderAvatarUrl: message.sender.avatarUrl,
+				senderId: message.sender?.id ?? null,
+				senderDisplayName: message.sender?.displayName ?? "[deleted user]",
+				senderAvatarUrl: message.sender?.avatarUrl ?? null,
 				content: normalizeMessageContent(message.content, message.deletedAt ?? null),
 				replyToMessageId: message.replyToMessageId ?? null,
 				isSystemMessage: message.isSystemMessage,
