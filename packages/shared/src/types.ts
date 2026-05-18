@@ -153,6 +153,8 @@ export type ParticipationIntent =
 	| "schedule_scrims"
 	| "just_browsing";
 export type AvailabilityIntent = "weekdays" | "weekends" | "flexible" | "not_sure";
+export type ProfileVisibility = "public" | "teams_only" | "private";
+export type PlayerRecruitingStatus = "looking" | "unavailable";
 export type OnboardingProgressData = {
 	battletag?: string;
 	primaryRole?: OW2Role | null;
@@ -1189,14 +1191,17 @@ export type PlayerProfileFull = {
 	secondaryRole: OW2Role | null;
 	rank: string | null;
 	rankDivision: number | null;
+	profileVisibility: ProfileVisibility;
 	participationIntent: ParticipationIntent;
 	availabilityIntent: AvailabilityIntent;
+	recruitingStatus: PlayerRecruitingStatus;
 	heroes: {
 		id: string;
 		displayName: string;
 		role: OW2Role;
 		imageUrl: string | null;
 	}[];
+	teamHistory: PlayerTeamHistoryEntry[];
 };
 
 export type PlayerStats = {
@@ -1257,7 +1262,12 @@ export type PublicPlayerTeamMembership = {
 	tag: string;
 	organizationName: string;
 	organizationSlug: string;
+	status: TeamViewableStatus;
+	joinedAt: IsoDateString;
+	leftAt: IsoDateString | null;
 };
+
+export type PlayerTeamHistoryEntry = PublicPlayerTeamMembership;
 
 export type PublicPlayerSummary = {
 	id: string;
@@ -1269,6 +1279,9 @@ export type PublicPlayerSummary = {
 	secondaryRole: OW2Role | null;
 	rank: string | null;
 	rankDivision: number | null;
+	profileVisibility: "public";
+	availabilityIntent: AvailabilityIntent | null;
+	recruitingStatus: PlayerRecruitingStatus;
 	openListings: RecruitmentListingSummary[];
 };
 

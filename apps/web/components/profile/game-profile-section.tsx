@@ -2,10 +2,11 @@
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { type UpdateGameProfileInput, UpdateGameProfileSchema } from "@scrimflow/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { updateGameProfileAction } from "@/app/actions/profile/update-game-profile";
 import { HeroPoolPicker } from "@/components/shared/hero-pool-picker";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -19,6 +20,26 @@ import { cn } from "@/lib/utils";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const VISIBILITY_OPTIONS = [
+	{ value: "public", label: "Public", description: "Visible on public player pages" },
+	{ value: "teams_only", label: "Teams only", description: "Hidden from public discovery" },
+	{ value: "private", label: "Private", description: "Only available in your workspace" },
+] as const;
+
+const PARTICIPATION_OPTIONS = [
+	{ value: "find_team", label: "Looking", description: "Eligible for player recruiting" },
+	{ value: "recruit_players", label: "Recruiting", description: "Focused on recruiting players" },
+	{ value: "schedule_scrims", label: "Scrims", description: "Focused on scheduling scrims" },
+	{ value: "just_browsing", label: "Unavailable", description: "Hidden from LFT discovery" },
+] as const;
+
+const AVAILABILITY_OPTIONS = [
+	{ value: "weekdays", label: "Weekdays" },
+	{ value: "weekends", label: "Weekends" },
+	{ value: "flexible", label: "Flexible" },
+	{ value: "not_sure", label: "Not sure" },
+] as const;
+
 interface GameProfileSectionProps {
 	profile: PlayerProfileFull;
 	heroes: HeroRow[];
@@ -30,7 +51,7 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 	);
 	const [heroError, setHeroError] = useState<string | null>(null);
 
-	const { submit, isPending } = useFormAction(updateGameProfileAction, {
+	const { state, submit, isPending } = useFormAction(updateGameProfileAction, {
 		loadingMessage: "Saving game profile…",
 		successMessage: "Game profile updated",
 	});
@@ -44,11 +65,27 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 			rank: (profile.rank as UpdateGameProfileInput["rank"]) ?? null,
 			rankDivision: profile.rankDivision ?? null,
 			heroPool: profile.heroes.map((h) => h.id),
+			profileVisibility: profile.profileVisibility,
+			participationIntent: profile.participationIntent,
+			availabilityIntent: profile.availabilityIntent,
 		},
 	});
 
 	const watchedRank = form.watch("rank");
 	const showDivision = !!watchedRank;
+
+	useEffect(() => {
+		if (!state?.fieldErrors) return;
+		for (const [field, messages] of Object.entries(state.fieldErrors)) {
+			const message = messages?.[0];
+			if (!message) continue;
+			if (field === "heroPool") {
+				setHeroError(message);
+				continue;
+			}
+			form.setError(field as keyof UpdateGameProfileInput, { message });
+		}
+	}, [form, state?.fieldErrors]);
 
 	function toggleHero(heroId: string) {
 		setHeroError(null);
@@ -74,6 +111,9 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 		if (values.rankDivision !== null && values.rankDivision !== undefined) {
 			formData.set("rankDivision", String(values.rankDivision));
 		}
+		formData.set("profileVisibility", values.profileVisibility);
+		formData.set("participationIntent", values.participationIntent);
+		formData.set("availabilityIntent", values.availabilityIntent);
 		for (const hero of selectedHeroes) formData.append("heroPool[]", hero);
 
 		submit(formData);
@@ -293,6 +333,123 @@ export function GameProfileSection({ profile, heroes }: GameProfileSectionProps)
 						/>
 
 						{heroError && <p className="text-xs text-destructive">{heroError}</p>}
+					</div>
+
+					<div className="space-y-1.5">
+						<p className="text-xs font-medium">Profile visibility</p>
+						<Controller
+							name="profileVisibility"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<>
+									<div className="grid gap-2 sm:grid-cols-3">
+										{VISIBILITY_OPTIONS.map((option) => (
+											<button
+												key={option.value}
+												type="button"
+												data-selected={field.value === option.value}
+												onClick={() => field.onChange(option.value)}
+												className={cn(
+													"border border-border px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+													"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+												)}
+											>
+												<span className="block font-semibold">{option.label}</span>
+												<span className="text-muted-foreground">{option.description}</span>
+											</button>
+										))}
+									</div>
+									{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+								</>
+							)}
+						/>
+					</div>
+
+					<div className="space-y-1.5">
+						<p className="text-xs font-medium">Recruiting intent</p>
+						<Controller
+							name="participationIntent"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<>
+									<div className="grid gap-2 sm:grid-cols-4">
+										{PARTICIPATION_OPTIONS.map((option) => (
+											<button
+												key={option.value}
+												type="button"
+												data-selected={field.value === option.value}
+												onClick={() => field.onChange(option.value)}
+												className={cn(
+													"border border-border px-3 py-2 text-left text-xs transition-colors hover:bg-muted",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+													"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+												)}
+											>
+												<span className="block font-semibold">{option.label}</span>
+												<span className="text-muted-foreground">{option.description}</span>
+											</button>
+										))}
+									</div>
+									{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+								</>
+							)}
+						/>
+					</div>
+
+					<div className="space-y-1.5">
+						<p className="text-xs font-medium">Availability intent</p>
+						<Controller
+							name="availabilityIntent"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<>
+									<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+										{AVAILABILITY_OPTIONS.map((option) => (
+											<button
+												key={option.value}
+												type="button"
+												data-selected={field.value === option.value}
+												onClick={() => field.onChange(option.value)}
+												className={cn(
+													"border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+													"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+												)}
+											>
+												{option.label}
+											</button>
+										))}
+									</div>
+									{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+								</>
+							)}
+						/>
+					</div>
+
+					<div className="space-y-2">
+						<p className="text-xs font-medium">Team history</p>
+						{profile.teamHistory.length === 0 ? (
+							<p className="border border-dashed p-3 text-xs text-muted-foreground">
+								No confirmed team history yet.
+							</p>
+						) : (
+							<div className="divide-y border">
+								{profile.teamHistory.map((team) => (
+									<div key={team.id} className="flex items-center justify-between gap-3 px-3 py-2">
+										<div>
+											<p className="text-sm font-medium">{team.name}</p>
+											<p className="text-xs text-muted-foreground">
+												[{team.tag}] {team.organizationName}
+											</p>
+										</div>
+										<Badge variant="outline" className="text-[10px]">
+											{team.status}
+										</Badge>
+									</div>
+								))}
+							</div>
+						)}
 					</div>
 
 					<Button type="submit" size="sm" disabled={isPending}>

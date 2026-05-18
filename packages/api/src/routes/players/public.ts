@@ -1,5 +1,10 @@
-import type { PublicPlayerDetail, PublicPlayerSummary } from "@scrimflow/shared";
-import { and, asc, eq, or } from "drizzle-orm";
+import type {
+	AvailabilityIntent,
+	PublicPlayerDetail,
+	PublicPlayerSummary,
+	TeamViewableStatus,
+} from "@scrimflow/shared";
+import { and, asc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
@@ -12,8 +17,19 @@ const publicPlayerRoutes = new Hono<AuthEnv>();
 
 publicPlayerRoutes.use("*", optionalAuth);
 
+const isActivelyRecruiting = (profile?: {
+	profileVisibility?: string | null;
+	participationIntent?: string | null;
+}) =>
+	(profile?.profileVisibility ?? "public") === "public" &&
+	profile?.participationIntent === "find_team";
+
+const CONFIRMED_TEAM_HISTORY_STATUSES = ["active", "benched", "inactive"] as const;
+const CURRENT_CONFIRMED_TEAM_STATUSES = ["active", "benched"] as const;
+
 publicPlayerRoutes.get("/", async (c) => {
 	const viewer = c.get("user");
+	const now = new Date();
 	const rows = await db.query.userTable.findMany({
 		columns: {
 			id: true,
@@ -30,10 +46,15 @@ publicPlayerRoutes.get("/", async (c) => {
 					rank: true,
 					rankDivision: true,
 					profileVisibility: true,
+					participationIntent: true,
+					availabilityIntent: true,
 				},
 			},
 			recruitmentListings: {
-				where: eq(recruitmentListingTable.status, "open"),
+				where: and(
+					eq(recruitmentListingTable.status, "open"),
+					or(isNull(recruitmentListingTable.expiresAt), gte(recruitmentListingTable.expiresAt, now))
+				),
 				with: {
 					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
@@ -58,8 +79,11 @@ publicPlayerRoutes.get("/", async (c) => {
 			secondaryRole: row.profile?.secondaryRole ?? null,
 			rank: row.profile?.rank ?? null,
 			rankDivision: row.profile?.rankDivision ?? null,
+			profileVisibility: "public",
+			availabilityIntent: (row.profile?.availabilityIntent ?? null) as AvailabilityIntent | null,
+			recruitingStatus: isActivelyRecruiting(row.profile) ? "looking" : "unavailable",
 			openListings: row.recruitmentListings
-				.filter((post) => post.ownerType === "player")
+				.filter((post) => post.ownerType === "player" && isActivelyRecruiting(row.profile))
 				.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null })),
 		}));
 
@@ -69,6 +93,7 @@ publicPlayerRoutes.get("/", async (c) => {
 publicPlayerRoutes.get("/:username", async (c) => {
 	const viewer = c.get("user");
 	const username = c.req.param("username");
+	const now = new Date();
 
 	const player = await db.query.userTable.findFirst({
 		where: eq(userTable.username, username),
@@ -89,6 +114,8 @@ publicPlayerRoutes.get("/:username", async (c) => {
 					rank: true,
 					rankDivision: true,
 					profileVisibility: true,
+					participationIntent: true,
+					availabilityIntent: true,
 				},
 			},
 			heroPool: {
@@ -104,7 +131,7 @@ publicPlayerRoutes.get("/:username", async (c) => {
 				},
 			},
 			teamRosters: {
-				where: eq(teamRosterTable.status, "active"),
+				where: inArray(teamRosterTable.status, CONFIRMED_TEAM_HISTORY_STATUSES),
 				with: {
 					team: {
 						columns: { id: true, name: true, tag: true, organizationId: true },
@@ -117,7 +144,10 @@ publicPlayerRoutes.get("/:username", async (c) => {
 				},
 			},
 			recruitmentListings: {
-				where: eq(recruitmentListingTable.status, "open"),
+				where: and(
+					eq(recruitmentListingTable.status, "open"),
+					or(isNull(recruitmentListingTable.expiresAt), gte(recruitmentListingTable.expiresAt, now))
+				),
 				with: {
 					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
@@ -136,10 +166,26 @@ publicPlayerRoutes.get("/:username", async (c) => {
 	if (visibility === "teams_only") {
 		const viewerUser = c.get("user");
 		if (!viewerUser) return c.json({ error: "Player not found." }, 404);
+		if (viewerUser.id !== player.id) {
+			const currentTeamIds = player.teamRosters
+				.filter((row) => row.status === "active" || row.status === "benched")
+				.map((row) => row.team.id);
+			if (currentTeamIds.length === 0) return c.json({ error: "Player not found." }, 404);
+
+			const sharedMembership = await db.query.teamRosterTable.findFirst({
+				where: and(
+					eq(teamRosterTable.userId, viewerUser.id),
+					inArray(teamRosterTable.teamId, currentTeamIds),
+					inArray(teamRosterTable.status, CURRENT_CONFIRMED_TEAM_STATUSES)
+				),
+				columns: { id: true },
+			});
+			if (!sharedMembership) return c.json({ error: "Player not found." }, 404);
+		}
 	}
 
 	const openListings = player.recruitmentListings
-		.filter((post) => post.ownerType === "player")
+		.filter((post) => post.ownerType === "player" && isActivelyRecruiting(player.profile))
 		.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null }));
 
 	// Derive team IDs this player is on
@@ -192,6 +238,9 @@ publicPlayerRoutes.get("/:username", async (c) => {
 		secondaryRole: player.profile?.secondaryRole ?? null,
 		rank: player.profile?.rank ?? null,
 		rankDivision: player.profile?.rankDivision ?? null,
+		profileVisibility: "public",
+		availabilityIntent: (player.profile?.availabilityIntent ?? null) as AvailabilityIntent | null,
+		recruitingStatus: isActivelyRecruiting(player.profile) ? "looking" : "unavailable",
 		openListings,
 		battletag: player.profile?.battletag ?? null,
 		heroPool: player.heroPool.map((ph) => ({
@@ -206,6 +255,9 @@ publicPlayerRoutes.get("/:username", async (c) => {
 			tag: r.team.tag,
 			organizationName: r.team.organization?.name ?? "",
 			organizationSlug: r.team.organization?.slug ?? "",
+			status: r.status as TeamViewableStatus,
+			joinedAt: r.joinedAt.toISOString(),
+			leftAt: r.leftAt?.toISOString() ?? null,
 		})),
 		scrimStats,
 	};

@@ -88,6 +88,12 @@ export default async function PlayerProfilePage({
 									{player.rankDivision ? ` ${player.rankDivision}` : ""}
 								</Badge>
 							)}
+							<Badge
+								variant={player.recruitingStatus === "looking" ? "default" : "outline"}
+								className="text-[10px]"
+							>
+								{player.recruitingStatus === "looking" ? "Looking for team" : "Unavailable"}
+							</Badge>
 						</div>
 					</div>
 				</div>
@@ -144,6 +150,14 @@ export default async function PlayerProfilePage({
 								</div>
 							</>
 						)}
+						<div>
+							<p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+								Availability
+							</p>
+							<p className="mt-1 text-sm font-semibold">
+								{player.availabilityIntent?.replace("_", " ") ?? "Not shared"}
+							</p>
+						</div>
 					</div>
 				</div>
 			)}
@@ -184,11 +198,14 @@ export default async function PlayerProfilePage({
 				)}
 			</PublicPageSection>
 
-			<PublicPageSection title="Active teams" description="Teams this player is currently on.">
+			<PublicPageSection
+				title="Team history"
+				description="Confirmed current team context for this player."
+			>
 				{player.teams.length === 0 ? (
 					<EmptyStateBlock
 						icon={UserSearch01Icon}
-						title="No active team memberships"
+						title="No confirmed team memberships"
 						description="This player is not currently listed on any public teams."
 						variant="card"
 					/>
@@ -203,7 +220,7 @@ export default async function PlayerProfilePage({
 								<div>
 									<p className="text-sm font-medium">{team.name}</p>
 									<p className="text-xs text-muted-foreground">
-										[{team.tag}] · {team.organizationName}
+										[{team.tag}] · {team.organizationName} · {team.status}
 									</p>
 								</div>
 							</Link>

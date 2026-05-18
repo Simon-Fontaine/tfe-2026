@@ -55,6 +55,7 @@ profileRoutes.get("/", async (c) => {
 			secondaryRole: true,
 			rank: true,
 			rankDivision: true,
+			profileVisibility: true,
 			participationIntent: true,
 			availabilityIntent: true,
 		},
@@ -71,6 +72,23 @@ profileRoutes.get("/", async (c) => {
 		},
 		orderBy: [asc(playerHeroTable.heroId)],
 	});
+	const teamRows = await db.query.teamRosterTable.findMany({
+		where: and(
+			eq(teamRosterTable.userId, user.id),
+			inArray(teamRosterTable.status, ["active", "benched", "inactive"])
+		),
+		with: {
+			team: {
+				columns: { id: true, name: true, tag: true },
+				with: {
+					organization: {
+						columns: { name: true, slug: true },
+					},
+				},
+			},
+		},
+		orderBy: [asc(teamRosterTable.joinedAt)],
+	});
 
 	return c.json({
 		data: {
@@ -79,9 +97,21 @@ profileRoutes.get("/", async (c) => {
 			secondaryRole: profile.secondaryRole ?? null,
 			rank: profile.rank ?? null,
 			rankDivision: profile.rankDivision ?? null,
+			profileVisibility: profile.profileVisibility,
 			participationIntent: profile.participationIntent,
 			availabilityIntent: profile.availabilityIntent,
+			recruitingStatus: profile.participationIntent === "find_team" ? "looking" : "unavailable",
 			heroes: heroRows.map((row) => row.hero),
+			teamHistory: teamRows.map((row) => ({
+				id: row.team.id,
+				name: row.team.name,
+				tag: row.team.tag,
+				organizationName: row.team.organization?.name ?? "",
+				organizationSlug: row.team.organization?.slug ?? "",
+				status: row.status,
+				joinedAt: row.joinedAt.toISOString(),
+				leftAt: row.leftAt?.toISOString() ?? null,
+			})),
 		},
 	});
 });
@@ -204,6 +234,9 @@ profileRoutes.patch("/game", async (c) => {
 		rank,
 		rankDivision,
 		heroPool: heroes,
+		profileVisibility,
+		participationIntent,
+		availabilityIntent,
 	} = parsed.output;
 
 	// Validate hero IDs against the active hero registry
@@ -228,6 +261,9 @@ profileRoutes.patch("/game", async (c) => {
 				secondaryRole: secondaryRole ?? null,
 				rank: rank ?? null,
 				rankDivision: effectiveDivision,
+				profileVisibility,
+				participationIntent,
+				availabilityIntent,
 			})
 			.where(eq(playerProfileTable.userId, user.id));
 

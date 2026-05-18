@@ -53,7 +53,14 @@ export default async function PlayersDirectoryPage({ searchParams }: PlayersDire
 						["support", "Support"],
 					] as const
 				).map(([value, label]) => (
-					<Link key={value} href={value === "all" ? "/players" : `/players?role=${value}`}>
+					<Link
+						key={value}
+						href={
+							value === "all"
+								? publicRoutes.players.root
+								: `${publicRoutes.players.root}?role=${value}`
+						}
+					>
 						<Badge variant={role === value ? "default" : "outline"}>{label}</Badge>
 					</Link>
 				))}
@@ -143,7 +150,16 @@ async function PlayerListSection({ role }: { role: PlayerRoleFilter }) {
 								{player.rank}
 							</Badge>
 						)}
+						<Badge
+							variant={player.recruitingStatus === "looking" ? "default" : "outline"}
+							className="text-[10px]"
+						>
+							{player.recruitingStatus === "looking" ? "Looking for team" : "Unavailable"}
+						</Badge>
 					</div>
+					<p className="text-[11px] text-muted-foreground">
+						Availability: {player.availabilityIntent?.replace("_", " ") ?? "Not shared"}
+					</p>
 					{player.bio ? (
 						<p className="line-clamp-3 text-xs text-muted-foreground">{player.bio}</p>
 					) : null}

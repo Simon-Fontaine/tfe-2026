@@ -16,6 +16,22 @@ import { getTeamAccessContext } from "@/utils/team";
 
 const EMPTY_ROLE_LIST: Array<"tank" | "damage" | "support"> = [];
 
+export function isPlayerRecruitingDiscoverable(row: {
+	ownerType: "player" | "team" | "organization";
+	user?: {
+		profile?: {
+			profileVisibility: string | null;
+			participationIntent: string | null;
+		} | null;
+	} | null;
+}) {
+	if (row.ownerType !== "player") return true;
+	return (
+		(row.user?.profile?.profileVisibility ?? "public") === "public" &&
+		row.user?.profile?.participationIntent === "find_team"
+	);
+}
+
 function toRoleList(value: unknown): Array<"tank" | "damage" | "support"> {
 	if (!Array.isArray(value)) return EMPTY_ROLE_LIST;
 	return value.filter(
@@ -283,7 +299,16 @@ export function mapRecruitmentListing(
 		userId: string;
 		organizationId: string | null;
 		teamId: string | null;
-		user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+		user: {
+			id: string;
+			username: string;
+			displayName: string;
+			avatarUrl: string | null;
+			profile?: {
+				profileVisibility: string | null;
+				participationIntent: string | null;
+			} | null;
+		};
 		organization?: { id: string; name: string; slug: string; avatarUrl: string | null } | null;
 		team?: {
 			id: string;
@@ -614,7 +639,10 @@ export async function getPublicRecruitmentListings(
 			filters?.region ? eq(recruitmentListingTable.region, filters.region) : undefined
 		),
 		with: {
-			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+			user: {
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
+				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: {
 				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
@@ -627,14 +655,19 @@ export async function getPublicRecruitmentListings(
 		limit: 100,
 	});
 
-	return rows.map((row) => mapRecruitmentListing(row, { viewerId: viewerId ?? null }));
+	return rows
+		.filter(isPlayerRecruitingDiscoverable)
+		.map((row) => mapRecruitmentListing(row, { viewerId: viewerId ?? null }));
 }
 
 export async function getPublicRecruitmentListingById(id: string, viewerId?: string | null) {
 	const row = await db.query.recruitmentListingTable.findFirst({
 		where: eq(recruitmentListingTable.id, id),
 		with: {
-			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+			user: {
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
+				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: {
 				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
@@ -645,6 +678,6 @@ export async function getPublicRecruitmentListingById(id: string, viewerId?: str
 		},
 	});
 
-	if (!row) return null;
+	if (!row || !isPlayerRecruitingDiscoverable(row)) return null;
 	return mapRecruitmentListing(row, { viewerId: viewerId ?? null });
 }

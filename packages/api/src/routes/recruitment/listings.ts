@@ -22,6 +22,7 @@ import {
 	canManageRecruitmentListing,
 	countManagedPendingApplications,
 	createRecruitmentConversation,
+	isPlayerRecruitingDiscoverable,
 	mapRecruitmentApplication,
 	mapRecruitmentListing,
 } from "@/utils/recruit";
@@ -77,7 +78,10 @@ async function listListings(params: {
 				: undefined
 		),
 		with: {
-			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+			user: {
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
+				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 			applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -87,7 +91,9 @@ async function listListings(params: {
 	});
 
 	if (!params.mine || !params.viewerId) {
-		return rows.map((row) => mapRecruitmentListing(row, { viewerId: params.viewerId }));
+		return rows
+			.filter(isPlayerRecruitingDiscoverable)
+			.map((row) => mapRecruitmentListing(row, { viewerId: params.viewerId }));
 	}
 	const viewerId = params.viewerId;
 
@@ -134,7 +140,10 @@ recruitmentListingsRoutes.get("/:id", async (c) => {
 	const listing = await db.query.recruitmentListingTable.findFirst({
 		where: eq(recruitmentListingTable.id, c.req.param("id")),
 		with: {
-			user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+			user: {
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
+				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
 			applications: { columns: { id: true, status: true, applicantUserId: true } },
@@ -143,6 +152,9 @@ recruitmentListingsRoutes.get("/:id", async (c) => {
 	if (!listing) return c.json({ error: "Listing not found." }, 404);
 
 	const canManage = await canManageRecruitmentListing(listing, user.id);
+	if (!canManage && !isPlayerRecruitingDiscoverable(listing)) {
+		return c.json({ error: "Listing not found." }, 404);
+	}
 	return c.json({ data: mapRecruitmentListing(listing, { viewerId: user.id, canManage }) });
 });
 
@@ -351,8 +363,17 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 			teamId: true,
 			organizationId: true,
 		},
+		with: {
+			user: {
+				columns: { id: true },
+				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+			},
+		},
 	});
 	if (!listing) return c.json({ error: "Listing not found." }, 404);
+	if (!isPlayerRecruitingDiscoverable(listing)) {
+		return c.json({ error: "Listing not found." }, 404);
+	}
 	if (listing.status !== "open") return c.json({ error: "This listing is no longer open." }, 400);
 	if (listing.expiresAt && listing.expiresAt.getTime() < Date.now()) {
 		return c.json({ error: "This listing has expired." }, 400);

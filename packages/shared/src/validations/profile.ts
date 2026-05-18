@@ -11,6 +11,14 @@ const OW2_RANK_VALUES = [
 	"grandmaster",
 	"champion",
 ] as const;
+const PROFILE_VISIBILITY_VALUES = ["public", "teams_only", "private"] as const;
+const PARTICIPATION_INTENT_VALUES = [
+	"find_team",
+	"recruit_players",
+	"schedule_scrims",
+	"just_browsing",
+] as const;
+const AVAILABILITY_INTENT_VALUES = ["weekdays", "weekends", "flexible", "not_sure"] as const;
 
 // ─── Update basic user info ───────────────────────────────────────────────────
 
@@ -63,6 +71,9 @@ export const UpdateGameProfileSchema = v.pipe(
 			)
 		),
 		heroPool: v.pipe(v.array(v.string()), v.minLength(1, "Please select at least one hero")),
+		profileVisibility: v.picklist(PROFILE_VISIBILITY_VALUES, "Please select profile visibility"),
+		participationIntent: v.picklist(PARTICIPATION_INTENT_VALUES, "Please select recruiting intent"),
+		availabilityIntent: v.picklist(AVAILABILITY_INTENT_VALUES, "Please select availability"),
 	}),
 	v.forward(
 		v.check(
