@@ -5,7 +5,7 @@ import {
 	parseAuthenticatorData,
 	parseClientDataJSON,
 } from "@oslojs/webauthn";
-import { appRoutes, rateLimits } from "@scrimflow/shared";
+import { rateLimits } from "@scrimflow/shared";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
 import { resolveDevice } from "@/auth/device";
@@ -26,7 +26,7 @@ import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { fetchGeoData } from "@/utils/geo";
 
-import { setSessionCookie } from "./utils";
+import { safeRedirectUrl, setSessionCookie } from "./utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,10 +144,7 @@ webauthnRoutes.post("/passkey/verify", requireAuth, async (c) => {
 		method: "passkey",
 	});
 
-	const redirect =
-		body.next?.startsWith("/") && !body.next.startsWith("//") ? body.next : appRoutes.root;
-
-	return c.json({ redirect });
+	return c.json({ redirect: safeRedirectUrl(body.next) });
 });
 
 // POST /security-key/verify — Verify security key assertion for 2FA
@@ -188,10 +185,7 @@ webauthnRoutes.post("/security-key/verify", requireAuth, async (c) => {
 		method: "security_key",
 	});
 
-	const redirect =
-		body.next?.startsWith("/") && !body.next.startsWith("//") ? body.next : appRoutes.root;
-
-	return c.json({ redirect });
+	return c.json({ redirect: safeRedirectUrl(body.next) });
 });
 
 // POST /passkey/login — Discoverable passkey login (usernameless)
@@ -316,9 +310,7 @@ webauthnRoutes.post("/passkey/login", async (c) => {
 	);
 
 	const { next } = body as { next?: string };
-	const redirect = next?.startsWith("/") && !next.startsWith("//") ? next : appRoutes.root;
-
-	return c.json({ redirect });
+	return c.json({ redirect: safeRedirectUrl(next) });
 });
 
 export { webauthnRoutes };

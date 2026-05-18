@@ -55,6 +55,8 @@ profileRoutes.get("/", async (c) => {
 			secondaryRole: true,
 			rank: true,
 			rankDivision: true,
+			participationIntent: true,
+			availabilityIntent: true,
 		},
 	});
 
@@ -77,6 +79,8 @@ profileRoutes.get("/", async (c) => {
 			secondaryRole: profile.secondaryRole ?? null,
 			rank: profile.rank ?? null,
 			rankDivision: profile.rankDivision ?? null,
+			participationIntent: profile.participationIntent,
+			availabilityIntent: profile.availabilityIntent,
 			heroes: heroRows.map((row) => row.hero),
 		},
 	});

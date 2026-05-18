@@ -8,6 +8,7 @@ export type OnboardingActionResult = {
 	error?: string;
 	fieldErrors?: Partial<Record<string, string[]>>;
 	redirect?: string;
+	success?: boolean;
 };
 
 export function useOnboardingAction(
@@ -37,6 +38,11 @@ export function useOnboardingAction(
 				} else {
 					router.push(result.redirect);
 				}
+				return;
+			}
+			if (result.success) {
+				toast.dismiss(toastId);
+				onSuccess?.();
 			}
 		},
 	});

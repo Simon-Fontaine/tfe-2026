@@ -77,6 +77,12 @@ export const playerProfileTable = pgTable(
 		/** Controls public profile visibility. Values: "public" | "teams_only" | "private". */
 		profileVisibility: text("profile_visibility").notNull().default("public"),
 
+		/** Initial intent captured during onboarding. */
+		participationIntent: text("participation_intent").notNull().default("find_team"),
+
+		/** Pre-team availability signal captured during onboarding. */
+		availabilityIntent: text("availability_intent").notNull().default("not_sure"),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()
@@ -88,6 +94,52 @@ export const playerProfileTable = pgTable(
 		index("player_profile_battletag_idx").on(table.battletag),
 		index("player_profile_role_rank_idx").on(table.primaryRole, table.rank),
 	]
+);
+
+// ============================================================================
+// ONBOARDING DRAFT — Server-backed progress before profile completion
+// ============================================================================
+
+type OnboardingDraftData = {
+	battletag?: string;
+	primaryRole?: "tank" | "damage" | "support" | null;
+	secondaryRole?: "tank" | "damage" | "support" | null;
+	rank?:
+		| "bronze"
+		| "silver"
+		| "gold"
+		| "platinum"
+		| "diamond"
+		| "master"
+		| "grandmaster"
+		| "champion"
+		| null;
+	rankDivision?: number | null;
+	heroPool?: string[];
+	participationIntent?:
+		| "find_team"
+		| "recruit_players"
+		| "schedule_scrims"
+		| "just_browsing"
+		| null;
+	availabilityIntent?: "weekdays" | "weekends" | "flexible" | "not_sure" | null;
+};
+
+export const onboardingDraftTable = pgTable(
+	"onboarding_draft",
+	{
+		userId: uuid("user_id")
+			.primaryKey()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		currentStep: text("current_step").notNull().default("battletag"),
+		data: jsonb("data").$type<OnboardingDraftData>().notNull().default({}),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [index("onboarding_draft_updated_idx").on(table.updatedAt)]
 );
 
 // ============================================================================

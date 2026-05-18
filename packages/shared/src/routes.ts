@@ -63,6 +63,7 @@ export const apiRoutes = {
 		resetPassword: "/api/auth/reset-password",
 	},
 	onboarding: {
+		progress: "/api/onboarding/progress",
 		profile: "/api/onboarding/profile",
 	},
 	profile: {

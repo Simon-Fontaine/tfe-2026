@@ -4,16 +4,24 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { ArrowLeft01Icon, Award01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { type RolesAndRankInput, RolesAndRankSchema } from "@scrimflow/shared";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { updateOnboardingProgressAction } from "@/app/onboarding/actions";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
+import { useOnboardingAction } from "@/hooks/use-onboarding-action";
 import { RANKS, ROLES } from "@/lib/ow2";
 import { cn } from "@/lib/utils";
 import { useOnboardingFlow } from "@/stores/onboarding-flow";
 
 export function RolesAndRankStepPanel() {
 	const { transitionTo, data } = useOnboardingFlow();
+	const [pendingValues, setPendingValues] = useState<RolesAndRankInput | null>(null);
+	const { state, submit, isPending } = useOnboardingAction(updateOnboardingProgressAction, {
+		loadingMessage: "Saving progress...",
+	});
 
 	const form = useForm<RolesAndRankInput>({
 		resolver: valibotResolver(RolesAndRankSchema),
@@ -28,13 +36,32 @@ export function RolesAndRankStepPanel() {
 	const watchedRank = form.watch("rank");
 	const showDivision = !!watchedRank;
 
+	useEffect(() => {
+		if (state?.success && pendingValues) {
+			transitionTo("hero-pool", {
+				primaryRole: pendingValues.primaryRole,
+				secondaryRole: pendingValues.secondaryRole ?? null,
+				rank: pendingValues.rank ?? null,
+				rankDivision: pendingValues.rank ? (pendingValues.rankDivision ?? null) : null,
+			});
+			setPendingValues(null);
+		}
+	}, [pendingValues, state, transitionTo]);
+
 	function onSubmit(values: RolesAndRankInput) {
-		transitionTo("hero-pool", {
-			primaryRole: values.primaryRole,
-			secondaryRole: values.secondaryRole ?? null,
-			rank: values.rank ?? null,
-			rankDivision: showDivision ? (values.rankDivision ?? null) : null,
-		});
+		const formData = new FormData();
+		formData.set("currentStep", "hero-pool");
+		formData.set("battletag", data.battletag);
+		formData.set("primaryRole", values.primaryRole);
+		if (values.secondaryRole) formData.set("secondaryRole", values.secondaryRole);
+		if (values.rank) formData.set("rank", values.rank);
+		if (values.rank && values.rankDivision)
+			formData.set("rankDivision", String(values.rankDivision));
+		for (const hero of data.heroPool) formData.append("heroPool[]", hero);
+		if (data.participationIntent) formData.set("participationIntent", data.participationIntent);
+		if (data.availabilityIntent) formData.set("availabilityIntent", data.availabilityIntent);
+		setPendingValues(values);
+		submit(formData);
 	}
 
 	return (
@@ -62,6 +89,7 @@ export function RolesAndRankStepPanel() {
 											key={role.id}
 											type="button"
 											data-selected={field.value === role.id}
+											disabled={isPending}
 											onClick={() => {
 												field.onChange(role.id);
 												if (form.getValues("secondaryRole") === role.id) {
@@ -103,7 +131,7 @@ export function RolesAndRankStepPanel() {
 												key={role.id}
 												type="button"
 												data-selected={field.value === role.id}
-												disabled={role.id === primaryRole}
+												disabled={isPending || role.id === primaryRole}
 												onClick={() => field.onChange(field.value === role.id ? null : role.id)}
 												className={cn(
 													"flex-1 border px-3 py-2 text-xs transition-colors",
@@ -119,6 +147,7 @@ export function RolesAndRankStepPanel() {
 											type="button"
 											data-selected={field.value == null}
 											onClick={() => field.onChange(null)}
+											disabled={isPending}
 											className={cn(
 												"flex-1 border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted",
 												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -149,6 +178,7 @@ export function RolesAndRankStepPanel() {
 											key={rank.id}
 											type="button"
 											data-selected={field.value === rank.id}
+											disabled={isPending}
 											onClick={() => {
 												const next = field.value === rank.id ? null : rank.id;
 												field.onChange(next);
@@ -168,6 +198,7 @@ export function RolesAndRankStepPanel() {
 									<button
 										type="button"
 										data-selected={field.value == null}
+										disabled={isPending}
 										onClick={() => {
 											field.onChange(null);
 											form.setValue("rankDivision", null);
@@ -204,6 +235,7 @@ export function RolesAndRankStepPanel() {
 												key={div}
 												type="button"
 												data-selected={field.value === div}
+												disabled={isPending}
 												onClick={() => field.onChange(div)}
 												className={cn(
 													"flex-1 border border-border py-2 text-xs font-semibold transition-colors hover:bg-muted",
@@ -223,18 +255,22 @@ export function RolesAndRankStepPanel() {
 				)}
 
 				{/* Actions */}
+				{state?.error && <p className="text-xs text-destructive">{state.error}</p>}
+
 				<div className="flex gap-2">
 					<Button
 						type="button"
 						variant="outline"
 						size="sm"
 						onClick={() => transitionTo("battletag")}
+						disabled={isPending}
 						className="gap-1.5"
 					>
 						<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3.5" />
 						Back
 					</Button>
-					<Button type="submit" className="flex-1">
+					<Button type="submit" className="flex-1" disabled={isPending}>
+						{isPending && <Spinner className="mr-1.5" />}
 						Continue
 					</Button>
 				</div>

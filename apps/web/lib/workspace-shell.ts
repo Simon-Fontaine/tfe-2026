@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -10,13 +11,29 @@ export type WorkspaceSession = Awaited<ReturnType<typeof getCurrentSession>> & {
 	user: NonNullable<Awaited<ReturnType<typeof getCurrentSession>>["user"]>;
 };
 
+function isAppPath(value: string | null): value is string {
+	return (
+		!!value &&
+		(value === appRoutes.root ||
+			value.startsWith(`${appRoutes.root}/`) ||
+			value.startsWith(`${appRoutes.root}?`)) &&
+		!value.includes("\\")
+	);
+}
+
 export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
 	const { session, user } = await getCurrentSession();
 	if (!session || !user) redirect("/auth");
 	if (user.registered2FA && !session.twoFactorVerified) redirect("/auth");
 
 	const profileRes = await apiGet<{ exists: boolean }>(apiRoutes.profile.exists);
-	if (!("data" in profileRes) || !profileRes.data.exists) redirect("/onboarding");
+	if (!("data" in profileRes) || !profileRes.data.exists) {
+		const currentPath = (await headers()).get("x-scrimflow-path");
+		const onboardingPath = isAppPath(currentPath)
+			? `/onboarding?next=${encodeURIComponent(currentPath)}`
+			: "/onboarding";
+		redirect(onboardingPath);
+	}
 
 	const deletionRes = await apiGet<{ isPending: boolean }>(
 		apiRoutes.settings.account.deletion.root

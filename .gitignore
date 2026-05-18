@@ -95,6 +95,7 @@ ENV/
 # Database / Docker Volumes
 # -----------------------------------------------------------------------------
 *.sql
+!packages/api/drizzle/0001_onboarding_progress.sql
 *.dump
 *.sqlite
 

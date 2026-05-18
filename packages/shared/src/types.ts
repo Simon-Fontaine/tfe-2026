@@ -146,6 +146,28 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
 
 export type OW2Role = "tank" | "damage" | "support";
+export type OnboardingStep = "battletag" | "roles-and-rank" | "hero-pool" | "intent" | "complete";
+export type ParticipationIntent =
+	| "find_team"
+	| "recruit_players"
+	| "schedule_scrims"
+	| "just_browsing";
+export type AvailabilityIntent = "weekdays" | "weekends" | "flexible" | "not_sure";
+export type OnboardingProgressData = {
+	battletag?: string;
+	primaryRole?: OW2Role | null;
+	secondaryRole?: OW2Role | null;
+	rank?: string | null;
+	rankDivision?: number | null;
+	heroPool?: string[];
+	participationIntent?: ParticipationIntent | null;
+	availabilityIntent?: AvailabilityIntent | null;
+};
+export type OnboardingProgress = {
+	currentStep: OnboardingStep;
+	data: OnboardingProgressData;
+	updatedAt: IsoDateString | null;
+};
 export type RosterStatus = "active" | "benched" | "trial" | "inactive";
 export const TEAM_VIEWABLE_STATUSES = ["active", "benched", "trial"] as const;
 export type TeamViewableStatus = (typeof TEAM_VIEWABLE_STATUSES)[number];
@@ -1167,6 +1189,8 @@ export type PlayerProfileFull = {
 	secondaryRole: OW2Role | null;
 	rank: string | null;
 	rankDivision: number | null;
+	participationIntent: ParticipationIntent;
+	availabilityIntent: AvailabilityIntent;
 	heroes: {
 		id: string;
 		displayName: string;

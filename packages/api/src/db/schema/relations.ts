@@ -12,6 +12,7 @@ import {
 	mapTable,
 	notificationTable,
 	ocrJobTable,
+	onboardingDraftTable,
 	organizationMemberTable,
 	organizationTable,
 	orgInviteTable,
@@ -59,6 +60,10 @@ export const userRelations = relations(userTable, ({ one, many }) => ({
 	accountDeletionRequests: many(accountDeletionRequestTable),
 	sensitiveActionVerifications: many(sensitiveActionVerificationTable),
 	heroPool: many(playerHeroTable),
+	onboardingDraft: one(onboardingDraftTable, {
+		fields: [userTable.id],
+		references: [onboardingDraftTable.userId],
+	}),
 	preferredMaps: many(playerMapTable),
 	receivedTeamInvites: many(teamInviteTable, { relationName: "inviteeTeamInvites" }),
 	sentTeamInvites: many(teamInviteTable, { relationName: "inviterTeamInvites" }),
@@ -83,6 +88,13 @@ export const sessionRelations = relations(sessionTable, ({ one }) => ({
 export const playerProfileRelations = relations(playerProfileTable, ({ one }) => ({
 	user: one(userTable, {
 		fields: [playerProfileTable.userId],
+		references: [userTable.id],
+	}),
+}));
+
+export const onboardingDraftRelations = relations(onboardingDraftTable, ({ one }) => ({
+	user: one(userTable, {
+		fields: [onboardingDraftTable.userId],
 		references: [userTable.id],
 	}),
 }));

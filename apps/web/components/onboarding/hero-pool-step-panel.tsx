@@ -4,7 +4,7 @@ import { ArrowLeft01Icon, GameController01Icon } from "@hugeicons/core-free-icon
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 
-import { createPlayerProfileAction } from "@/app/onboarding/actions";
+import { updateOnboardingProgressAction } from "@/app/onboarding/actions";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
 import { HeroPoolPicker } from "@/components/shared/hero-pool-picker";
 import { Button } from "@/components/ui/button";
@@ -21,19 +21,24 @@ export function HeroPoolStepPanel({ heroes }: HeroPoolStepPanelProps) {
 	const { transitionTo, data } = useOnboardingFlow();
 	const [selectedHeroes, setSelectedHeroes] = useState<Set<string>>(new Set(data.heroPool));
 	const [heroError, setHeroError] = useState<string | null>(null);
+	const [pendingHeroPool, setPendingHeroPool] = useState<string[] | null>(null);
 
-	const { state, submit, isPending } = useOnboardingAction(createPlayerProfileAction, {
-		loadingMessage: "Setting up your profile…",
-		onSuccess: () => transitionTo("complete"),
+	const { state, submit, isPending } = useOnboardingAction(updateOnboardingProgressAction, {
+		loadingMessage: "Saving progress...",
 	});
 
 	useEffect(() => {
+		if (state?.success && pendingHeroPool) {
+			transitionTo("intent", { heroPool: pendingHeroPool });
+			setPendingHeroPool(null);
+			return;
+		}
 		if (state?.fieldErrors?.heroPool?.[0]) {
 			setHeroError(state.fieldErrors.heroPool[0]);
 		} else if (state?.error) {
 			setHeroError(state.error);
 		}
-	}, [state]);
+	}, [pendingHeroPool, state, transitionTo]);
 
 	function toggleHero(heroId: string) {
 		setHeroError(null);
@@ -61,7 +66,11 @@ export function HeroPoolStepPanel({ heroes }: HeroPoolStepPanelProps) {
 			formData.set("rankDivision", String(data.rankDivision));
 		}
 		for (const hero of selectedHeroes) formData.append("heroPool[]", hero);
+		formData.set("currentStep", "intent");
+		if (data.participationIntent) formData.set("participationIntent", data.participationIntent);
+		if (data.availabilityIntent) formData.set("availabilityIntent", data.availabilityIntent);
 
+		setPendingHeroPool([...selectedHeroes]);
 		submit(formData);
 	}
 
@@ -105,7 +114,7 @@ export function HeroPoolStepPanel({ heroes }: HeroPoolStepPanelProps) {
 				</Button>
 				<Button type="button" onClick={handleFinish} disabled={isPending} className="flex-1">
 					{isPending && <Spinner className="mr-1.5" />}
-					Finish setup
+					Continue
 				</Button>
 			</div>
 		</div>

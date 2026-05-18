@@ -10,16 +10,18 @@ import { siteConfig } from "@/lib/config/site";
 import { useOnboardingFlow } from "@/stores/onboarding-flow";
 
 const STEP_PROGRESS = {
-	battletag: 33,
-	"roles-and-rank": 66,
-	"hero-pool": 100,
+	battletag: 25,
+	"roles-and-rank": 50,
+	"hero-pool": 75,
+	intent: 100,
 	complete: 100,
 } as const;
 
 const STEP_LABELS = {
-	battletag: "Step 1 of 3",
-	"roles-and-rank": "Step 2 of 3",
-	"hero-pool": "Step 3 of 3",
+	battletag: "Step 1 of 4",
+	"roles-and-rank": "Step 2 of 4",
+	"hero-pool": "Step 3 of 4",
+	intent: "Step 4 of 4",
 	complete: "Complete",
 } as const;
 

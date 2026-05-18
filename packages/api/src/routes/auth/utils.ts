@@ -32,7 +32,13 @@ export type ActionResult = {
 
 export function safeRedirectUrl(next: string | null | undefined): string {
 	const url = typeof next === "string" ? next.trim() : "";
-	if (!url || !url.startsWith("/") || url.startsWith("//") || url.startsWith("/auth")) {
+	if (
+		!url ||
+		!url.startsWith("/") ||
+		url.startsWith("//") ||
+		url.startsWith("/auth") ||
+		url.includes("\\")
+	) {
 		return appRoutes.root;
 	}
 	return url;
