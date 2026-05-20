@@ -1,5 +1,5 @@
 import { rateLimits } from "@scrimflow/shared";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
 import {
@@ -24,24 +24,39 @@ accountRoutes.get("/deletion", async (c) => {
 	const session = c.get("session");
 
 	const record = await db
-		.select({ scheduledDeletionAt: accountDeletionRequestTable.scheduledDeletionAt })
+		.select({
+			scheduledDeletionAt: accountDeletionRequestTable.scheduledDeletionAt,
+			cancelledAt: accountDeletionRequestTable.cancelledAt,
+			confirmedAt: accountDeletionRequestTable.confirmedAt,
+		})
 		.from(accountDeletionRequestTable)
-		.where(
-			and(
-				eq(accountDeletionRequestTable.userId, session.userId),
-				isNull(accountDeletionRequestTable.cancelledAt)
-			)
-		)
-		.orderBy(accountDeletionRequestTable.createdAt)
+		.where(eq(accountDeletionRequestTable.userId, session.userId))
+		.orderBy(desc(accountDeletionRequestTable.createdAt))
 		.limit(1)
 		.then((rows) => rows[0] ?? null);
 
-	if (!record?.scheduledDeletionAt) {
-		return c.json({ data: { isPending: false, scheduledAt: null } });
-	}
+	const now = new Date();
+	const isPending = Boolean(
+		record?.scheduledDeletionAt && !record.cancelledAt && record.scheduledDeletionAt > now
+	);
+	const isExpired = Boolean(
+		record?.scheduledDeletionAt && !record.cancelledAt && record.scheduledDeletionAt <= now
+	);
 
 	return c.json({
-		data: { isPending: true, scheduledAt: record.scheduledDeletionAt.toISOString() },
+		data: {
+			status: isPending
+				? "pending"
+				: record?.cancelledAt
+					? "cancelled"
+					: isExpired
+						? "failed"
+						: "none",
+			isPending,
+			scheduledAt: record?.scheduledDeletionAt?.toISOString() ?? null,
+			cancelledAt: record?.cancelledAt?.toISOString() ?? null,
+			failedAt: isExpired ? (record?.scheduledDeletionAt?.toISOString() ?? null) : null,
+		},
 	});
 });
 

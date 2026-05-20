@@ -143,6 +143,7 @@ export const verificationActionEnum = pgEnum("verification_action", [
 	"two_factor_disable",
 	"passkey_disable",
 	"security_key_disable",
+	"recovery_code_regenerate",
 ]);
 
 /** Why a session was revoked — enables security dashboards and alerts. */
@@ -202,6 +203,7 @@ export const auditActionEnum = pgEnum("audit_action", [
 	"security_key_register",
 	"security_key_remove",
 	"recovery_codes_regenerate",
+	"data_export_request",
 	"account_deletion_request",
 	"account_deletion_confirm",
 	"account_deletion_cancel",

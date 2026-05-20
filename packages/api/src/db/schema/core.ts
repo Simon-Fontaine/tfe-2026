@@ -77,6 +77,15 @@ export const playerProfileTable = pgTable(
 		/** Controls public profile visibility. Values: "public" | "teams_only" | "private". */
 		profileVisibility: text("profile_visibility").notNull().default("public"),
 
+		/** Controls whether availability intent is shown outside authenticated team contexts. */
+		availabilityVisibility: text("availability_visibility").notNull().default("public"),
+
+		/** Controls whether player-owned recruiting listings are discoverable publicly. */
+		recruitingDiscoverability: boolean("recruiting_discoverability").notNull().default(true),
+
+		/** Controls public team history and public scrim summary visibility. */
+		publicHistoryVisibility: text("public_history_visibility").notNull().default("public"),
+
 		/** Initial intent captured during onboarding. */
 		participationIntent: text("participation_intent").notNull().default("find_team"),
 

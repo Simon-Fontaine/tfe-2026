@@ -5,14 +5,17 @@ import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./password";
 
 export interface DeletionStatus {
+	status: "none" | "pending" | "cancelled" | "failed";
 	isPending: boolean;
 	scheduledAt: string | null;
+	cancelledAt: string | null;
+	failedAt: string | null;
 }
 
 export async function getAccountDeletionStatusAction(): Promise<DeletionStatus> {
 	const res = await apiGet<DeletionStatus>(apiRoutes.settings.account.deletion.root);
 	if ("data" in res) return res.data;
-	return { isPending: false, scheduledAt: null };
+	return { status: "none", isPending: false, scheduledAt: null, cancelledAt: null, failedAt: null };
 }
 
 export async function requestAccountDeletionAction(reason?: string): Promise<ActionResult> {

@@ -20,9 +20,13 @@ publicPlayerRoutes.use("*", optionalAuth);
 const isActivelyRecruiting = (profile?: {
 	profileVisibility?: string | null;
 	participationIntent?: string | null;
+	recruitingDiscoverability?: boolean | null;
 }) =>
 	(profile?.profileVisibility ?? "public") === "public" &&
+	profile?.recruitingDiscoverability !== false &&
 	profile?.participationIntent === "find_team";
+
+const isPublic = (value?: string | null) => (value ?? "public") === "public";
 
 const CONFIRMED_TEAM_HISTORY_STATUSES = ["active", "benched", "inactive"] as const;
 const CURRENT_CONFIRMED_TEAM_STATUSES = ["active", "benched"] as const;
@@ -30,6 +34,17 @@ const CURRENT_CONFIRMED_TEAM_STATUSES = ["active", "benched"] as const;
 publicPlayerRoutes.get("/", async (c) => {
 	const viewer = c.get("user");
 	const now = new Date();
+	const viewerCurrentTeamIds = viewer
+		? await db.query.teamRosterTable
+				.findMany({
+					where: and(
+						eq(teamRosterTable.userId, viewer.id),
+						inArray(teamRosterTable.status, CURRENT_CONFIRMED_TEAM_STATUSES)
+					),
+					columns: { teamId: true },
+				})
+				.then((memberships) => new Set(memberships.map((membership) => membership.teamId)))
+		: new Set<string>();
 	const rows = await db.query.userTable.findMany({
 		columns: {
 			id: true,
@@ -46,9 +61,16 @@ publicPlayerRoutes.get("/", async (c) => {
 					rank: true,
 					rankDivision: true,
 					profileVisibility: true,
+					availabilityVisibility: true,
+					recruitingDiscoverability: true,
+					publicHistoryVisibility: true,
 					participationIntent: true,
 					availabilityIntent: true,
 				},
+			},
+			teamRosters: {
+				where: inArray(teamRosterTable.status, CURRENT_CONFIRMED_TEAM_STATUSES),
+				columns: { teamId: true },
 			},
 			recruitmentListings: {
 				where: and(
@@ -69,23 +91,35 @@ publicPlayerRoutes.get("/", async (c) => {
 
 	const data: PublicPlayerSummary[] = rows
 		.filter((row) => (row.profile?.profileVisibility ?? "public") === "public")
-		.map((row) => ({
-			id: row.id,
-			username: row.username,
-			displayName: row.displayName,
-			avatarUrl: row.avatarUrl,
-			bio: row.bio ?? null,
-			primaryRole: row.profile?.primaryRole ?? null,
-			secondaryRole: row.profile?.secondaryRole ?? null,
-			rank: row.profile?.rank ?? null,
-			rankDivision: row.profile?.rankDivision ?? null,
-			profileVisibility: "public",
-			availabilityIntent: (row.profile?.availabilityIntent ?? null) as AvailabilityIntent | null,
-			recruitingStatus: isActivelyRecruiting(row.profile) ? "looking" : "unavailable",
-			openListings: row.recruitmentListings
-				.filter((post) => post.ownerType === "player" && isActivelyRecruiting(row.profile))
-				.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null })),
-		}));
+		.map((row) => {
+			const canViewTeamsOnlyFields =
+				viewer?.id === row.id ||
+				row.teamRosters.some((membership) => viewerCurrentTeamIds.has(membership.teamId));
+			const canShowAvailability =
+				isPublic(row.profile?.availabilityVisibility) ||
+				((row.profile?.availabilityVisibility ?? "public") === "teams_only" &&
+					canViewTeamsOnlyFields);
+
+			return {
+				id: row.id,
+				username: row.username,
+				displayName: row.displayName,
+				avatarUrl: row.avatarUrl,
+				bio: row.bio ?? null,
+				primaryRole: row.profile?.primaryRole ?? null,
+				secondaryRole: row.profile?.secondaryRole ?? null,
+				rank: row.profile?.rank ?? null,
+				rankDivision: row.profile?.rankDivision ?? null,
+				profileVisibility: "public",
+				availabilityIntent: canShowAvailability
+					? ((row.profile?.availabilityIntent ?? null) as AvailabilityIntent | null)
+					: null,
+				recruitingStatus: isActivelyRecruiting(row.profile) ? "looking" : "unavailable",
+				openListings: row.recruitmentListings
+					.filter((post) => post.ownerType === "player" && isActivelyRecruiting(row.profile))
+					.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null })),
+			};
+		});
 
 	return c.json({ data });
 });
@@ -114,6 +148,9 @@ publicPlayerRoutes.get("/:username", async (c) => {
 					rank: true,
 					rankDivision: true,
 					profileVisibility: true,
+					availabilityVisibility: true,
+					recruitingDiscoverability: true,
+					publicHistoryVisibility: true,
 					participationIntent: true,
 					availabilityIntent: true,
 				},
@@ -163,15 +200,16 @@ publicPlayerRoutes.get("/:username", async (c) => {
 	if (visibility === "private") {
 		return c.json({ error: "Player not found." }, 404);
 	}
-	if (visibility === "teams_only") {
-		const viewerUser = c.get("user");
-		if (!viewerUser) return c.json({ error: "Player not found." }, 404);
-		if (viewerUser.id !== player.id) {
-			const currentTeamIds = player.teamRosters
-				.filter((row) => row.status === "active" || row.status === "benched")
-				.map((row) => row.team.id);
-			if (currentTeamIds.length === 0) return c.json({ error: "Player not found." }, 404);
 
+	const currentTeamIds = player.teamRosters
+		.filter((row) => row.status === "active" || row.status === "benched")
+		.map((row) => row.team.id);
+	let canViewTeamsOnlyFields = false;
+	const viewerUser = c.get("user");
+	if (viewerUser) {
+		if (viewerUser.id === player.id) {
+			canViewTeamsOnlyFields = true;
+		} else if (currentTeamIds.length > 0) {
 			const sharedMembership = await db.query.teamRosterTable.findFirst({
 				where: and(
 					eq(teamRosterTable.userId, viewerUser.id),
@@ -180,16 +218,24 @@ publicPlayerRoutes.get("/:username", async (c) => {
 				),
 				columns: { id: true },
 			});
-			if (!sharedMembership) return c.json({ error: "Player not found." }, 404);
+			canViewTeamsOnlyFields = Boolean(sharedMembership);
 		}
+	}
+
+	if (visibility === "teams_only") {
+		if (!viewerUser) return c.json({ error: "Player not found." }, 404);
+		if (!canViewTeamsOnlyFields) return c.json({ error: "Player not found." }, 404);
 	}
 
 	const openListings = player.recruitmentListings
 		.filter((post) => post.ownerType === "player" && isActivelyRecruiting(player.profile))
 		.map((post) => mapRecruitmentListing(post, { viewerId: viewer?.id ?? null }));
 
-	// Derive team IDs this player is on
-	const playerTeamIds = player.teamRosters.map((r) => r.team.id);
+	const canViewField = (value?: string | null) =>
+		isPublic(value) || ((value ?? "public") === "teams_only" && canViewTeamsOnlyFields);
+	const canShowAvailability = canViewField(player.profile?.availabilityVisibility);
+	const canShowPublicHistory = canViewField(player.profile?.publicHistoryVisibility);
+	const playerTeamIds = canShowPublicHistory ? player.teamRosters.map((r) => r.team.id) : [];
 
 	// Derive scrim stats if player belongs to any teams
 	let scrimStats: PublicPlayerDetail["scrimStats"] = null;
@@ -239,7 +285,9 @@ publicPlayerRoutes.get("/:username", async (c) => {
 		rank: player.profile?.rank ?? null,
 		rankDivision: player.profile?.rankDivision ?? null,
 		profileVisibility: "public",
-		availabilityIntent: (player.profile?.availabilityIntent ?? null) as AvailabilityIntent | null,
+		availabilityIntent: canShowAvailability
+			? ((player.profile?.availabilityIntent ?? null) as AvailabilityIntent | null)
+			: null,
 		recruitingStatus: isActivelyRecruiting(player.profile) ? "looking" : "unavailable",
 		openListings,
 		battletag: player.profile?.battletag ?? null,
@@ -249,16 +297,18 @@ publicPlayerRoutes.get("/:username", async (c) => {
 			role: ph.hero.role,
 			imageUrl: ph.hero.imageUrl ?? null,
 		})),
-		teams: player.teamRosters.map((r) => ({
-			id: r.team.id,
-			name: r.team.name,
-			tag: r.team.tag,
-			organizationName: r.team.organization?.name ?? "",
-			organizationSlug: r.team.organization?.slug ?? "",
-			status: r.status as TeamViewableStatus,
-			joinedAt: r.joinedAt.toISOString(),
-			leftAt: r.leftAt?.toISOString() ?? null,
-		})),
+		teams: canShowPublicHistory
+			? player.teamRosters.map((r) => ({
+					id: r.team.id,
+					name: r.team.name,
+					tag: r.team.tag,
+					organizationName: r.team.organization?.name ?? "",
+					organizationSlug: r.team.organization?.slug ?? "",
+					status: r.status as TeamViewableStatus,
+					joinedAt: r.joinedAt.toISOString(),
+					leftAt: r.leftAt?.toISOString() ?? null,
+				}))
+			: [],
 		scrimStats,
 	};
 

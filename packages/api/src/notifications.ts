@@ -1,11 +1,59 @@
 import { appRoutes, type NotificationSummary } from "@scrimflow/shared";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { notificationTable, type notificationTypeEnum, ocrJobTable, scrimTable } from "@/db/schema";
+import {
+	notificationTable,
+	type notificationTypeEnum,
+	ocrJobTable,
+	scrimTable,
+	userTable,
+} from "@/db/schema";
 import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
 import { isUserOnTeam } from "@/utils/team";
 
 type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
+type OptionalNotificationCategory =
+	| "invites"
+	| "applications"
+	| "scrimChanges"
+	| "chatActivity"
+	| "results"
+	| "disputes"
+	| "updates";
+
+const OPTIONAL_NOTIFICATION_BY_TYPE: Partial<
+	Record<NotificationType, OptionalNotificationCategory>
+> = {
+	channel_invite: "invites",
+	team_invite_received: "invites",
+	team_invite_accepted: "invites",
+	org_invite_received: "invites",
+	recruitment_application: "applications",
+	recruitment_accepted: "applications",
+	recruitment_rejected: "applications",
+	recruitment_withdrawn: "applications",
+	scrim_request: "scrimChanges",
+	scrim_accepted: "scrimChanges",
+	scrim_cancelled: "scrimChanges",
+	scrim_reminder: "scrimChanges",
+	ocr_completed: "results",
+	ocr_failed: "results",
+	sr_updated: "results",
+	scrim_disputed: "disputes",
+	scrim_resolved: "disputes",
+	dispute_opened: "disputes",
+	dispute_resolved: "disputes",
+	new_message: "chatActivity",
+	generic: "updates",
+};
+
+const MANDATORY_NOTIFICATION_TYPES = new Set<NotificationType>([
+	"email_change_requested",
+	"account_deletion_requested",
+	"new_device_login",
+	"new_location_login",
+	"session_revoked_alert",
+]);
 
 interface CreateNotificationInput {
 	userId: string;
@@ -93,6 +141,21 @@ async function getUnreadNotificationCount(userId: string) {
 	return Number(result?.count ?? 0);
 }
 
+async function isNotificationAllowed(userId: string, type: NotificationType, client: typeof db) {
+	if (MANDATORY_NOTIFICATION_TYPES.has(type)) return true;
+	const category = OPTIONAL_NOTIFICATION_BY_TYPE[type];
+	if (!category) return true;
+
+	const row = await client
+		.select({ notificationPreferences: userTable.notificationPreferences })
+		.from(userTable)
+		.where(eq(userTable.id, userId))
+		.limit(1)
+		.then((rows) => rows[0] ?? null);
+
+	return row?.notificationPreferences?.[category] !== false;
+}
+
 /**
  * Insert a single notification row. Call from within Server Actions after
  * a mutation that should notify a user. Pass a transaction `tx` when called
@@ -103,6 +166,8 @@ export async function createNotification(
 	tx?: typeof db
 ): Promise<NotificationSummary | null> {
 	const client = tx ?? db;
+	if (!(await isNotificationAllowed(input.userId, input.type, client))) return null;
+
 	const [created] = await client
 		.insert(notificationTable)
 		.values({

@@ -108,6 +108,8 @@ export const apiRoutes = {
 		security: {
 			summary: "/api/settings/security/summary",
 			recoveryCodeRegenerate: "/api/settings/security/recovery-code/regenerate",
+			recoveryCodeRegenerateRequest: "/api/settings/security/recovery-code/regenerate/request",
+			recoveryCodeRegenerateConfirm: "/api/settings/security/recovery-code/regenerate/confirm",
 		},
 		sessions: {
 			root: "/api/settings/sessions",
@@ -124,7 +126,11 @@ export const apiRoutes = {
 		},
 		notificationPreferences: "/api/settings/notifications",
 		privacy: "/api/settings/privacy",
-		dataExport: "/api/settings/data-export",
+		dataExport: {
+			root: "/api/settings/data-export",
+			status: "/api/settings/data-export/status",
+			download: "/api/settings/data-export/download",
+		},
 	},
 	schedule: {
 		availability: {

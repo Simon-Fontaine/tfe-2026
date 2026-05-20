@@ -15,7 +15,9 @@ import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
+	cancelAccountDeletionAction,
 	confirmAccountDeletionAction,
+	type DeletionStatus,
 	requestAccountDeletionAction,
 } from "@/app/actions/settings/account-deletion";
 import { SettingsSectionCard } from "@/components/shared/settings-section-card";
@@ -38,10 +40,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Step = "idle" | "reason" | "code-sent";
 
-export function DeleteAccountSection() {
+export function DeleteAccountSection({ initialStatus }: { initialStatus: DeletionStatus }) {
 	const router = useRouter();
 	const [step, setStep] = useState<Step>("idle");
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [deletionStatus, setDeletionStatus] = useState(initialStatus);
 	const [isPending, startTransition] = useTransition();
 
 	const reasonForm = useForm<DeleteAccountInput>({
@@ -75,6 +78,24 @@ export function DeleteAccountSection() {
 		});
 	}
 
+	function onCancelDeletion() {
+		startTransition(async () => {
+			const result = await cancelAccountDeletionAction();
+			if (result.error) {
+				toast.error(result.error);
+				return;
+			}
+			setDeletionStatus({
+				status: "cancelled",
+				isPending: false,
+				scheduledAt: deletionStatus.scheduledAt,
+				cancelledAt: new Date().toISOString(),
+				failedAt: null,
+			});
+			toast.success("Account deletion cancelled.");
+		});
+	}
+
 	function onDialogClose(open: boolean) {
 		if (!open) {
 			setStep("idle");
@@ -91,9 +112,36 @@ export function DeleteAccountSection() {
 			description="Permanently delete your Scrimflow account and all associated data"
 		>
 			<div className="space-y-3">
+				{deletionStatus.isPending && (
+					<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+						<p className="text-sm font-medium text-destructive">Deletion pending</p>
+						<p className="text-muted-foreground text-sm">
+							Your account is scheduled for deletion
+							{deletionStatus.scheduledAt
+								? ` on ${new Date(deletionStatus.scheduledAt).toLocaleDateString()}.`
+								: "."}
+						</p>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="mt-3"
+							disabled={isPending}
+							onClick={onCancelDeletion}
+						>
+							{isPending ? "Cancelling..." : "Cancel deletion"}
+						</Button>
+					</div>
+				)}
+				{deletionStatus.status === "cancelled" && (
+					<p className="rounded-lg border bg-muted/30 p-3 text-muted-foreground text-sm">
+						Your last deletion request was cancelled.
+					</p>
+				)}
 				<p className="text-sm text-muted-foreground">
-					Once deleted, your account and all its data — including teams, scrims, and stats — will be
-					permanently removed after a 30-day grace period.
+					Once confirmed, deletion is delayed by a 30-day grace period. Platform records such as
+					teams, scrims, ratings, evidence, moderation, and audit history may be retained or
+					anonymized according to policy.
 				</p>
 
 				<AlertDialog open={dialogOpen} onOpenChange={onDialogClose}>

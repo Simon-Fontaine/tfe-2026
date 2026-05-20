@@ -80,7 +80,15 @@ async function listListings(params: {
 		with: {
 			user: {
 				columns: { id: true, username: true, displayName: true, avatarUrl: true },
-				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+				with: {
+					profile: {
+						columns: {
+							profileVisibility: true,
+							participationIntent: true,
+							recruitingDiscoverability: true,
+						},
+					},
+				},
 			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
@@ -142,7 +150,15 @@ recruitmentListingsRoutes.get("/:id", async (c) => {
 		with: {
 			user: {
 				columns: { id: true, username: true, displayName: true, avatarUrl: true },
-				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+				with: {
+					profile: {
+						columns: {
+							profileVisibility: true,
+							participationIntent: true,
+							recruitingDiscoverability: true,
+						},
+					},
+				},
 			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
@@ -366,7 +382,15 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 		with: {
 			user: {
 				columns: { id: true },
-				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+				with: {
+					profile: {
+						columns: {
+							profileVisibility: true,
+							participationIntent: true,
+							recruitingDiscoverability: true,
+						},
+					},
+				},
 			},
 		},
 	});

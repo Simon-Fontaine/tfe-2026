@@ -1,3 +1,4 @@
+import { getAccountDeletionStatusAction } from "@/app/actions/settings/account-deletion";
 import { getPendingVerificationsAction } from "@/app/actions/settings/pending-verifications";
 import { ChangeEmailSection } from "@/components/settings/change-email-section";
 import { ChangeUsernameSection } from "@/components/settings/change-username-section";
@@ -8,7 +9,10 @@ import { requireWorkspaceSession } from "@/lib/workspace-shell";
 export default async function AppAccountSettingsPage() {
 	const { user } = await requireWorkspaceSession();
 
-	const pending = await getPendingVerificationsAction();
+	const [pending, deletionStatus] = await Promise.all([
+		getPendingVerificationsAction(),
+		getAccountDeletionStatusAction(),
+	]);
 
 	return (
 		<SecuritySettingsPageShell>
@@ -20,7 +24,7 @@ export default async function AppAccountSettingsPage() {
 				initialPendingEmail={pending.emailChange?.pendingEmail}
 			/>
 
-			<DeleteAccountSection />
+			<DeleteAccountSection initialStatus={deletionStatus} />
 		</SecuritySettingsPageShell>
 	);
 }

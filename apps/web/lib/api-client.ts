@@ -128,29 +128,23 @@ export async function apiGet<T>(
 
 export async function apiPost<T = unknown>(
 	path: string,
-	body?: Record<string, unknown>
+	body?: object
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	return apiMutate("POST", path, body);
 }
 
-export async function apiPatch(
-	path: string,
-	body?: Record<string, unknown>
-): Promise<ApiMutationResponse> {
+export async function apiPatch(path: string, body?: object): Promise<ApiMutationResponse> {
 	return apiMutate("PATCH", path, body);
 }
 
-export async function apiDelete(
-	path: string,
-	body?: Record<string, unknown>
-): Promise<ApiMutationResponse> {
+export async function apiDelete(path: string, body?: object): Promise<ApiMutationResponse> {
 	return apiMutate("DELETE", path, body);
 }
 
 async function apiMutate<T = unknown>(
 	method: string,
 	path: string,
-	body?: Record<string, unknown>
+	body?: object
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
 	const res = await fetchApi(path, {
@@ -205,7 +199,7 @@ async function forwardSetCookieHeaders(res: Response): Promise<void> {
 
 export async function apiAuthPost<T = unknown>(
 	path: string,
-	body?: Record<string, unknown>
+	body?: object
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
 	const res = await fetchApi(path, {
@@ -232,7 +226,7 @@ export async function apiAuthPost<T = unknown>(
 
 export async function apiAuthDelete<T = unknown>(
 	path: string,
-	body?: Record<string, unknown>
+	body?: object
 ): Promise<(ApiMutationSuccess & T) | ApiError> {
 	const headers = await authHeaders();
 	const res = await fetchApi(path, {

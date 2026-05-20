@@ -1,3 +1,7 @@
+import type {
+	MandatoryNotificationPolicy,
+	NotificationPreferenceSettings,
+} from "@scrimflow/shared";
 import { NotificationPreferencesSection } from "@/components/settings/notification-preferences-section";
 import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
 import { apiGet } from "@/lib/api-client";
@@ -6,13 +10,38 @@ import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppNotificationsSettingsPage() {
 	await requireWorkspaceSession();
-	const prefsRes = await apiGet<Record<string, boolean>>(
-		apiRoutes.settings.notificationPreferences
-	);
-	const initialPreferences = "data" in prefsRes ? prefsRes.data : {};
+	const prefsRes = await apiGet<{
+		optional: NotificationPreferenceSettings;
+		mandatory: MandatoryNotificationPolicy;
+	}>(apiRoutes.settings.notificationPreferences);
+	const initialPreferences =
+		"data" in prefsRes
+			? prefsRes.data
+			: ({
+					optional: {
+						invites: true,
+						applications: true,
+						scrimChanges: true,
+						chatActivity: true,
+						results: true,
+						disputes: true,
+						updates: true,
+					},
+					mandatory: {
+						accountLifecycle: true,
+						securityCritical: true,
+						moderationCritical: true,
+					},
+				} satisfies {
+					optional: NotificationPreferenceSettings;
+					mandatory: MandatoryNotificationPolicy;
+				});
 	return (
 		<SecuritySettingsPageShell>
-			<NotificationPreferencesSection initialPreferences={initialPreferences} />
+			<NotificationPreferencesSection
+				initialMandatoryPolicy={initialPreferences.mandatory}
+				initialPreferences={initialPreferences.optional}
+			/>
 		</SecuritySettingsPageShell>
 	);
 }

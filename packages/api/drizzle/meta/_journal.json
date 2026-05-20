@@ -5,15 +5,29 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1778065440386,
-      "tag": "0000_damp_susan_delgado",
+      "when": 1779197380518,
+      "tag": "0000_brief_stardust",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1779052361557,
-      "tag": "0001_onboarding_progress",
+      "when": 1779197380519,
+      "tag": "0002_personal_settings_privacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779197380520,
+      "tag": "0003_recovery_code_regenerate_verification",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779197380521,
+      "tag": "0004_data_export_audit_action",
       "breakpoints": true
     }
   ]

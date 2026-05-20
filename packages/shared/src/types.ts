@@ -155,6 +155,44 @@ export type ParticipationIntent =
 export type AvailabilityIntent = "weekdays" | "weekends" | "flexible" | "not_sure";
 export type ProfileVisibility = "public" | "teams_only" | "private";
 export type PlayerRecruitingStatus = "looking" | "unavailable";
+export type PrivacyVisibility = ProfileVisibility;
+export type NotificationOptionalCategory =
+	| "invites"
+	| "applications"
+	| "scrimChanges"
+	| "chatActivity"
+	| "results"
+	| "disputes"
+	| "updates";
+export type MandatoryNotificationCategory =
+	| "accountLifecycle"
+	| "securityCritical"
+	| "moderationCritical";
+export type NotificationPreferenceSettings = Record<NotificationOptionalCategory, boolean>;
+export type MandatoryNotificationPolicy = Record<MandatoryNotificationCategory, true>;
+export type PersonalPrivacySettings = {
+	profileVisibility: ProfileVisibility;
+	availabilityVisibility: PrivacyVisibility;
+	recruitingDiscoverability: boolean;
+	publicHistoryVisibility: PrivacyVisibility;
+};
+export type DataExportStatus = {
+	status: "available" | "pending" | "completed" | "failed";
+	mode: "immediate_download" | "async_request";
+	requestedAt: IsoDateString | null;
+	completedAt: IsoDateString | null;
+	downloadUrl: string | null;
+};
+export type AccountLifecycleState = {
+	deletion: {
+		status: "none" | "pending" | "cancelled" | "failed";
+		isPending: boolean;
+		scheduledAt: IsoDateString | null;
+		cancelledAt: IsoDateString | null;
+		failedAt: IsoDateString | null;
+	};
+	dataExport: DataExportStatus;
+};
 export type OnboardingProgressData = {
 	battletag?: string;
 	primaryRole?: OW2Role | null;
@@ -1192,6 +1230,9 @@ export type PlayerProfileFull = {
 	rank: string | null;
 	rankDivision: number | null;
 	profileVisibility: ProfileVisibility;
+	availabilityVisibility: PrivacyVisibility;
+	recruitingDiscoverability: boolean;
+	publicHistoryVisibility: PrivacyVisibility;
 	participationIntent: ParticipationIntent;
 	availabilityIntent: AvailabilityIntent;
 	recruitingStatus: PlayerRecruitingStatus;

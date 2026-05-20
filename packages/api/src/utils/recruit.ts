@@ -22,12 +22,14 @@ export function isPlayerRecruitingDiscoverable(row: {
 		profile?: {
 			profileVisibility: string | null;
 			participationIntent: string | null;
+			recruitingDiscoverability?: boolean | null;
 		} | null;
 	} | null;
 }) {
 	if (row.ownerType !== "player") return true;
 	return (
 		(row.user?.profile?.profileVisibility ?? "public") === "public" &&
+		row.user?.profile?.recruitingDiscoverability !== false &&
 		row.user?.profile?.participationIntent === "find_team"
 	);
 }
@@ -307,6 +309,7 @@ export function mapRecruitmentListing(
 			profile?: {
 				profileVisibility: string | null;
 				participationIntent: string | null;
+				recruitingDiscoverability?: boolean | null;
 			} | null;
 		};
 		organization?: { id: string; name: string; slug: string; avatarUrl: string | null } | null;
@@ -641,7 +644,15 @@ export async function getPublicRecruitmentListings(
 		with: {
 			user: {
 				columns: { id: true, username: true, displayName: true, avatarUrl: true },
-				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+				with: {
+					profile: {
+						columns: {
+							profileVisibility: true,
+							participationIntent: true,
+							recruitingDiscoverability: true,
+						},
+					},
+				},
 			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: {
@@ -666,7 +677,15 @@ export async function getPublicRecruitmentListingById(id: string, viewerId?: str
 		with: {
 			user: {
 				columns: { id: true, username: true, displayName: true, avatarUrl: true },
-				with: { profile: { columns: { profileVisibility: true, participationIntent: true } } },
+				with: {
+					profile: {
+						columns: {
+							profileVisibility: true,
+							participationIntent: true,
+							recruitingDiscoverability: true,
+						},
+					},
+				},
 			},
 			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
 			team: {

@@ -11,5 +11,6 @@ export * from "./validations/org";
 export * from "./validations/profile";
 export * from "./validations/recruit";
 export * from "./validations/scrim";
+export * from "./validations/settings";
 export * from "./validations/update";
 export * from "./validations/upload";

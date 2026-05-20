@@ -56,6 +56,9 @@ profileRoutes.get("/", async (c) => {
 			rank: true,
 			rankDivision: true,
 			profileVisibility: true,
+			availabilityVisibility: true,
+			recruitingDiscoverability: true,
+			publicHistoryVisibility: true,
 			participationIntent: true,
 			availabilityIntent: true,
 		},
@@ -98,9 +101,15 @@ profileRoutes.get("/", async (c) => {
 			rank: profile.rank ?? null,
 			rankDivision: profile.rankDivision ?? null,
 			profileVisibility: profile.profileVisibility,
+			availabilityVisibility: profile.availabilityVisibility,
+			recruitingDiscoverability: profile.recruitingDiscoverability,
+			publicHistoryVisibility: profile.publicHistoryVisibility,
 			participationIntent: profile.participationIntent,
 			availabilityIntent: profile.availabilityIntent,
-			recruitingStatus: profile.participationIntent === "find_team" ? "looking" : "unavailable",
+			recruitingStatus:
+				profile.participationIntent === "find_team" && profile.recruitingDiscoverability
+					? "looking"
+					: "unavailable",
 			heroes: heroRows.map((row) => row.hero),
 			teamHistory: teamRows.map((row) => ({
 				id: row.team.id,

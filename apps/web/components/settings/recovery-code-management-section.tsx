@@ -18,6 +18,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { apiRoutes } from "@/lib/routes";
 
 interface RecoveryCodeManagementSectionProps {
@@ -29,20 +30,43 @@ export function RecoveryCodeManagementSection({
 }: RecoveryCodeManagementSectionProps) {
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [isPending, setIsPending] = useState(false);
+	const [code, setCode] = useState("");
+	const [codeSent, setCodeSent] = useState(false);
 	const [newCode, setNewCode] = useState<string | null>(null);
 
-	async function handleRegenerate() {
+	async function handleRequestCode() {
 		setIsPending(true);
 		try {
-			const res = await fetch(apiRoutes.settings.security.recoveryCodeRegenerate, {
+			const res = await fetch(apiRoutes.settings.security.recoveryCodeRegenerateRequest, {
 				method: "POST",
 				credentials: "include",
 			});
 			if (!res.ok) throw new Error("Request failed");
+			setCodeSent(true);
+			toast.success("Verification code sent to your email.");
+		} catch {
+			toast.error("Failed to request verification. Please try again.");
+		} finally {
+			setIsPending(false);
+		}
+	}
+
+	async function handleRegenerate() {
+		setIsPending(true);
+		try {
+			const res = await fetch(apiRoutes.settings.security.recoveryCodeRegenerateConfirm, {
+				method: "POST",
+				credentials: "include",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ code }),
+			});
+			if (!res.ok) throw new Error("Request failed");
 			const json = (await res.json()) as { data: { recoveryCode: string } };
+			setCode("");
+			setCodeSent(false);
 			setNewCode(json.data.recoveryCode);
 		} catch {
-			toast.error("Failed to regenerate recovery code. Please try again.");
+			toast.error("Invalid or expired verification code. Please try again.");
 		} finally {
 			setIsPending(false);
 		}
@@ -85,6 +109,25 @@ export function RecoveryCodeManagementSection({
 				>
 					{hasRecoveryCode ? "Regenerate recovery code" : "Generate recovery code"}
 				</Button>
+
+				{codeSent && (
+					<div className="mt-3 max-w-sm space-y-2">
+						<Input
+							value={code}
+							onChange={(event) => setCode(event.currentTarget.value)}
+							inputMode="numeric"
+							autoComplete="one-time-code"
+							placeholder="Verification code"
+						/>
+						<Button
+							size="sm"
+							disabled={isPending || code.trim().length === 0}
+							onClick={handleRegenerate}
+						>
+							Confirm and show new code
+						</Button>
+					</div>
+				)}
 			</SettingsSectionCard>
 
 			<AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
@@ -93,7 +136,7 @@ export function RecoveryCodeManagementSection({
 						<AlertDialogTitle>Regenerate recovery code?</AlertDialogTitle>
 						<AlertDialogDescription>
 							Your existing recovery code will be immediately invalidated. Make sure you save the
-							new one.
+							new one. A verification code will be sent to your account email first.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -101,10 +144,10 @@ export function RecoveryCodeManagementSection({
 						<AlertDialogAction
 							onClick={() => {
 								setShowConfirm(false);
-								handleRegenerate();
+								handleRequestCode();
 							}}
 						>
-							Regenerate
+							Send verification code
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
