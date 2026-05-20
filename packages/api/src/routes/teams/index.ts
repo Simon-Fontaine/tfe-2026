@@ -10,7 +10,7 @@ import {
 	UpdateTeamMemberSchema,
 	UpdateTeamSchema,
 } from "@scrimflow/shared";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -39,6 +39,11 @@ import {
 	normalizeMemberFields,
 } from "@/utils/recruit";
 import { getTeamAccessContext, getTeamById, isUserOnTeam } from "@/utils/team";
+import {
+	getTeamIdentityConstraintFieldErrors,
+	getTeamIdentityFieldErrors,
+	normalizeTeamIdentity,
+} from "./identity";
 
 const teamRoutes = new Hono<AuthEnv>();
 
@@ -48,6 +53,89 @@ function getEffectiveInviteStatus(status: string, expiresAt: Date) {
 
 function isActivePendingInvite(status: string, expiresAt: Date) {
 	return getEffectiveInviteStatus(status, expiresAt) === "pending";
+}
+
+function isUniqueViolation(error: unknown) {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: string }).code === "23505"
+	);
+}
+
+function getConstraintName(error: unknown) {
+	if (typeof error !== "object" || error === null || !("constraint" in error)) return undefined;
+	const constraint = (error as { constraint?: unknown }).constraint;
+	return typeof constraint === "string" ? constraint : undefined;
+}
+
+function getTeamIdentityConflictResponse(error: unknown) {
+	if (!isUniqueViolation(error)) return null;
+	const fieldErrors = getTeamIdentityConstraintFieldErrors(getConstraintName(error));
+	if (!fieldErrors) return null;
+	return {
+		error: "A team with this identity already exists in this organization.",
+		fieldErrors,
+	};
+}
+
+async function findActiveTeamIdentityConflict(input: {
+	orgId: string;
+	name: string;
+	tag: string;
+	excludeTeamId?: string;
+}) {
+	const identity = normalizeTeamIdentity(input);
+	const rows = await db.query.teamTable.findMany({
+		where: and(
+			eq(teamTable.organizationId, input.orgId),
+			eq(teamTable.isArchived, false),
+			input.excludeTeamId ? ne(teamTable.id, input.excludeTeamId) : undefined,
+			or(
+				sql`lower(${teamTable.name}) = ${identity.name.toLowerCase()}`,
+				sql`upper(${teamTable.tag}) = ${identity.tag}`
+			)
+		),
+		columns: { name: true, tag: true },
+	});
+
+	if (rows.length === 0) return null;
+	return getTeamIdentityFieldErrors(identity, rows);
+}
+
+async function hasOtherActiveTeamAdmin(teamId: string, memberId: string) {
+	const [row] = await db
+		.select({ value: count() })
+		.from(teamRosterTable)
+		.where(
+			and(
+				eq(teamRosterTable.teamId, teamId),
+				ne(teamRosterTable.id, memberId),
+				eq(teamRosterTable.permissionRole, "admin"),
+				ne(teamRosterTable.status, "inactive")
+			)
+		);
+
+	return Number(row?.value ?? 0) > 0;
+}
+
+async function blocksLastActiveTeamAdmin(member: {
+	id: string;
+	teamId: string;
+	permissionRole: "admin" | "member";
+	status: "active" | "benched" | "trial" | "inactive";
+	nextPermissionRole?: "admin" | "member";
+	nextStatus?: "active" | "benched" | "trial" | "inactive";
+}) {
+	if (member.permissionRole !== "admin" || member.status === "inactive") return false;
+
+	const nextPermissionRole = member.nextPermissionRole ?? member.permissionRole;
+	const nextStatus = member.nextStatus ?? member.status;
+	const remainsActiveAdmin = nextPermissionRole === "admin" && nextStatus !== "inactive";
+	if (remainsActiveAdmin) return false;
+
+	return !(await hasOtherActiveTeamAdmin(member.teamId, member.id));
 }
 
 function toTeamPermissions(ctx: NonNullable<Awaited<ReturnType<typeof getTeamAccessContext>>>) {
@@ -497,19 +585,56 @@ teamRoutes.post("/", async (c) => {
 		);
 	}
 
-	const [team] = await db
-		.insert(teamTable)
-		.values({
-			organizationId: parsed.output.orgId,
-			name: parsed.output.name,
-			tag: parsed.output.tag.toUpperCase(),
-			description: parsed.output.description || null,
-			avatarUrl: parsed.output.avatarUrl || null,
-			bannerUrl: parsed.output.bannerUrl || null,
-		})
-		.returning({ id: teamTable.id });
+	const identity = normalizeTeamIdentity({
+		name: parsed.output.name,
+		tag: parsed.output.tag,
+	});
+	const conflict = await findActiveTeamIdentityConflict({
+		orgId: parsed.output.orgId,
+		...identity,
+	});
+	if (conflict) {
+		return c.json(
+			{
+				error: "A team with this identity already exists in this organization.",
+				fieldErrors: conflict,
+			},
+			409
+		);
+	}
 
-	return c.json({ success: true, teamId: team.id });
+	try {
+		const team = await db.transaction(async (tx) => {
+			const [createdTeam] = await tx
+				.insert(teamTable)
+				.values({
+					organizationId: parsed.output.orgId,
+					name: identity.name,
+					tag: identity.tag,
+					description: parsed.output.description || null,
+					avatarUrl: parsed.output.avatarUrl || null,
+					bannerUrl: parsed.output.bannerUrl || null,
+				})
+				.returning({ id: teamTable.id });
+
+			await ensureTeamMembership(tx, {
+				teamId: createdTeam.id,
+				userId: user.id,
+				memberType: "staff",
+				staffRole: "manager",
+				permissionRole: "admin",
+				status: "active",
+			});
+
+			return createdTeam;
+		});
+
+		return c.json({ success: true, teamId: team.id });
+	} catch (error) {
+		const conflictResponse = getTeamIdentityConflictResponse(error);
+		if (conflictResponse) return c.json(conflictResponse, 409);
+		throw error;
+	}
 });
 
 teamRoutes.get("/:id", async (c) => {
@@ -533,16 +658,41 @@ teamRoutes.patch("/:id", async (c) => {
 	if (!access.canManageTeam)
 		return c.json({ error: "You do not have permission to edit this team." }, 403);
 
-	await db
-		.update(teamTable)
-		.set({
-			name: parsed.output.name,
-			tag: parsed.output.tag.toUpperCase(),
-			description: parsed.output.description || null,
-			avatarUrl: parsed.output.avatarUrl || null,
-			bannerUrl: parsed.output.bannerUrl || null,
-		})
-		.where(eq(teamTable.id, teamId));
+	const identity = normalizeTeamIdentity({
+		name: parsed.output.name,
+		tag: parsed.output.tag,
+	});
+	const conflict = await findActiveTeamIdentityConflict({
+		orgId: access.organizationId,
+		...identity,
+		excludeTeamId: teamId,
+	});
+	if (conflict) {
+		return c.json(
+			{
+				error: "A team with this identity already exists in this organization.",
+				fieldErrors: conflict,
+			},
+			409
+		);
+	}
+
+	try {
+		await db
+			.update(teamTable)
+			.set({
+				name: identity.name,
+				tag: identity.tag,
+				description: parsed.output.description || null,
+				avatarUrl: parsed.output.avatarUrl || null,
+				bannerUrl: parsed.output.bannerUrl || null,
+			})
+			.where(eq(teamTable.id, teamId));
+	} catch (error) {
+		const conflictResponse = getTeamIdentityConflictResponse(error);
+		if (conflictResponse) return c.json(conflictResponse, 409);
+		throw error;
+	}
 
 	return c.json({ success: true });
 });
@@ -610,7 +760,29 @@ teamRoutes.post("/:id/unarchive", async (c) => {
 		return c.json({ error: "You do not have permission to restore this team." }, 403);
 	}
 
-	await db.update(teamTable).set({ isArchived: false }).where(eq(teamTable.id, team.id));
+	const conflict = await findActiveTeamIdentityConflict({
+		orgId: team.organizationId,
+		name: team.name,
+		tag: team.tag,
+		excludeTeamId: team.id,
+	});
+	if (conflict) {
+		return c.json(
+			{
+				error: "A team with this identity already exists in this organization.",
+				fieldErrors: conflict,
+			},
+			409
+		);
+	}
+
+	try {
+		await db.update(teamTable).set({ isArchived: false }).where(eq(teamTable.id, team.id));
+	} catch (error) {
+		const conflictResponse = getTeamIdentityConflictResponse(error);
+		if (conflictResponse) return c.json(conflictResponse, 409);
+		throw error;
+	}
 
 	return c.json({ success: true });
 });
@@ -687,11 +859,14 @@ teamRoutes.delete("/:id/leave", async (c) => {
 	const teamId = c.req.param("id");
 	const roster = await db.query.teamRosterTable.findFirst({
 		where: and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.userId, user.id)),
-		columns: { id: true, status: true },
+		columns: { id: true, teamId: true, permissionRole: true, status: true },
 	});
 	if (!roster) return c.json({ error: "You are not on this roster." }, 404);
 	if (roster.status === "inactive")
 		return c.json({ error: "You are no longer active on this roster." }, 400);
+	if (await blocksLastActiveTeamAdmin({ ...roster, nextStatus: "inactive" })) {
+		return c.json({ error: "Assign another active team admin before leaving this team." }, 409);
+	}
 
 	await db
 		.update(teamRosterTable)
@@ -733,7 +908,7 @@ teamRoutes.patch("/:id/roster/:memberId", async (c) => {
 
 	const member = await db.query.teamRosterTable.findFirst({
 		where: eq(teamRosterTable.id, memberId),
-		columns: { id: true, teamId: true },
+		columns: { id: true, teamId: true, permissionRole: true, status: true },
 	});
 	if (!member || member.teamId !== teamId)
 		return c.json({ error: "Roster member not found." }, 404);
@@ -743,6 +918,18 @@ teamRoutes.patch("/:id/roster/:memberId", async (c) => {
 		staffRole: parsed.output.staffRole ?? null,
 		gameRole: parsed.output.gameRole ?? parsed.output.roleInTeam ?? null,
 	});
+	if (
+		await blocksLastActiveTeamAdmin({
+			...member,
+			nextPermissionRole: parsed.output.permissionRole,
+			nextStatus: parsed.output.status,
+		})
+	) {
+		return c.json(
+			{ error: "Assign another active team admin before changing this admin's access." },
+			409
+		);
+	}
 
 	await db
 		.update(teamRosterTable)
@@ -780,10 +967,13 @@ teamRoutes.delete("/:id/roster/:memberId", async (c) => {
 
 	const member = await db.query.teamRosterTable.findFirst({
 		where: eq(teamRosterTable.id, memberId),
-		columns: { id: true, teamId: true },
+		columns: { id: true, teamId: true, permissionRole: true, status: true },
 	});
 	if (!member || member.teamId !== teamId)
 		return c.json({ error: "Roster member not found." }, 404);
+	if (await blocksLastActiveTeamAdmin({ ...member, nextStatus: "inactive" })) {
+		return c.json({ error: "Assign another active team admin before removing this admin." }, 409);
+	}
 
 	await db
 		.update(teamRosterTable)
@@ -811,9 +1001,20 @@ teamRoutes.patch("/:id/members/:memberId/role", async (c) => {
 
 	const member = await db.query.teamRosterTable.findFirst({
 		where: eq(teamRosterTable.id, memberId),
-		columns: { id: true, teamId: true },
+		columns: { id: true, teamId: true, permissionRole: true, status: true },
 	});
 	if (!member || member.teamId !== teamId) return c.json({ error: "Team member not found." }, 404);
+	if (
+		await blocksLastActiveTeamAdmin({
+			...member,
+			nextPermissionRole: parsed.output.permissionRole,
+		})
+	) {
+		return c.json(
+			{ error: "Assign another active team admin before changing this admin's access." },
+			409
+		);
+	}
 
 	await db
 		.update(teamRosterTable)

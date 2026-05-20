@@ -57,7 +57,24 @@ export function CreateTeamDialog({
 			const teamId = (state as { teamId?: string }).teamId;
 			if (teamId) router.push(appRoutes.teams.byId(teamId));
 		}
-	}, [state, router]);
+		if (state?.fieldErrors) {
+			pendingRef.current = false;
+			for (const [field, messages] of Object.entries(state.fieldErrors)) {
+				const message = messages?.[0];
+				if (!message) continue;
+				if (
+					field === "orgId" ||
+					field === "name" ||
+					field === "tag" ||
+					field === "description" ||
+					field === "avatarUrl" ||
+					field === "bannerUrl"
+				) {
+					form.setError(field, { message });
+				}
+			}
+		}
+	}, [state, router, form]);
 
 	function onSubmit(values: CreateTeamInput) {
 		pendingRef.current = true;

@@ -23,6 +23,13 @@ interface TeamSettingsPanelProps {
 	team: TeamWithRoster;
 }
 
+function getFieldErrorText(
+	fieldErrors: Partial<Record<string, string[]>> | undefined,
+	field: string
+) {
+	return fieldErrors?.[field]?.join(" ");
+}
+
 export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 	const canManageSettings = team.currentUser.canManageSettings;
 	const canManageLifecycle =
@@ -51,6 +58,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 		loadingMessage: "Leaving team…",
 		successMessage: "You left the team",
 	});
+	const updateFieldErrors = updateForm.state?.fieldErrors;
 
 	function submitArchive() {
 		const fd = new FormData();
@@ -104,6 +112,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 								<Field>
 									<FieldLabel>Name</FieldLabel>
 									<Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+									<FieldError>{getFieldErrorText(updateFieldErrors, "name")}</FieldError>
 								</Field>
 								<Field>
 									<FieldLabel>Tag</FieldLabel>
@@ -116,6 +125,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 									<FieldDescription>
 										Used across roster, recruiting listings, and the public team profile.
 									</FieldDescription>
+									<FieldError>{getFieldErrorText(updateFieldErrors, "tag")}</FieldError>
 								</Field>
 								<Field>
 									<FieldLabel>Description</FieldLabel>
@@ -125,6 +135,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 										rows={4}
 										maxLength={280}
 									/>
+									<FieldError>{getFieldErrorText(updateFieldErrors, "description")}</FieldError>
 								</Field>
 								<EntityImageUploadField
 									label="Team avatar"

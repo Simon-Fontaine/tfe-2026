@@ -379,6 +379,13 @@ export const teamTable = pgTable(
 	},
 	(table) => [
 		index("team_org_idx").on(table.organizationId),
+		// Team identity is org-scoped. Archived teams release their name/tag for reuse.
+		uniqueIndex("team_org_active_name_unique_idx")
+			.on(table.organizationId, sql`lower(${table.name})`)
+			.where(sql`${table.isArchived} = false`),
+		uniqueIndex("team_org_active_tag_unique_idx")
+			.on(table.organizationId, sql`upper(${table.tag})`)
+			.where(sql`${table.isArchived} = false`),
 		// Matchmaking: "find active teams in rating range"
 		index("team_matchmaking_idx").on(table.rating, table.isArchived),
 	]

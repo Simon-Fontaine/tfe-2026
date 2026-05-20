@@ -263,7 +263,7 @@ export const apiRoutes = {
 
 export const appRoutes = {
 	root: "/app",
-	me: "/app/me",
+	me: "/app",
 	inbox: "/app/inbox",
 	calendar: "/app/calendar",
 	profile: "/app/profile",
