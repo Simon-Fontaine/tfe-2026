@@ -11,6 +11,7 @@ import {
 	updateTeamMemberPermissionAction,
 } from "@/app/actions/team";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -78,24 +79,35 @@ interface RosterRowProps {
 function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProps) {
 	const [isPending, startTransition] = useTransition();
 	const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+	const [mutationError, setMutationError] = useState<string | null>(null);
+
+	function submitMutation(action: () => Promise<{ error?: string; fieldErrors?: unknown }>) {
+		setMutationError(null);
+		startTransition(async () => {
+			const result = await action();
+			if (result.error) {
+				setMutationError(result.error);
+				return;
+			}
+			if (result.fieldErrors) {
+				setMutationError("Check the selected roster fields and try again.");
+			}
+		});
+	}
 
 	function changeStatus(status: RosterStatus) {
 		const fd = new FormData();
 		fd.set("teamId", teamId);
 		fd.set("rosterId", member.id);
 		fd.set("status", status);
-		startTransition(() => {
-			void updateRosterStatusAction(null, fd);
-		});
+		submitMutation(() => updateRosterStatusAction(null, fd));
 	}
 
 	function remove() {
 		const fd = new FormData();
 		fd.set("teamId", teamId);
 		fd.set("rosterId", member.id);
-		startTransition(() => {
-			void removeRosterMemberAction(null, fd);
-		});
+		submitMutation(() => removeRosterMemberAction(null, fd));
 	}
 
 	function changePermissionRole(permissionRole: "admin" | "member") {
@@ -103,9 +115,7 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 		fd.set("teamId", teamId);
 		fd.set("memberId", member.id);
 		fd.set("permissionRole", permissionRole);
-		startTransition(() => {
-			void updateTeamMemberPermissionAction(null, fd);
-		});
+		submitMutation(() => updateTeamMemberPermissionAction(null, fd));
 	}
 
 	function updateMemberDetails(input: {
@@ -119,58 +129,50 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 		if (input.memberType) fd.set("memberType", input.memberType);
 		if (input.roleInTeam) fd.set("roleInTeam", input.roleInTeam);
 		if (input.staffRole) fd.set("staffRole", input.staffRole);
-		startTransition(() => {
-			void updateTeamMemberAction(null, fd);
-		});
+		submitMutation(() => updateTeamMemberAction(null, fd));
 	}
 
 	return (
-		<div
-			className={cn(
-				"flex items-center gap-3 px-4 py-3 transition-opacity",
-				isPending && "opacity-50 pointer-events-none"
-			)}
-		>
-			<Avatar className="size-8 rounded-none overflow-hidden after:rounded-none shrink-0">
-				<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
-				<AvatarFallback className="rounded-none text-[10px]">
-					<HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
-				</AvatarFallback>
-			</Avatar>
+		<div className={cn("transition-opacity", isPending && "opacity-50 pointer-events-none")}>
+			<div className="flex flex-wrap items-center gap-3 px-4 py-3">
+				<Avatar className="size-8 rounded-none overflow-hidden after:rounded-none shrink-0">
+					<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
+					<AvatarFallback className="rounded-none text-[10px]">
+						<HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
+					</AvatarFallback>
+				</Avatar>
 
-			<div className="min-w-0 flex-1">
-				<Link
-					href={publicRoutes.players.byUsername(member.username)}
-					className="truncate text-xs font-medium hover:underline"
-				>
-					{member.displayName}
-				</Link>
-				<p className="text-[10px] text-muted-foreground">
-					{member.roleInTeam
-						? ROLE_LABELS[member.roleInTeam]
-						: member.staffRole
-							? member.staffRole[0].toUpperCase() + member.staffRole.slice(1)
-							: "Staff"}
-					{member.rank &&
-						` · ${RANK_LABELS[member.rank] ?? member.rank}${member.rankDivision ? ` ${member.rankDivision}` : ""}`}
-				</p>
-			</div>
+				<div className="min-w-40 flex-1">
+					<Link
+						href={publicRoutes.players.byUsername(member.username)}
+						className="truncate text-xs font-medium hover:underline"
+					>
+						{member.displayName}
+					</Link>
+					<p className="text-[10px] text-muted-foreground">
+						{member.roleInTeam
+							? ROLE_LABELS[member.roleInTeam]
+							: member.staffRole
+								? member.staffRole[0].toUpperCase() + member.staffRole.slice(1)
+								: "Staff"}
+						{member.rank &&
+							` · ${RANK_LABELS[member.rank] ?? member.rank}${member.rankDivision ? ` ${member.rankDivision}` : ""}`}
+					</p>
+				</div>
 
-			<Badge className={cn("text-[10px] shrink-0", STATUS_VARIANTS[member.status])}>
-				{member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-			</Badge>
-			{member.permissionRole === "admin" && (
-				<Badge variant="outline" className="text-[10px] shrink-0">
-					Admin
+				<Badge className={cn("text-[10px] shrink-0", STATUS_VARIANTS[member.status])}>
+					{member.status.charAt(0).toUpperCase() + member.status.slice(1)}
 				</Badge>
-			)}
+				<Badge variant="outline" className="text-[10px] shrink-0">
+					{member.permissionRole === "admin" ? "Admin access" : "Member access"}
+				</Badge>
 
-			{canManage && (
-				<>
+				{canManage && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<button
 								type="button"
+								aria-label={`Manage ${member.displayName}`}
 								className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 							>
 								<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
@@ -250,22 +252,32 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
+				)}
+			</div>
 
-					<AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
-								<AlertDialogDescription>
-									This will remove them from the team roster. This action cannot be undone.
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onClick={remove}>Remove member</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-				</>
+			{mutationError ? (
+				<div className="px-4 pb-3">
+					<Alert variant="destructive">
+						<AlertDescription>{mutationError}</AlertDescription>
+					</Alert>
+				</div>
+			) : null}
+
+			{canManage && (
+				<AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
+							<AlertDialogDescription>
+								This removes team-scoped access while preserving historical roster context.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
+							<AlertDialogAction onClick={remove}>Remove member</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			)}
 		</div>
 	);

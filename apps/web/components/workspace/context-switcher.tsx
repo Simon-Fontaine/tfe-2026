@@ -48,6 +48,15 @@ export interface SwitcherTeam {
 	organizationId: string;
 	organizationName: string;
 	canManage: boolean;
+	canViewWorkspace: boolean;
+	canViewRoster: boolean;
+	canViewSchedule: boolean;
+	canViewScrims: boolean;
+	canViewRecruiting: boolean;
+	canViewChat: boolean;
+	canViewUpdates: boolean;
+	canManageSettings: boolean;
+	canLeave: boolean;
 }
 
 interface ContextSwitcherProps {

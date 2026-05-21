@@ -17,7 +17,7 @@ export default async function AppOrgBrandPage({ params }: { params: Promise<{ or
 		return <AccessGate title="Brand" resourceType="organization" />;
 	}
 
-	if (!org.data.currentUser.canManage) {
+	if (!org.data.currentUser.canManageBrand) {
 		return (
 			<PageContainer>
 				<PageHeader title="Brand" detail={`/${org.data.slug}`} />

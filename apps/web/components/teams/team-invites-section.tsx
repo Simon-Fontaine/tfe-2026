@@ -1,6 +1,7 @@
 "use client";
 
 import { cancelTeamInviteAction, resendTeamInviteAction } from "@/app/actions/team";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,15 +46,22 @@ function InviteActions({ teamId, inviteId }: { teamId: string; inviteId: string 
 	}
 
 	return (
-		<div className="flex shrink-0 gap-2">
-			<Button size="sm" variant="outline" onClick={submitResend} disabled={isPending}>
-				{resendForm.isPending && <Spinner className="mr-1.5" />}
-				Resend
-			</Button>
-			<Button size="sm" variant="outline" onClick={submitCancel} disabled={isPending}>
-				{cancelForm.isPending && <Spinner className="mr-1.5" />}
-				Cancel
-			</Button>
+		<div className="space-y-2">
+			<div className="flex shrink-0 flex-wrap gap-2">
+				<Button size="sm" variant="outline" onClick={submitResend} disabled={isPending}>
+					{resendForm.isPending && <Spinner className="mr-1.5" />}
+					Resend
+				</Button>
+				<Button size="sm" variant="outline" onClick={submitCancel} disabled={isPending}>
+					{cancelForm.isPending && <Spinner className="mr-1.5" />}
+					Cancel
+				</Button>
+			</div>
+			{cancelForm.state?.error || resendForm.state?.error ? (
+				<Alert variant="destructive">
+					<AlertDescription>{cancelForm.state?.error ?? resendForm.state?.error}</AlertDescription>
+				</Alert>
+			) : null}
 		</div>
 	);
 }
@@ -66,7 +74,7 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 	return (
 		<div className="space-y-2">
 			{invites.map((invite) => (
-				<div key={invite.id} className="flex items-center gap-3 border px-4 py-3">
+				<div key={invite.id} className="flex flex-wrap items-center gap-3 border px-4 py-3">
 					<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
 						<AvatarImage src={invite.inviteeAvatarUrl ?? undefined} className="rounded-none" />
 						<AvatarFallback className="rounded-none text-[10px] font-bold">
@@ -75,7 +83,7 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 					</Avatar>
 					<div className="min-w-0 flex-1">
 						<p className="truncate text-xs font-medium">{invite.inviteeDisplayName}</p>
-						<div className="mt-0.5 flex items-center gap-2">
+						<div className="mt-0.5 flex flex-wrap items-center gap-2">
 							<Badge variant="outline" className="text-[10px]">
 								{invite.roleInTeam
 									? (ROLE_LABELS[invite.roleInTeam] ?? invite.roleInTeam)
@@ -86,6 +94,11 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 							{invite.permissionRole === "admin" && (
 								<Badge variant="secondary" className="text-[10px]">
 									Admin access
+								</Badge>
+							)}
+							{invite.permissionRole === "member" && (
+								<Badge variant="outline" className="text-[10px]">
+									Member access
 								</Badge>
 							)}
 							<span className="text-[10px] text-muted-foreground">

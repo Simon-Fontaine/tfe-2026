@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { TeamWithRoster } from "@/lib/data/team";
@@ -39,6 +40,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 	const [description, setDescription] = useState(team.description ?? "");
 	const [avatarUrl, setAvatarUrl] = useState(team.avatarUrl ?? "");
 	const [bannerUrl, setBannerUrl] = useState(team.bannerUrl ?? "");
+	const [isPublic, setIsPublic] = useState(team.isPublic);
 	const updateForm = useFormAction(updateTeamAction, {
 		loadingMessage: "Saving team settings…",
 		successMessage: "Team updated",
@@ -93,6 +95,7 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 		fd.set("description", description);
 		fd.set("avatarUrl", avatarUrl);
 		fd.set("bannerUrl", bannerUrl);
+		fd.set("isPublic", isPublic ? "true" : "false");
 		updateForm.submit(fd);
 	}
 
@@ -151,6 +154,15 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 									onChange={setBannerUrl}
 									helperText="Wide image recommended · max 4 MB"
 								/>
+								<Field orientation="horizontal" className="justify-between rounded-md border p-3">
+									<div className="space-y-1">
+										<FieldLabel htmlFor="team-public">Public profile</FieldLabel>
+										<FieldDescription>
+											Show this team on public team and organization discovery surfaces.
+										</FieldDescription>
+									</div>
+									<Switch id="team-public" checked={isPublic} onCheckedChange={setIsPublic} />
+								</Field>
 							</FieldGroup>
 							{updateForm.state?.error ? <FieldError>{updateForm.state.error}</FieldError> : null}
 							<div className="flex flex-wrap items-center gap-2">

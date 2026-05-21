@@ -12,13 +12,14 @@ import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
-import { getTeamScrims, type ScrimSummary } from "@/lib/data/scrims";
-import { getTeamWithRoster } from "@/lib/data/teams";
+import { getTeamScrimsRouteState, type ScrimSummary } from "@/lib/data/scrims";
+import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 import { ScrimsStoreBootstrap } from "./scrims-store-bootstrap";
@@ -98,26 +99,56 @@ export default async function TeamScrimsPage({
 
 	const { teamId } = await params;
 	const { pastCursor } = await searchParams;
-	const [team, { scrims, nextCursor }, discoveryTeams] = await Promise.all([
-		getTeamWithRoster(teamId, user.id),
-		getTeamScrims(teamId, pastCursor),
-		getTeamsForDiscovery(),
-	]);
-	if (!team) notFound();
-	const opponentOptions = discoveryTeams.filter((candidate) => candidate.id !== team.id);
+	const team = await getTeamWithRosterRouteState(teamId, user.id);
+	if (team.kind === "missing") notFound();
+	if (team.kind !== "success" || !team.data.currentUser.canViewScrims) {
+		return <AccessGate title="Scrims" resourceType="team" />;
+	}
 
-	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, team.id));
+	const [scrimsState, discoveryTeams] = await Promise.all([
+		getTeamScrimsRouteState(teamId, pastCursor),
+		team.data.currentUser.canManage ? getTeamsForDiscovery() : Promise.resolve([]),
+	]);
+	const opponentOptions = discoveryTeams.filter((candidate) => candidate.id !== team.data.id);
+
+	if (scrimsState.kind !== "success") {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Scrims"
+					detail={`[${team.data.tag}] ${team.data.name}`}
+					description={`Live scrim queue, result confirmation, and evidence tracking for ${team.data.name}.`}
+				/>
+				<EmptyStateBlock
+					title={scrimsState.kind === "no-access" ? "No access" : "Scrims unavailable"}
+					description={
+						scrimsState.kind === "no-access"
+							? "You do not have permission to view this team's scrim queue."
+							: "This team's scrim queue could not be opened from the current route."
+					}
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+
+	const teamData = team.data;
+	const { scrims, nextCursor } = scrimsState.data;
+
+	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, teamData.id));
 	const upcomingScrims = scrims.filter(
-		(s) => !isNeedsAction(s, team.id) && ["accepted", "scheduled", "in_progress"].includes(s.status)
+		(s) =>
+			!isNeedsAction(s, teamData.id) && ["accepted", "scheduled", "in_progress"].includes(s.status)
 	);
 	const pastScrims = scrims.filter(
-		(s) => !isNeedsAction(s, team.id) && ["completed", "cancelled", "disputed"].includes(s.status)
+		(s) =>
+			!isNeedsAction(s, teamData.id) && ["completed", "cancelled", "disputed"].includes(s.status)
 	);
 	const needsActionCount = needsActionScrims.length;
 
-	const createAction = team.currentUser.canManage ? (
+	const createAction = teamData.currentUser.canManage ? (
 		opponentOptions.length > 0 ? (
-			<CreateScrimDialog teamId={team.id} opponentOptions={opponentOptions}>
+			<CreateScrimDialog teamId={teamData.id} opponentOptions={opponentOptions}>
 				<Button size="sm">
 					<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 					New scrim
@@ -135,11 +166,11 @@ export default async function TeamScrimsPage({
 		<PageContainer>
 			<PageHeader
 				title="Scrims"
-				description={`Live scrim queue, result confirmation, and evidence tracking for ${team.name}.`}
+				description={`Live scrim queue, result confirmation, and evidence tracking for ${teamData.name}.`}
 				actions={createAction}
 			/>
 
-			<ScrimsStoreBootstrap needsActionCount={needsActionCount} />
+			<ScrimsStoreBootstrap teamId={teamData.id} needsActionCount={needsActionCount} />
 
 			{scrims.length === 0 ? (
 				<>
@@ -149,7 +180,7 @@ export default async function TeamScrimsPage({
 						description="Scrim requests and scheduled matches will appear here once your team is active."
 						variant="card"
 					/>
-					{!team.currentUser.canManage && (
+					{!teamData.currentUser.canManage && (
 						<p className="text-center text-sm text-muted-foreground">
 							Team managers can schedule scrims from this page.
 						</p>
@@ -178,7 +209,7 @@ export default async function TeamScrimsPage({
 						) : (
 							<div className="space-y-3">
 								{needsActionScrims.map((scrim) => (
-									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
 							</div>
 						)}
@@ -201,7 +232,7 @@ export default async function TeamScrimsPage({
 						) : (
 							<div className="space-y-3">
 								{upcomingScrims.map((scrim) => (
-									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
 							</div>
 						)}
@@ -224,7 +255,7 @@ export default async function TeamScrimsPage({
 						) : (
 							<div className="space-y-3">
 								{pastScrims.map((scrim) => (
-									<ScrimRow key={scrim.id} scrim={scrim} teamId={team.id} />
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
 								{nextCursor && (
 									<LoadMoreButton

@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { availabilityTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
-import { verifyUserOnTeam } from "@/utils/team";
+import { getTeamAccessContext, verifyUserOnTeam } from "@/utils/team";
 
 const scheduleRoutes = new Hono<AuthEnv>();
 
@@ -58,8 +58,11 @@ scheduleRoutes.get("/team/:teamId", async (c) => {
 	const user = c.get("user");
 	const teamId = c.req.param("teamId");
 
-	const onTeam = await verifyUserOnTeam(user.id, teamId);
-	if (!onTeam) return c.json({ error: "You are not an active member of this team." }, 403);
+	const access = await getTeamAccessContext(teamId, user.id);
+	if (!access) return c.json({ error: "Team not found." }, 404);
+	if (!access.canManageTeam && access.teamStatus !== "active") {
+		return c.json({ error: "You do not have access to this team's schedule." }, 403);
+	}
 
 	const team = await db.query.teamTable.findFirst({
 		where: eq(teamTable.id, teamId),

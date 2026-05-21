@@ -17,16 +17,20 @@ export default async function AppTeamCalendarPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { teamId } = await params;
-	const [team, schedule, myAvailability] = await Promise.all([
-		getTeamWithRosterRouteState(teamId, user.id),
-		getTeamScheduleRouteState(teamId),
-		getPlayerAvailability(user.id, teamId),
-	]);
+	const team = await getTeamWithRosterRouteState(teamId, user.id);
 
 	if (team.kind === "missing") notFound();
 	if (team.kind !== "success") {
 		return <AccessGate title="Team schedule" resourceType="team" />;
 	}
+	if (!team.data.currentUser.canViewSchedule) {
+		return <AccessGate title="Team schedule" resourceType="team" />;
+	}
+
+	const [schedule, myAvailability] = await Promise.all([
+		getTeamScheduleRouteState(teamId),
+		getPlayerAvailability(user.id, teamId),
+	]);
 
 	if (schedule.kind !== "success") {
 		return (

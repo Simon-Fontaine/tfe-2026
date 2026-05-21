@@ -113,6 +113,7 @@ export async function createTeamAction(
 		description: formData.get("description")?.toString() || undefined,
 		avatarUrl: formData.get("avatarUrl")?.toString() || undefined,
 		bannerUrl: formData.get("bannerUrl")?.toString() || undefined,
+		isPublic: formData.get("isPublic")?.toString() !== "false",
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
@@ -135,6 +136,7 @@ export async function updateTeamAction(
 		description: formData.get("description")?.toString() || undefined,
 		avatarUrl: formData.get("avatarUrl")?.toString() || undefined,
 		bannerUrl: formData.get("bannerUrl")?.toString() || undefined,
+		isPublic: formData.get("isPublic")?.toString() !== "false",
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
@@ -239,6 +241,7 @@ export async function updateRosterStatusAction(
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -253,6 +256,7 @@ export async function updateTeamMemberAction(
 
 	const fields = getTeamMemberFields(formData);
 	const result = await apiPatch(apiRoutes.teams.roster.byId(teamId, memberId), {
+		memberType: fields.memberType,
 		roleInTeam: fields.roleInTeam,
 		gameRole: fields.gameRole,
 		staffRole: fields.staffRole,
@@ -262,6 +266,7 @@ export async function updateTeamMemberAction(
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -280,6 +285,7 @@ export async function updateTeamMemberPermissionAction(
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -320,6 +326,7 @@ export async function sendTeamInviteAction(
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -336,6 +343,7 @@ export async function cancelTeamInviteAction(
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
 	return { success: true };
 }
 
@@ -344,12 +352,17 @@ export async function respondToTeamInviteAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const inviteId = String(formData.get("inviteId") ?? "");
-	const result = await apiPost(apiRoutes.teams.invites.respond(inviteId), {
-		action: String(formData.get("action") ?? ""),
-	});
+	const result = await apiPost<{ teamId?: string; organizationId?: string }>(
+		apiRoutes.teams.invites.respond(inviteId),
+		{
+			action: String(formData.get("action") ?? ""),
+		}
+	);
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateInvitationSurfaces();
+	if (result.teamId) revalidateTeamWorkspace(result.teamId);
+	if (result.organizationId) await revalidateOrgWorkspace(result.organizationId);
 	return { success: true };
 }
 
@@ -366,5 +379,6 @@ export async function resendTeamInviteAction(
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
 	return { success: true };
 }

@@ -24,6 +24,7 @@ publicTeamRoutes.get("/", async (c) => {
 	const rows = await db.query.teamTable.findMany({
 		where: and(
 			eq(teamTable.isArchived, false),
+			eq(teamTable.isPublic, true),
 			recruitingFilter !== undefined ? eq(teamTable.isRecruiting, recruitingFilter) : undefined
 		),
 		columns: {
@@ -44,23 +45,28 @@ publicTeamRoutes.get("/", async (c) => {
 				where: eq(recruitmentListingTable.status, "open"),
 				columns: { id: true },
 			},
+			organization: {
+				columns: { id: true, isPublic: true },
+			},
 		},
 		orderBy: [asc(teamTable.name)],
 		limit: 60,
 	});
 
-	const data: DiscoveryTeam[] = rows.map((team) => ({
-		id: team.id,
-		organizationId: team.organizationId,
-		name: team.name,
-		tag: team.tag,
-		description: team.description ?? null,
-		avatarUrl: team.avatarUrl,
-		rating: team.rating,
-		isRecruiting: team.isRecruiting,
-		activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
-		openListingCount: team.recruitmentListings.length,
-	}));
+	const data: DiscoveryTeam[] = rows
+		.filter((team) => team.organization?.isPublic)
+		.map((team) => ({
+			id: team.id,
+			organizationId: team.organizationId,
+			name: team.name,
+			tag: team.tag,
+			description: team.description ?? null,
+			avatarUrl: team.avatarUrl,
+			rating: team.rating,
+			isRecruiting: team.isRecruiting,
+			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
+			openListingCount: team.recruitmentListings.length,
+		}));
 
 	return c.json({ data });
 });
@@ -70,7 +76,11 @@ publicTeamRoutes.get("/:id", async (c) => {
 	const user = c.get("user");
 
 	const team = await db.query.teamTable.findFirst({
-		where: and(eq(teamTable.id, teamId), eq(teamTable.isArchived, false)),
+		where: and(
+			eq(teamTable.id, teamId),
+			eq(teamTable.isArchived, false),
+			eq(teamTable.isPublic, true)
+		),
 		columns: {
 			id: true,
 			organizationId: true,
@@ -89,6 +99,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 				columns: {
 					name: true,
 					slug: true,
+					isPublic: true,
 				},
 			},
 			roster: {
@@ -154,7 +165,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 		},
 	});
 
-	if (!team) return c.json({ error: "Team not found." }, 404);
+	if (!team || !team.organization?.isPublic) return c.json({ error: "Team not found." }, 404);
 
 	// Derive win/loss/draw and recentScrims from completed scrim results
 	let wins = 0;

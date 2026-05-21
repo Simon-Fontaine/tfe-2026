@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { sendTeamInviteAction } from "@/app/actions/team";
 import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -227,6 +228,12 @@ export function InvitePlayerDialog({
 							</div>
 						</Field>
 					)}
+
+					{state?.error ? (
+						<Alert variant="destructive">
+							<AlertDescription>{state.error}</AlertDescription>
+						</Alert>
+					) : null}
 
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={!selected || isPending}>

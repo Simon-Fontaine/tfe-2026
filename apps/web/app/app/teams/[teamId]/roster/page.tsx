@@ -31,6 +31,9 @@ export default async function AppTeamRosterPage({
 	if (team.kind !== "success") {
 		return <AccessGate title="Roster" resourceType="team" />;
 	}
+	if (!team.data.currentUser.canViewRoster) {
+		return <AccessGate title="Roster" resourceType="team" />;
+	}
 
 	const activeTab = type === "staff" ? "staff" : "players";
 	const canManage = team.data.currentUser.canManage;
@@ -38,6 +41,8 @@ export default async function AppTeamRosterPage({
 	const canManageInvites = team.data.currentUser.canManageInvites;
 	const isStaffTab = activeTab === "staff";
 	const activeRoster = isStaffTab ? team.data.staff : team.data.players;
+	const activePlayers = team.data.players.filter((member) => member.status !== "inactive").length;
+	const activeStaff = team.data.staff.filter((member) => member.status !== "inactive").length;
 
 	return (
 		<PageContainer>
@@ -69,14 +74,23 @@ export default async function AppTeamRosterPage({
 				title="Roster groups"
 				description="Switch between the player roster and staff group."
 			>
-				<div className="flex gap-2">
+				<div className="flex flex-wrap gap-2">
 					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=players`}>
-						<Badge variant={!isStaffTab ? "default" : "outline"}>Players</Badge>
+						<Badge variant={!isStaffTab ? "default" : "outline"}>
+							Players: {activePlayers} active
+						</Badge>
 					</Link>
 					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=staff`}>
-						<Badge variant={isStaffTab ? "default" : "outline"}>Staff</Badge>
+						<Badge variant={isStaffTab ? "default" : "outline"}>Staff: {activeStaff} active</Badge>
 					</Link>
+					<Badge variant="outline">Admins: {team.data.adminCount}</Badge>
+					<Badge variant="outline">Pending invites: {team.data.pendingInvites.length}</Badge>
 				</div>
+				{canManage ? null : (
+					<p className="mt-3 text-xs text-muted-foreground">
+						Roster changes require team admin access or organisation admin access.
+					</p>
+				)}
 			</PageSection>
 
 			{activeRoster.length === 0 ? (

@@ -288,6 +288,9 @@ export const organizationTable = pgTable(
 		/** Optional Twitter/X username or profile URL. */
 		twitter: text("twitter"),
 
+		/** Controls whether the organization appears on public organization surfaces. */
+		isPublic: boolean("is_public").notNull().default(true),
+
 		/** Org creator. Denormalized for fast access. */
 		ownerId: uuid("owner_id")
 			.notNull()
@@ -299,7 +302,10 @@ export const organizationTable = pgTable(
 			.defaultNow()
 			.$onUpdate(() => new Date()),
 	},
-	(table) => [uniqueIndex("organization_slug_idx").on(table.slug)]
+	(table) => [
+		uniqueIndex("organization_slug_idx").on(table.slug),
+		uniqueIndex("organization_name_unique_idx").on(sql`lower(${table.name})`),
+	]
 );
 
 // ============================================================================
@@ -370,6 +376,9 @@ export const teamTable = pgTable(
 
 		/** Whether the team is actively looking for new players. */
 		isRecruiting: boolean("is_recruiting").notNull().default(false),
+
+		/** Controls whether the team appears on public team and org surfaces. */
+		isPublic: boolean("is_public").notNull().default(true),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })

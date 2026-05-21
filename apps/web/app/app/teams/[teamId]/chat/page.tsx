@@ -37,14 +37,16 @@ export default async function TeamChatPage({
 	const { user } = await requireWorkspaceSession();
 
 	const [{ teamId }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-	const [teamState, conversationsState] = await Promise.all([
-		getTeamWithRosterRouteState(teamId, user.id),
-		getTeamChatRouteState(teamId),
-	]);
+	const teamState = await getTeamWithRosterRouteState(teamId, user.id);
 	if (teamState.kind === "missing") notFound();
 	if (teamState.kind !== "success") {
 		return <AccessGate title="Chat" resourceType="team" />;
 	}
+	if (!teamState.data.currentUser.canViewChat) {
+		return <AccessGate title="Chat" resourceType="team" />;
+	}
+
+	const conversationsState = await getTeamChatRouteState(teamId);
 	if (conversationsState.kind !== "success") {
 		return (
 			<PageContainer>

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
@@ -22,29 +23,21 @@ export default async function TeamRecruitingPage({
 	const team = await getTeamWithRosterRouteState(teamId, user.id);
 	if (team.kind === "missing") notFound();
 	if (team.kind !== "success") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Recruiting"
-					detail="team workspace"
-					description="Team-owned listings and applicant review live in this workspace."
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You need an active team membership before you can review this team's recruiting workspace."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Recruiting" resourceType="team" />;
+	}
+	if (!team.data.currentUser.canViewRecruiting) {
+		return <AccessGate title="Recruiting" resourceType="team" />;
 	}
 
 	const applicationsByListing = new Map(
-		await Promise.all(
-			team.data.ownedListings.map(async (listing) => {
-				const apps = await getRecruitmentApplicationsForListing(listing.id).catch(() => []);
-				return [listing.id, apps] as const;
-			})
-		)
+		team.data.currentUser.canManageListings
+			? await Promise.all(
+					team.data.ownedListings.map(async (listing) => {
+						const apps = await getRecruitmentApplicationsForListing(listing.id).catch(() => []);
+						return [listing.id, apps] as const;
+					})
+				)
+			: []
 	);
 
 	return (

@@ -6,9 +6,10 @@ import { EntityImageUploadField } from "@/components/shared/entity-image-upload-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { OrgWithTeams } from "@/lib/data/organization";
@@ -30,6 +31,10 @@ export function OrgProfilePanel({
 	const [descriptionValue, setDescriptionValue] = useState(org.description ?? "");
 	const [avatarUrl, setAvatarUrl] = useState(org.avatarUrl ?? "");
 	const [bannerUrl, setBannerUrl] = useState(org.bannerUrl ?? "");
+	const [website, setWebsite] = useState(org.website ?? "");
+	const [discord, setDiscord] = useState(org.discord ?? "");
+	const [twitter, setTwitter] = useState(org.twitter ?? "");
+	const [isPublic, setIsPublic] = useState(org.isPublic);
 
 	const updateForm = useFormAction(updateOrgAction, {
 		loadingMessage: "Saving org profile…",
@@ -45,6 +50,10 @@ export function OrgProfilePanel({
 		fd.set("description", descriptionValue);
 		fd.set("avatarUrl", avatarUrl);
 		fd.set("bannerUrl", bannerUrl);
+		fd.set("website", website);
+		fd.set("discord", discord);
+		fd.set("twitter", twitter);
+		fd.set("isPublic", isPublic ? "true" : "false");
 		updateForm.submit(fd);
 	}
 
@@ -94,6 +103,9 @@ export function OrgProfilePanel({
 					<Field>
 						<FieldLabel>Name</FieldLabel>
 						<Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+						<FieldError
+							errors={updateForm.state?.fieldErrors?.name?.map((message) => ({ message }))}
+						/>
 						<FieldDescription>
 							Shown in app workspaces and public organization pages.
 						</FieldDescription>
@@ -101,6 +113,9 @@ export function OrgProfilePanel({
 					<Field>
 						<FieldLabel>Slug</FieldLabel>
 						<Input value={slug} onChange={(e) => setSlug(e.target.value)} maxLength={50} />
+						<FieldError
+							errors={updateForm.state?.fieldErrors?.slug?.map((message) => ({ message }))}
+						/>
 						<FieldDescription>
 							Used for the public organization URL and workspace identity.
 						</FieldDescription>
@@ -112,6 +127,11 @@ export function OrgProfilePanel({
 							onChange={(e) => setDescriptionValue(e.target.value)}
 							rows={4}
 							maxLength={280}
+						/>
+						<FieldError
+							errors={updateForm.state?.fieldErrors?.description?.map((message) => ({
+								message,
+							}))}
 						/>
 						<FieldDescription>
 							Keep this short enough to scan in public discovery cards.
@@ -125,6 +145,9 @@ export function OrgProfilePanel({
 							onChange={setAvatarUrl}
 							helperText="Square image recommended · max 2 MB"
 						/>
+						<FieldError
+							errors={updateForm.state?.fieldErrors?.avatarUrl?.map((message) => ({ message }))}
+						/>
 					</Field>
 					<Field>
 						<EntityImageUploadField
@@ -134,6 +157,62 @@ export function OrgProfilePanel({
 							onChange={setBannerUrl}
 							helperText="Wide image recommended · max 4 MB"
 						/>
+						<FieldError
+							errors={updateForm.state?.fieldErrors?.bannerUrl?.map((message) => ({ message }))}
+						/>
+					</Field>
+					<div className="grid gap-3 md:grid-cols-3">
+						<Field>
+							<FieldLabel>Website</FieldLabel>
+							<Input
+								value={website}
+								onChange={(e) => setWebsite(e.target.value)}
+								placeholder="https://example.com"
+								maxLength={500}
+							/>
+							<FieldError
+								errors={updateForm.state?.fieldErrors?.website?.map((message) => ({
+									message,
+								}))}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel>Discord</FieldLabel>
+							<Input
+								value={discord}
+								onChange={(e) => setDiscord(e.target.value)}
+								placeholder="https://discord.gg/example"
+								maxLength={100}
+							/>
+							<FieldError
+								errors={updateForm.state?.fieldErrors?.discord?.map((message) => ({
+									message,
+								}))}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel>X / Twitter</FieldLabel>
+							<Input
+								value={twitter}
+								onChange={(e) => setTwitter(e.target.value)}
+								placeholder="https://x.com/example"
+								maxLength={100}
+							/>
+							<FieldError
+								errors={updateForm.state?.fieldErrors?.twitter?.map((message) => ({
+									message,
+								}))}
+							/>
+						</Field>
+					</div>
+					<Field orientation="horizontal" className="justify-between rounded-md border p-3">
+						<div className="space-y-1">
+							<FieldLabel htmlFor="org-public">Public profile</FieldLabel>
+							<FieldDescription>
+								Show this organization on public org, recruiting, and team discovery surfaces.
+							</FieldDescription>
+						</div>
+						<Switch id="org-public" checked={isPublic} onCheckedChange={setIsPublic} />
 					</Field>
 					<Button type="submit" size="sm" disabled={updateForm.isPending}>
 						{updateForm.isPending && <Spinner className="mr-1.5" />}

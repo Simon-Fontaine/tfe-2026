@@ -236,6 +236,13 @@ export type TeamPermissions = {
 	orgRole: OrgPermissionRole | null;
 	teamPermissionRole: TeamPermissionRole | null;
 	canManage: boolean;
+	canViewWorkspace: boolean;
+	canViewRoster: boolean;
+	canViewSchedule: boolean;
+	canViewScrims: boolean;
+	canViewRecruiting: boolean;
+	canViewChat: boolean;
+	canViewUpdates: boolean;
 	canManageAdmins: boolean;
 	canManageMembers: boolean;
 	canManageRoster: boolean;
@@ -282,6 +289,7 @@ export type TeamSummary = {
 	matchesPlayed: number;
 	isRecruiting: boolean;
 	isArchived: boolean;
+	isPublic: boolean;
 	activeRosterCount: number;
 	adminCount: number;
 };
@@ -418,6 +426,7 @@ export type TeamPublicPreview = {
 export type OrgPermissions = {
 	role: OrgPermissionRole | null;
 	canManage: boolean;
+	canManageBrand: boolean;
 	canDelete: boolean;
 	canTransferOwnership: boolean;
 	canLeave: boolean;
@@ -432,6 +441,15 @@ export type UserOrgTeamSummary = {
 	name: string;
 	tag: string;
 	canManage: boolean;
+	canViewWorkspace: boolean;
+	canViewRoster: boolean;
+	canViewSchedule: boolean;
+	canViewScrims: boolean;
+	canViewRecruiting: boolean;
+	canViewChat: boolean;
+	canViewUpdates: boolean;
+	canManageSettings: boolean;
+	canLeave: boolean;
 };
 
 export type UserOrg = {
@@ -441,6 +459,7 @@ export type UserOrg = {
 	avatarUrl: string | null;
 	description: string | null;
 	role: OrgPermissionRole;
+	isPublic: boolean;
 	teamCount: number;
 	openListingCount: number;
 	canManage: boolean;
@@ -504,6 +523,10 @@ export type OrgWorkspaceDetail = {
 	avatarUrl: string | null;
 	bannerUrl: string | null;
 	description: string | null;
+	website: string | null;
+	discord: string | null;
+	twitter: string | null;
+	isPublic: boolean;
 	ownerId: string;
 	currentUser: OrgPermissions;
 	activeTeams: OrgTeamSummary[];

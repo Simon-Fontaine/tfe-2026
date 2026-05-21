@@ -20,6 +20,7 @@ publicOrgRoutes.use("*", optionalAuth);
 
 publicOrgRoutes.get("/", async (c) => {
 	const rows = await db.query.organizationTable.findMany({
+		where: eq(organizationTable.isPublic, true),
 		columns: {
 			id: true,
 			slug: true,
@@ -29,7 +30,7 @@ publicOrgRoutes.get("/", async (c) => {
 		},
 		with: {
 			teams: {
-				where: eq(teamTable.isArchived, false),
+				where: and(eq(teamTable.isArchived, false), eq(teamTable.isPublic, true)),
 				columns: { id: true },
 				with: {
 					roster: {
@@ -68,8 +69,11 @@ publicOrgRoutes.get("/:id", async (c) => {
 	const user = c.get("user");
 
 	const whereCondition = UUID_RE.test(idOrSlug)
-		? or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug))
-		: eq(organizationTable.slug, idOrSlug);
+		? and(
+				eq(organizationTable.isPublic, true),
+				or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug))
+			)
+		: and(eq(organizationTable.isPublic, true), eq(organizationTable.slug, idOrSlug));
 
 	const org = await db.query.organizationTable.findFirst({
 		where: whereCondition,
@@ -86,7 +90,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 		},
 		with: {
 			teams: {
-				where: and(eq(teamTable.isArchived, false)),
+				where: and(eq(teamTable.isArchived, false), eq(teamTable.isPublic, true)),
 				columns: {
 					id: true,
 					organizationId: true,
@@ -99,6 +103,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 					matchesPlayed: true,
 					isRecruiting: true,
 					isArchived: true,
+					isPublic: true,
 				},
 				with: {
 					roster: {
@@ -155,6 +160,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 			matchesPlayed: team.matchesPlayed,
 			isRecruiting: team.isRecruiting,
 			isArchived: team.isArchived,
+			isPublic: team.isPublic,
 			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
 			adminCount: new Set(
 				team.roster

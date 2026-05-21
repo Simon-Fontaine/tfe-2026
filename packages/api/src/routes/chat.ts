@@ -177,9 +177,13 @@ chatRoutes.get("/teams/:teamId/conversations", async (c) => {
 	const access = await getTeamAccessContext(teamId, user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
 
-	const canView = access.teamStatus
-		? TEAM_VIEWABLE_STATUSES.includes(access.teamStatus as (typeof TEAM_VIEWABLE_STATUSES)[number])
-		: false;
+	const canView = access.canManageTeam
+		? true
+		: access.teamStatus
+			? TEAM_VIEWABLE_STATUSES.includes(
+					access.teamStatus as (typeof TEAM_VIEWABLE_STATUSES)[number]
+				)
+			: false;
 	if (!canView) {
 		return c.json({ error: "You do not have access to this team's chat workspace." }, 403);
 	}

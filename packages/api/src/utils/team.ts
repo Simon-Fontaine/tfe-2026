@@ -42,6 +42,7 @@ export async function getTeamById(teamId: string) {
 			matchesPlayed: true,
 			isRecruiting: true,
 			isArchived: true,
+			isPublic: true,
 		},
 	});
 }

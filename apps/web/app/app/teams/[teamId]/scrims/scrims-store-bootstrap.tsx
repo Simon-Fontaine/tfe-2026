@@ -4,19 +4,20 @@ import { useEffect } from "react";
 import { useScrimStore } from "@/stores/scrims";
 
 interface ScrimsStoreBootstrapProps {
+	teamId: string;
 	needsActionCount: number;
 }
 
-export function ScrimsStoreBootstrap({ needsActionCount }: ScrimsStoreBootstrapProps) {
+export function ScrimsStoreBootstrap({ teamId, needsActionCount }: ScrimsStoreBootstrapProps) {
 	const hydrateNeedsActionCount = useScrimStore((state) => state.hydrateNeedsActionCount);
 	const resetNeedsActionCount = useScrimStore((state) => state.resetNeedsActionCount);
 
 	useEffect(() => {
-		hydrateNeedsActionCount(needsActionCount);
+		hydrateNeedsActionCount(teamId, needsActionCount);
 		return () => {
 			resetNeedsActionCount();
 		};
-	}, [needsActionCount, hydrateNeedsActionCount, resetNeedsActionCount]);
+	}, [teamId, needsActionCount, hydrateNeedsActionCount, resetNeedsActionCount]);
 
 	return null;
 }

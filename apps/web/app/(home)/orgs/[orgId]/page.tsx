@@ -16,6 +16,16 @@ import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization"
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { appRoutes, publicRoutes } from "@/lib/routes";
 
+function getSafeExternalHref(value: string | null): string | null {
+	if (!value) return null;
+	try {
+		const url = new URL(value);
+		return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+	} catch {
+		return null;
+	}
+}
+
 export default async function OrgProfilePage({ params }: { params: Promise<{ orgId: string }> }) {
 	const { orgId } = await params;
 
@@ -47,6 +57,9 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 
 	const { user } = await getCurrentSession();
 	const userOrgRole = user ? await getUserOrgRole(org.id, user.id).catch(() => null) : null;
+	const websiteHref = getSafeExternalHref(org.website);
+	const discordHref = getSafeExternalHref(org.discord);
+	const twitterHref = getSafeExternalHref(org.twitter);
 	const isMember = userOrgRole !== null;
 	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
 
@@ -128,11 +141,11 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						<p className="mt-1 text-sm font-semibold">{org.openListings.length}</p>
 					</div>
 				</div>
-				{(org.website || org.discord || org.twitter) && (
+				{(websiteHref || discordHref || twitterHref) && (
 					<div className="mt-4 flex flex-wrap gap-4 border-t pt-4">
-						{org.website && (
+						{websiteHref && (
 							<a
-								href={org.website}
+								href={websiteHref}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"
@@ -140,9 +153,9 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 								Website
 							</a>
 						)}
-						{org.discord && (
+						{discordHref && (
 							<a
-								href={org.discord}
+								href={discordHref}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"
@@ -150,9 +163,9 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 								Discord
 							</a>
 						)}
-						{org.twitter && (
+						{twitterHref && (
 							<a
-								href={org.twitter}
+								href={twitterHref}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-xs font-medium text-primary underline underline-offset-2 hover:no-underline"

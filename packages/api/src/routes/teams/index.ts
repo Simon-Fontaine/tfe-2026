@@ -4,13 +4,14 @@ import {
 	DeleteTeamSchema,
 	InviteToTeamSchema,
 	RespondToTeamInviteSchema,
+	TEAM_VIEWABLE_STATUSES,
 	TeamScopedSchema,
 	ToggleRecruitingSchema,
 	UpdateTeamMemberPermissionSchema,
 	UpdateTeamMemberSchema,
 	UpdateTeamSchema,
 } from "@scrimflow/shared";
-import { and, asc, count, desc, eq, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, lt, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -38,21 +39,62 @@ import {
 	mapTeamMember,
 	normalizeMemberFields,
 } from "@/utils/recruit";
-import { getTeamAccessContext, getTeamById, isUserOnTeam } from "@/utils/team";
+import { getTeamAccessContext, getTeamById } from "@/utils/team";
 import {
 	getTeamIdentityConstraintFieldErrors,
 	getTeamIdentityFieldErrors,
 	normalizeTeamIdentity,
 } from "./identity";
+import {
+	getEffectiveInviteStatus,
+	getRosterInviteConflictMessage,
+	isActivePendingInvite,
+	shouldPersistExpiredInvite,
+} from "./invite-lifecycle";
 
 const teamRoutes = new Hono<AuthEnv>();
 
-function getEffectiveInviteStatus(status: string, expiresAt: Date) {
-	return status === "pending" && expiresAt < new Date() ? "expired" : status;
+function teamInviteLockKey(teamId: string, userId: string) {
+	return `team-invite:${teamId}:${userId}`;
 }
 
-function isActivePendingInvite(status: string, expiresAt: Date) {
-	return getEffectiveInviteStatus(status, expiresAt) === "pending";
+async function persistExpiredInvitesForTeam(teamId: string) {
+	await db
+		.update(teamInviteTable)
+		.set({ status: "expired" })
+		.where(
+			and(
+				eq(teamInviteTable.teamId, teamId),
+				eq(teamInviteTable.status, "pending"),
+				lt(teamInviteTable.expiresAt, new Date())
+			)
+		);
+}
+
+async function persistExpiredInvitesForUser(userId: string) {
+	await db
+		.update(teamInviteTable)
+		.set({ status: "expired" })
+		.where(
+			and(
+				eq(teamInviteTable.inviteeUserId, userId),
+				eq(teamInviteTable.status, "pending"),
+				lt(teamInviteTable.expiresAt, new Date())
+			)
+		);
+}
+
+async function persistExpiredInvite(inviteId: string) {
+	await db
+		.update(teamInviteTable)
+		.set({ status: "expired" })
+		.where(
+			and(
+				eq(teamInviteTable.id, inviteId),
+				eq(teamInviteTable.status, "pending"),
+				lt(teamInviteTable.expiresAt, new Date())
+			)
+		);
 }
 
 function isUniqueViolation(error: unknown) {
@@ -140,11 +182,23 @@ async function blocksLastActiveTeamAdmin(member: {
 
 function toTeamPermissions(ctx: NonNullable<Awaited<ReturnType<typeof getTeamAccessContext>>>) {
 	const orgCanManage = ctx.orgRole === "owner" || ctx.orgRole === "admin";
+	const hasViewableRosterStatus = ctx.teamStatus
+		? TEAM_VIEWABLE_STATUSES.includes(ctx.teamStatus as (typeof TEAM_VIEWABLE_STATUSES)[number])
+		: false;
+	const canViewWorkspace = ctx.canManageTeam || hasViewableRosterStatus;
+	const canViewSchedule = ctx.canManageTeam || ctx.teamStatus === "active";
 
 	return {
 		orgRole: ctx.orgRole,
 		teamPermissionRole: ctx.teamPermissionRole,
 		canManage: ctx.canManageTeam,
+		canViewWorkspace,
+		canViewRoster: canViewWorkspace,
+		canViewSchedule,
+		canViewScrims: canViewWorkspace,
+		canViewRecruiting: canViewWorkspace,
+		canViewChat: canViewWorkspace,
+		canViewUpdates: canViewWorkspace,
 		canManageAdmins: orgCanManage,
 		canManageMembers: ctx.canManageTeam,
 		canManageRoster: ctx.canManageTeam,
@@ -192,7 +246,14 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		getTeamById(teamId),
 		getTeamAccessContext(teamId, userId),
 	]);
-	if (!team || !access || (!access.orgRole && !access.teamMemberId)) return null;
+	if (!team || !access) return null;
+	const permissions = toTeamPermissions(access);
+	if (!permissions.canViewWorkspace) return null;
+	const canManageInvites = permissions.canManageInvites;
+	const canManageListings = permissions.canManageListings;
+	const canManageConversations = permissions.canManageConversations;
+
+	await persistExpiredInvitesForTeam(teamId);
 
 	const [
 		organization,
@@ -226,15 +287,17 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 			},
 			orderBy: [asc(teamRosterTable.joinedAt)],
 		}),
-		db.query.teamInviteTable.findMany({
-			where: eq(teamInviteTable.teamId, teamId),
-			with: {
-				invitee: {
-					columns: { id: true, displayName: true, avatarUrl: true },
-				},
-			},
-			orderBy: [desc(teamInviteTable.createdAt)],
-		}),
+		canManageInvites
+			? db.query.teamInviteTable.findMany({
+					where: eq(teamInviteTable.teamId, teamId),
+					with: {
+						invitee: {
+							columns: { id: true, displayName: true, avatarUrl: true },
+						},
+					},
+					orderBy: [desc(teamInviteTable.createdAt)],
+				})
+			: Promise.resolve([]),
 		db.query.recruitmentListingTable.findMany({
 			where: eq(recruitmentListingTable.teamId, teamId),
 			with: {
@@ -249,8 +312,8 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 			},
 			orderBy: [desc(recruitmentListingTable.createdAt)],
 		}),
-		getPendingRecruitmentApplications(teamId),
-		getRecruitmentConversationsForUser(userId),
+		canManageListings ? getPendingRecruitmentApplications(teamId) : Promise.resolve([]),
+		canManageConversations ? getRecruitmentConversationsForUser(userId) : Promise.resolve([]),
 		db.query.organizationMemberTable.findMany({
 			where: eq(organizationMemberTable.organizationId, team.organizationId),
 			with: {
@@ -370,9 +433,10 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
 		isArchived: team.isArchived,
+		isPublic: team.isPublic,
 		activeRosterCount: members.filter((member) => member.status !== "inactive").length,
 		adminCount: adminsByUserId.size,
-		currentUser: toTeamPermissions(access),
+		currentUser: permissions,
 		members,
 		players: members.filter((member) => member.memberType === "player"),
 		staff: members.filter((member) => member.memberType === "staff"),
@@ -404,9 +468,9 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 			})
 			.filter((invite) => invite.status === "pending"),
 		ownedListings: listingRows.map((listing) =>
-			mapRecruitmentListing(listing, {
+			mapRecruitmentListing(canManageListings ? listing : { ...listing, applications: [] }, {
 				viewerId: userId,
-				canManage: access.canManageTeam,
+				canManage: canManageListings,
 			})
 		),
 		conversations: conversations.filter((conversation) => conversation.teamId === teamId),
@@ -417,6 +481,8 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 
 teamRoutes.get("/invites/received", async (c) => {
 	const user = c.get("user");
+	await persistExpiredInvitesForUser(user.id);
+
 	const rows = await db.query.teamInviteTable.findMany({
 		where: eq(teamInviteTable.inviteeUserId, user.id),
 		with: {
@@ -475,6 +541,7 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 		return c.json({ error: "This invite is not for you." }, 403);
 	const effectiveStatus = getEffectiveInviteStatus(invite.status, invite.expiresAt);
 	if (effectiveStatus === "expired") {
+		await persistExpiredInvite(inviteId);
 		return c.json({ error: "This invite has expired." }, 400);
 	}
 	if (effectiveStatus !== "pending")
@@ -487,7 +554,37 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 			roleInTeam: invite.roleInTeam ?? null,
 		});
 
-		await db.transaction(async (tx) => {
+		const result = await db.transaction(async (tx) => {
+			await tx.execute(
+				sql`select pg_advisory_xact_lock(hashtextextended(${teamInviteLockKey(invite.teamId, user.id)}, 0))`
+			);
+
+			const lockedInvite = await tx.query.teamInviteTable.findFirst({
+				where: eq(teamInviteTable.id, inviteId),
+				columns: { status: true, expiresAt: true },
+			});
+			if (!lockedInvite) return { error: "Invite not found.", status: 404 };
+
+			const lockedStatus = getEffectiveInviteStatus(lockedInvite.status, lockedInvite.expiresAt);
+			if (lockedStatus === "expired") {
+				await tx
+					.update(teamInviteTable)
+					.set({ status: "expired" })
+					.where(eq(teamInviteTable.id, inviteId));
+				return { error: "This invite has expired.", status: 400 };
+			}
+			if (lockedStatus !== "pending") {
+				return { error: "This invite is no longer active.", status: 400 };
+			}
+
+			const existingRoster = await tx.query.teamRosterTable.findFirst({
+				where: and(eq(teamRosterTable.teamId, invite.teamId), eq(teamRosterTable.userId, user.id)),
+				columns: { status: true },
+			});
+			if (existingRoster) {
+				return { error: getRosterInviteConflictMessage(existingRoster.status), status: 409 };
+			}
+
 			await ensureOrganizationMembership(tx, {
 				organizationId: invite.team.organizationId,
 				userId: user.id,
@@ -511,7 +608,22 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 				.update(teamInviteTable)
 				.set({ status: "accepted" })
 				.where(eq(teamInviteTable.id, inviteId));
+
+			await tx
+				.update(teamInviteTable)
+				.set({ status: "cancelled" })
+				.where(
+					and(
+						eq(teamInviteTable.teamId, invite.teamId),
+						eq(teamInviteTable.inviteeUserId, user.id),
+						eq(teamInviteTable.status, "pending"),
+						ne(teamInviteTable.id, inviteId)
+					)
+				);
+
+			return { success: true };
 		});
+		if ("error" in result) return c.json({ error: result.error }, result.status);
 
 		await createNotification({
 			userId: invite.inviterUserId,
@@ -521,13 +633,44 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 			referenceId: invite.teamId,
 		});
 	} else {
-		await db
-			.update(teamInviteTable)
-			.set({ status: "declined" })
-			.where(eq(teamInviteTable.id, inviteId));
+		const result = await db.transaction(async (tx) => {
+			await tx.execute(
+				sql`select pg_advisory_xact_lock(hashtextextended(${teamInviteLockKey(invite.teamId, user.id)}, 0))`
+			);
+
+			const lockedInvite = await tx.query.teamInviteTable.findFirst({
+				where: eq(teamInviteTable.id, inviteId),
+				columns: { status: true, expiresAt: true },
+			});
+			if (!lockedInvite) return { error: "Invite not found.", status: 404 };
+
+			const lockedStatus = getEffectiveInviteStatus(lockedInvite.status, lockedInvite.expiresAt);
+			if (lockedStatus === "expired") {
+				await tx
+					.update(teamInviteTable)
+					.set({ status: "expired" })
+					.where(eq(teamInviteTable.id, inviteId));
+				return { error: "This invite has expired.", status: 400 };
+			}
+			if (lockedStatus !== "pending") {
+				return { error: "This invite is no longer active.", status: 400 };
+			}
+
+			await tx
+				.update(teamInviteTable)
+				.set({ status: "declined" })
+				.where(eq(teamInviteTable.id, inviteId));
+
+			return { success: true };
+		});
+		if ("error" in result) return c.json({ error: result.error }, result.status);
 	}
 
-	return c.json({ success: true });
+	return c.json({
+		success: true,
+		teamId: invite.teamId,
+		organizationId: invite.team.organizationId,
+	});
 });
 
 teamRoutes.get("/", async (c) => {
@@ -614,6 +757,7 @@ teamRoutes.post("/", async (c) => {
 					description: parsed.output.description || null,
 					avatarUrl: parsed.output.avatarUrl || null,
 					bannerUrl: parsed.output.bannerUrl || null,
+					isPublic: parsed.output.isPublic ?? true,
 				})
 				.returning({ id: teamTable.id });
 
@@ -639,8 +783,13 @@ teamRoutes.post("/", async (c) => {
 
 teamRoutes.get("/:id", async (c) => {
 	const user = c.get("user");
-	const detail = await getTeamWorkspaceDetail(c.req.param("id"), user.id);
-	if (!detail) return c.json({ error: "Team not found or inaccessible." }, 404);
+	const teamId = c.req.param("id");
+	const detail = await getTeamWorkspaceDetail(teamId, user.id);
+	if (!detail) {
+		const team = await getTeamById(teamId);
+		if (team) return c.json({ error: "You do not have access to this team workspace." }, 403);
+		return c.json({ error: "Team not found." }, 404);
+	}
 	return c.json({ data: detail });
 });
 
@@ -686,6 +835,7 @@ teamRoutes.patch("/:id", async (c) => {
 				description: parsed.output.description || null,
 				avatarUrl: parsed.output.avatarUrl || null,
 				bannerUrl: parsed.output.bannerUrl || null,
+				...(parsed.output.isPublic === undefined ? {} : { isPublic: parsed.output.isPublic }),
 			})
 			.where(eq(teamTable.id, teamId));
 	} catch (error) {
@@ -811,7 +961,9 @@ teamRoutes.get("/:id/recruitment/applications", async (c) => {
 	const user = c.get("user");
 	const access = await getTeamAccessContext(c.req.param("id"), user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
-	if (!access.canManageTeam) return c.json({ data: [] });
+	if (!toTeamPermissions(access).canManageListings) {
+		return c.json({ error: "You do not have permission to review team applications." }, 403);
+	}
 	return c.json({ data: await getPendingRecruitmentApplications(access.teamId) });
 });
 
@@ -820,6 +972,10 @@ teamRoutes.get("/:id/recruitment/listings", async (c) => {
 	const teamId = c.req.param("id");
 	const access = await getTeamAccessContext(teamId, user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
+	const permissions = toTeamPermissions(access);
+	if (!permissions.canViewRecruiting) {
+		return c.json({ error: "You do not have access to this team's recruiting workspace." }, 403);
+	}
 
 	const rows = await db.query.recruitmentListingTable.findMany({
 		where: eq(recruitmentListingTable.teamId, teamId),
@@ -836,7 +992,7 @@ teamRoutes.get("/:id/recruitment/listings", async (c) => {
 		data: rows.map((row) =>
 			mapRecruitmentListing(row, {
 				viewerId: user.id,
-				canManage: access.canManageTeam,
+				canManage: permissions.canManageListings,
 			})
 		),
 	});
@@ -846,7 +1002,9 @@ teamRoutes.get("/:id/recruitment/conversations", async (c) => {
 	const user = c.get("user");
 	const access = await getTeamAccessContext(c.req.param("id"), user.id);
 	if (!access) return c.json({ error: "Team not found." }, 404);
-	if (!access.canManageTeam) return c.json({ data: [] });
+	if (!toTeamPermissions(access).canManageConversations) {
+		return c.json({ error: "You do not have permission to review team conversations." }, 403);
+	}
 
 	const conversations = await getRecruitmentConversationsForUser(user.id);
 	return c.json({
@@ -947,7 +1105,8 @@ teamRoutes.patch("/:id/roster/:memberId", async (c) => {
 					? normalized.staffRole
 					: undefined,
 			status: parsed.output.status ?? undefined,
-			leftAt: parsed.output.status === "inactive" ? new Date() : undefined,
+			leftAt:
+				parsed.output.status === "inactive" ? new Date() : parsed.output.status ? null : undefined,
 			permissionRole: parsed.output.permissionRole ?? undefined,
 		})
 		.where(eq(teamRosterTable.id, memberId));
@@ -1030,6 +1189,8 @@ teamRoutes.get("/:id/invites", async (c) => {
 	if (!access) return c.json({ error: "Team not found." }, 404);
 	if (!access.canManageTeam) return c.json({ data: [] });
 
+	await persistExpiredInvitesForTeam(access.teamId);
+
 	const rows = await db.query.teamInviteTable.findMany({
 		where: eq(teamInviteTable.teamId, access.teamId),
 		with: {
@@ -1089,22 +1250,6 @@ teamRoutes.post("/:id/invites", async (c) => {
 	) {
 		return c.json({ error: "Only org admins can invite team admins." }, 403);
 	}
-	if (await isUserOnTeam(parsed.output.userId, teamId)) {
-		return c.json({ error: "This user is already on the team." }, 409);
-	}
-
-	const existingInvite = await db.query.teamInviteTable.findFirst({
-		where: and(
-			eq(teamInviteTable.teamId, teamId),
-			eq(teamInviteTable.inviteeUserId, parsed.output.userId),
-			eq(teamInviteTable.status, "pending")
-		),
-		columns: { id: true, expiresAt: true },
-	});
-	if (existingInvite && existingInvite.expiresAt > new Date()) {
-		return c.json({ error: "An invite is already pending for this user." }, 409);
-	}
-
 	const team = await getTeamById(teamId);
 	const normalized = normalizeMemberFields({
 		memberType: parsed.output.memberType ?? null,
@@ -1112,16 +1257,64 @@ teamRoutes.post("/:id/invites", async (c) => {
 		gameRole: parsed.output.gameRole ?? parsed.output.roleInTeam ?? null,
 	});
 
-	await db.insert(teamInviteTable).values({
-		teamId,
-		inviteeUserId: parsed.output.userId,
-		inviterUserId: user.id,
-		memberType: normalized.memberType,
-		roleInTeam: normalized.roleInTeam,
-		staffRole: normalized.staffRole,
-		permissionRole: parsed.output.permissionRole ?? "member",
-		expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+	const result = await db.transaction(async (tx) => {
+		await tx.execute(
+			sql`select pg_advisory_xact_lock(hashtextextended(${teamInviteLockKey(teamId, parsed.output.userId)}, 0))`
+		);
+
+		const existingRoster = await tx.query.teamRosterTable.findFirst({
+			where: and(
+				eq(teamRosterTable.teamId, teamId),
+				eq(teamRosterTable.userId, parsed.output.userId)
+			),
+			columns: { status: true },
+		});
+		if (existingRoster) {
+			return { error: getRosterInviteConflictMessage(existingRoster.status), status: 409 };
+		}
+
+		const existingInvites = await tx.query.teamInviteTable.findMany({
+			where: and(
+				eq(teamInviteTable.teamId, teamId),
+				eq(teamInviteTable.inviteeUserId, parsed.output.userId),
+				eq(teamInviteTable.status, "pending")
+			),
+			columns: { id: true, expiresAt: true },
+		});
+		const activeInvite = existingInvites.find((invite) =>
+			isActivePendingInvite("pending", invite.expiresAt)
+		);
+		if (activeInvite) {
+			return { error: "An invite is already pending for this user.", status: 409 };
+		}
+		const expiredInviteIds = existingInvites
+			.filter((invite) => shouldPersistExpiredInvite("pending", invite.expiresAt))
+			.map((invite) => invite.id);
+
+		if (expiredInviteIds.length > 0) {
+			await tx
+				.update(teamInviteTable)
+				.set({ status: "expired" })
+				.where(or(...expiredInviteIds.map((id) => eq(teamInviteTable.id, id))));
+		}
+
+		const [createdInvite] = await tx
+			.insert(teamInviteTable)
+			.values({
+				teamId,
+				inviteeUserId: parsed.output.userId,
+				inviterUserId: user.id,
+				memberType: normalized.memberType,
+				roleInTeam: normalized.roleInTeam,
+				staffRole: normalized.staffRole,
+				permissionRole: parsed.output.permissionRole ?? "member",
+				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+			})
+			.returning({ id: teamInviteTable.id });
+
+		return { inviteId: createdInvite.id };
 	});
+	if ("error" in result) return c.json({ error: result.error }, result.status);
 
 	await createNotification({
 		userId: parsed.output.userId,
@@ -1129,6 +1322,7 @@ teamRoutes.post("/:id/invites", async (c) => {
 		title: `You've been invited to join ${team?.name ?? "a team"}`,
 		body: `Access: ${parsed.output.permissionRole ?? "member"}.`,
 		referenceType: "team_invite",
+		referenceId: teamId,
 	});
 
 	return c.json({ success: true });
@@ -1150,6 +1344,7 @@ teamRoutes.delete("/:id/invites/:inviteId", async (c) => {
 	});
 	if (!invite || invite.teamId !== teamId) return c.json({ error: "Invite not found." }, 404);
 	if (!isActivePendingInvite(invite.status, invite.expiresAt)) {
+		await persistExpiredInvite(inviteId);
 		return c.json({ error: "Only pending invites can be cancelled." }, 400);
 	}
 
@@ -1176,8 +1371,10 @@ teamRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 		with: { team: { columns: { name: true } } },
 	});
 	if (!invite || invite.teamId !== teamId) return c.json({ error: "Invite not found." }, 404);
-	if (!isActivePendingInvite(invite.status, invite.expiresAt))
+	if (!isActivePendingInvite(invite.status, invite.expiresAt)) {
+		await persistExpiredInvite(inviteId);
 		return c.json({ error: "Only pending invites can be resent." }, 400);
+	}
 
 	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 	await db.update(teamInviteTable).set({ expiresAt }).where(eq(teamInviteTable.id, inviteId));
@@ -1188,6 +1385,7 @@ teamRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 		title: `You've been invited to join ${invite.team?.name ?? "a team"}`,
 		body: `Access: ${invite.permissionRole}.`,
 		referenceType: "team_invite",
+		referenceId: teamId,
 	});
 
 	return c.json({ success: true });

@@ -1,12 +1,7 @@
 import type { ScrimConfirmationStatus } from "@scrimflow/shared";
 import { createNotification } from "@/notifications";
 import { verifyOrgManager } from "@/utils/org";
-import {
-	getTeamAccessContext,
-	isUserOnTeam,
-	listTeamAdminUserIds,
-	verifyTeamManager,
-} from "@/utils/team";
+import { getTeamAccessContext, listTeamAdminUserIds, verifyTeamManager } from "@/utils/team";
 import { TEAM_VIEWABLE_STATUSES } from "./constants";
 
 export async function canViewTeam(teamId: string, userId: string) {
@@ -22,8 +17,8 @@ export async function canAccessScrim(
 	userId: string,
 	scrim: { homeTeamId: string; awayTeamId: string | null }
 ) {
-	if (await isUserOnTeam(userId, scrim.homeTeamId)) return true;
-	if (scrim.awayTeamId && (await isUserOnTeam(userId, scrim.awayTeamId))) return true;
+	if (await canViewTeam(scrim.homeTeamId, userId)) return true;
+	if (scrim.awayTeamId && (await canViewTeam(scrim.awayTeamId, userId))) return true;
 	return false;
 }
 

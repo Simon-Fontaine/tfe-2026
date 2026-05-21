@@ -34,6 +34,20 @@ export function isPlayerRecruitingDiscoverable(row: {
 	);
 }
 
+function isPublicRecruitmentListingDiscoverable(row: {
+	ownerType: "player" | "team" | "organization";
+	organization?: { isPublic: boolean } | null;
+	team?: { isPublic: boolean; organization?: { isPublic: boolean } | null } | null;
+	user?: Parameters<typeof isPlayerRecruitingDiscoverable>[0]["user"];
+}) {
+	if (!isPlayerRecruitingDiscoverable(row)) return false;
+	if (row.ownerType === "organization") return row.organization?.isPublic === true;
+	if (row.ownerType === "team") {
+		return row.team?.isPublic === true && row.team.organization?.isPublic === true;
+	}
+	return true;
+}
+
 function toRoleList(value: unknown): Array<"tank" | "damage" | "support"> {
 	if (!Array.isArray(value)) return EMPTY_ROLE_LIST;
 	return value.filter(
@@ -654,9 +668,14 @@ export async function getPublicRecruitmentListings(
 					},
 				},
 			},
-			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+			organization: {
+				columns: { id: true, name: true, slug: true, avatarUrl: true, isPublic: true },
+			},
 			team: {
-				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
+				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true, isPublic: true },
+				with: {
+					organization: { columns: { isPublic: true } },
+				},
 			},
 			applications: {
 				columns: { id: true, status: true, applicantUserId: true },
@@ -667,7 +686,7 @@ export async function getPublicRecruitmentListings(
 	});
 
 	return rows
-		.filter(isPlayerRecruitingDiscoverable)
+		.filter(isPublicRecruitmentListingDiscoverable)
 		.map((row) => mapRecruitmentListing(row, { viewerId: viewerId ?? null }));
 }
 
@@ -687,9 +706,14 @@ export async function getPublicRecruitmentListingById(id: string, viewerId?: str
 					},
 				},
 			},
-			organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+			organization: {
+				columns: { id: true, name: true, slug: true, avatarUrl: true, isPublic: true },
+			},
 			team: {
-				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true },
+				columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true, isPublic: true },
+				with: {
+					organization: { columns: { isPublic: true } },
+				},
 			},
 			applications: {
 				columns: { id: true, status: true, applicantUserId: true },
@@ -697,6 +721,6 @@ export async function getPublicRecruitmentListingById(id: string, viewerId?: str
 		},
 	});
 
-	if (!row || !isPlayerRecruitingDiscoverable(row)) return null;
+	if (!row || !isPublicRecruitmentListingDiscoverable(row)) return null;
 	return mapRecruitmentListing(row, { viewerId: viewerId ?? null });
 }

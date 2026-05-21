@@ -62,6 +62,15 @@ export async function getWorkspaceShellData(userId: string) {
 				organizationId: org.id,
 				organizationName: org.name,
 				canManage: team.canManage,
+				canViewWorkspace: team.canViewWorkspace,
+				canViewRoster: team.canViewRoster,
+				canViewSchedule: team.canViewSchedule,
+				canViewScrims: team.canViewScrims,
+				canViewRecruiting: team.canViewRecruiting,
+				canViewChat: team.canViewChat,
+				canViewUpdates: team.canViewUpdates,
+				canManageSettings: team.canManageSettings,
+				canLeave: team.canLeave,
 			}))
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));

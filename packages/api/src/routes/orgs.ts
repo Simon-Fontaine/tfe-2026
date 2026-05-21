@@ -3,12 +3,14 @@ import {
 	canAssignOrgRole,
 	DeleteOrgSchema,
 	InviteToOrgSchema,
+	isReservedIdentityValue,
 	RespondToOrgInviteSchema,
+	TEAM_VIEWABLE_STATUSES,
 	TransferOrgOwnershipSchema,
 	UpdateOrgMemberSchema,
 	UpdateOrgSchema,
 } from "@scrimflow/shared";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -25,7 +27,7 @@ import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { extractErrors } from "@/routes/auth/utils";
 import logger from "@/utils/logger";
-import { ensureUniqueSlug, getOrgPermissions, getUserOrgRole, nameToSlug } from "@/utils/org";
+import { findOrgBySlug, getOrgPermissions, getUserOrgRole, nameToSlug } from "@/utils/org";
 import {
 	ensureOrganizationMembership,
 	getRecruitmentConversationsForUser,
@@ -52,6 +54,7 @@ function toOrgTeamSummary(
 		matchesPlayed: number;
 		isRecruiting: boolean;
 		isArchived: boolean;
+		isPublic: boolean;
 		roster: Array<{ userId: string; permissionRole: "admin" | "member"; status: string }>;
 	}
 ) {
@@ -76,9 +79,83 @@ function toOrgTeamSummary(
 		matchesPlayed: team.matchesPlayed,
 		isRecruiting: team.isRecruiting,
 		isArchived: team.isArchived,
+		isPublic: team.isPublic,
 		activeRosterCount,
 		adminCount,
 	};
+}
+
+function isUniqueViolation(error: unknown) {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: string }).code === "23505"
+	);
+}
+
+function getConstraintName(error: unknown) {
+	if (typeof error !== "object" || error === null || !("constraint" in error)) return undefined;
+	const constraint = (error as { constraint?: unknown }).constraint;
+	return typeof constraint === "string" ? constraint : undefined;
+}
+
+function getOrgIdentityConflictResponse(error: unknown) {
+	if (!isUniqueViolation(error)) return null;
+	const constraint = getConstraintName(error);
+	if (constraint === "organization_slug_idx") {
+		return {
+			error: "Organization identity is unavailable.",
+			fieldErrors: { slug: ["Another organization already uses this slug."] },
+		};
+	}
+	if (constraint === "organization_name_unique_idx") {
+		return {
+			error: "Organization identity is unavailable.",
+			fieldErrors: { name: ["Another organization already uses this name."] },
+		};
+	}
+	return null;
+}
+
+async function getOrgIdentityFieldErrors(input: {
+	name: string;
+	slug: string;
+	ignoreOrgId?: string;
+}) {
+	const fieldErrors: Partial<Record<"name" | "slug", string[]>> = {};
+
+	if (isReservedIdentityValue(input.name)) {
+		fieldErrors.name = [
+			"This organization name is unavailable. Choose a different public identity.",
+		];
+	}
+	if (isReservedIdentityValue(input.slug)) {
+		fieldErrors.slug = [
+			"This organization slug is unavailable. Choose a different public identity.",
+		];
+	}
+	if (Object.keys(fieldErrors).length > 0) return fieldErrors;
+
+	const nameConflict = await db.query.organizationTable.findFirst({
+		where: input.ignoreOrgId
+			? and(
+					sql`lower(${organizationTable.name}) = ${input.name.toLowerCase()}`,
+					ne(organizationTable.id, input.ignoreOrgId)
+				)
+			: sql`lower(${organizationTable.name}) = ${input.name.toLowerCase()}`,
+		columns: { id: true },
+	});
+	if (nameConflict) {
+		fieldErrors.name = ["Another organization already uses this name."];
+	}
+
+	const slugConflict = await findOrgBySlug(input.slug, input.ignoreOrgId);
+	if (slugConflict) {
+		fieldErrors.slug = ["Another organization already uses this slug."];
+	}
+
+	return fieldErrors;
 }
 
 async function getOrgWorkspaceDetail(orgId: string, userId: string) {
@@ -94,6 +171,10 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 			avatarUrl: true,
 			bannerUrl: true,
 			description: true,
+			website: true,
+			discord: true,
+			twitter: true,
+			isPublic: true,
 			ownerId: true,
 		},
 		with: {
@@ -110,6 +191,7 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 					matchesPlayed: true,
 					isRecruiting: true,
 					isArchived: true,
+					isPublic: true,
 				},
 				with: {
 					roster: {
@@ -260,10 +342,15 @@ async function getOrgWorkspaceDetail(orgId: string, userId: string) {
 		avatarUrl: org.avatarUrl,
 		bannerUrl: org.bannerUrl ?? null,
 		description: org.description ?? null,
+		website: org.website ?? null,
+		discord: org.discord ?? null,
+		twitter: org.twitter ?? null,
+		isPublic: org.isPublic,
 		ownerId: org.ownerId,
 		currentUser: {
 			role: permissions.role,
 			canManage: permissions.canManage,
+			canManageBrand: permissions.canManageBrand,
 			canDelete: permissions.canDelete,
 			canTransferOwnership: permissions.canTransferOwnership,
 			canLeave: permissions.canLeave,
@@ -298,6 +385,7 @@ orgRoutes.get("/", async (c) => {
 					slug: true,
 					avatarUrl: true,
 					description: true,
+					isPublic: true,
 				},
 				with: {
 					teams: {
@@ -306,7 +394,7 @@ orgRoutes.get("/", async (c) => {
 						with: {
 							roster: {
 								where: eq(teamRosterTable.userId, user.id),
-								columns: { permissionRole: true },
+								columns: { permissionRole: true, status: true },
 							},
 						},
 					},
@@ -321,26 +409,52 @@ orgRoutes.get("/", async (c) => {
 	});
 
 	return c.json({
-		data: memberships.map((membership) => ({
-			id: membership.organization.id,
-			name: membership.organization.name,
-			slug: membership.organization.slug,
-			avatarUrl: membership.organization.avatarUrl,
-			description: membership.organization.description ?? null,
-			role: membership.role,
-			teamCount: membership.organization.teams.length,
-			openListingCount: membership.organization.recruitmentListings.length,
-			canManage: membership.role === "owner" || membership.role === "admin",
-			teams: membership.organization.teams.map((t) => ({
-				id: t.id,
-				name: t.name,
-				tag: t.tag,
-				canManage:
-					membership.role === "owner" ||
-					membership.role === "admin" ||
-					t.roster[0]?.permissionRole === "admin",
-			})),
-		})),
+		data: memberships.map((membership) => {
+			const orgCanManage = membership.role === "owner" || membership.role === "admin";
+			const teams = membership.organization.teams
+				.map((team) => {
+					const roster = team.roster[0] ?? null;
+					const hasViewableRosterStatus = roster?.status
+						? TEAM_VIEWABLE_STATUSES.includes(
+								roster.status as (typeof TEAM_VIEWABLE_STATUSES)[number]
+							)
+						: false;
+					const canManage =
+						orgCanManage || (hasViewableRosterStatus && roster?.permissionRole === "admin");
+					const canViewWorkspace = canManage || hasViewableRosterStatus;
+
+					return {
+						id: team.id,
+						name: team.name,
+						tag: team.tag,
+						canManage,
+						canViewWorkspace,
+						canViewRoster: canViewWorkspace,
+						canViewSchedule: canManage || roster?.status === "active",
+						canViewScrims: canViewWorkspace,
+						canViewRecruiting: canViewWorkspace,
+						canViewChat: canViewWorkspace,
+						canViewUpdates: canViewWorkspace,
+						canManageSettings: canManage,
+						canLeave: roster !== null && roster.status !== "inactive",
+					};
+				})
+				.filter((team) => team.canViewWorkspace);
+
+			return {
+				id: membership.organization.id,
+				name: membership.organization.name,
+				slug: membership.organization.slug,
+				avatarUrl: membership.organization.avatarUrl,
+				description: membership.organization.description ?? null,
+				isPublic: membership.organization.isPublic,
+				role: membership.role,
+				teamCount: teams.length,
+				openListingCount: membership.organization.recruitmentListings.length,
+				canManage: orgCanManage,
+				teams,
+			};
+		}),
 	});
 });
 
@@ -441,28 +555,47 @@ orgRoutes.post("/", async (c) => {
 	const parsed = v.safeParse(CreateOrgSchema, body);
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
-	const slug = await ensureUniqueSlug(nameToSlug(parsed.output.name));
-	const [org] = await db
-		.insert(organizationTable)
-		.values({
-			name: parsed.output.name,
-			slug,
-			description: parsed.output.description || null,
-			avatarUrl: parsed.output.avatarUrl || null,
-			bannerUrl: parsed.output.bannerUrl || null,
-			ownerId: user.id,
-		})
-		.returning({ id: organizationTable.id });
+	const slug = parsed.output.slug || nameToSlug(parsed.output.name);
+	const fieldErrors = await getOrgIdentityFieldErrors({ name: parsed.output.name, slug });
+	if (Object.keys(fieldErrors).length > 0) {
+		return c.json({ error: "Organization identity is unavailable.", fieldErrors }, 409);
+	}
 
-	await db.insert(organizationMemberTable).values({
-		organizationId: org.id,
-		userId: user.id,
-		role: "owner",
-		memberType: "staff",
-		staffRole: "manager",
-	});
+	try {
+		const org = await db.transaction(async (tx) => {
+			const [createdOrg] = await tx
+				.insert(organizationTable)
+				.values({
+					name: parsed.output.name,
+					slug,
+					description: parsed.output.description || null,
+					avatarUrl: parsed.output.avatarUrl || null,
+					bannerUrl: parsed.output.bannerUrl || null,
+					website: parsed.output.website || null,
+					discord: parsed.output.discord || null,
+					twitter: parsed.output.twitter || null,
+					isPublic: parsed.output.isPublic ?? true,
+					ownerId: user.id,
+				})
+				.returning({ id: organizationTable.id });
 
-	return c.json({ success: true, orgId: org.id });
+			await tx.insert(organizationMemberTable).values({
+				organizationId: createdOrg.id,
+				userId: user.id,
+				role: "owner",
+				memberType: "staff",
+				staffRole: "manager",
+			});
+
+			return createdOrg;
+		});
+
+		return c.json({ success: true, orgId: org.id });
+	} catch (error) {
+		const conflictResponse = getOrgIdentityConflictResponse(error);
+		if (conflictResponse) return c.json(conflictResponse, 409);
+		throw error;
+	}
 });
 
 orgRoutes.get("/:id", async (c) => {
@@ -486,20 +619,36 @@ orgRoutes.patch("/:id", async (c) => {
 		return c.json({ error: "You do not have permission to edit this organisation." }, 403);
 	}
 
-	const slug = parsed.output.slug
-		? await ensureUniqueSlug(parsed.output.slug, orgId)
-		: await ensureUniqueSlug(nameToSlug(parsed.output.name), orgId);
+	const slug = parsed.output.slug || nameToSlug(parsed.output.name);
+	const fieldErrors = await getOrgIdentityFieldErrors({
+		name: parsed.output.name,
+		slug,
+		ignoreOrgId: orgId,
+	});
+	if (Object.keys(fieldErrors).length > 0) {
+		return c.json({ error: "Organization identity is unavailable.", fieldErrors }, 409);
+	}
 
-	await db
-		.update(organizationTable)
-		.set({
-			name: parsed.output.name,
-			slug,
-			description: parsed.output.description || null,
-			avatarUrl: parsed.output.avatarUrl || null,
-			bannerUrl: parsed.output.bannerUrl || null,
-		})
-		.where(eq(organizationTable.id, orgId));
+	try {
+		await db
+			.update(organizationTable)
+			.set({
+				name: parsed.output.name,
+				slug,
+				description: parsed.output.description || null,
+				avatarUrl: parsed.output.avatarUrl || null,
+				bannerUrl: parsed.output.bannerUrl || null,
+				website: parsed.output.website || null,
+				discord: parsed.output.discord || null,
+				twitter: parsed.output.twitter || null,
+				...(parsed.output.isPublic === undefined ? {} : { isPublic: parsed.output.isPublic }),
+			})
+			.where(eq(organizationTable.id, orgId));
+	} catch (error) {
+		const conflictResponse = getOrgIdentityConflictResponse(error);
+		if (conflictResponse) return c.json(conflictResponse, 409);
+		throw error;
+	}
 
 	return c.json({ success: true });
 });

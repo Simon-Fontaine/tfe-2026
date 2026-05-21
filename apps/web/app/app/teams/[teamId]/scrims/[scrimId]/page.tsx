@@ -39,13 +39,8 @@ export default async function TeamScrimDetailPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { teamId, scrimId } = await params;
-	const [teamState, scrimState, chatConversationsState] = await Promise.all([
-		getTeamWithRosterRouteState(teamId, user.id),
-		getScrimRouteState(scrimId),
-		getScrimChatRouteState(scrimId),
-	]);
-
-	if (teamState.kind === "missing" || scrimState.kind === "missing") notFound();
+	const teamState = await getTeamWithRosterRouteState(teamId, user.id);
+	if (teamState.kind === "missing") notFound();
 	if (teamState.kind !== "success") {
 		return (
 			<PageContainer>
@@ -58,6 +53,28 @@ export default async function TeamScrimDetailPage({
 			</PageContainer>
 		);
 	}
+	if (!teamState.data.currentUser.canViewScrims) {
+		return (
+			<PageContainer>
+				<PageHeader
+					title="Scrim detail"
+					detail={`[${teamState.data.tag}] ${teamState.data.name}`}
+				/>
+				<EmptyStateBlock
+					title="No access"
+					description="You do not have permission to open this team's scrim workspace."
+					variant="card"
+				/>
+			</PageContainer>
+		);
+	}
+
+	const [scrimState, chatConversationsState] = await Promise.all([
+		getScrimRouteState(scrimId),
+		getScrimChatRouteState(scrimId),
+	]);
+
+	if (scrimState.kind === "missing") notFound();
 	if (scrimState.kind === "no-access") {
 		return (
 			<PageContainer>

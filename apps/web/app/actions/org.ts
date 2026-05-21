@@ -19,6 +19,7 @@ async function getOrgSlug(orgId: string): Promise<string | null> {
 }
 
 async function revalidateOrg(orgId: string) {
+	revalidatePath(appRoutes.root);
 	revalidatePath(appRoutes.recruiting.root);
 	revalidatePath(appRoutes.orgs.root);
 	revalidatePath(appRoutes.orgs.byId(orgId));
@@ -40,9 +41,14 @@ export async function createOrgAction(
 ): Promise<FormActionResult & { orgId?: string }> {
 	const result = await apiPost<{ orgId: string }>(apiRoutes.orgs.root, {
 		name: String(formData.get("name") ?? ""),
+		slug: formData.get("slug")?.toString() || undefined,
 		description: formData.get("description")?.toString() || undefined,
 		avatarUrl: formData.get("avatarUrl")?.toString() || undefined,
 		bannerUrl: formData.get("bannerUrl")?.toString() || undefined,
+		website: formData.get("website")?.toString() || undefined,
+		discord: formData.get("discord")?.toString() || undefined,
+		twitter: formData.get("twitter")?.toString() || undefined,
+		isPublic: formData.get("isPublic")?.toString() !== "false",
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
@@ -56,16 +62,22 @@ export async function updateOrgAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
+	const oldSlug = await getOrgSlug(orgId);
 	const result = await apiPatch(apiRoutes.orgs.byId(orgId), {
 		name: String(formData.get("name") ?? ""),
 		slug: formData.get("slug")?.toString() || undefined,
 		description: formData.get("description")?.toString() || undefined,
 		avatarUrl: formData.get("avatarUrl")?.toString() || undefined,
 		bannerUrl: formData.get("bannerUrl")?.toString() || undefined,
+		website: formData.get("website")?.toString() || undefined,
+		discord: formData.get("discord")?.toString() || undefined,
+		twitter: formData.get("twitter")?.toString() || undefined,
+		isPublic: formData.get("isPublic")?.toString() !== "false",
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	await revalidateOrg(orgId);
+	if (oldSlug) revalidatePath(publicRoutes.orgs.bySlug(oldSlug));
 	return { success: true };
 }
 

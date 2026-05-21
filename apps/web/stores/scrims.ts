@@ -1,22 +1,24 @@
 import { create } from "zustand";
 
 interface ScrimState {
+	teamId: string | null;
 	needsActionCount: number | null;
 }
 
 interface ScrimActions {
-	hydrateNeedsActionCount(needsActionCount: number): void;
+	hydrateNeedsActionCount(teamId: string, needsActionCount: number): void;
 	resetNeedsActionCount(): void;
 }
 
 export const useScrimStore = create<ScrimState & ScrimActions>((set) => ({
+	teamId: null,
 	needsActionCount: null,
 
-	hydrateNeedsActionCount(needsActionCount) {
-		set({ needsActionCount });
+	hydrateNeedsActionCount(teamId, needsActionCount) {
+		set({ teamId, needsActionCount });
 	},
 
 	resetNeedsActionCount() {
-		set({ needsActionCount: null });
+		set({ teamId: null, needsActionCount: null });
 	},
 }));

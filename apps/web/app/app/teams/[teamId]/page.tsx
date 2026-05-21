@@ -49,9 +49,12 @@ export default async function AppTeamOverviewPage({
 		return <AccessGate title="Overview" resourceType="team" />;
 	}
 
-	const openListingCount = team.data.ownedListings.filter((post) => post.status === "open").length;
+	const canManageTeam = team.data.currentUser.canManage;
+	const openListingCount = team.data.currentUser.canViewRecruiting
+		? team.data.ownedListings.filter((post) => post.status === "open").length
+		: 0;
 
-	const discoveryTeams = await getTeamsForDiscovery();
+	const discoveryTeams = canManageTeam ? await getTeamsForDiscovery() : [];
 	const opponentOptions = discoveryTeams.filter((c) => c.id !== team.data.id);
 
 	return (
@@ -75,7 +78,7 @@ export default async function AppTeamOverviewPage({
 					</>
 				}
 				actions={
-					team.data.currentUser.canManage ? (
+					canManageTeam ? (
 						<div className="flex flex-wrap items-center gap-2 shrink-0">
 							{opponentOptions.length > 0 ? (
 								<CreateScrimDialog teamId={team.data.id} opponentOptions={opponentOptions}>

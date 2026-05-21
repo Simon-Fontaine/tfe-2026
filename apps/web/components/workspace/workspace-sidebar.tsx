@@ -70,62 +70,90 @@ export function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
 	const pathname = usePathname();
 	const livePendingApplicationCount = useRecruitingStore((state) => state.pendingApplicationCount);
+	const liveScrimTeamId = useScrimStore((state) => state.teamId);
 	const liveScrimNeedsActionCount = useScrimStore((state) => state.needsActionCount);
 	const { activeOrgId, activeTeamId } = getWorkspacePathContext(pathname);
 	const displayPendingApplicationCount = livePendingApplicationCount ?? pendingApplicationCount;
+	const displayScrimNeedsActionCount =
+		liveScrimTeamId === activeTeamId ? (liveScrimNeedsActionCount ?? undefined) : undefined;
 
 	const activeOrg = activeOrgId ? contextOrgs.find((o) => o.id === activeOrgId) : null;
 	const activeTeam = activeTeamId ? contextTeams.find((t) => t.id === activeTeamId) : null;
 	const canManageOrg = activeOrg?.canManage ?? false;
-	const canManageTeam = activeTeam?.canManage ?? false;
+	const canOpenTeamSettings =
+		(activeTeam?.canManageSettings ?? false) || (activeTeam?.canLeave ?? false);
 
-	const contextGroups = activeTeamId
+	const contextGroups = activeTeam
 		? [
 				{
 					label: "Team",
 					links: [
 						{
 							label: "Overview",
-							href: appRoutes.teams.byId(activeTeamId),
+							href: appRoutes.teams.byId(activeTeam.id),
 							icon: Home01Icon,
 							exact: true,
 						},
-						{
-							label: "Roster",
-							href: appRoutes.teams.roster(activeTeamId),
-							icon: UserGroupIcon,
-						},
-						{
-							label: "Team schedule",
-							href: appRoutes.teams.calendar(activeTeamId),
-							icon: Calendar03Icon,
-						},
-						{
-							label: "Scrims",
-							href: appRoutes.teams.scrims(activeTeamId),
-							icon: Sword03Icon,
-							badge: liveScrimNeedsActionCount ?? undefined,
-						},
-						{
-							label: "Recruiting",
-							href: appRoutes.teams.recruiting(activeTeamId),
-							icon: UserSearch01Icon,
-						},
-						{
-							label: "Chat",
-							href: appRoutes.teams.chat(activeTeamId),
-							icon: Mail01Icon,
-						},
-						{
-							label: "Updates",
-							href: appRoutes.teams.updates(activeTeamId),
-							icon: Notification01Icon,
-						},
-						...(canManageTeam
+						...(activeTeam?.canViewRoster
+							? [
+									{
+										label: "Roster",
+										href: appRoutes.teams.roster(activeTeam.id),
+										icon: UserGroupIcon,
+									},
+								]
+							: []),
+						...(activeTeam?.canViewSchedule
+							? [
+									{
+										label: "Team schedule",
+										href: appRoutes.teams.calendar(activeTeam.id),
+										icon: Calendar03Icon,
+									},
+								]
+							: []),
+						...(activeTeam?.canViewScrims
+							? [
+									{
+										label: "Scrims",
+										href: appRoutes.teams.scrims(activeTeam.id),
+										icon: Sword03Icon,
+										badge: displayScrimNeedsActionCount,
+									},
+								]
+							: []),
+						...(activeTeam?.canViewRecruiting
+							? [
+									{
+										label: "Recruiting",
+										href: appRoutes.teams.recruiting(activeTeam.id),
+										icon: UserSearch01Icon,
+									},
+								]
+							: []),
+						...(activeTeam?.canViewChat
+							? [
+									{
+										label: "Chat",
+										href: appRoutes.teams.chat(activeTeam.id),
+										icon: Mail01Icon,
+									},
+								]
+							: []),
+						...(activeTeam?.canViewUpdates
+							? [
+									{
+										label: "Updates",
+										href: appRoutes.teams.updates(activeTeam.id),
+										icon: Notification01Icon,
+									},
+								]
+							: []),
+						...(canOpenTeamSettings
 							? [
 									{
 										label: "Settings",
-										href: appRoutes.teams.settings(activeTeamId),
+										href: appRoutes.teams.settings(activeTeam.id),
 										icon: Settings01Icon,
 									},
 								]
@@ -159,13 +187,13 @@ export function WorkspaceSidebar({
 										},
 									]
 								: []),
-							{
-								label: "Brand",
-								href: appRoutes.orgs.brand(activeOrgId),
-								icon: UserSearch01Icon,
-							},
 							...(canManageOrg
 								? [
+										{
+											label: "Brand",
+											href: appRoutes.orgs.brand(activeOrgId),
+											icon: UserSearch01Icon,
+										},
 										{
 											label: "Recruiting",
 											href: appRoutes.orgs.recruiting(activeOrgId),
@@ -246,7 +274,7 @@ export function WorkspaceSidebar({
 									return (
 										<SidebarMenuItem key={link.href}>
 											<SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
-												<Link href={link.href}>
+												<Link href={link.href} prefetch={false}>
 													<HugeiconsIcon icon={link.icon} strokeWidth={2} />
 													{link.label}
 												</Link>

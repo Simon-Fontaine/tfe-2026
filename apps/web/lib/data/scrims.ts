@@ -16,14 +16,30 @@ export const getTeamScrims = cache(
 		teamId: string,
 		pastCursor?: string
 	): Promise<{ scrims: ScrimSummary[]; nextCursor: string | null }> => {
+		const result = await getTeamScrimsRouteState(teamId, pastCursor);
+		if (result.kind === "success") return result.data;
+		return { scrims: [], nextCursor: null };
+	}
+);
+
+export const getTeamScrimsRouteState = cache(
+	async (
+		teamId: string,
+		pastCursor?: string
+	): Promise<RouteStateResult<{ scrims: ScrimSummary[]; nextCursor: string | null }>> => {
 		const url = pastCursor
 			? `${apiRoutes.scrims.root}?teamId=${encodeURIComponent(teamId)}&cursor=${encodeURIComponent(pastCursor)}&limit=20`
 			: `${apiRoutes.scrims.root}?teamId=${encodeURIComponent(teamId)}&limit=20`;
 		const res = await apiGet<ScrimSummary[]>(url);
 		if ("data" in res) {
 			const paginated = res as unknown as { data: ScrimSummary[]; nextCursor: string | null };
-			return { scrims: paginated.data, nextCursor: paginated.nextCursor ?? null };
+			return routeStateSuccess({
+				scrims: paginated.data,
+				nextCursor: paginated.nextCursor ?? null,
+			});
 		}
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
 		throw new Error(res.error);
 	}
 );

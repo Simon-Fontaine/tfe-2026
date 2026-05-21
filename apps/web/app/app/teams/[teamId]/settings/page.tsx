@@ -31,7 +31,7 @@ export default async function AppTeamSettingsPage({
 		);
 	}
 
-	if (!team.data.currentUser.canManage && !team.data.currentUser.canLeave) {
+	if (!team.data.currentUser.canManageSettings && !team.data.currentUser.canLeave) {
 		return (
 			<PageContainer>
 				<PageHeader title="Settings" detail={`[${team.data.tag}] ${team.data.name}`} />

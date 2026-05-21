@@ -2,6 +2,7 @@ import {
 	canDeleteOrg,
 	canManageOrg,
 	canTransferOrgOwnership,
+	normalizeIdentityValue,
 	type OrgRole,
 } from "@scrimflow/shared";
 import { and, eq, ne } from "drizzle-orm";
@@ -61,6 +62,7 @@ export async function getOrgPermissions(orgId: string, userId: string) {
 		membership,
 		role,
 		canManage: canManageOrg(role),
+		canManageBrand: canManageOrg(role),
 		canDelete: canDeleteOrg(role),
 		canTransferOwnership: canTransferOrgOwnership(role),
 		canLeave: role !== "owner" && role !== null,
@@ -70,30 +72,18 @@ export async function getOrgPermissions(orgId: string, userId: string) {
 }
 
 export function nameToSlug(name: string): string {
-	return (
-		name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/(^-|-$)/g, "") || "org"
-	);
+	return normalizeIdentityValue(name) || "org";
 }
 
-export async function ensureUniqueSlug(base: string, ignoreOrgId?: string): Promise<string> {
+export async function findOrgBySlug(
+	base: string,
+	ignoreOrgId?: string
+): Promise<{ id: string } | null> {
 	const existing = await db.query.organizationTable.findFirst({
 		where: ignoreOrgId
 			? and(eq(organizationTable.slug, base), ne(organizationTable.id, ignoreOrgId))
 			: eq(organizationTable.slug, base),
 		columns: { id: true },
 	});
-	if (!existing) return base;
-
-	const suffix = Math.random().toString(36).substring(2, 6);
-	const candidate = `${base}-${suffix}`;
-	const conflict = await db.query.organizationTable.findFirst({
-		where: ignoreOrgId
-			? and(eq(organizationTable.slug, candidate), ne(organizationTable.id, ignoreOrgId))
-			: eq(organizationTable.slug, candidate),
-		columns: { id: true },
-	});
-	return conflict ? `${candidate}-${Math.random().toString(36).substring(2, 6)}` : candidate;
+	return existing ?? null;
 }

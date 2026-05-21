@@ -16,13 +16,35 @@ const optionalSlug = v.optional(
 	v.pipe(
 		v.string(),
 		v.trim(),
-		v.minLength(2, "Slug must be at least 2 characters"),
 		v.maxLength(50, "Slug cannot exceed 50 characters"),
-		v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must use lowercase letters, numbers, and hyphens")
+		v.check(
+			(value) => value.length === 0 || value.length >= 2,
+			"Slug must be at least 2 characters"
+		),
+		v.check(
+			(value) => value.length === 0 || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value),
+			"Slug must use lowercase letters, numbers, and hyphens"
+		)
 	)
 );
 
-const optionalUrl = v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500, "URL is too long")));
+const optionalPublicUrl = v.pipe(
+	v.string(),
+	v.trim(),
+	v.maxLength(500, "URL is too long"),
+	v.check((value) => {
+		if (value.length === 0) return true;
+		try {
+			const url = new URL(value);
+			return url.protocol === "http:" || url.protocol === "https:";
+		} catch {
+			return false;
+		}
+	}, "Enter a full http:// or https:// URL")
+);
+const optionalUrl = v.optional(optionalPublicUrl);
+const optionalSocial = v.optional(v.pipe(optionalPublicUrl, v.maxLength(100, "Value is too long")));
+const optionalBoolean = v.optional(v.boolean());
 
 const optionalGameRole = v.optional(v.picklist(OW2_ROLE_VALUES, "Please select a role"));
 const optionalStaffRole = v.optional(v.picklist(STAFF_ROLE_VALUES, "Please select a staff role"));
@@ -39,9 +61,14 @@ export const CreateOrgSchema = v.object({
 		v.minLength(2, "Organisation name must be at least 2 characters"),
 		v.maxLength(50, "Organisation name cannot exceed 50 characters")
 	),
+	slug: optionalSlug,
 	description: optionalDescription,
 	avatarUrl: optionalUrl,
 	bannerUrl: optionalUrl,
+	website: optionalUrl,
+	discord: optionalSocial,
+	twitter: optionalSocial,
+	isPublic: optionalBoolean,
 });
 
 export type CreateOrgInput = v.InferOutput<typeof CreateOrgSchema>;
@@ -58,6 +85,10 @@ export const UpdateOrgSchema = v.object({
 	description: optionalDescription,
 	avatarUrl: optionalUrl,
 	bannerUrl: optionalUrl,
+	website: optionalUrl,
+	discord: optionalSocial,
+	twitter: optionalSocial,
+	isPublic: optionalBoolean,
 });
 
 export type UpdateOrgInput = v.InferOutput<typeof UpdateOrgSchema>;
@@ -132,6 +163,7 @@ export const CreateTeamSchema = v.object({
 	description: optionalDescription,
 	avatarUrl: optionalUrl,
 	bannerUrl: optionalUrl,
+	isPublic: optionalBoolean,
 });
 
 export type CreateTeamInput = v.InferOutput<typeof CreateTeamSchema>;
@@ -154,6 +186,7 @@ export const UpdateTeamSchema = v.object({
 	description: optionalDescription,
 	avatarUrl: optionalUrl,
 	bannerUrl: optionalUrl,
+	isPublic: optionalBoolean,
 });
 
 export type UpdateTeamInput = v.InferOutput<typeof UpdateTeamSchema>;
