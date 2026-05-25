@@ -169,7 +169,9 @@ export async function archiveTeamAction(
 	const orgId = await getVerifiedTeamOrgId(teamId);
 	if (!orgId) return { success: false, error: "Team not found" };
 
-	const result = await apiPost(apiRoutes.teams.archive(teamId), {});
+	const result = await apiPost(apiRoutes.teams.archive(teamId), {
+		reason: formData.get("reason")?.toString() || undefined,
+	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	await revalidateOrgWorkspace(orgId);
@@ -185,7 +187,9 @@ export async function unarchiveTeamAction(
 	const orgId = await getVerifiedTeamOrgId(teamId);
 	if (!orgId) return { success: false, error: "Team not found" };
 
-	const result = await apiPost(apiRoutes.teams.unarchive(teamId), {});
+	const result = await apiPost(apiRoutes.teams.unarchive(teamId), {
+		reason: formData.get("reason")?.toString() || undefined,
+	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	revalidateTeamWorkspace(teamId);
@@ -201,13 +205,27 @@ export async function deleteTeamAction(
 	const orgId = await getVerifiedTeamOrgId(teamId);
 	if (!orgId) return { success: false, error: "Team not found" };
 
-	const result = await apiDelete(apiRoutes.teams.byId(teamId), {});
+	const result = await apiDelete(apiRoutes.teams.byId(teamId), {
+		confirmName: formData.get("confirmName")?.toString() || undefined,
+		reason: formData.get("reason")?.toString() || undefined,
+		verificationCode: formData.get("verificationCode")?.toString() || undefined,
+	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	await revalidateOrgWorkspace(orgId);
 	revalidatePath(publicRoutes.teams.root);
 	revalidatePath(publicRoutes.teams.byId(teamId));
 	redirect(appRoutes.orgs.byId(orgId));
+}
+
+export async function requestTeamDeletionCodeAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const result = await apiPost(apiRoutes.teams.requestDeletionCode(teamId), {});
+	if (isApiActionError(result)) return toFormActionError(result);
+	return { success: true };
 }
 
 export async function leaveTeamAction(
@@ -223,6 +241,89 @@ export async function leaveTeamAction(
 
 	revalidateTeamWorkspace(teamId);
 	await revalidateOrgWorkspace(orgId);
+	return { success: true };
+}
+
+export async function startTeamOwnershipRecoveryAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (!orgId) return { success: false, error: "Team not found" };
+
+	const result = await apiPost(apiRoutes.teams.ownership.initiate(teamId), {
+		kind: "recovery",
+		reason: String(formData.get("reason") ?? ""),
+		recoveryTargetUserId: formData.get("recoveryTargetUserId")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
+	revalidatePath(appRoutes.inbox);
+	return { success: true };
+}
+
+export async function cancelTeamOwnershipWorkflowAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const workflowId = String(formData.get("workflowId") ?? "");
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (!orgId) return { success: false, error: "Team not found" };
+
+	const result = await apiPost(apiRoutes.teams.ownership.cancel(teamId, workflowId), {
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
+	revalidatePath(appRoutes.inbox);
+	return { success: true };
+}
+
+export async function respondTeamOwnershipWorkflowAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const workflowId = String(formData.get("workflowId") ?? "");
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (!orgId) return { success: false, error: "Team not found" };
+
+	const result = await apiPost(apiRoutes.teams.ownership.respond(teamId, workflowId), {
+		action: String(formData.get("action") ?? ""),
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
+	revalidatePath(appRoutes.inbox);
+	return { success: true };
+}
+
+export async function resolveTeamOwnershipWorkflowAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const workflowId = String(formData.get("workflowId") ?? "");
+	const orgId = await getVerifiedTeamOrgId(teamId);
+	if (!orgId) return { success: false, error: "Team not found" };
+
+	const result = await apiPost(apiRoutes.teams.ownership.resolve(teamId, workflowId), {
+		result: String(formData.get("result") ?? ""),
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	revalidateTeamWorkspace(teamId);
+	await revalidateOrgWorkspace(orgId);
+	revalidatePath(appRoutes.inbox);
 	return { success: true };
 }
 

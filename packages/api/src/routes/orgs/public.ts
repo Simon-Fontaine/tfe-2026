@@ -20,7 +20,10 @@ publicOrgRoutes.use("*", optionalAuth);
 
 publicOrgRoutes.get("/", async (c) => {
 	const rows = await db.query.organizationTable.findMany({
-		where: eq(organizationTable.isPublic, true),
+		where: and(
+			eq(organizationTable.isPublic, true),
+			eq(organizationTable.lifecycleStatus, "active")
+		),
 		columns: {
 			id: true,
 			slug: true,
@@ -30,7 +33,12 @@ publicOrgRoutes.get("/", async (c) => {
 		},
 		with: {
 			teams: {
-				where: and(eq(teamTable.isArchived, false), eq(teamTable.isPublic, true)),
+				where: and(
+					eq(teamTable.isArchived, false),
+					eq(teamTable.isPublic, true),
+					// P22: also filter out deletion_pending / irreversible teams from public listing
+					eq(teamTable.lifecycleStatus, "active")
+				),
 				columns: { id: true },
 				with: {
 					roster: {
@@ -71,9 +79,14 @@ publicOrgRoutes.get("/:id", async (c) => {
 	const whereCondition = UUID_RE.test(idOrSlug)
 		? and(
 				eq(organizationTable.isPublic, true),
+				eq(organizationTable.lifecycleStatus, "active"),
 				or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug))
 			)
-		: and(eq(organizationTable.isPublic, true), eq(organizationTable.slug, idOrSlug));
+		: and(
+				eq(organizationTable.isPublic, true),
+				eq(organizationTable.lifecycleStatus, "active"),
+				eq(organizationTable.slug, idOrSlug)
+			);
 
 	const org = await db.query.organizationTable.findFirst({
 		where: whereCondition,
@@ -90,7 +103,11 @@ publicOrgRoutes.get("/:id", async (c) => {
 		},
 		with: {
 			teams: {
-				where: and(eq(teamTable.isArchived, false), eq(teamTable.isPublic, true)),
+				where: and(
+					eq(teamTable.isArchived, false),
+					eq(teamTable.isPublic, true),
+					eq(teamTable.lifecycleStatus, "active")
+				),
 				columns: {
 					id: true,
 					organizationId: true,
@@ -103,6 +120,7 @@ publicOrgRoutes.get("/:id", async (c) => {
 					matchesPlayed: true,
 					isRecruiting: true,
 					isArchived: true,
+					lifecycleStatus: true,
 					isPublic: true,
 				},
 				with: {
@@ -160,6 +178,12 @@ publicOrgRoutes.get("/:id", async (c) => {
 			matchesPlayed: team.matchesPlayed,
 			isRecruiting: team.isRecruiting,
 			isArchived: team.isArchived,
+			lifecycleStatus: team.lifecycleStatus as
+				| "active"
+				| "archived"
+				| "deletion_pending"
+				| "irreversible",
+			lifecycleWorkflow: null,
 			isPublic: team.isPublic,
 			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
 			adminCount: new Set(

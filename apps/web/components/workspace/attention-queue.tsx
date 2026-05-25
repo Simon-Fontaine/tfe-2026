@@ -27,6 +27,7 @@ export type AttentionQueueItem = {
 	sortDirection?: "asc" | "desc";
 	actionLabel: string;
 	href: string;
+	prefetch?: boolean;
 	permissionCopy?: string;
 	icon?: IconSvgElement;
 };
@@ -117,7 +118,7 @@ export function AttentionQueue({ items, className }: AttentionQueueProps) {
 								variant="outline"
 								className="justify-self-start sm:justify-self-end"
 							>
-								<Link href={item.href}>
+								<Link href={item.href} prefetch={item.prefetch}>
 									{item.actionLabel}
 									<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
 								</Link>

@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { availabilityTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
+import { getLifecycleMutationBlockReason } from "@/utils/lifecycle";
 import { getTeamAccessContext, verifyUserOnTeam } from "@/utils/team";
 
 const scheduleRoutes = new Hono<AuthEnv>();
@@ -66,7 +67,7 @@ scheduleRoutes.get("/team/:teamId", async (c) => {
 
 	const team = await db.query.teamTable.findFirst({
 		where: eq(teamTable.id, teamId),
-		columns: { id: true, name: true, tag: true },
+		columns: { id: true, name: true, tag: true, lifecycleStatus: true },
 	});
 	if (!team) return c.json({ error: "Team not found." }, 404);
 
@@ -150,6 +151,12 @@ scheduleRoutes.post("/availability", async (c) => {
 
 	const onTeam = await verifyUserOnTeam(user.id, teamId);
 	if (!onTeam) return c.json({ error: "You are not an active member of this team." }, 403);
+	const team = await db.query.teamTable.findFirst({
+		where: eq(teamTable.id, teamId),
+		columns: { lifecycleStatus: true },
+	});
+	const lifecycleBlock = getLifecycleMutationBlockReason("Team", team?.lifecycleStatus);
+	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 
 	await db.insert(availabilityTable).values({
 		userId: user.id,
@@ -177,9 +184,8 @@ scheduleRoutes.delete("/availability/:id", async (c) => {
 	if (!row) return c.json({ error: "Availability window not found." }, 404);
 	if (row.userId !== user.id) return c.json({ error: "Not authorized." }, 403);
 
-	const onTeam = await verifyUserOnTeam(user.id, row.teamId);
-	if (!onTeam) return c.json({ error: "You are no longer an active member of this team." }, 403);
-
+	// D7-P: deleting availability is a housekeeping action — exempt from lifecycle block
+	// so members can clean up their schedule even when the team is archived or deletion-pending.
 	await db.delete(availabilityTable).where(eq(availabilityTable.id, id));
 
 	return c.json({ success: true });

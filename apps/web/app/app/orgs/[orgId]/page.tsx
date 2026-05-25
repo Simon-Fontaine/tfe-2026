@@ -6,6 +6,7 @@ import { TeamCard } from "@/components/teams/team-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
+import { AttentionQueue, type AttentionQueueItem } from "@/components/workspace/attention-queue";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -37,6 +38,28 @@ export default async function AppOrgOverviewPage({
 
 	const totalTeams = orgDetail.activeTeams.length + orgDetail.archivedTeams.length;
 	const openListingCount = orgDetail.ownedListings.filter((post) => post.status === "open").length;
+	const attentionItems: AttentionQueueItem[] = orgDetail.activeTeams
+		.flatMap((team) =>
+			(team.oversight?.signals ?? [])
+				.filter((signal) => signal.severity === "critical" || signal.severity === "warning")
+				.slice(0, 2)
+				.map((signal) => ({
+					id: `${team.id}-${signal.code}`,
+					title: `${team.name}: ${signal.label}`,
+					objectType: "team oversight",
+					contextLabel: orgDetail.name,
+					statusText: signal.severity === "critical" ? "Needs action" : "Watch",
+					timestamp: signal.at ?? team.oversight?.latestActivityAt ?? null,
+					priority: signal.severity === "critical" ? 1 : 2,
+					actionLabel: team.oversight?.canOpenWorkspace ? "Open team" : "View teams",
+					href: team.oversight?.canOpenWorkspace
+						? appRoutes.teams.byId(team.id)
+						: appRoutes.orgs.teams(orgDetail.id),
+					prefetch: false,
+					permissionCopy: team.oversight?.autonomyCopy,
+				}))
+		)
+		.slice(0, 12);
 
 	return (
 		<PageContainer>
@@ -74,6 +97,13 @@ export default async function AppOrgOverviewPage({
 					{ label: "Pending invites", value: orgDetail.pendingInvites.length },
 				]}
 			/>
+
+			<PageSection
+				title="Operational attention"
+				description="Permission-filtered team health signals for organization coordination."
+			>
+				<AttentionQueue items={attentionItems} />
+			</PageSection>
 
 			<PageSection
 				title="Active teams"

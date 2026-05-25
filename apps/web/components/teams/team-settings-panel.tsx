@@ -3,8 +3,13 @@
 import { useState } from "react";
 import {
 	archiveTeamAction,
+	cancelTeamOwnershipWorkflowAction,
 	deleteTeamAction,
 	leaveTeamAction,
+	requestTeamDeletionCodeAction,
+	resolveTeamOwnershipWorkflowAction,
+	respondTeamOwnershipWorkflowAction,
+	startTeamOwnershipRecoveryAction,
 	unarchiveTeamAction,
 	updateTeamAction,
 } from "@/app/actions/team";
@@ -22,6 +27,7 @@ import type { TeamWithRoster } from "@/lib/data/team";
 
 interface TeamSettingsPanelProps {
 	team: TeamWithRoster;
+	currentUserId: string;
 }
 
 function getFieldErrorText(
@@ -31,7 +37,7 @@ function getFieldErrorText(
 	return fieldErrors?.[field]?.join(" ");
 }
 
-export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
+export function TeamSettingsPanel({ team, currentUserId }: TeamSettingsPanelProps) {
 	const canManageSettings = team.currentUser.canManageSettings;
 	const canManageLifecycle =
 		team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin";
@@ -54,36 +60,109 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 		successMessage: "Team restored",
 	});
 	const deleteForm = useFormAction(deleteTeamAction, {
-		loadingMessage: "Deleting team…",
+		loadingMessage: "Requesting deletion…",
+	});
+	const deletionCodeForm = useFormAction(requestTeamDeletionCodeAction, {
+		loadingMessage: "Sending code…",
+		successMessage: "Verification code sent",
 	});
 	const leaveForm = useFormAction(leaveTeamAction, {
 		loadingMessage: "Leaving team…",
 		successMessage: "You left the team",
 	});
+	const recoveryForm = useFormAction(startTeamOwnershipRecoveryAction, {
+		loadingMessage: "Starting recovery…",
+		successMessage: "Recovery workflow started",
+	});
+	const cancelOwnershipForm = useFormAction(cancelTeamOwnershipWorkflowAction, {
+		loadingMessage: "Cancelling workflow…",
+		successMessage: "Ownership workflow cancelled",
+	});
+	const respondOwnershipForm = useFormAction(respondTeamOwnershipWorkflowAction, {
+		loadingMessage: "Updating workflow…",
+		successMessage: "Ownership workflow updated",
+	});
+	const resolveOwnershipForm = useFormAction(resolveTeamOwnershipWorkflowAction, {
+		loadingMessage: "Resolving recovery…",
+		successMessage: "Ownership recovery resolved",
+	});
+	const [recoveryReason, setRecoveryReason] = useState("");
+	const [lifecycleReason, setLifecycleReason] = useState("");
+	const [deleteConfirmName, setDeleteConfirmName] = useState("");
+	const [deleteVerificationCode, setDeleteVerificationCode] = useState("");
 	const updateFieldErrors = updateForm.state?.fieldErrors;
+	const canRespondToOwnership =
+		team.ownershipWorkflow?.kind === "transfer" &&
+		team.ownershipWorkflow.status === "pending" &&
+		team.ownershipWorkflow.recipient?.userId === currentUserId;
+	const canResolveRecovery =
+		team.ownershipWorkflow?.kind === "recovery" &&
+		team.ownershipWorkflow.status === "review_required" &&
+		canManageLifecycle;
 
 	function submitArchive() {
 		const fd = new FormData();
 		fd.set("teamId", team.id);
+		fd.set("reason", lifecycleReason);
 		archiveForm.submit(fd);
 	}
 
 	function submitUnarchive() {
 		const fd = new FormData();
 		fd.set("teamId", team.id);
+		fd.set("reason", lifecycleReason);
 		unarchiveForm.submit(fd);
 	}
 
 	function submitDelete() {
 		const fd = new FormData();
 		fd.set("teamId", team.id);
+		fd.set("confirmName", deleteConfirmName);
+		fd.set("reason", lifecycleReason);
+		fd.set("verificationCode", deleteVerificationCode);
 		deleteForm.submit(fd);
+	}
+
+	function requestDeletionCode() {
+		const fd = new FormData();
+		fd.set("teamId", team.id);
+		deletionCodeForm.submit(fd);
 	}
 
 	function submitLeave() {
 		const fd = new FormData();
 		fd.set("teamId", team.id);
 		leaveForm.submit(fd);
+	}
+
+	function submitRecovery() {
+		const fd = new FormData();
+		fd.set("teamId", team.id);
+		fd.set("reason", recoveryReason);
+		recoveryForm.submit(fd);
+	}
+
+	function cancelOwnershipWorkflow(workflowId: string) {
+		const fd = new FormData();
+		fd.set("teamId", team.id);
+		fd.set("workflowId", workflowId);
+		cancelOwnershipForm.submit(fd);
+	}
+
+	function respondOwnershipWorkflow(workflowId: string, action: "accept" | "reject") {
+		const fd = new FormData();
+		fd.set("teamId", team.id);
+		fd.set("workflowId", workflowId);
+		fd.set("action", action);
+		respondOwnershipForm.submit(fd);
+	}
+
+	function resolveOwnershipWorkflow(workflowId: string, result: "approve" | "reject" | "block") {
+		const fd = new FormData();
+		fd.set("teamId", team.id);
+		fd.set("workflowId", workflowId);
+		fd.set("result", result);
+		resolveOwnershipForm.submit(fd);
 	}
 
 	function submitSettings(e: React.FormEvent) {
@@ -199,6 +278,135 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 				</Card>
 			)}
 
+			{canManageSettings && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-sm">Continuity</CardTitle>
+						<CardDescription>
+							Team authority is based on active team admins and organization staff authority.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						{team.ownershipWorkflow ? (
+							<div className="space-y-2 border px-3 py-3">
+								<p className="text-xs font-medium capitalize">
+									{team.ownershipWorkflow.kind} {team.ownershipWorkflow.status.replaceAll("_", " ")}
+								</p>
+								<p className="text-[11px] text-muted-foreground">
+									Review state: {team.ownershipWorkflow.reviewState.replaceAll("_", " ")}
+								</p>
+								<p className="text-[11px] text-muted-foreground">
+									Ownership-sensitive actions reconcile against current team admins until the
+									workflow settles.
+								</p>
+								{canRespondToOwnership ? (
+									<div className="flex flex-wrap gap-2">
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												respondOwnershipWorkflow(team.ownershipWorkflow?.id ?? "unknown", "accept")
+											}
+											disabled={respondOwnershipForm.isPending}
+										>
+											{respondOwnershipForm.isPending && <Spinner className="mr-1.5" />}
+											Accept transfer
+										</Button>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												respondOwnershipWorkflow(team.ownershipWorkflow?.id ?? "unknown", "reject")
+											}
+											disabled={respondOwnershipForm.isPending}
+										>
+											Reject transfer
+										</Button>
+									</div>
+								) : null}
+								{canResolveRecovery ? (
+									<div className="flex flex-wrap gap-2">
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												resolveOwnershipWorkflow(team.ownershipWorkflow?.id ?? "unknown", "approve")
+											}
+											disabled={resolveOwnershipForm.isPending}
+										>
+											{resolveOwnershipForm.isPending && <Spinner className="mr-1.5" />}
+											Approve recovery
+										</Button>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												resolveOwnershipWorkflow(team.ownershipWorkflow?.id ?? "unknown", "reject")
+											}
+											disabled={resolveOwnershipForm.isPending}
+										>
+											Reject recovery
+										</Button>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												resolveOwnershipWorkflow(team.ownershipWorkflow?.id ?? "unknown", "block")
+											}
+											disabled={resolveOwnershipForm.isPending}
+										>
+											Block recovery
+										</Button>
+									</div>
+								) : null}
+								{/* P28: cancel button must be guarded — only team admins/managers should cancel */}
+								{canManageSettings && (
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => cancelOwnershipWorkflow(team.ownershipWorkflow?.id ?? "unknown")}
+										disabled={cancelOwnershipForm.isPending}
+									>
+										{cancelOwnershipForm.isPending && <Spinner className="mr-1.5" />}
+										Cancel workflow
+									</Button>
+								)}
+							</div>
+						) : (
+							<div className="space-y-3">
+								<div className="border px-3 py-3">
+									<p className="text-xs font-medium">
+										{team.adminCount > 0 ? "Admin continuity healthy" : "No active admin"}
+									</p>
+									<p className="mt-1 text-[11px] text-muted-foreground">
+										{team.adminCount > 0
+											? "At least one active team admin or org-authorized operator can manage this workspace."
+											: "Start a reviewed recovery workflow before routine ownership-sensitive changes."}
+									</p>
+								</div>
+								<textarea
+									value={recoveryReason}
+									onChange={(event) => setRecoveryReason(event.target.value)}
+									maxLength={800}
+									rows={2}
+									className="min-h-16 w-full rounded-md border bg-background px-3 py-2 text-xs"
+									placeholder="Recovery reason and authority context"
+								/>
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={submitRecovery}
+									disabled={recoveryForm.isPending || recoveryReason.trim().length === 0}
+								>
+									{recoveryForm.isPending && <Spinner className="mr-1.5" />}
+									Start recovery review
+								</Button>
+							</div>
+						)}
+					</CardContent>
+				</Card>
+			)}
+
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-sm">Danger Zone</CardTitle>
@@ -207,6 +415,66 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="flex flex-wrap gap-2">
+					<div className="basis-full space-y-2">
+						{team.lifecycleWorkflow ? (
+							<div className="border px-3 py-3">
+								<p className="text-xs font-medium capitalize">
+									{/* P25: distinct label for irreversible state */}
+									{team.lifecycleWorkflow.status === "irreversible"
+										? "Irreversibly settled — no further actions available"
+										: team.lifecycleWorkflow.status.replaceAll("_", " ")}
+								</p>
+								{team.lifecycleWorkflow.recoveryUntil ? (
+									<p className="mt-1 text-[11px] text-muted-foreground">
+										{/* P29: format ISO date as human-readable */}
+										Recovery window until:{" "}
+										{new Date(team.lifecycleWorkflow.recoveryUntil).toLocaleString()}
+									</p>
+								) : (
+									<p className="mt-1 text-[11px] text-muted-foreground">
+										Recovery window: not applicable
+									</p>
+								)}
+							</div>
+						) : null}
+						{/* P32: explain to non-managers why lifecycle actions are unavailable */}
+						{!canManageLifecycle && (
+							<p className="text-[11px] text-muted-foreground">
+								Archive and deletion actions are restricted to organization owners and admins.
+							</p>
+						)}
+						<textarea
+							value={lifecycleReason}
+							onChange={(event) => setLifecycleReason(event.target.value)}
+							maxLength={800}
+							rows={2}
+							className="min-h-16 w-full rounded-md border bg-background px-3 py-2 text-xs"
+							placeholder="Lifecycle reason for archive, restore, or deletion-pending history"
+						/>
+						<input
+							value={deleteConfirmName}
+							onChange={(event) => setDeleteConfirmName(event.target.value)}
+							className="h-9 w-full rounded-md border bg-background px-3 text-xs"
+							placeholder={`Type ${team.name} before deletion-pending`}
+						/>
+						<div className="flex flex-wrap gap-2">
+							<input
+								value={deleteVerificationCode}
+								onChange={(event) => setDeleteVerificationCode(event.target.value)}
+								className="h-9 min-w-52 flex-1 rounded-md border bg-background px-3 text-xs"
+								placeholder="Verification code"
+							/>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={requestDeletionCode}
+								disabled={deletionCodeForm.isPending}
+							>
+								{deletionCodeForm.isPending && <Spinner className="mr-1.5" />}
+								Send code
+							</Button>
+						</div>
+					</div>
 					{team.currentUser.canLeave && (
 						<Button
 							size="sm"
@@ -218,28 +486,37 @@ export function TeamSettingsPanel({ team }: TeamSettingsPanelProps) {
 							Leave team
 						</Button>
 					)}
-					{canManageLifecycle ? (
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={team.isArchived ? submitUnarchive : submitArchive}
-							disabled={archiveForm.isPending || unarchiveForm.isPending}
-						>
-							{(archiveForm.isPending || unarchiveForm.isPending) && <Spinner className="mr-1.5" />}
-							{team.isArchived ? "Restore team" : "Archive team"}
-						</Button>
-					) : null}
-					{canManageLifecycle ? (
+					{/* P24: only show archive/restore for active or archived lifecycle state */}
+					{canManageLifecycle &&
+						(team.lifecycleStatus === "active" || team.lifecycleStatus === "archived") && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={team.isArchived ? submitUnarchive : submitArchive}
+								disabled={archiveForm.isPending || unarchiveForm.isPending}
+							>
+								{(archiveForm.isPending || unarchiveForm.isPending) && (
+									<Spinner className="mr-1.5" />
+								)}
+								{team.isArchived ? "Restore team" : "Archive team"}
+							</Button>
+						)}
+					{/* P24: only show delete when team is not irreversibly settled */}
+					{canManageLifecycle && team.lifecycleStatus !== "irreversible" && (
 						<Button
 							size="sm"
 							variant="destructive"
 							onClick={submitDelete}
-							disabled={deleteForm.isPending}
+							disabled={
+								deleteForm.isPending ||
+								deleteConfirmName !== team.name ||
+								deleteVerificationCode.trim().length === 0
+							}
 						>
 							{deleteForm.isPending && <Spinner className="mr-1.5" />}
-							Delete team
+							Request deletion
 						</Button>
-					) : null}
+					)}
 				</CardContent>
 			</Card>
 		</div>

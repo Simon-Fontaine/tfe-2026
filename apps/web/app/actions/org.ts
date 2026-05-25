@@ -86,13 +86,102 @@ export async function transferOrgOwnershipAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const result = await apiPost(apiRoutes.orgs.transferOwnership(orgId), {
+	const result = await apiPost(apiRoutes.orgs.ownership.initiate(orgId), {
 		memberId: String(formData.get("memberId") ?? ""),
+		reason: formData.get("reason")?.toString() || undefined,
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	await revalidateOrg(orgId);
 	revalidatePath(appRoutes.orgs.root);
+	return { success: true };
+}
+
+export async function cancelOrgOwnershipWorkflowAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const workflowId = String(formData.get("workflowId") ?? "");
+	const result = await apiPost(apiRoutes.orgs.ownership.cancel(orgId, workflowId), {
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateOrg(orgId);
+	revalidatePath(appRoutes.inbox);
+	return { success: true };
+}
+
+export async function respondOrgOwnershipWorkflowAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const workflowId = String(formData.get("workflowId") ?? "");
+	const result = await apiPost(apiRoutes.orgs.ownership.respond(orgId, workflowId), {
+		action: String(formData.get("action") ?? ""),
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateOrg(orgId);
+	revalidatePath(appRoutes.inbox);
+	return { success: true };
+}
+
+export async function resolveOrgOwnershipWorkflowAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const workflowId = String(formData.get("workflowId") ?? "");
+	const result = await apiPost(apiRoutes.orgs.ownership.resolve(orgId, workflowId), {
+		result: String(formData.get("result") ?? ""),
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateOrg(orgId);
+	revalidatePath(appRoutes.inbox);
+	return { success: true };
+}
+
+export async function archiveOrgAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const result = await apiPost(apiRoutes.orgs.archive(orgId), {
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateOrg(orgId);
+	return { success: true };
+}
+
+export async function restoreOrgAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const result = await apiPost(apiRoutes.orgs.restore(orgId), {
+		reason: formData.get("reason")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateOrg(orgId);
+	return { success: true };
+}
+
+export async function requestOrgDeletionCodeAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const orgId = String(formData.get("orgId") ?? "");
+	const result = await apiPost(apiRoutes.orgs.requestDeletionCode(orgId), {});
+	if (isApiActionError(result)) return toFormActionError(result);
 	return { success: true };
 }
 
@@ -104,6 +193,9 @@ export async function deleteOrgAction(
 	const slug = await getOrgSlug(orgId);
 	const result = await apiDelete(apiRoutes.orgs.byId(orgId), {
 		confirmName: String(formData.get("confirmName") ?? ""),
+		reason: formData.get("reason")?.toString() || undefined,
+		retentionPolicy: formData.get("retentionPolicy")?.toString() || undefined,
+		verificationCode: formData.get("verificationCode")?.toString() || undefined,
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
@@ -159,12 +251,15 @@ export async function removeOrgMemberAction(
 	formData: FormData
 ): Promise<FormActionResult> {
 	const orgId = String(formData.get("orgId") ?? "");
-	const result = await apiDelete(
+	const result = await apiDelete<{ affectedTeamIds?: string[] }>(
 		apiRoutes.orgs.members.byId(orgId, String(formData.get("memberId") ?? ""))
 	);
 	if (isApiActionError(result)) return toFormActionError(result);
 
 	await revalidateOrg(orgId);
+	for (const teamId of result.affectedTeamIds ?? []) {
+		revalidatePath(appRoutes.teams.byId(teamId));
+	}
 	return { success: true };
 }
 

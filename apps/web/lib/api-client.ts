@@ -137,7 +137,10 @@ export async function apiPatch(path: string, body?: object): Promise<ApiMutation
 	return apiMutate("PATCH", path, body);
 }
 
-export async function apiDelete(path: string, body?: object): Promise<ApiMutationResponse> {
+export async function apiDelete<T = unknown>(
+	path: string,
+	body?: object
+): Promise<(ApiMutationSuccess & T) | ApiError> {
 	return apiMutate("DELETE", path, body);
 }
 

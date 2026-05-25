@@ -291,6 +291,10 @@ export const organizationTable = pgTable(
 		/** Controls whether the organization appears on public organization surfaces. */
 		isPublic: boolean("is_public").notNull().default(true),
 
+		/** Operational lifecycle: active, archived, deletion_pending, or irreversible. */
+		lifecycleStatus: text("lifecycle_status").notNull().default("active"),
+		lifecycleUpdatedAt: timestamp("lifecycle_updated_at", { mode: "date" }),
+
 		/** Org creator. Denormalized for fast access. */
 		ownerId: uuid("owner_id")
 			.notNull()
@@ -371,8 +375,14 @@ export const teamTable = pgTable(
 		/** Completed scrim count for rating calibration. */
 		matchesPlayed: integer("matches_played").notNull().default(0),
 
-		/** Archived teams are hidden from matchmaking. */
+		/** Archived teams are hidden from matchmaking.
+		 * Invariant enforced by DB CHECK: is_archived = (lifecycle_status != 'active').
+		 * Use lifecycleStatus as the source of truth; is_archived is a denormalised flag. */
 		isArchived: boolean("is_archived").notNull().default(false),
+
+		/** Operational lifecycle: active, archived, deletion_pending, or irreversible. */
+		lifecycleStatus: text("lifecycle_status").notNull().default("active"),
+		lifecycleUpdatedAt: timestamp("lifecycle_updated_at", { mode: "date" }),
 
 		/** Whether the team is actively looking for new players. */
 		isRecruiting: boolean("is_recruiting").notNull().default(false),
@@ -442,6 +452,133 @@ export const teamRosterTable = pgTable(
 		index("team_roster_user_idx").on(table.userId),
 		// Quickly list active roster for a team
 		index("team_roster_active_idx").on(table.teamId, table.status),
+	]
+);
+
+type OwnershipWorkflowMetadata = {
+	reason?: string | null;
+	resultReason?: string | null;
+	priorOwnerUserId?: string | null;
+	previousAdminUserIds?: string[];
+	resultingAdminUserIds?: string[];
+};
+
+type OwnershipWorkflowEventMetadata = {
+	previousOwnerUserId?: string | null;
+	newOwnerUserId?: string | null;
+	previousAdminUserIds?: string[];
+	resultingAdminUserIds?: string[];
+	resultReason?: string | null;
+};
+
+type LifecycleWorkflowMetadata = {
+	confirmName?: string | null;
+	priorLifecycleStatus?: string | null;
+	priorIsPublic?: boolean | null;
+	priorIsRecruiting?: boolean | null;
+	retentionPolicy?: string | null;
+	blockingReason?: string | null;
+};
+
+export const lifecycleWorkflowTable = pgTable(
+	"lifecycle_workflow",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		entityType: text("entity_type").notNull(),
+		entityId: uuid("entity_id").notNull(),
+		action: text("action").notNull(),
+		/** Entity lifecycle state carried by this workflow row (archived, deletion_pending, irreversible). */
+		status: text("status").notNull().default("pending"),
+		/** Workflow process state: "open" while the workflow is active; "settled" when it has been
+		 *  resolved (restored, cancelled, expired, or irreversibly settled). Used for the uniqueness
+		 *  constraint so a second open workflow cannot be created for the same entity. */
+		workflowState: text("workflow_state").notNull().default("open"),
+		actorUserId: uuid("actor_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		reason: text("reason"),
+		recoveryUntil: timestamp("recovery_until", { mode: "date" }),
+		settledAt: timestamp("settled_at", { mode: "date" }),
+		result: text("result"),
+		metadata: jsonb("metadata").$type<LifecycleWorkflowMetadata>().notNull().default({}),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("lifecycle_workflow_target_idx").on(table.entityType, table.entityId),
+		index("lifecycle_workflow_actor_idx").on(table.actorUserId),
+		// D2-P: index on workflowState ensures at most one open workflow per entity at all times,
+		// including during the initial insertion (no race with pending→archived status update).
+		uniqueIndex("lifecycle_workflow_open_unique_idx")
+			.on(table.entityType, table.entityId)
+			.where(sql`${table.workflowState} = 'open'`),
+	]
+);
+
+export const ownershipWorkflowTable = pgTable(
+	"ownership_workflow",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		entityType: text("entity_type").notNull(),
+		entityId: uuid("entity_id").notNull(),
+		kind: text("kind").notNull(),
+		status: text("status").notNull().default("pending"),
+		requesterUserId: uuid("requester_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		currentOwnerUserId: uuid("current_owner_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		recipientUserId: uuid("recipient_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		recoveryTargetUserId: uuid("recovery_target_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		verificationState: text("verification_state").notNull().default("required"),
+		reviewState: text("review_state").notNull().default("not_required"),
+		reason: text("reason"),
+		expiresAt: timestamp("expires_at", { mode: "date" }),
+		resolvedAt: timestamp("resolved_at", { mode: "date" }),
+		result: text("result"),
+		metadata: jsonb("metadata").$type<OwnershipWorkflowMetadata>().notNull().default({}),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("ownership_workflow_target_idx").on(table.entityType, table.entityId),
+		index("ownership_workflow_requester_idx").on(table.requesterUserId),
+		index("ownership_workflow_recipient_idx").on(table.recipientUserId),
+		uniqueIndex("ownership_workflow_open_unique_idx")
+			.on(table.entityType, table.entityId)
+			.where(sql`${table.status} in ('pending', 'review_required', 'blocked')`),
+	]
+);
+
+export const ownershipWorkflowEventTable = pgTable(
+	"ownership_workflow_event",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		workflowId: uuid("workflow_id")
+			.notNull()
+			.references(() => ownershipWorkflowTable.id, { onDelete: "cascade" }),
+		actorUserId: uuid("actor_user_id").references(() => userTable.id, { onDelete: "set null" }),
+		action: text("action").notNull(),
+		fromStatus: text("from_status"),
+		toStatus: text("to_status").notNull(),
+		reason: text("reason"),
+		metadata: jsonb("metadata").$type<OwnershipWorkflowEventMetadata>().notNull().default({}),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("ownership_workflow_event_workflow_idx").on(table.workflowId),
+		index("ownership_workflow_event_actor_idx").on(table.actorUserId),
 	]
 );
 

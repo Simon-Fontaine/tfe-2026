@@ -9,6 +9,7 @@ import {
 	chatMessageTable,
 	emailChangeVerificationTable,
 	heroTable,
+	lifecycleWorkflowTable,
 	mapTable,
 	notificationTable,
 	ocrJobTable,
@@ -16,6 +17,8 @@ import {
 	organizationMemberTable,
 	organizationTable,
 	orgInviteTable,
+	ownershipWorkflowEventTable,
+	ownershipWorkflowTable,
 	playerHeroTable,
 	playerMapTable,
 	playerProfileTable,
@@ -64,6 +67,12 @@ export const userRelations = relations(userTable, ({ one, many }) => ({
 		fields: [userTable.id],
 		references: [onboardingDraftTable.userId],
 	}),
+	requestedOwnershipWorkflows: many(ownershipWorkflowTable, {
+		relationName: "ownershipWorkflowRequester",
+	}),
+	receivedOwnershipWorkflows: many(ownershipWorkflowTable, {
+		relationName: "ownershipWorkflowRecipient",
+	}),
 	preferredMaps: many(playerMapTable),
 	receivedTeamInvites: many(teamInviteTable, { relationName: "inviteeTeamInvites" }),
 	sentTeamInvites: many(teamInviteTable, { relationName: "inviterTeamInvites" }),
@@ -109,6 +118,7 @@ export const organizationRelations = relations(organizationTable, ({ one, many }
 	recruitmentListings: many(recruitmentListingTable),
 	updatePosts: many(updatePostTable),
 	orgInvites: many(orgInviteTable),
+	lifecycleWorkflows: many(lifecycleWorkflowTable),
 }));
 
 export const organizationMemberRelations = relations(organizationMemberTable, ({ one }) => ({
@@ -138,6 +148,7 @@ export const teamRelations = relations(teamTable, ({ one, many }) => ({
 	chatChannels: many(chatChannelTable, { relationName: "teamChatChannels" }),
 	invites: many(teamInviteTable),
 	ratingEvents: many(teamRatingEventTable),
+	lifecycleWorkflows: many(lifecycleWorkflowTable),
 }));
 
 export const teamRosterRelations = relations(teamRosterTable, ({ one }) => ({
@@ -147,6 +158,52 @@ export const teamRosterRelations = relations(teamRosterTable, ({ one }) => ({
 	}),
 	user: one(userTable, {
 		fields: [teamRosterTable.userId],
+		references: [userTable.id],
+	}),
+}));
+
+export const ownershipWorkflowRelations = relations(ownershipWorkflowTable, ({ one, many }) => ({
+	requester: one(userTable, {
+		fields: [ownershipWorkflowTable.requesterUserId],
+		references: [userTable.id],
+		relationName: "ownershipWorkflowRequester",
+	}),
+	currentOwner: one(userTable, {
+		fields: [ownershipWorkflowTable.currentOwnerUserId],
+		references: [userTable.id],
+		relationName: "ownershipWorkflowCurrentOwner",
+	}),
+	recipient: one(userTable, {
+		fields: [ownershipWorkflowTable.recipientUserId],
+		references: [userTable.id],
+		relationName: "ownershipWorkflowRecipient",
+	}),
+	recoveryTarget: one(userTable, {
+		fields: [ownershipWorkflowTable.recoveryTargetUserId],
+		references: [userTable.id],
+		relationName: "ownershipWorkflowRecoveryTarget",
+	}),
+	events: many(ownershipWorkflowEventTable),
+}));
+
+export const ownershipWorkflowEventRelations = relations(
+	ownershipWorkflowEventTable,
+	({ one }) => ({
+		workflow: one(ownershipWorkflowTable, {
+			fields: [ownershipWorkflowEventTable.workflowId],
+			references: [ownershipWorkflowTable.id],
+		}),
+		actor: one(userTable, {
+			fields: [ownershipWorkflowEventTable.actorUserId],
+			references: [userTable.id],
+			relationName: "ownershipWorkflowEventActor",
+		}),
+	})
+);
+
+export const lifecycleWorkflowRelations = relations(lifecycleWorkflowTable, ({ one }) => ({
+	actor: one(userTable, {
+		fields: [lifecycleWorkflowTable.actorUserId],
 		references: [userTable.id],
 	}),
 }));

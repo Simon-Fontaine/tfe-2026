@@ -217,6 +217,54 @@ export type TeamPermissionRole = "admin" | "member";
 export type MemberType = "player" | "staff";
 export type StaffRole = "coach" | "analyst" | "manager" | "staff";
 export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
+export type OwnershipEntityType = "team" | "organization";
+export type OwnershipWorkflowKind = "transfer" | "recovery";
+export type OwnershipWorkflowStatus =
+	| "pending"
+	| "accepted"
+	| "rejected"
+	| "cancelled"
+	| "expired"
+	| "review_required"
+	| "approved"
+	| "blocked";
+export type OwnershipVerificationState = "not_required" | "required" | "verified";
+export type OwnershipReviewState = "not_required" | "required" | "approved" | "rejected";
+export type OwnershipWorkflowResult =
+	| "transferred"
+	| "recovered"
+	| "rejected"
+	| "cancelled"
+	| "expired"
+	| "blocked";
+export type LifecycleEntityType = "team" | "organization";
+export type LifecycleStatus = "active" | "archived" | "deletion_pending" | "irreversible";
+export type LifecycleActionKind =
+	| "archive"
+	| "restore"
+	| "deletion_request"
+	| "deletion_cancel"
+	| "irreversible_settlement";
+export type LifecycleVisibilityImpact =
+	| "public_hidden"
+	| "workspace_read_only"
+	| "active_workflows_suspended"
+	| "history_preserved";
+export type LifecycleWorkflowSummary = {
+	id: string;
+	entityType: LifecycleEntityType;
+	entityId: string;
+	action: LifecycleActionKind;
+	status: LifecycleStatus;
+	actorUserId: string | null;
+	reason: string | null;
+	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+	recoveryUntil: IsoDateString | null;
+	settledAt: IsoDateString | null;
+	result: string | null;
+	visibilityImpact: LifecycleVisibilityImpact[];
+};
 export type RecruitmentListingCategory = "lft" | "lfp" | "lfr" | "lfs";
 export type RecruitmentOwnerType = "player" | "team" | "organization";
 export type RecruitmentListingStatus = "open" | "closed" | "fulfilled" | "expired";
@@ -289,6 +337,8 @@ export type TeamSummary = {
 	matchesPlayed: number;
 	isRecruiting: boolean;
 	isArchived: boolean;
+	lifecycleStatus: LifecycleStatus;
+	lifecycleWorkflow: LifecycleWorkflowSummary | null;
 	isPublic: boolean;
 	activeRosterCount: number;
 	adminCount: number;
@@ -359,6 +409,32 @@ export type TeamRatingHistoryEntry = {
 
 export type TeamWorkspaceConversation = RecruitmentConversationSummary;
 
+export type OwnershipActorSummary = {
+	userId: string | null;
+	displayName: string | null;
+};
+
+export type OwnershipWorkflowSummary = {
+	id: string;
+	entityType: OwnershipEntityType;
+	entityId: string;
+	kind: OwnershipWorkflowKind;
+	status: OwnershipWorkflowStatus;
+	requester: OwnershipActorSummary;
+	currentOwner: OwnershipActorSummary;
+	recipient: OwnershipActorSummary | null;
+	recoveryTarget: OwnershipActorSummary | null;
+	verificationState: OwnershipVerificationState;
+	reviewState: OwnershipReviewState;
+	reason: string | null;
+	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+	expiresAt: IsoDateString | null;
+	resolvedAt: IsoDateString | null;
+	result: OwnershipWorkflowResult | null;
+	visibility: "authorized" | "limited";
+};
+
 export type TeamWorkspaceDetail = TeamSummary & {
 	currentUser: TeamPermissions;
 	members: TeamMemberSummary[];
@@ -371,6 +447,7 @@ export type TeamWorkspaceDetail = TeamSummary & {
 	conversations: TeamWorkspaceConversation[];
 	applications: RecruitmentApplicationSummary[];
 	ratingHistory: TeamRatingHistoryEntry[];
+	ownershipWorkflow: OwnershipWorkflowSummary | null;
 };
 
 export type TeamWithRoster = TeamWorkspaceDetail;
@@ -436,6 +513,51 @@ export type OrgPermissions = {
 	canManageSettings: boolean;
 };
 
+export type OrgTeamRelationshipState = "active" | "archived";
+export type OrgTeamVisibilityState = "public" | "private";
+export type OrgTeamOversightSummaryState = "loaded" | "partial-failed" | "unavailable";
+export type OrgTeamOversightSignalSeverity = "info" | "warning" | "critical";
+export type OrgTeamOversightSignalCode =
+	| "archived"
+	| "private_team"
+	| "no_active_roster"
+	| "no_active_admin"
+	| "pending_invites"
+	| "recruiting"
+	| "pending_applications"
+	| "no_schedule"
+	| "upcoming_scrim"
+	| "recent_scrim"
+	| "recent_update";
+
+export type OrgTeamOversightSignal = {
+	code: OrgTeamOversightSignalCode;
+	label: string;
+	severity: OrgTeamOversightSignalSeverity;
+	count: number | null;
+	at: IsoDateString | null;
+};
+
+export type OrgTeamOperationalHealth = {
+	summaryState: OrgTeamOversightSummaryState;
+	relationshipState: OrgTeamRelationshipState;
+	visibility: OrgTeamVisibilityState;
+	canOpenWorkspace: boolean;
+	autonomyCopy: string;
+	activeRosterCount: number;
+	adminCount: number;
+	pendingInviteCount: number;
+	openListingCount: number;
+	pendingApplicationCount: number;
+	availabilityCount: number;
+	upcomingScrimCount: number;
+	recentScrimCount: number;
+	latestUpdateAt: IsoDateString | null;
+	latestScrimAt: IsoDateString | null;
+	latestActivityAt: IsoDateString | null;
+	signals: OrgTeamOversightSignal[];
+};
+
 export type UserOrgTeamSummary = {
 	id: string;
 	name: string;
@@ -466,7 +588,9 @@ export type UserOrg = {
 	teams: UserOrgTeamSummary[];
 };
 
-export type OrgTeamSummary = TeamSummary;
+export type OrgTeamSummary = TeamSummary & {
+	oversight?: OrgTeamOperationalHealth;
+};
 
 export type OrgMemberSummary = {
 	id: string;
@@ -527,6 +651,8 @@ export type OrgWorkspaceDetail = {
 	discord: string | null;
 	twitter: string | null;
 	isPublic: boolean;
+	lifecycleStatus: LifecycleStatus;
+	lifecycleWorkflow: LifecycleWorkflowSummary | null;
 	ownerId: string;
 	currentUser: OrgPermissions;
 	activeTeams: OrgTeamSummary[];
@@ -535,6 +661,7 @@ export type OrgWorkspaceDetail = {
 	pendingInvites: OrgPendingInvite[];
 	ownedListings: RecruitmentListingSummary[];
 	conversations: RecruitmentConversationSummary[];
+	ownershipWorkflow: OwnershipWorkflowSummary | null;
 };
 
 export type OrgWithTeams = OrgWorkspaceDetail;

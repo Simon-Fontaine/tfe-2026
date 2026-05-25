@@ -68,6 +68,10 @@ export async function getOrgPermissions(orgId: string, userId: string) {
 		canLeave: role !== "owner" && role !== null,
 		canManageMembers: canManageOrg(role),
 		canManageTeams: canManageOrg(role),
+		canManageInvites: canManageOrg(role),
+		// D5-P: recovery resolution must be owner-only — only the owner can approve,
+		// reject, or block a recovery workflow affecting their org's ownership chain.
+		canManageSettings: canDeleteOrg(role),
 	};
 }
 

@@ -9,17 +9,39 @@ import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { updatePostTable } from "@/db/schema";
+import { organizationTable, teamTable, updatePostTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { publishTeamEvent } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
+import { getLifecycleMutationBlockReason } from "@/utils/lifecycle";
 import { getOrgPermissions } from "@/utils/org";
 import { getTeamAccessContext, listTeamWorkspaceUserIds } from "@/utils/team";
 import { mapUpdatePost } from "@/utils/updates";
 
 const updatesRoutes = new Hono<AuthEnv>();
 const publicUpdatesRoutes = new Hono<AuthEnv>();
+
+async function getUpdateLifecycleBlock(input: {
+	teamId?: string | null;
+	organizationId?: string | null;
+}) {
+	if (input.teamId) {
+		const team = await db.query.teamTable.findFirst({
+			where: eq(teamTable.id, input.teamId),
+			columns: { lifecycleStatus: true },
+		});
+		return getLifecycleMutationBlockReason("Team", team?.lifecycleStatus);
+	}
+	if (input.organizationId) {
+		const org = await db.query.organizationTable.findFirst({
+			where: eq(organizationTable.id, input.organizationId),
+			columns: { lifecycleStatus: true },
+		});
+		return getLifecycleMutationBlockReason("Organization", org?.lifecycleStatus);
+	}
+	return null;
+}
 
 async function listUpdatePosts(params: {
 	teamId?: string;
@@ -179,6 +201,8 @@ updatesRoutes.post("/", async (c) => {
 		if (!access?.canManageTeam) {
 			return c.json({ error: "You do not have permission to publish team updates." }, 403);
 		}
+		const lifecycleBlock = await getUpdateLifecycleBlock({ teamId: access.teamId });
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 
 		teamId = access.teamId;
 		organizationId = access.organizationId;
@@ -191,6 +215,10 @@ updatesRoutes.post("/", async (c) => {
 		if (!permissions.canManage) {
 			return c.json({ error: "You do not have permission to publish organization updates." }, 403);
 		}
+		const lifecycleBlock = await getUpdateLifecycleBlock({
+			organizationId: parsed.output.organizationId,
+		});
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 
 		organizationId = parsed.output.organizationId;
 	}
@@ -260,12 +288,18 @@ updatesRoutes.patch("/:id", async (c) => {
 		if (!access?.canManageTeam) {
 			return c.json({ error: "You do not have permission to manage this update." }, 403);
 		}
+		const lifecycleBlock = await getUpdateLifecycleBlock({ teamId: existing.teamId });
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	} else {
 		if (!existing.organizationId) return c.json({ error: "Invalid organization update." }, 400);
 		const permissions = await getOrgPermissions(existing.organizationId, user.id);
 		if (!permissions.canManage) {
 			return c.json({ error: "You do not have permission to manage this update." }, 403);
 		}
+		const lifecycleBlock = await getUpdateLifecycleBlock({
+			organizationId: existing.organizationId,
+		});
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	}
 
 	await db
@@ -306,12 +340,19 @@ updatesRoutes.delete("/:id", async (c) => {
 		if (!access?.canManageTeam) {
 			return c.json({ error: "You do not have permission to delete this update." }, 403);
 		}
+		// P23: lifecycle block applies to delete as well as create/patch
+		const lifecycleBlock = await getUpdateLifecycleBlock({ teamId: existing.teamId });
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	} else {
 		if (!existing.organizationId) return c.json({ error: "Invalid organization update." }, 400);
 		const permissions = await getOrgPermissions(existing.organizationId, user.id);
 		if (!permissions.canManage) {
 			return c.json({ error: "You do not have permission to delete this update." }, 403);
 		}
+		const lifecycleBlock = await getUpdateLifecycleBlock({
+			organizationId: existing.organizationId,
+		});
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	}
 
 	await db.delete(updatePostTable).where(eq(updatePostTable.id, updateId));

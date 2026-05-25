@@ -1,6 +1,6 @@
 {
-  "id": "a1ffeb20-2085-48b5-8d1b-4545586100f3",
-  "prevId": "7cfad1ae-b7d2-46f7-b001-f0f3381cf395",
+  "id": "d1572dfe-b2d8-4fac-a42c-9bf197dccc88",
+  "prevId": "3744032c-3d99-49f6-8a2e-713d9b6cd304",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2476,6 +2476,175 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.lifecycle_workflow": {
+      "name": "lifecycle_workflow",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recovery_until": {
+          "name": "recovery_until",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "lifecycle_workflow_target_idx": {
+          "name": "lifecycle_workflow_target_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "lifecycle_workflow_actor_idx": {
+          "name": "lifecycle_workflow_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "lifecycle_workflow_open_unique_idx": {
+          "name": "lifecycle_workflow_open_unique_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"lifecycle_workflow\".\"status\" in ('archived', 'deletion_pending')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "lifecycle_workflow_actor_user_id_user_id_fk": {
+          "name": "lifecycle_workflow_actor_user_id_user_id_fk",
+          "tableFrom": "lifecycle_workflow",
+          "tableTo": "user",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.map": {
       "name": "map",
       "schema": "",
@@ -3404,6 +3573,19 @@
           "notNull": true,
           "default": true
         },
+        "lifecycle_status": {
+          "name": "lifecycle_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "lifecycle_updated_at": {
+          "name": "lifecycle_updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "owner_id": {
           "name": "owner_id",
           "type": "uuid",
@@ -3482,6 +3664,134 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ownership_workflow_event": {
+      "name": "ownership_workflow_event",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workflow_id": {
+          "name": "workflow_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ownership_workflow_event_workflow_idx": {
+          "name": "ownership_workflow_event_workflow_idx",
+          "columns": [
+            {
+              "expression": "workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ownership_workflow_event_actor_idx": {
+          "name": "ownership_workflow_event_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ownership_workflow_event_workflow_id_ownership_workflow_id_fk": {
+          "name": "ownership_workflow_event_workflow_id_ownership_workflow_id_fk",
+          "tableFrom": "ownership_workflow_event",
+          "tableTo": "ownership_workflow",
+          "columnsFrom": [
+            "workflow_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ownership_workflow_event_actor_user_id_user_id_fk": {
+          "name": "ownership_workflow_event_actor_user_id_user_id_fk",
+          "tableFrom": "ownership_workflow_event",
+          "tableTo": "user",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3727,134 +4037,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "recovery_target_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.ownership_workflow_event": {
-      "name": "ownership_workflow_event",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workflow_id": {
-          "name": "workflow_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actor_user_id": {
-          "name": "actor_user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "action": {
-          "name": "action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "from_status": {
-          "name": "from_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "to_status": {
-          "name": "to_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "ownership_workflow_event_workflow_idx": {
-          "name": "ownership_workflow_event_workflow_idx",
-          "columns": [
-            {
-              "expression": "workflow_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ownership_workflow_event_actor_idx": {
-          "name": "ownership_workflow_event_actor_idx",
-          "columns": [
-            {
-              "expression": "actor_user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "ownership_workflow_event_workflow_id_ownership_workflow_id_fk": {
-          "name": "ownership_workflow_event_workflow_id_ownership_workflow_id_fk",
-          "tableFrom": "ownership_workflow_event",
-          "tableTo": "ownership_workflow",
-          "columnsFrom": [
-            "workflow_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "ownership_workflow_event_actor_user_id_user_id_fk": {
-          "name": "ownership_workflow_event_actor_user_id_user_id_fk",
-          "tableFrom": "ownership_workflow_event",
-          "tableTo": "user",
-          "columnsFrom": [
-            "actor_user_id"
           ],
           "columnsTo": [
             "id"
@@ -6408,6 +6590,19 @@
           "notNull": true,
           "default": false
         },
+        "lifecycle_status": {
+          "name": "lifecycle_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "lifecycle_updated_at": {
+          "name": "lifecycle_updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "is_recruiting": {
           "name": "is_recruiting",
           "type": "boolean",
@@ -7101,7 +7296,9 @@
         "two_factor_disable",
         "passkey_disable",
         "security_key_disable",
-        "recovery_code_regenerate"
+        "recovery_code_regenerate",
+        "organization_lifecycle_delete",
+        "team_lifecycle_delete"
       ]
     }
   },

@@ -45,7 +45,7 @@ export default async function AppOrgSettingsPage({
 				detail={`/${org.data.slug}`}
 				description={`Ownership, membership, and danger-zone actions for ${org.data.name}.`}
 			/>
-			<OrgSettingsPanel org={org.data} includeProfile={false} />
+			<OrgSettingsPanel org={org.data} currentUserId={user.id} includeProfile={false} />
 		</PageContainer>
 	);
 }

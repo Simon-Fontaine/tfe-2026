@@ -2,7 +2,7 @@
 
 import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { removeOrgMemberAction, updateOrgMemberRoleAction } from "@/app/actions/org";
 import {
 	AlertDialog,
@@ -83,6 +83,14 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 		successMessage: "Member removed",
 	});
 
+	useEffect(() => {
+		if (roleForm.state?.success) setEditRoleOpen(false);
+	}, [roleForm.state]);
+
+	useEffect(() => {
+		if (removeForm.state?.success) setRemoveOpen(false);
+	}, [removeForm.state]);
+
 	function submitRoleChange() {
 		const fd = new FormData();
 		fd.set("orgId", orgId);
@@ -92,7 +100,6 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 		if (memberType === "player") fd.set("gameRole", gameRole);
 		if (memberType === "staff") fd.set("staffRole", staffRole);
 		roleForm.submit(fd);
-		setEditRoleOpen(false);
 	}
 
 	function submitRemove() {
@@ -100,7 +107,6 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 		fd.set("orgId", orgId);
 		fd.set("memberId", member.id);
 		removeForm.submit(fd);
-		setRemoveOpen(false);
 	}
 
 	if (member.role === "owner") return null;
@@ -201,6 +207,18 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 									</button>
 								))}
 					</div>
+					{roleForm.state?.error ? (
+						<p className="text-xs text-destructive">{roleForm.state.error}</p>
+					) : null}
+					{roleForm.state?.fieldErrors ? (
+						<div className="space-y-1 text-xs text-destructive">
+							{Object.entries(roleForm.state.fieldErrors).map(([field, messages]) => (
+								<p key={field}>
+									{field}: {messages?.join(", ")}
+								</p>
+							))}
+						</div>
+					) : null}
 					<div className="flex gap-2">
 						<Button size="sm" onClick={submitRoleChange} disabled={roleForm.isPending}>
 							{roleForm.isPending && <Spinner className="mr-1.5" />}
@@ -222,6 +240,9 @@ export function MemberActionsDropdown({ orgId, member, viewerRole }: MemberActio
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
+						{removeForm.state?.error ? (
+							<p className="mr-auto text-xs text-destructive">{removeForm.state.error}</p>
+						) : null}
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<Button
 							variant="destructive"

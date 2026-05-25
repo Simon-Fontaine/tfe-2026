@@ -124,6 +124,16 @@ export function InviteMemberDialog({ orgId, children }: InviteMemberDialogProps)
 						onClearSelection={clearSelection}
 						renderUserMeta={renderOw2RoleRankMeta}
 					/>
+					{state?.error ? <p className="text-xs text-destructive">{state.error}</p> : null}
+					{state?.fieldErrors ? (
+						<div className="space-y-1 text-xs text-destructive">
+							{Object.entries(state.fieldErrors).map(([field, messages]) => (
+								<p key={field}>
+									{field}: {messages?.join(", ")}
+								</p>
+							))}
+						</div>
+					) : null}
 
 					<Field>
 						<FieldLabel>Permission</FieldLabel>

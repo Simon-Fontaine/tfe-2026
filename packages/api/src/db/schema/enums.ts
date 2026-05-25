@@ -144,6 +144,8 @@ export const verificationActionEnum = pgEnum("verification_action", [
 	"passkey_disable",
 	"security_key_disable",
 	"recovery_code_regenerate",
+	"organization_lifecycle_delete",
+	"team_lifecycle_delete",
 ]);
 
 /** Why a session was revoked — enables security dashboards and alerts. */

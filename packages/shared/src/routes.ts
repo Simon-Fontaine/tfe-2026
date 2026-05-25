@@ -144,7 +144,21 @@ export const apiRoutes = {
 		root: "/api/orgs",
 		byId: (orgId: string) => `/api/orgs/${orgId}`,
 		leave: (orgId: string) => `/api/orgs/${orgId}/leave`,
-		transferOwnership: (orgId: string) => `/api/orgs/${orgId}/ownership`,
+		archive: (orgId: string) => `/api/orgs/${orgId}/archive`,
+		restore: (orgId: string) => `/api/orgs/${orgId}/restore`,
+		requestDeletionCode: (orgId: string) => `/api/orgs/${orgId}/deletion/request-code`,
+		cancelDeletion: (orgId: string) => `/api/orgs/${orgId}/deletion/cancel`,
+		settleDeletion: (orgId: string) => `/api/orgs/${orgId}/deletion/settle`,
+		ownership: {
+			/** POST — initiate a new ownership transfer or recovery workflow. */
+			initiate: (orgId: string) => `/api/orgs/${orgId}/ownership`,
+			respond: (orgId: string, workflowId: string) =>
+				`/api/orgs/${orgId}/ownership/${workflowId}/respond`,
+			cancel: (orgId: string, workflowId: string) =>
+				`/api/orgs/${orgId}/ownership/${workflowId}/cancel`,
+			resolve: (orgId: string, workflowId: string) =>
+				`/api/orgs/${orgId}/ownership/${workflowId}/resolve`,
+		},
 		publicRoot: "/api/public/orgs",
 		publicById: (orgIdOrSlug: string) => `/api/public/orgs/${orgIdOrSlug}`,
 		members: {
@@ -164,6 +178,19 @@ export const apiRoutes = {
 		byId: (teamId: string) => `/api/teams/${teamId}`,
 		recruiting: (teamId: string) => `/api/teams/${teamId}/recruiting`,
 		archive: (teamId: string) => `/api/teams/${teamId}/archive`,
+		requestDeletionCode: (teamId: string) => `/api/teams/${teamId}/deletion/request-code`,
+		cancelDeletion: (teamId: string) => `/api/teams/${teamId}/deletion/cancel`,
+		settleDeletion: (teamId: string) => `/api/teams/${teamId}/deletion/settle`,
+		ownership: {
+			/** POST — initiate a new ownership transfer or recovery workflow. */
+			initiate: (teamId: string) => `/api/teams/${teamId}/ownership`,
+			respond: (teamId: string, workflowId: string) =>
+				`/api/teams/${teamId}/ownership/${workflowId}/respond`,
+			cancel: (teamId: string, workflowId: string) =>
+				`/api/teams/${teamId}/ownership/${workflowId}/cancel`,
+			resolve: (teamId: string, workflowId: string) =>
+				`/api/teams/${teamId}/ownership/${workflowId}/resolve`,
+		},
 		publicRoot: "/api/public/teams",
 		memberRole: (teamId: string, memberId: string) =>
 			`/api/teams/${teamId}/members/${memberId}/role`,

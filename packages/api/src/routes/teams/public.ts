@@ -3,11 +3,17 @@ import type {
 	PublicRosterMemberSummary,
 	TeamPublicPreview,
 } from "@scrimflow/shared";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/db";
-import { recruitmentListingTable, scrimTable, teamRosterTable, teamTable } from "@/db/schema";
+import {
+	organizationTable,
+	recruitmentListingTable,
+	scrimTable,
+	teamRosterTable,
+	teamTable,
+} from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
 import { mapRecruitmentListing } from "@/utils/recruit";
@@ -21,10 +27,25 @@ publicTeamRoutes.get("/", async (c) => {
 	const recruitingFilter =
 		recruiting === "true" ? true : recruiting === "false" ? false : undefined;
 
+	// P33: Filter on org lifecycle/visibility at SQL level so the limit:60 window
+	// is not silently consumed by teams whose parent org is archived or private.
+	const activePublicOrgIds = (
+		await db
+			.select({ id: organizationTable.id })
+			.from(organizationTable)
+			.where(
+				and(eq(organizationTable.isPublic, true), eq(organizationTable.lifecycleStatus, "active"))
+			)
+	).map((o) => o.id);
+
+	if (activePublicOrgIds.length === 0) return c.json({ data: [] });
+
 	const rows = await db.query.teamTable.findMany({
 		where: and(
 			eq(teamTable.isArchived, false),
 			eq(teamTable.isPublic, true),
+			eq(teamTable.lifecycleStatus, "active"),
+			inArray(teamTable.organizationId, activePublicOrgIds),
 			recruitingFilter !== undefined ? eq(teamTable.isRecruiting, recruitingFilter) : undefined
 		),
 		columns: {
@@ -45,28 +66,23 @@ publicTeamRoutes.get("/", async (c) => {
 				where: eq(recruitmentListingTable.status, "open"),
 				columns: { id: true },
 			},
-			organization: {
-				columns: { id: true, isPublic: true },
-			},
 		},
 		orderBy: [asc(teamTable.name)],
 		limit: 60,
 	});
 
-	const data: DiscoveryTeam[] = rows
-		.filter((team) => team.organization?.isPublic)
-		.map((team) => ({
-			id: team.id,
-			organizationId: team.organizationId,
-			name: team.name,
-			tag: team.tag,
-			description: team.description ?? null,
-			avatarUrl: team.avatarUrl,
-			rating: team.rating,
-			isRecruiting: team.isRecruiting,
-			activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
-			openListingCount: team.recruitmentListings.length,
-		}));
+	const data: DiscoveryTeam[] = rows.map((team) => ({
+		id: team.id,
+		organizationId: team.organizationId,
+		name: team.name,
+		tag: team.tag,
+		description: team.description ?? null,
+		avatarUrl: team.avatarUrl,
+		rating: team.rating,
+		isRecruiting: team.isRecruiting,
+		activeRosterCount: team.roster.filter((row) => row.status !== "inactive").length,
+		openListingCount: team.recruitmentListings.length,
+	}));
 
 	return c.json({ data });
 });
@@ -79,7 +95,8 @@ publicTeamRoutes.get("/:id", async (c) => {
 		where: and(
 			eq(teamTable.id, teamId),
 			eq(teamTable.isArchived, false),
-			eq(teamTable.isPublic, true)
+			eq(teamTable.isPublic, true),
+			eq(teamTable.lifecycleStatus, "active")
 		),
 		columns: {
 			id: true,
@@ -100,6 +117,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 					name: true,
 					slug: true,
 					isPublic: true,
+					lifecycleStatus: true,
 				},
 			},
 			roster: {
@@ -165,7 +183,9 @@ publicTeamRoutes.get("/:id", async (c) => {
 		},
 	});
 
-	if (!team || !team.organization?.isPublic) return c.json({ error: "Team not found." }, 404);
+	if (!team || !team.organization?.isPublic || team.organization.lifecycleStatus !== "active") {
+		return c.json({ error: "Team not found." }, 404);
+	}
 
 	// Derive win/loss/draw and recentScrims from completed scrim results
 	let wins = 0;

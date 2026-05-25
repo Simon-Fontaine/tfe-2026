@@ -52,7 +52,7 @@ export default async function AppTeamSettingsPage({
 				detail={`[${team.data.tag}] ${team.data.name}`}
 				description="Manage team profile, recruiting, and workspace lifecycle actions."
 			/>
-			<TeamSettingsPanel team={team.data} />
+			<TeamSettingsPanel team={team.data} currentUserId={user.id} />
 		</PageContainer>
 	);
 }

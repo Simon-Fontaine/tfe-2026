@@ -10,13 +10,16 @@ import * as v from "valibot";
 import { db } from "@/db";
 import {
 	chatMessageTable,
+	organizationTable,
 	recruitmentApplicationTable,
 	recruitmentListingTable,
+	teamTable,
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
 import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
+import { getLifecycleMutationBlockReason } from "@/utils/lifecycle";
 import { getOrgPermissions } from "@/utils/org";
 import {
 	canManageRecruitmentListing,
@@ -29,6 +32,27 @@ import {
 import { getTeamAccessContext } from "@/utils/team";
 
 const recruitmentListingsRoutes = new Hono<AuthEnv>();
+
+async function getRecruitingLifecycleBlock(input: {
+	teamId?: string | null;
+	organizationId?: string | null;
+}) {
+	if (input.teamId) {
+		const team = await db.query.teamTable.findFirst({
+			where: eq(teamTable.id, input.teamId),
+			columns: { lifecycleStatus: true },
+		});
+		return getLifecycleMutationBlockReason("Team", team?.lifecycleStatus);
+	}
+	if (input.organizationId) {
+		const org = await db.query.organizationTable.findFirst({
+			where: eq(organizationTable.id, input.organizationId),
+			columns: { lifecycleStatus: true },
+		});
+		return getLifecycleMutationBlockReason("Organization", org?.lifecycleStatus);
+	}
+	return null;
+}
 
 function assertListingShape(input: {
 	category: "lft" | "lfp" | "lfr" | "lfs";
@@ -242,6 +266,8 @@ recruitmentListingsRoutes.post("/", async (c) => {
 			);
 		}
 		organizationId = access.organizationId;
+		const lifecycleBlock = await getRecruitingLifecycleBlock({ teamId });
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	}
 
 	if (parsed.output.ownerType === "organization") {
@@ -254,6 +280,8 @@ recruitmentListingsRoutes.post("/", async (c) => {
 				403
 			);
 		}
+		const lifecycleBlock = await getRecruitingLifecycleBlock({ organizationId });
+		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 		teamId = null;
 	}
 
@@ -311,6 +339,8 @@ recruitmentListingsRoutes.patch("/:id", async (c) => {
 	if (!(await canManageRecruitmentListing(listing, user.id))) {
 		return c.json({ error: "You do not have permission to edit this listing." }, 403);
 	}
+	const lifecycleBlock = await getRecruitingLifecycleBlock(listing);
+	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 
 	await db
 		.update(recruitmentListingTable)
@@ -352,6 +382,10 @@ recruitmentListingsRoutes.delete("/:id", async (c) => {
 	if (!(await canManageRecruitmentListing(listing, user.id))) {
 		return c.json({ error: "You do not have permission to delete this listing." }, 403);
 	}
+	// P23: block deletes on archived/deletion_pending/irreversible entities so listings
+	// that belong to a non-active org or team cannot be removed mid-lifecycle.
+	const lifecycleBlock = await getRecruitingLifecycleBlock(listing);
+	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 
 	await db.delete(recruitmentListingTable).where(eq(recruitmentListingTable.id, listingId));
 	return c.json({ success: true });
@@ -398,6 +432,8 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 	if (!isPlayerRecruitingDiscoverable(listing)) {
 		return c.json({ error: "Listing not found." }, 404);
 	}
+	const listingLifecycleBlock = await getRecruitingLifecycleBlock(listing);
+	if (listingLifecycleBlock) return c.json({ error: "Listing not found." }, 404);
 	if (listing.status !== "open") return c.json({ error: "This listing is no longer open." }, 400);
 	if (listing.expiresAt && listing.expiresAt.getTime() < Date.now()) {
 		return c.json({ error: "This listing has expired." }, 400);
@@ -419,6 +455,8 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 			}
 			applicantTeamId = access.teamId;
 			applicantOrganizationId = access.organizationId;
+			const lifecycleBlock = await getRecruitingLifecycleBlock({ teamId: access.teamId });
+			if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 		} else if (parsed.output.senderOrganizationId) {
 			const permissions = await getOrgPermissions(parsed.output.senderOrganizationId, user.id);
 			if (!permissions.canManage) {
@@ -428,6 +466,10 @@ recruitmentListingsRoutes.post("/:id/applications", async (c) => {
 				);
 			}
 			applicantOrganizationId = parsed.output.senderOrganizationId;
+			const lifecycleBlock = await getRecruitingLifecycleBlock({
+				organizationId: parsed.output.senderOrganizationId,
+			});
+			if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 		}
 	} else {
 		if (parsed.output.senderTeamId || parsed.output.senderOrganizationId) {
