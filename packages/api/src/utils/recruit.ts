@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -297,7 +297,7 @@ export function mapRecruitmentListing(
 	row: {
 		id: string;
 		type: "lft" | "lfp" | "lfr" | "lfs";
-		status: "open" | "closed" | "fulfilled" | "expired";
+		status: "open" | "paused" | "closed" | "fulfilled" | "expired";
 		ownerType: "player" | "team" | "organization";
 		title: string;
 		description: string | null;
@@ -643,6 +643,8 @@ export async function getPublicRecruitmentListings(
 		category?: "lft" | "lfp" | "lfr" | "lfs";
 		memberType?: "player" | "staff";
 		region?: string;
+		role?: "tank" | "damage" | "support";
+		rankFilter?: string;
 	},
 	viewerId?: string | null
 ) {
@@ -653,7 +655,22 @@ export async function getPublicRecruitmentListings(
 			or(isNull(recruitmentListingTable.expiresAt), gte(recruitmentListingTable.expiresAt, now)),
 			filters?.category ? eq(recruitmentListingTable.type, filters.category) : undefined,
 			filters?.memberType ? eq(recruitmentListingTable.memberType, filters.memberType) : undefined,
-			filters?.region ? eq(recruitmentListingTable.region, filters.region) : undefined
+			filters?.region ? eq(recruitmentListingTable.region, filters.region) : undefined,
+			filters?.role
+				? sql`(${recruitmentListingTable.rolesNeeded} = '[]'::jsonb OR ${recruitmentListingTable.rolesNeeded} @> ${JSON.stringify([filters.role])}::jsonb)`
+				: undefined,
+			filters?.rankFilter
+				? and(
+						or(
+							isNull(recruitmentListingTable.minRank),
+							sql`${recruitmentListingTable.minRank} <= ${filters.rankFilter}::ow2_rank`
+						),
+						or(
+							isNull(recruitmentListingTable.maxRank),
+							sql`${recruitmentListingTable.maxRank} >= ${filters.rankFilter}::ow2_rank`
+						)
+					)
+				: undefined
 		),
 		with: {
 			user: {

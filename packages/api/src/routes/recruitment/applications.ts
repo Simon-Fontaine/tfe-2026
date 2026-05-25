@@ -1,4 +1,7 @@
-import { DecideRecruitmentApplicationSchema } from "@scrimflow/shared";
+import {
+	DecideRecruitmentApplicationSchema,
+	UpdateRecruitmentApplicationSchema,
+} from "@scrimflow/shared";
 import { and, eq, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
@@ -106,6 +109,43 @@ recruitmentApplicationsRoutes.delete("/:id", async (c) => {
 			},
 		});
 	}
+
+	return c.json({ success: true });
+});
+
+recruitmentApplicationsRoutes.patch("/:id", async (c) => {
+	const user = c.get("user");
+	const applicationId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(UpdateRecruitmentApplicationSchema, { ...body, applicationId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const application = await db.query.recruitmentApplicationTable.findFirst({
+		where: eq(recruitmentApplicationTable.id, applicationId),
+		columns: { id: true, applicantUserId: true, status: true },
+		with: { chatChannels: { columns: { id: true } } },
+	});
+	if (!application) return c.json({ error: "Application not found." }, 404);
+	if (application.applicantUserId !== user.id)
+		return c.json({ error: "Not your application." }, 403);
+
+	if (application.status !== "pending") {
+		return c.json(
+			{
+				error: "This application can no longer be edited.",
+				canWithdraw: false,
+				conversationId: application.chatChannels[0]?.id ?? null,
+			},
+			400
+		);
+	}
+
+	await db
+		.update(recruitmentApplicationTable)
+		.set({ message: parsed.output.message ?? null })
+		.where(eq(recruitmentApplicationTable.id, applicationId));
 
 	return c.json({ success: true });
 });

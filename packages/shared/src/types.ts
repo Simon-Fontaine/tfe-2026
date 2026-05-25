@@ -267,7 +267,7 @@ export type LifecycleWorkflowSummary = {
 };
 export type RecruitmentListingCategory = "lft" | "lfp" | "lfr" | "lfs";
 export type RecruitmentOwnerType = "player" | "team" | "organization";
-export type RecruitmentListingStatus = "open" | "closed" | "fulfilled" | "expired";
+export type RecruitmentListingStatus = "open" | "paused" | "closed" | "fulfilled" | "expired";
 export type RecruitmentApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 
 export type UserSearchResult = {

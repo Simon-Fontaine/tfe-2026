@@ -16,7 +16,7 @@ const LISTING_CATEGORY_VALUES = ["lft", "lfp", "lfr", "lfs"] as const;
 const OWNER_TYPE_VALUES = ["player", "team", "organization"] as const;
 const MEMBER_TYPE_VALUES = ["player", "staff"] as const;
 const STAFF_ROLE_VALUES = ["coach", "analyst", "manager", "staff"] as const;
-const LISTING_STATUS_VALUES = ["open", "closed", "fulfilled", "expired"] as const;
+const LISTING_STATUS_TRANSITION_VALUES = ["open", "paused", "closed", "fulfilled"] as const;
 const APPLICATION_DECISION_VALUES = ["accept", "reject"] as const;
 
 const optionalDescription = v.optional(
@@ -77,14 +77,13 @@ export const UpdateRecruitmentListingSchema = v.object({
 	maxRating: v.optional(v.number("Maximum rating must be a number")),
 	region: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(60, "Region name too long"))),
 	expiresAt: v.optional(v.string()),
-	status: v.optional(v.picklist(LISTING_STATUS_VALUES, "Invalid listing status")),
 });
 
 export type UpdateRecruitmentListingInput = v.InferOutput<typeof UpdateRecruitmentListingSchema>;
 
 export const UpdateRecruitmentListingStatusSchema = v.object({
 	listingId: v.pipe(v.string(), v.uuid("Invalid listing ID")),
-	status: v.picklist(LISTING_STATUS_VALUES, "Invalid listing status"),
+	status: v.picklist(LISTING_STATUS_TRANSITION_VALUES, "Invalid listing status"),
 });
 
 export type UpdateRecruitmentListingStatusInput = v.InferOutput<
@@ -108,6 +107,15 @@ export const WithdrawRecruitmentApplicationSchema = v.object({
 
 export type WithdrawRecruitmentApplicationInput = v.InferOutput<
 	typeof WithdrawRecruitmentApplicationSchema
+>;
+
+export const UpdateRecruitmentApplicationSchema = v.object({
+	applicationId: v.pipe(v.string(), v.uuid("Invalid application ID")),
+	message: optionalMessage,
+});
+
+export type UpdateRecruitmentApplicationInput = v.InferOutput<
+	typeof UpdateRecruitmentApplicationSchema
 >;
 
 export const DecideRecruitmentApplicationSchema = v.object({

@@ -54,6 +54,9 @@ export const getRecruitmentListings = cache(
 			ownerType?: "player" | "team" | "organization";
 			teamId?: string;
 			organizationId?: string;
+			region?: string;
+			role?: string;
+			rankFilter?: string;
 		} = {}
 	): Promise<RecruitmentListingSummary[]> => {
 		const params = new URLSearchParams();
@@ -62,6 +65,9 @@ export const getRecruitmentListings = cache(
 		if (filters.ownerType) params.set("ownerType", filters.ownerType);
 		if (filters.teamId) params.set("teamId", filters.teamId);
 		if (filters.organizationId) params.set("organizationId", filters.organizationId);
+		if (filters.region) params.set("region", filters.region);
+		if (filters.role) params.set("role", filters.role);
+		if (filters.rankFilter) params.set("rankFilter", filters.rankFilter);
 
 		const qs = params.toString();
 		const res = await apiGet<RecruitmentListingSummary[]>(
@@ -105,12 +111,16 @@ export const getPublicRecruitmentListings = cache(
 			category?: RecruitmentListingCategory;
 			memberType?: "player" | "staff";
 			region?: string;
+			role?: string;
+			rankFilter?: string;
 		} = {}
 	): Promise<RecruitmentListingSummary[]> => {
 		const params = new URLSearchParams();
 		if (filters.category) params.set("category", filters.category);
 		if (filters.memberType) params.set("memberType", filters.memberType);
 		if (filters.region) params.set("region", filters.region);
+		if (filters.role) params.set("role", filters.role);
+		if (filters.rankFilter) params.set("rankFilter", filters.rankFilter);
 
 		const qs = params.toString();
 		const res = await apiGet<RecruitmentListingSummary[]>(

@@ -3,6 +3,7 @@
 import {
 	type CreateRecruitmentListingInput,
 	CreateRecruitmentListingSchema,
+	type RecruitmentListingStatus,
 	type RecruitmentOwnerType,
 	type UpdateRecruitmentListingInput,
 	UpdateRecruitmentListingSchema,
@@ -334,12 +335,6 @@ export async function updateRecruitmentListingAction(
 	const input: UpdateRecruitmentListingInput = {
 		listingId,
 		category: getString(formData, "category") as "lft" | "lfp" | "lfr" | "lfs",
-		status: getOptionalString(formData, "status") as
-			| "open"
-			| "closed"
-			| "fulfilled"
-			| "expired"
-			| undefined,
 		title: getString(formData, "title"),
 		description: getOptionalString(formData, "description"),
 		memberType: getString(formData, "memberType") as "player" | "staff",
@@ -393,6 +388,30 @@ export async function deleteRecruitmentListingAction(
 	return { success: true };
 }
 
+export async function updateRecruitmentListingStatusAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const { user } = await getCurrentSession();
+	if (!user) return { error: "You must be signed in." };
+
+	const listingId = getString(formData, "listingId");
+	const status = getString(formData, "status") as RecruitmentListingStatus;
+	const teamId = getOptionalString(formData, "teamId");
+	const orgId = getOptionalString(formData, "organizationId");
+	const ownerType = getOptionalString(formData, "ownerType");
+
+	const result = await apiPost(apiRoutes.recruitment.listings.status(listingId), { status });
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateRecruitPaths({
+		teamId,
+		orgId,
+		playerUsername: ownerType === "player" ? user.username : undefined,
+	});
+	return { success: true };
+}
+
 export async function createRecruitmentApplicationAction(
 	_prev: FormActionResult | null,
 	formData: FormData
@@ -417,6 +436,24 @@ export async function createRecruitmentApplicationAction(
 		conversationId: result.conversationId,
 		applicationId: result.applicationId,
 	};
+}
+
+export async function updateRecruitmentApplicationAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const { user } = await getCurrentSession();
+	if (!user) return { error: "You must be signed in." };
+
+	const applicationId = getString(formData, "applicationId");
+	const result = await apiPatch(apiRoutes.recruitment.applications.byId(applicationId), {
+		message: getOptionalString(formData, "message"),
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	revalidatePath(appRoutes.recruiting.root);
+	revalidatePath(appRoutes.recruiting.conversations);
+	return { success: true };
 }
 
 export async function withdrawRecruitmentApplicationAction(

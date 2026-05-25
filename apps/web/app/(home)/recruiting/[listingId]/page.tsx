@@ -99,7 +99,11 @@ export default async function PublicRecruitingListingDetailPage({
 						</RecruitmentApplicationDialog>
 					) : (
 						<Button asChild size="sm">
-							<Link href={publicRoutes.auth.step("login")}>Sign in to apply</Link>
+							<Link
+								href={`${publicRoutes.auth.step("login")}?next=${encodeURIComponent(`/recruiting/${listingId}`)}`}
+							>
+								Sign in to apply
+							</Link>
 						</Button>
 					)
 				) : undefined

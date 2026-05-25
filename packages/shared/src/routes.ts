@@ -220,6 +220,7 @@ export const apiRoutes = {
 			root: "/api/recruitment/listings",
 			mine: "/api/recruitment/listings/mine",
 			byId: (listingId: string) => `/api/recruitment/listings/${listingId}`,
+			status: (listingId: string) => `/api/recruitment/listings/${listingId}/status`,
 			applications: (listingId: string) => `/api/recruitment/listings/${listingId}/applications`,
 			publicRoot: "/api/public/recruitment/listings",
 			publicById: (listingId: string) => `/api/public/recruitment/listings/${listingId}`,

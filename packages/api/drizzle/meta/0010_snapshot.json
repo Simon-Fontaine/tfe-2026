@@ -1,6 +1,6 @@
 {
-  "id": "ccade399-0727-4bac-a192-3b9404fa1395",
-  "prevId": "d1572dfe-b2d8-4fac-a42c-9bf197dccc88",
+  "id": "4eed9faa-55bb-4b40-a317-f1c0dcdb4bcb",
+  "prevId": "ccade399-0727-4bac-a192-3b9404fa1395",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7196,6 +7196,7 @@
       "schema": "public",
       "values": [
         "open",
+        "paused",
         "closed",
         "fulfilled",
         "expired"

@@ -1,7 +1,9 @@
 import type {
 	CreateRecruitmentListingInput,
+	RecruitmentApplicationStatus,
 	RecruitmentApplicationSummary,
 	RecruitmentListingCategory,
+	RecruitmentListingStatus,
 	RecruitmentListingSummary,
 	StaffRole,
 } from "@scrimflow/shared";
@@ -56,6 +58,21 @@ export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 export const MEMBER_TYPE_LABELS: Record<"player" | "staff", string> = {
 	player: "Player",
 	staff: "Staff",
+};
+
+export const APPLICATION_STATUS_LABELS: Record<RecruitmentApplicationStatus, string> = {
+	pending: "Pending review",
+	accepted: "Accepted",
+	rejected: "Not accepted",
+	withdrawn: "Withdrawn",
+};
+
+export const RECRUITMENT_STATUS_LABELS: Record<RecruitmentListingStatus, string> = {
+	open: "Open",
+	paused: "Paused",
+	closed: "Closed",
+	fulfilled: "Fulfilled",
+	expired: "Expired",
 };
 
 export const RANK_LABELS: Record<string, string> = {

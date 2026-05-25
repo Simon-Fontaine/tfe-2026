@@ -5,7 +5,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { RecruitmentApplicationSummary, RecruitmentListingSummary } from "@scrimflow/shared";
 import Link from "next/link";
 import { useState } from "react";
-import { deleteRecruitmentListingAction } from "@/app/actions/recruit";
+import {
+	deleteRecruitmentListingAction,
+	updateRecruitmentListingStatusAction,
+} from "@/app/actions/recruit";
 import { RecruitmentApplicationDialog } from "@/components/recruit/recruitment-application-dialog";
 import { RecruitmentApplicationsPanel } from "@/components/recruit/recruitment-applications-panel";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
@@ -32,6 +35,7 @@ import {
 	MEMBER_TYPE_LABELS,
 	RECRUITMENT_CATEGORY_DESCRIPTIONS,
 	RECRUITMENT_CATEGORY_LABELS,
+	RECRUITMENT_STATUS_LABELS,
 } from "@/lib/recruitment";
 import { publicRoutes } from "@/lib/routes";
 
@@ -61,6 +65,10 @@ export function RecruitmentListingCard({
 		loadingMessage: "Deleting listing…",
 		successMessage: "Listing deleted",
 	});
+	const statusForm = useFormAction(updateRecruitmentListingStatusAction, {
+		loadingMessage: "Updating listing…",
+		successMessage: "Listing updated",
+	});
 	const ownerLabel = formatRecruitmentOwner(listing);
 	const compRange = formatRecruitmentCompRange(listing);
 	const canApply = !!currentUserId && listing.canApply && !listing.canManage;
@@ -79,6 +87,20 @@ export function RecruitmentListingCard({
 		deleteForm.submit(fd);
 		setDeleteOpen(false);
 	}
+
+	function submitStatus(status: "open" | "paused" | "closed" | "fulfilled") {
+		const fd = new FormData();
+		fd.set("listingId", listing.id);
+		fd.set("status", status);
+		fd.set("ownerType", listing.ownerType);
+		if (listing.teamId) fd.set("teamId", listing.teamId);
+		if (listing.organizationId) fd.set("organizationId", listing.organizationId);
+		statusForm.submit(fd);
+	}
+
+	const isTerminal =
+		listing.status === "closed" || listing.status === "fulfilled" || listing.status === "expired";
+	const isStatusPending = statusForm.isPending;
 
 	return (
 		<>
@@ -118,8 +140,11 @@ export function RecruitmentListingCard({
 							<Badge variant="outline" className="text-[10px]">
 								{MEMBER_TYPE_LABELS[listing.memberType]}
 							</Badge>
-							<Badge variant="outline" className="text-[10px] capitalize">
-								{listing.status}
+							<Badge
+								variant={listing.status === "open" ? "secondary" : "outline"}
+								className="text-[10px]"
+							>
+								{RECRUITMENT_STATUS_LABELS[listing.status]}
 							</Badge>
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
@@ -162,7 +187,7 @@ export function RecruitmentListingCard({
 				</div>
 
 				<div className="flex flex-wrap gap-2">
-					{canApply ? (
+					{canApply && listing.status === "open" ? (
 						<RecruitmentApplicationDialog
 							listing={listing}
 							entityOptions={entityOptions}
@@ -170,9 +195,14 @@ export function RecruitmentListingCard({
 						>
 							<Button size="sm">{getRecruitmentApplicationLabel(listing)}</Button>
 						</RecruitmentApplicationDialog>
+					) : !!currentUserId && !listing.canManage && listing.status !== "open" ? (
+						<p className="text-xs text-muted-foreground">
+							This listing is {RECRUITMENT_STATUS_LABELS[listing.status].toLowerCase()} and is not
+							accepting applications.
+						</p>
 					) : null}
 
-					{!currentUserId && (
+					{!currentUserId && listing.status === "open" && (
 						<Button asChild size="sm" variant="outline">
 							<Link href={publicRoutes.auth.step("login")}>
 								<HugeiconsIcon icon={LinkIcon} strokeWidth={2} className="mr-1.5 size-4" />
@@ -183,16 +213,62 @@ export function RecruitmentListingCard({
 
 					{listing.canManage && (
 						<>
-							<RecruitmentListingFormDialog
-								mode="edit"
-								listing={listing}
-								ownerOptions={entityOptions}
-								fixedOwnerType={listing.ownerType}
-								fixedTeamId={teamId ?? listing.teamId ?? undefined}
-								fixedOrganizationId={organizationId ?? listing.organizationId ?? undefined}
-								triggerContent="Edit listing"
-								triggerVariant="outline"
-							/>
+							{!isTerminal && (
+								<RecruitmentListingFormDialog
+									mode="edit"
+									listing={listing}
+									ownerOptions={entityOptions}
+									fixedOwnerType={listing.ownerType}
+									fixedTeamId={teamId ?? listing.teamId ?? undefined}
+									fixedOrganizationId={organizationId ?? listing.organizationId ?? undefined}
+									triggerContent="Edit listing"
+									triggerVariant="outline"
+								/>
+							)}
+							{listing.status === "open" && (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => submitStatus("paused")}
+									disabled={isStatusPending}
+								>
+									{isStatusPending && <Spinner className="mr-1.5" />}
+									Pause
+								</Button>
+							)}
+							{listing.status === "paused" && (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => submitStatus("open")}
+									disabled={isStatusPending}
+								>
+									{isStatusPending && <Spinner className="mr-1.5" />}
+									Resume
+								</Button>
+							)}
+							{!isTerminal && (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => submitStatus("fulfilled")}
+									disabled={isStatusPending}
+								>
+									{isStatusPending && <Spinner className="mr-1.5" />}
+									Mark Fulfilled
+								</Button>
+							)}
+							{!isTerminal && (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => submitStatus("closed")}
+									disabled={isStatusPending}
+								>
+									{isStatusPending && <Spinner className="mr-1.5" />}
+									Close
+								</Button>
+							)}
 							<Button
 								size="sm"
 								variant="outline"

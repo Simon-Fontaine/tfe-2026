@@ -2,8 +2,9 @@ import {
 	CreateRecruitmentApplicationSchema,
 	CreateRecruitmentListingSchema,
 	UpdateRecruitmentListingSchema,
+	UpdateRecruitmentListingStatusSchema,
 } from "@scrimflow/shared";
-import { and, desc, eq, gte, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -74,6 +75,18 @@ function assertListingShape(input: {
 	return null;
 }
 
+const VALID_ROLES = ["tank", "damage", "support"] as const;
+const VALID_RANKS = [
+	"bronze",
+	"silver",
+	"gold",
+	"platinum",
+	"diamond",
+	"master",
+	"grandmaster",
+	"champion",
+] as const;
+
 async function listListings(params: {
 	viewerId: string | null;
 	category?: "lft" | "lfp" | "lfr" | "lfs";
@@ -81,8 +94,14 @@ async function listListings(params: {
 	ownerType?: "player" | "team" | "organization";
 	teamId?: string;
 	organizationId?: string;
+	region?: string;
+	role?: "tank" | "damage" | "support";
+	rankFilter?: string;
 	mine?: boolean;
 }) {
+	if (params.rankFilter && !(VALID_RANKS as readonly string[]).includes(params.rankFilter)) {
+		params.rankFilter = undefined;
+	}
 	const now = new Date();
 	const rows = await db.query.recruitmentListingTable.findMany({
 		where: and(
@@ -99,6 +118,22 @@ async function listListings(params: {
 			params.teamId ? eq(recruitmentListingTable.teamId, params.teamId) : undefined,
 			params.organizationId
 				? eq(recruitmentListingTable.organizationId, params.organizationId)
+				: undefined,
+			params.region ? eq(recruitmentListingTable.region, params.region) : undefined,
+			params.role
+				? sql`(${recruitmentListingTable.rolesNeeded} = '[]'::jsonb OR ${recruitmentListingTable.rolesNeeded} @> ${JSON.stringify([params.role])}::jsonb)`
+				: undefined,
+			params.rankFilter
+				? and(
+						or(
+							isNull(recruitmentListingTable.minRank),
+							sql`${recruitmentListingTable.minRank} <= ${params.rankFilter}::ow2_rank`
+						),
+						or(
+							isNull(recruitmentListingTable.maxRank),
+							sql`${recruitmentListingTable.maxRank} >= ${params.rankFilter}::ow2_rank`
+						)
+					)
 				: undefined
 		),
 		with: {
@@ -148,6 +183,16 @@ recruitmentListingsRoutes.get("/", async (c) => {
 	const teamId = c.req.query("teamId");
 	const organizationId = c.req.query("organizationId");
 	const mine = c.req.query("mine") === "true";
+	const regionRaw = c.req.query("region");
+	const region = regionRaw?.trim() || undefined;
+	const roleRaw = c.req.query("role");
+	const role = (VALID_ROLES as readonly string[]).includes(roleRaw ?? "")
+		? (roleRaw as "tank" | "damage" | "support")
+		: undefined;
+	const rankFilterRaw = c.req.query("rankFilter");
+	const rankFilter = (VALID_RANKS as readonly string[]).includes(rankFilterRaw ?? "")
+		? rankFilterRaw
+		: undefined;
 
 	return c.json({
 		data: await listListings({
@@ -158,6 +203,9 @@ recruitmentListingsRoutes.get("/", async (c) => {
 			teamId,
 			organizationId,
 			mine,
+			region,
+			role,
+			rankFilter,
 		}),
 	});
 });
@@ -195,6 +243,7 @@ recruitmentListingsRoutes.get("/:id", async (c) => {
 	if (!canManage && !isPlayerRecruitingDiscoverable(listing)) {
 		return c.json({ error: "Listing not found." }, 404);
 	}
+
 	return c.json({ data: mapRecruitmentListing(listing, { viewerId: user.id, canManage }) });
 });
 
@@ -290,6 +339,32 @@ recruitmentListingsRoutes.post("/", async (c) => {
 		organizationId = null;
 	}
 
+	const ownerWhere = teamId
+		? eq(recruitmentListingTable.teamId, teamId)
+		: organizationId
+			? eq(recruitmentListingTable.organizationId, organizationId)
+			: eq(recruitmentListingTable.userId, user.id);
+
+	const conflict = await db.query.recruitmentListingTable.findFirst({
+		where: and(
+			ownerWhere,
+			eq(recruitmentListingTable.ownerType, parsed.output.ownerType),
+			eq(recruitmentListingTable.type, parsed.output.category),
+			eq(recruitmentListingTable.memberType, parsed.output.memberType),
+			or(eq(recruitmentListingTable.status, "open"), eq(recruitmentListingTable.status, "paused"))
+		),
+		columns: { id: true },
+	});
+	if (conflict) {
+		return c.json(
+			{
+				error: "An open listing for this category and member type already exists.",
+				conflictingListingId: conflict.id,
+			},
+			409
+		);
+	}
+
 	const [listing] = await db
 		.insert(recruitmentListingTable)
 		.values({
@@ -346,7 +421,6 @@ recruitmentListingsRoutes.patch("/:id", async (c) => {
 		.update(recruitmentListingTable)
 		.set({
 			type: parsed.output.category,
-			status: parsed.output.status ?? undefined,
 			title: parsed.output.title,
 			description: parsed.output.description ?? null,
 			memberType: parsed.output.memberType,
@@ -360,6 +434,115 @@ recruitmentListingsRoutes.patch("/:id", async (c) => {
 			expiresAt: parsed.output.expiresAt ? new Date(parsed.output.expiresAt) : null,
 		})
 		.where(eq(recruitmentListingTable.id, listingId));
+
+	return c.json({ success: true });
+});
+
+recruitmentListingsRoutes.post("/:id/status", async (c) => {
+	const user = c.get("user");
+	const listingId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const parsed = v.safeParse(UpdateRecruitmentListingStatusSchema, { ...body, listingId });
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const listing = await db.query.recruitmentListingTable.findFirst({
+		where: eq(recruitmentListingTable.id, listingId),
+		columns: {
+			id: true,
+			status: true,
+			expiresAt: true,
+			userId: true,
+			ownerType: true,
+			teamId: true,
+			organizationId: true,
+		},
+	});
+	if (!listing) return c.json({ error: "Listing not found." }, 404);
+
+	if (!(await canManageRecruitmentListing(listing, user.id))) {
+		return c.json({ error: "You do not have permission to update this listing." }, 403);
+	}
+
+	const lifecycleBlock = await getRecruitingLifecycleBlock(listing);
+	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
+
+	if (listing.expiresAt && listing.expiresAt < new Date()) {
+		await db
+			.update(recruitmentListingTable)
+			.set({ status: "expired" })
+			.where(eq(recruitmentListingTable.id, listingId));
+		return c.json({ error: "This listing has expired and cannot be updated." }, 409);
+	}
+
+	const current = listing.status;
+	const next = parsed.output.status;
+
+	const validTransitions: Record<string, string[]> = {
+		open: ["paused", "closed", "fulfilled"],
+		paused: ["open", "closed", "fulfilled"],
+	};
+
+	const allowed = validTransitions[current]?.includes(next) ?? false;
+	if (!allowed) {
+		return c.json(
+			{
+				error: `Cannot transition listing from "${current}" to "${next}".`,
+			},
+			409
+		);
+	}
+
+	// P2: when resuming a paused listing, re-check for an already-open duplicate
+	if (next === "open") {
+		const resumeOwnerWhere = listing.teamId
+			? eq(recruitmentListingTable.teamId, listing.teamId)
+			: listing.organizationId
+				? eq(recruitmentListingTable.organizationId, listing.organizationId)
+				: eq(recruitmentListingTable.userId, listing.userId);
+
+		const resumeConflict = await db.query.recruitmentListingTable.findFirst({
+			where: and(
+				resumeOwnerWhere,
+				eq(recruitmentListingTable.ownerType, listing.ownerType),
+				eq(recruitmentListingTable.status, "open"),
+				// Exclude the listing being resumed from the conflict check
+				...[listing.id !== listingId ? eq(recruitmentListingTable.id, listing.id) : undefined]
+			),
+			columns: { id: true },
+		});
+		if (resumeConflict) {
+			return c.json(
+				{
+					error: "Another listing is already open. Close or pause it before resuming this one.",
+					conflictingListingId: resumeConflict.id,
+				},
+				409
+			);
+		}
+	}
+
+	const now = new Date();
+	const updated = await db
+		.update(recruitmentListingTable)
+		.set({ status: next })
+		.where(
+			and(
+				eq(recruitmentListingTable.id, listingId),
+				eq(recruitmentListingTable.status, current),
+				// P3: prevent resume past expiry window (TOCTOU guard)
+				or(isNull(recruitmentListingTable.expiresAt), gte(recruitmentListingTable.expiresAt, now))
+			)
+		)
+		.returning({ id: recruitmentListingTable.id });
+
+	if (updated.length === 0) {
+		return c.json(
+			{ error: "Listing status has changed or listing has expired. Please refresh and try again." },
+			409
+		);
+	}
 
 	return c.json({ success: true });
 });

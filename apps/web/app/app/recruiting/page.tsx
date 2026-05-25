@@ -1,14 +1,14 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
+import { RecruitmentDiscoveryFilters } from "@/components/recruit/recruitment-discovery-filters";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { RecruitmentSentApplicationsPanel } from "@/components/recruit/recruitment-sent-applications-panel";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
+import { getPlayerProfileFull } from "@/lib/data/player";
 import {
 	getManageableRecruitEntities,
 	getMyRecruitmentApplications,
@@ -16,37 +16,60 @@ import {
 	getRecruitmentApplicationsForListing,
 	getRecruitmentListings,
 } from "@/lib/data/recruit";
-import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
+import { RECRUITMENT_RANK_VALUES } from "@/lib/recruitment";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
-const CATEGORY_FILTERS = ["all", "lft", "lfp", "lfr", "lfs"] as const;
+const VALID_CATEGORIES = ["lft", "lfp", "lfr", "lfs"] as const;
+const VALID_ROLES = ["tank", "damage", "support"] as const;
 
 interface AppRecruitingPageProps {
-	searchParams: Promise<{ category?: string }>;
+	searchParams: Promise<{ category?: string; role?: string; rankFilter?: string; region?: string }>;
 }
 
 export default async function AppRecruitingPage({ searchParams }: AppRecruitingPageProps) {
 	const { user } = await requireWorkspaceSession();
 
-	const { category: categoryParam } = await searchParams;
-	const category = CATEGORY_FILTERS.includes(
-		(categoryParam ?? "all") as (typeof CATEGORY_FILTERS)[number]
-	)
-		? ((categoryParam ?? "all") as (typeof CATEGORY_FILTERS)[number])
-		: "all";
+	const {
+		category: categoryParam,
+		role: roleParam,
+		rankFilter: rankFilterParam,
+		region: regionParam,
+	} = await searchParams;
 
-	const [entityOptions, myListings, myApplications, openListings] = await Promise.all([
+	const category = VALID_CATEGORIES.includes(categoryParam as (typeof VALID_CATEGORIES)[number])
+		? (categoryParam as (typeof VALID_CATEGORIES)[number])
+		: undefined;
+
+	const role = (VALID_ROLES as readonly string[]).includes(roleParam ?? "")
+		? (roleParam as "tank" | "damage" | "support")
+		: undefined;
+
+	const rankFilter = (RECRUITMENT_RANK_VALUES as readonly string[]).includes(rankFilterParam ?? "")
+		? rankFilterParam
+		: undefined;
+
+	const region = regionParam?.trim() || undefined;
+
+	const hasAnyFilters = !!(category || role || rankFilter || region);
+
+	const [entityOptions, myListings, myApplications, profile, filteredListings] = await Promise.all([
 		getManageableRecruitEntities(user.id),
 		getMyRecruitmentListings(),
 		getMyRecruitmentApplications(),
-		getRecruitmentListings({
-			category: category === "all" ? undefined : category,
-		}),
+		getPlayerProfileFull(user.id).catch(() => null),
+		getRecruitmentListings({ category, role, rankFilter, region }),
 	]);
 
 	const myListingIds = new Set(myListings.map((listing) => listing.id));
-	const marketplaceListings = openListings.filter((listing) => !myListingIds.has(listing.id));
+	const marketplaceListings = filteredListings.filter((listing) => !myListingIds.has(listing.id));
+
+	const unfilteredSample =
+		hasAnyFilters && marketplaceListings.length === 0 ? await getRecruitmentListings({}) : null;
+	const unfilteredMarketplaceCount = unfilteredSample
+		? unfilteredSample.filter((listing) => !myListingIds.has(listing.id)).length
+		: null;
+
 	const applicationsByListing = new Map(
 		await Promise.all(
 			myListings.map(
@@ -55,6 +78,17 @@ export default async function AppRecruitingPage({ searchParams }: AppRecruitingP
 			)
 		)
 	);
+
+	const currentFilters = {
+		category: category ?? "all",
+		role: role ?? "any",
+		rankFilter: rankFilter ?? "any",
+		region: region ?? "",
+	};
+
+	const emptyMarketplace = marketplaceListings.length === 0;
+	const noMatchForFilters =
+		emptyMarketplace && hasAnyFilters && (unfilteredMarketplaceCount ?? 0) > 0;
 
 	return (
 		<PageContainer>
@@ -73,22 +107,11 @@ export default async function AppRecruitingPage({ searchParams }: AppRecruitingP
 					/>
 				}
 			>
-				<div className="flex flex-wrap gap-2">
-					{CATEGORY_FILTERS.map((filter) => (
-						<Link
-							key={filter}
-							href={
-								filter === "all"
-									? appRoutes.recruiting.root
-									: `${appRoutes.recruiting.root}?category=${filter}`
-							}
-						>
-							<Badge variant={category === filter ? "default" : "outline"} className="capitalize">
-								{filter === "all" ? "All listings" : RECRUITMENT_CATEGORY_LABELS[filter]}
-							</Badge>
-						</Link>
-					))}
-				</div>
+				<RecruitmentDiscoveryFilters
+					currentFilters={currentFilters}
+					profileRank={profile?.rank ?? null}
+					profileRole={profile?.primaryRole ?? null}
+				/>
 			</PageHeader>
 
 			<PageSection
@@ -134,12 +157,20 @@ export default async function AppRecruitingPage({ searchParams }: AppRecruitingP
 				title="Marketplace"
 				description="Browse open recruiting listings across the platform without leaving the app shell."
 			>
-				{marketplaceListings.length === 0 ? (
-					<EmptyStateBlock
-						title="No listings match this filter"
-						description="Try another category or publish a listing of your own."
-						variant="card"
-					/>
+				{emptyMarketplace ? (
+					noMatchForFilters ? (
+						<EmptyStateBlock
+							title="No listings match your filters"
+							description="Try clearing some filters to see more results."
+							variant="card"
+						/>
+					) : (
+						<EmptyStateBlock
+							title="No active listings yet"
+							description="Be the first — publish a listing of your own."
+							variant="card"
+						/>
+					)
 				) : (
 					<div className="space-y-4">
 						{marketplaceListings.map((listing) => (

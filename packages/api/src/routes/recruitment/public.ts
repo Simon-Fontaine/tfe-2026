@@ -8,14 +8,38 @@ const publicRecruitmentListingsRoutes = new Hono<AuthEnv>();
 
 publicRecruitmentListingsRoutes.use("*", optionalAuth);
 
+const VALID_ROLES = ["tank", "damage", "support"] as const;
+const VALID_RANKS = [
+	"bronze",
+	"silver",
+	"gold",
+	"platinum",
+	"diamond",
+	"master",
+	"grandmaster",
+	"champion",
+] as const;
+
 publicRecruitmentListingsRoutes.get("/", async (c) => {
 	const user = c.get("user");
 	const category = c.req.query("category") as "lft" | "lfp" | "lfr" | "lfs" | undefined;
 	const memberType = c.req.query("memberType") as "player" | "staff" | undefined;
-	const region = c.req.query("region") as string | undefined;
+	const regionRaw = c.req.query("region");
+	const region = regionRaw?.trim() || undefined;
+	const roleRaw = c.req.query("role");
+	const role = (VALID_ROLES as readonly string[]).includes(roleRaw ?? "")
+		? (roleRaw as "tank" | "damage" | "support")
+		: undefined;
+	const rankFilterRaw = c.req.query("rankFilter");
+	const rankFilter = (VALID_RANKS as readonly string[]).includes(rankFilterRaw ?? "")
+		? rankFilterRaw
+		: undefined;
 
 	return c.json({
-		data: await getPublicRecruitmentListings({ category, memberType, region }, user?.id ?? null),
+		data: await getPublicRecruitmentListings(
+			{ category, memberType, region, role, rankFilter },
+			user?.id ?? null
+		),
 	});
 });
 

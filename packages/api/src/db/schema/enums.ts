@@ -84,6 +84,7 @@ export const recruitmentListingCategoryEnum = pgEnum("recruitment_listing_catego
 
 export const recruitmentListingStatusEnum = pgEnum("recruitment_listing_status", [
 	"open",
+	"paused",
 	"closed",
 	"fulfilled",
 	"expired",
