@@ -1045,6 +1045,44 @@ export const scrimResultRevisionTable = pgTable(
 );
 
 // ============================================================================
+// SCRIM NEGOTIATION REVISIONS — Append-only log of negotiation actions
+// ============================================================================
+
+export const scrimNegotiationRevisionTable = pgTable(
+	"scrim_negotiation_revision",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		scrimId: uuid("scrim_id")
+			.notNull()
+			.references(() => scrimTable.id, { onDelete: "cascade" }),
+		actorUserId: uuid("actor_user_id").references(() => userTable.id, { onDelete: "set null" }),
+		actorTeamId: uuid("actor_team_id").references(() => teamTable.id, { onDelete: "set null" }),
+		action: text("action").notNull(), // "accept" | "decline" | "reschedule" | "propose_changes" | "expired"
+		priorScheduledAt: timestamp("prior_scheduled_at", { mode: "date" }),
+		proposedScheduledAt: timestamp("proposed_scheduled_at", { mode: "date" }),
+		priorConfig: jsonb("prior_config").$type<{
+			mapPool?: string[];
+			bestOf?: number;
+			heroRestrictions?: string[];
+			format?: string;
+		}>(),
+		proposedConfig: jsonb("proposed_config").$type<{
+			mapPool?: string[];
+			bestOf?: number;
+			heroRestrictions?: string[];
+			format?: string;
+		}>(),
+		priorMessage: text("prior_message"),
+		proposedMessage: text("proposed_message"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("scrim_neg_rev_scrim_idx").on(table.scrimId),
+		index("scrim_neg_rev_actor_user_idx").on(table.actorUserId),
+	]
+);
+
+// ============================================================================
 // SCRIM MAPS — Per-map results within a scrim (matches the OCR "matches" output)
 // ============================================================================
 

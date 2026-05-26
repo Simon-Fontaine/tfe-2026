@@ -26,6 +26,7 @@ import {
 	recruitmentListingTable,
 	scrimConfirmationTable,
 	scrimMapTable,
+	scrimNegotiationRevisionTable,
 	scrimPlayerStatTable,
 	scrimResultRevisionTable,
 	scrimTable,
@@ -81,6 +82,7 @@ export const userRelations = relations(userTable, ({ one, many }) => ({
 	createdScrims: many(scrimTable, { relationName: "scrimCreatedBy" }),
 	resolvedScrimDisputes: many(scrimTable, { relationName: "scrimDisputeResolvedBy" }),
 	submittedScrimResultRevisions: many(scrimResultRevisionTable),
+	scrimNegotiationRevisions: many(scrimNegotiationRevisionTable),
 }));
 
 export const sessionRelations = relations(sessionTable, ({ one }) => ({
@@ -143,6 +145,7 @@ export const teamRelations = relations(teamTable, ({ one, many }) => ({
 	awayScrims: many(scrimTable, { relationName: "awayTeamScrims" }),
 	confirmations: many(scrimConfirmationTable),
 	resultRevisions: many(scrimResultRevisionTable),
+	scrimNegotiationRevisions: many(scrimNegotiationRevisionTable),
 	recruitmentListings: many(recruitmentListingTable),
 	updatePosts: many(updatePostTable),
 	chatChannels: many(chatChannelTable, { relationName: "teamChatChannels" }),
@@ -295,6 +298,7 @@ export const scrimRelations = relations(scrimTable, ({ one, many }) => ({
 		relationName: "scrimDisputeResolvedBy",
 	}),
 	resultRevisions: many(scrimResultRevisionTable),
+	negotiationRevisions: many(scrimNegotiationRevisionTable),
 	maps: many(scrimMapTable),
 	confirmations: many(scrimConfirmationTable),
 	ocrJobs: many(ocrJobTable),
@@ -567,3 +571,21 @@ export const orgInviteRelations = relations(orgInviteTable, ({ one }) => ({
 		relationName: "inviterOrgInvites",
 	}),
 }));
+
+export const scrimNegotiationRevisionRelations = relations(
+	scrimNegotiationRevisionTable,
+	({ one }) => ({
+		scrim: one(scrimTable, {
+			fields: [scrimNegotiationRevisionTable.scrimId],
+			references: [scrimTable.id],
+		}),
+		actor: one(userTable, {
+			fields: [scrimNegotiationRevisionTable.actorUserId],
+			references: [userTable.id],
+		}),
+		actorTeam: one(teamTable, {
+			fields: [scrimNegotiationRevisionTable.actorTeamId],
+			references: [teamTable.id],
+		}),
+	})
+);

@@ -92,6 +92,13 @@
       "when": 1779830409056,
       "tag": "0012_black_the_santerians",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779831239129,
+      "tag": "0013_wealthy_wild_child",
+      "breakpoints": true
     }
   ]
 }

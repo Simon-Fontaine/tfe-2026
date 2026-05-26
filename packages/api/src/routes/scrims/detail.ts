@@ -165,6 +165,24 @@ export function mapScrimDetail(scrim: ScrimRow): ScrimDetail {
 		ocrJobs: scrim.ocrJobs.map(mapOcrJob),
 		maps: scrim.maps.map(mapScrimMap),
 		resultRevisions: scrim.resultRevisions.map(mapScrimResultRevision),
+		negotiationRevisions: scrim.negotiationRevisions.map((rev) => ({
+			id: rev.id,
+			action: rev.action as ScrimDetail["negotiationRevisions"][number]["action"],
+			actorUserId: rev.actorUserId ?? null,
+			actorDisplayName: rev.actor?.displayName ?? null,
+			actorTeamId: rev.actorTeamId ?? null,
+			actorTeamName: rev.actorTeam?.name ?? null,
+			actorTeamTag: rev.actorTeam?.tag ?? null,
+			priorScheduledAt: toIsoDate(rev.priorScheduledAt),
+			proposedScheduledAt: toIsoDate(rev.proposedScheduledAt),
+			priorConfig: (rev.priorConfig ??
+				null) as ScrimDetail["negotiationRevisions"][number]["priorConfig"],
+			proposedConfig: (rev.proposedConfig ??
+				null) as ScrimDetail["negotiationRevisions"][number]["proposedConfig"],
+			priorMessage: rev.priorMessage ?? null,
+			proposedMessage: rev.proposedMessage ?? null,
+			createdAt: rev.createdAt.toISOString(),
+		})),
 		dispute: {
 			resolution: scrim.disputeResolution ?? null,
 			resolvedByUserId: scrim.disputeResolvedByUserId ?? null,

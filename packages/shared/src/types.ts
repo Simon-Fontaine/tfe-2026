@@ -1310,6 +1310,23 @@ export type ScrimResultRevisionSummary = {
 	createdAt: IsoDateString;
 };
 
+export type ScrimNegotiationRevisionSummary = {
+	id: string;
+	action: "accept" | "decline" | "reschedule" | "propose_changes" | "expired";
+	actorUserId: string | null;
+	actorDisplayName: string | null;
+	actorTeamId: string | null;
+	actorTeamName: string | null;
+	actorTeamTag: string | null;
+	priorScheduledAt: IsoDateString | null;
+	proposedScheduledAt: IsoDateString | null;
+	priorConfig: ScrimConfig | null;
+	proposedConfig: ScrimConfig | null;
+	priorMessage: string | null;
+	proposedMessage: string | null;
+	createdAt: IsoDateString;
+};
+
 export type OcrJobSummary = {
 	id: string;
 	scrimId: string;
@@ -1361,6 +1378,7 @@ export type ScrimDetail = ScrimSummary & {
 	dispute: ScrimDisputeSummary;
 	maps: ScrimMapSummary[];
 	resultRevisions: ScrimResultRevisionSummary[];
+	negotiationRevisions: ScrimNegotiationRevisionSummary[];
 };
 
 // ─── Notification types ────────────────────────────────────────────────────

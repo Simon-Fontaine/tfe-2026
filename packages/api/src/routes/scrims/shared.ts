@@ -4,6 +4,7 @@ import { db } from "@/db";
 import {
 	ocrJobTable,
 	scrimMapTable,
+	scrimNegotiationRevisionTable,
 	scrimPlayerStatTable,
 	scrimResultRevisionTable,
 	scrimTable,
@@ -147,6 +148,30 @@ export async function findScrimWithRelations(scrimId: string) {
 					},
 				},
 				orderBy: [desc(scrimResultRevisionTable.revisionNumber)],
+			},
+			negotiationRevisions: {
+				columns: {
+					id: true,
+					action: true,
+					actorUserId: true,
+					actorTeamId: true,
+					priorScheduledAt: true,
+					proposedScheduledAt: true,
+					priorConfig: true,
+					proposedConfig: true,
+					priorMessage: true,
+					proposedMessage: true,
+					createdAt: true,
+				},
+				with: {
+					actor: {
+						columns: { id: true, displayName: true },
+					},
+					actorTeam: {
+						columns: { id: true, name: true, tag: true },
+					},
+				},
+				orderBy: [asc(scrimNegotiationRevisionTable.createdAt)],
 			},
 			maps: {
 				columns: {

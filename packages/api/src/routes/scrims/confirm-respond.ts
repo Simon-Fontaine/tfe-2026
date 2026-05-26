@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
 import { db } from "@/db";
-import { scrimConfirmationTable, scrimTable } from "@/db/schema";
+import { scrimConfirmationTable, scrimNegotiationRevisionTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { ensureScrimConversationLifecycle } from "@/utils/chat";
@@ -188,7 +188,53 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			return c.json({ error: "Completed scrims cannot be changed." }, 400);
 		}
 
-		if (parsed.output.action === "accept") {
+		// Auto-expire pending scrims older than 7 days before processing any action.
+		if (scrim.status === "pending") {
+			const PENDING_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+			if (Date.now() - scrim.createdAt.getTime() > PENDING_EXPIRY_MS) {
+				await db.transaction(async (tx) => {
+					await tx
+						.update(scrimTable)
+						.set({ status: "cancelled" })
+						.where(eq(scrimTable.id, scrimId));
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: null,
+						actorTeamId: null,
+						action: "expired",
+						priorScheduledAt: scrim.scheduledAt,
+						proposedScheduledAt: null,
+						priorConfig: scrim.config,
+						proposedConfig: null,
+						priorMessage: scrim.message,
+						proposedMessage: null,
+					});
+				});
+				const expiredDetail = await findScrimWithRelations(scrimId);
+				if (expiredDetail) {
+					await Promise.all(
+						[expiredDetail.homeTeam.id, expiredDetail.awayTeam?.id ?? null]
+							.filter((teamId): teamId is string => !!teamId)
+							.map((teamId) =>
+								notifyTeamAdmins({
+									teamId,
+									actorUserId: user.id,
+									type: "scrim_cancelled",
+									title: "Scrim request expired",
+									body: `The scrim request for ${expiredDetail.homeTeam.name}${expiredDetail.awayTeam ? ` vs ${expiredDetail.awayTeam.name}` : ""} has expired and been cancelled.`,
+									scrimId: expiredDetail.id,
+								})
+							)
+					);
+				}
+				return c.json({ error: "This scrim request has expired and has been cancelled." }, 409);
+			}
+		}
+
+		const action = parsed.output.action;
+		let rescheduleIsHomeTeamActor = false;
+
+		if (action === "accept") {
 			if (!scrim.awayTeamId) {
 				return c.json({ error: "This scrim request does not have an opponent yet." }, 400);
 			}
@@ -199,16 +245,133 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 				return c.json({ error: "Only pending scrim requests can be accepted." }, 400);
 			}
 
-			await db
-				.update(scrimTable)
-				.set({
-					status: parsed.output.scheduledAt || scrim.scheduledAt ? "scheduled" : "accepted",
-					scheduledAt: parsed.output.scheduledAt
-						? new Date(parsed.output.scheduledAt)
-						: scrim.scheduledAt,
-				})
-				.where(eq(scrimTable.id, scrimId));
+			const acceptedScheduledAt = parsed.output.scheduledAt
+				? new Date(parsed.output.scheduledAt)
+				: scrim.scheduledAt;
+			await db.transaction(async (tx) => {
+				await tx
+					.update(scrimTable)
+					.set({
+						status: acceptedScheduledAt ? "scheduled" : "accepted",
+						scheduledAt: acceptedScheduledAt,
+					})
+					.where(eq(scrimTable.id, scrimId));
+				await tx.insert(scrimNegotiationRevisionTable).values({
+					scrimId,
+					actorUserId: user.id,
+					actorTeamId: scrim.awayTeamId,
+					action: "accept",
+					priorScheduledAt: scrim.scheduledAt,
+					proposedScheduledAt: acceptedScheduledAt,
+					priorConfig: scrim.config,
+					proposedConfig: null,
+					priorMessage: scrim.message,
+					proposedMessage: null,
+				});
+			});
+		} else if (action === "decline") {
+			if (!scrim.awayTeamId) {
+				return c.json({ error: "This scrim does not have an opponent to decline." }, 400);
+			}
+			if (!(await verifyTeamManager(scrim.awayTeamId, user.id))) {
+				return c.json({ error: "Only the away team can decline this scrim request." }, 403);
+			}
+			if (scrim.status !== "pending") {
+				return c.json({ error: "Only pending scrim requests can be declined." }, 400);
+			}
+			await db.transaction(async (tx) => {
+				await tx.update(scrimTable).set({ status: "cancelled" }).where(eq(scrimTable.id, scrimId));
+				await tx.insert(scrimNegotiationRevisionTable).values({
+					scrimId,
+					actorUserId: user.id,
+					actorTeamId: scrim.awayTeamId,
+					action: "decline",
+					priorScheduledAt: scrim.scheduledAt,
+					proposedScheduledAt: null,
+					priorConfig: scrim.config,
+					proposedConfig: null,
+					priorMessage: scrim.message,
+					proposedMessage: null,
+				});
+			});
+		} else if (action === "reschedule") {
+			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
+				return c.json({ error: "Only a team manager can propose a reschedule." }, 403);
+			}
+			if (scrim.status !== "accepted" && scrim.status !== "scheduled") {
+				return c.json(
+					{ error: "Reschedule is only available for accepted or scheduled scrims." },
+					400
+				);
+			}
+			if (!parsed.output.scheduledAt) {
+				return c.json({ error: "A new proposed time is required for reschedule." }, 400);
+			}
+			rescheduleIsHomeTeamActor = await verifyTeamManager(scrim.homeTeamId, user.id);
+			const actorTeamId = rescheduleIsHomeTeamActor
+				? scrim.homeTeamId
+				: (scrim.awayTeamId ?? scrim.homeTeamId);
+			const newScheduledAt = new Date(parsed.output.scheduledAt);
+			await db.transaction(async (tx) => {
+				await tx
+					.update(scrimTable)
+					.set({ status: "scheduled", scheduledAt: newScheduledAt })
+					.where(eq(scrimTable.id, scrimId));
+				await tx.insert(scrimNegotiationRevisionTable).values({
+					scrimId,
+					actorUserId: user.id,
+					actorTeamId,
+					action: "reschedule",
+					priorScheduledAt: scrim.scheduledAt,
+					proposedScheduledAt: newScheduledAt,
+					priorConfig: scrim.config,
+					proposedConfig: null,
+					priorMessage: scrim.message,
+					proposedMessage: null,
+				});
+			});
+		} else if (action === "propose_changes") {
+			if (!scrim.awayTeamId) {
+				return c.json({ error: "This scrim request does not have an opponent yet." }, 400);
+			}
+			if (!(await verifyTeamManager(scrim.awayTeamId, user.id))) {
+				return c.json({ error: "Only the away team can propose changes to a pending scrim." }, 403);
+			}
+			if (scrim.status !== "pending") {
+				return c.json(
+					{ error: "Counterproposals are only available for pending scrim requests." },
+					400
+				);
+			}
+			const proposedScheduledAt = parsed.output.scheduledAt
+				? new Date(parsed.output.scheduledAt)
+				: scrim.scheduledAt;
+			const proposedConfig = parsed.output.config ?? scrim.config;
+			const proposedMessage = parsed.output.message ?? scrim.message;
+			await db.transaction(async (tx) => {
+				await tx
+					.update(scrimTable)
+					.set({
+						scheduledAt: proposedScheduledAt,
+						config: proposedConfig,
+						message: proposedMessage ?? null,
+					})
+					.where(eq(scrimTable.id, scrimId));
+				await tx.insert(scrimNegotiationRevisionTable).values({
+					scrimId,
+					actorUserId: user.id,
+					actorTeamId: scrim.awayTeamId,
+					action: "propose_changes",
+					priorScheduledAt: scrim.scheduledAt,
+					proposedScheduledAt: parsed.output.scheduledAt ? proposedScheduledAt : null,
+					priorConfig: scrim.config,
+					proposedConfig: parsed.output.config ?? null,
+					priorMessage: scrim.message,
+					proposedMessage: parsed.output.message ?? null,
+				});
+			});
 		} else {
+			// cancel
 			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
 				return c.json({ error: "Only a team manager can cancel this scrim." }, 403);
 			}
@@ -233,7 +396,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after update." }, 500);
 
-		if (parsed.output.action === "accept") {
+		if (action === "accept") {
 			await notifyTeamAdmins({
 				teamId: detail.homeTeam.id,
 				actorUserId: user.id,
@@ -242,7 +405,38 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 				body: `${detail.awayTeam?.name ?? "The opponent"} accepted your scrim request.`,
 				scrimId: detail.id,
 			});
+		} else if (action === "decline") {
+			await notifyTeamAdmins({
+				teamId: detail.homeTeam.id,
+				actorUserId: user.id,
+				type: "scrim_cancelled",
+				title: "Scrim request declined",
+				body: `${detail.awayTeam?.name ?? "The opponent"} declined your scrim request.`,
+				scrimId: detail.id,
+			});
+		} else if (action === "reschedule") {
+			const otherTeamId = rescheduleIsHomeTeamActor ? detail.awayTeam?.id : detail.homeTeam.id;
+			if (otherTeamId) {
+				await notifyTeamAdmins({
+					teamId: otherTeamId,
+					actorUserId: user.id,
+					type: "scrim_rescheduled",
+					title: "Scrim reschedule proposed",
+					body: `A new time has been proposed for ${detail.homeTeam.name}${detail.awayTeam ? ` vs ${detail.awayTeam.name}` : ""}.`,
+					scrimId: detail.id,
+				});
+			}
+		} else if (action === "propose_changes") {
+			await notifyTeamAdmins({
+				teamId: detail.homeTeam.id,
+				actorUserId: user.id,
+				type: "scrim_rescheduled",
+				title: "New scrim terms proposed",
+				body: `${detail.awayTeam?.name ?? "The opponent"} proposed updated terms for your scrim request.`,
+				scrimId: detail.id,
+			});
 		} else {
+			// cancel
 			await Promise.all(
 				[detail.homeTeam.id, detail.awayTeam?.id ?? null]
 					.filter((teamId): teamId is string => !!teamId)

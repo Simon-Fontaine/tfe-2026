@@ -5,6 +5,7 @@ import { ReportScrimResultDialog } from "@/components/scrims/report-scrim-result
 import { ResolveScrimDisputeDialog } from "@/components/scrims/resolve-scrim-dispute-dialog";
 import { ScrimConfirmationSection } from "@/components/scrims/scrim-confirmation-section";
 import { ScrimMapsSection } from "@/components/scrims/scrim-maps-section";
+import { ScrimNegotiationHistory } from "@/components/scrims/scrim-negotiation-history";
 import { ScrimOcrJobsPanel } from "@/components/scrims/scrim-ocr-jobs-panel";
 import { ScrimRatingSection } from "@/components/scrims/scrim-rating-section";
 import { ScrimRespondActions } from "@/components/scrims/scrim-respond-actions";
@@ -227,6 +228,7 @@ export default async function TeamScrimDetailPage({
 						createdByDisplayName={scrim.createdByDisplayName}
 						pendingConfirmationCount={scrim.pendingConfirmationCount}
 					/>
+					<ScrimNegotiationHistory revisions={scrim.negotiationRevisions} />
 					<ScrimConfirmationSection
 						confirmations={scrim.confirmations}
 						dispute={scrim.dispute}

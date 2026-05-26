@@ -7,7 +7,13 @@ import {
 } from "./ocr";
 
 const SCRIM_CONFIRMATION_STATUS_VALUES = ["confirmed", "disputed"] as const;
-const SCRIM_RESPONSE_ACTION_VALUES = ["accept", "cancel"] as const;
+const SCRIM_RESPONSE_ACTION_VALUES = [
+	"accept",
+	"cancel",
+	"decline",
+	"reschedule",
+	"propose_changes",
+] as const;
 const SCRIM_DISPUTE_RESOLUTION_ACTION_VALUES = ["confirm_reported_result", "void_scrim"] as const;
 
 const optionalUuid = v.optional(v.pipe(v.string(), v.uuid("Invalid ID")));
@@ -39,6 +45,15 @@ export type CreateScrimInput = v.InferOutput<typeof CreateScrimSchema>;
 export const RespondToScrimSchema = v.object({
 	action: v.picklist(SCRIM_RESPONSE_ACTION_VALUES, "Invalid scrim action"),
 	scheduledAt: optionalIsoDate,
+	config: v.optional(
+		v.object({
+			bestOf: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(9))),
+			format: optionalTrimmedString(60, "Format cannot exceed 60 characters"),
+			mapPool: v.optional(v.array(v.pipe(v.string(), v.trim(), v.maxLength(80)))),
+			heroRestrictions: v.optional(v.array(v.pipe(v.string(), v.trim(), v.maxLength(80)))),
+		})
+	),
+	message: optionalTrimmedString(1000, "Message cannot exceed 1000 characters"),
 });
 
 export type RespondToScrimInput = v.InferOutput<typeof RespondToScrimSchema>;
