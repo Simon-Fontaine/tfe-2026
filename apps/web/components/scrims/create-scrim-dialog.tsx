@@ -187,7 +187,16 @@ export function CreateScrimDialog({ children, teamId, opponentOptions }: CreateS
 								disabled={submitting}
 							/>
 							<FieldDescription>
-								Optional. The invited team can accept with this time.
+								Optional. The invited team can accept with this time. Check your{" "}
+								<a
+									href={appRoutes.teams.calendar(teamId)}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="underline underline-offset-2"
+								>
+									team calendar
+								</a>{" "}
+								before proposing a time.
 							</FieldDescription>
 						</Field>
 

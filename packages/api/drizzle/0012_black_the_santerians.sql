@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "scrim_active_pair_unique_idx" ON "scrim" USING btree (LEAST("home_team_id", "away_team_id"),GREATEST("home_team_id", "away_team_id")) WHERE "scrim"."status" IN ('pending', 'accepted', 'scheduled', 'in_progress') AND "scrim"."away_team_id" IS NOT NULL;

@@ -209,9 +209,38 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 		if (parsed.output.awayTeamId) {
 			const awayTeam = await db.query.teamTable.findFirst({
 				where: eq(teamTable.id, parsed.output.awayTeamId),
-				columns: { id: true },
+				columns: { id: true, lifecycleStatus: true, isArchived: true, isPublic: true },
 			});
 			if (!awayTeam) return c.json({ error: "Away team not found." }, 404);
+			if (awayTeam.lifecycleStatus !== "active" || awayTeam.isArchived || !awayTeam.isPublic) {
+				return c.json(
+					{ error: "The selected opponent team is not currently accepting scrim requests." },
+					422
+				);
+			}
+
+			const { homeTeamId, awayTeamId } = parsed.output;
+			const BLOCKING_STATUSES = ["pending", "accepted", "scheduled", "in_progress"] as const;
+			const existingScrim = await db.query.scrimTable.findFirst({
+				where: and(
+					inArray(scrimTable.status, [...BLOCKING_STATUSES]),
+					or(
+						and(eq(scrimTable.homeTeamId, homeTeamId), eq(scrimTable.awayTeamId, awayTeamId)),
+						and(eq(scrimTable.homeTeamId, awayTeamId), eq(scrimTable.awayTeamId, homeTeamId))
+					)
+				),
+				columns: { id: true },
+			});
+			if (existingScrim) {
+				return c.json(
+					{
+						error:
+							"An active scrim request already exists between these two teams. Settle or cancel it before creating a new one.",
+						existingScrimId: existingScrim.id,
+					},
+					409
+				);
+			}
 		}
 
 		const scrim = await db.transaction(async (tx) => {

@@ -889,6 +889,15 @@ export const scrimTable = pgTable(
 		index("scrim_schedule_idx").on(table.status, table.scheduledAt),
 		// History for a specific team
 		index("scrim_team_history_idx").on(table.homeTeamId, table.status, table.scheduledAt),
+		// Prevent concurrent duplicate active scrims between the same pair (bidirectional)
+		uniqueIndex("scrim_active_pair_unique_idx")
+			.on(
+				sql`LEAST(${table.homeTeamId}, ${table.awayTeamId})`,
+				sql`GREATEST(${table.homeTeamId}, ${table.awayTeamId})`
+			)
+			.where(
+				sql`${table.status} IN ('pending', 'accepted', 'scheduled', 'in_progress') AND ${table.awayTeamId} IS NOT NULL`
+			),
 	]
 );
 
