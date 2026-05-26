@@ -1,4 +1,5 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +16,27 @@ import { getPublicPlayerByUsername } from "@/lib/data/player";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { ROLE_LABELS } from "@/lib/recruitment";
 import { appRoutes, publicRoutes } from "@/lib/routes";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+	const { username } = await params;
+	let player: Awaited<ReturnType<typeof getPublicPlayerByUsername>> | null = null;
+	try {
+		player = await getPublicPlayerByUsername(username);
+	} catch {
+		// metadata fetch failed
+	}
+	if (!player) return { title: "Profile not available" };
+	return {
+		title: player.displayName,
+		description:
+			player.bio ??
+			`View ${player.displayName}'s Overwatch 2 profile, role, rank, and team history on Scrimflow.`,
+	};
+}
 
 export default async function PlayerProfilePage({
 	params,

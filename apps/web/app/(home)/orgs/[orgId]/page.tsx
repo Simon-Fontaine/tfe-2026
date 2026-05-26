@@ -1,5 +1,6 @@
 import { ArrowRight01Icon, GameController01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +16,27 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { appRoutes, publicRoutes } from "@/lib/routes";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ orgId: string }>;
+}): Promise<Metadata> {
+	const { orgId } = await params;
+	let org: Awaited<ReturnType<typeof getPublicOrgByIdOrSlug>> | null = null;
+	try {
+		org = await getPublicOrgByIdOrSlug(orgId);
+	} catch {
+		// metadata fetch failed
+	}
+	if (!org) return { title: "Organization not available" };
+	return {
+		title: org.name,
+		description:
+			org.description ??
+			`View ${org.name}'s public organization profile, teams, and recruiting listings on Scrimflow.`,
+	};
+}
 
 function getSafeExternalHref(value: string | null): string | null {
 	if (!value) return null;

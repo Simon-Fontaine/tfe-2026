@@ -1,6 +1,7 @@
 import { ArrowRight01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OW2Role } from "@scrimflow/shared";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,6 +18,27 @@ import { getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicTeamPreview } from "@/lib/data/team";
 import { appRoutes, publicRoutes } from "@/lib/routes";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ teamId: string }>;
+}): Promise<Metadata> {
+	const { teamId } = await params;
+	let team: Awaited<ReturnType<typeof getPublicTeamPreview>> | null = null;
+	try {
+		team = await getPublicTeamPreview(teamId);
+	} catch {
+		// metadata fetch failed
+	}
+	if (!team) return { title: "Team not available" };
+	return {
+		title: team.name,
+		description:
+			team.description ??
+			`View [${team.tag}] ${team.name}'s public profile, roster, and recruiting listings on Scrimflow.`,
+	};
+}
 
 export default async function TeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
 	const { teamId } = await params;
