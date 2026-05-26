@@ -81,6 +81,7 @@ export function WeeklyGrid({ recurring, teamId }: WeeklyGridProps) {
 				defaultType="recurring"
 				defaultDay={dialogState.day}
 				teamId={teamId}
+				existingWindows={recurring}
 			/>
 		</>
 	);

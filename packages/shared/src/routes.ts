@@ -269,6 +269,7 @@ export const apiRoutes = {
 		root: "/api/updates",
 		byId: (updateId: string) => `/api/updates/${updateId}`,
 		publicRoot: "/api/public/updates",
+		publicById: (id: string) => `/api/public/updates/${id}`,
 	},
 	heroes: {
 		root: "/api/heroes",
@@ -373,5 +374,6 @@ export const publicRoutes = {
 		root: "/updates",
 		withScope: (scope: "all" | "team" | "organization") =>
 			scope === "all" ? "/updates" : withQuery("/updates", { scope }),
+		byId: (id: string) => `/updates/${id}`,
 	},
 } as const;

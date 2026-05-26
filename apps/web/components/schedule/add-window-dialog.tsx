@@ -1,8 +1,12 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { type AvailabilityInput, AvailabilitySchema } from "@scrimflow/shared";
-import { useEffect, useRef } from "react";
+import {
+	type AvailabilityInput,
+	type AvailabilityRow,
+	AvailabilitySchema,
+} from "@scrimflow/shared";
+import { useEffect, useMemo, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { addAvailabilityAction } from "@/app/actions/schedule/availability";
 import { Button } from "@/components/ui/button";
@@ -11,7 +15,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
-import { COMMON_TIMEZONES, DAYS } from "@/lib/schedule/constants";
+import { COMMON_TIMEZONES, DAYS, formatWindowTitle } from "@/lib/schedule/constants";
 import { cn } from "@/lib/utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -41,6 +45,7 @@ interface AddWindowDialogProps {
 	defaultType?: "recurring" | "one_off";
 	defaultDay?: number | null;
 	teamId: string;
+	existingWindows?: AvailabilityRow[];
 }
 
 export function AddWindowDialog({
@@ -49,6 +54,7 @@ export function AddWindowDialog({
 	defaultType = "recurring",
 	defaultDay = null,
 	teamId,
+	existingWindows = [],
 }: AddWindowDialogProps) {
 	const pendingRef = useRef(false);
 
@@ -63,6 +69,31 @@ export function AddWindowDialog({
 	});
 
 	const watchedType = form.watch("type");
+	const [watchedDay, watchedDate, watchedStart, watchedEnd] = form.watch([
+		"dayOfWeek",
+		"specificDate",
+		"startTime",
+		"endTime",
+	]);
+
+	const overlapWarning = useMemo(() => {
+		if (!watchedStart || !watchedEnd) return null;
+		const overlapping = existingWindows.find((w) => {
+			if (watchedType === "recurring") {
+				if (w.dayOfWeek === null || w.dayOfWeek !== watchedDay) return false;
+			} else {
+				if (!w.specificDate || !watchedDate) return false;
+				const wDate =
+					typeof w.specificDate === "string"
+						? w.specificDate.slice(0, 10)
+						: w.specificDate.toISOString().slice(0, 10);
+				if (wDate !== watchedDate) return false;
+			}
+			return watchedStart < w.endTime && watchedEnd > w.startTime;
+		});
+		if (!overlapping) return null;
+		return `${formatWindowTitle(overlapping)} ${overlapping.startTime}–${overlapping.endTime}`;
+	}, [watchedType, watchedDay, watchedDate, watchedStart, watchedEnd, existingWindows]);
 
 	// Reset form with correct defaults each time the dialog opens
 	useEffect(() => {
@@ -191,6 +222,13 @@ export function AddWindowDialog({
 							<FieldError errors={[form.formState.errors.endTime]} />
 						</Field>
 					</div>
+
+					{overlapWarning && (
+						<p className="text-xs text-amber-600">
+							This window overlaps with an existing window ({overlapWarning}). You can still save
+							it.
+						</p>
+					)}
 
 					{/* Timezone */}
 					<Field>

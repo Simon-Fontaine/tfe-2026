@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { availabilityTable, teamRosterTable, teamTable } from "@/db/schema";
+import { availabilityTable, playerProfileTable, teamRosterTable, teamTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { getLifecycleMutationBlockReason } from "@/utils/lifecycle";
@@ -92,14 +92,25 @@ scheduleRoutes.get("/team/:teamId", async (c) => {
 		orderBy: [asc(teamRosterTable.memberType), asc(teamRosterTable.joinedAt)],
 	});
 
-	const availability = members.length
+	const memberUserIds = members.map((m) => m.userId);
+
+	const profiles = memberUserIds.length
+		? await db.query.playerProfileTable.findMany({
+				where: inArray(playerProfileTable.userId, memberUserIds),
+				columns: { userId: true, availabilityVisibility: true },
+			})
+		: [];
+	const visibilityMap = new Map(profiles.map((p) => [p.userId, p.availabilityVisibility]));
+
+	const privateUserIds = new Set(
+		memberUserIds.filter((id) => id !== user.id && visibilityMap.get(id) === "private")
+	);
+
+	const allAvailability = memberUserIds.length
 		? await db.query.availabilityTable.findMany({
 				where: and(
 					eq(availabilityTable.teamId, teamId),
-					inArray(
-						availabilityTable.userId,
-						members.map((member) => member.userId)
-					)
+					inArray(availabilityTable.userId, memberUserIds)
 				),
 				columns: {
 					id: true,
@@ -116,6 +127,8 @@ scheduleRoutes.get("/team/:teamId", async (c) => {
 			})
 		: [];
 
+	const availability = allAvailability.filter((row) => !privateUserIds.has(row.userId));
+
 	return c.json({
 		data: {
 			teamId: team.id,
@@ -130,6 +143,8 @@ scheduleRoutes.get("/team/:teamId", async (c) => {
 				status: member.status,
 				gameRole: member.roleInTeam,
 				staffRole: member.staffRole,
+				availabilityHidden:
+					member.userId !== user.id && visibilityMap.get(member.userId) === "private",
 			})),
 			availability,
 		},

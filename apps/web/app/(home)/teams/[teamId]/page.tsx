@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Notification01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OW2Role } from "@scrimflow/shared";
 import type { Metadata } from "next";
@@ -13,10 +13,12 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UpdatePostCard } from "@/components/updates/update-post-card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicTeamPreview } from "@/lib/data/team";
+import { getPublicUpdates } from "@/lib/data/updates";
 import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({
@@ -76,6 +78,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 	const canManageInWorkspace = userOrgRole === "owner" || userOrgRole === "admin";
 	const isOrgMember = userOrgRole !== null;
 	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
+	const teamUpdates = await getPublicUpdates({ teamId: team.id }).catch(() => []);
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
@@ -235,6 +238,27 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 								</div>
 							);
 						})}
+					</div>
+				)}
+			</PublicPageSection>
+
+			<PublicPageSection title="Team updates" description="Public announcements from this team.">
+				{teamUpdates.slice(0, 3).length === 0 ? (
+					<EmptyStateBlock
+						icon={Notification01Icon}
+						title="No public updates yet"
+						description="This team has not published any public updates."
+						variant="card"
+					/>
+				) : (
+					<div className="space-y-4">
+						{teamUpdates.slice(0, 3).map((post) => (
+							<UpdatePostCard
+								key={post.id}
+								post={post}
+								detailHref={publicRoutes.updates.byId(post.id)}
+							/>
+						))}
 					</div>
 				)}
 			</PublicPageSection>

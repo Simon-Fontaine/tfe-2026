@@ -64,3 +64,10 @@ export const getPublicUpdates = cache(
 		throw new Error(res.error);
 	}
 );
+
+export const getPublicUpdateById = cache(async (id: string): Promise<UpdatePostSummary | null> => {
+	const res = await apiGet<UpdatePostSummary>(apiRoutes.updates.publicById(id));
+	if ("data" in res) return res.data;
+	if (res.status === 404) return null;
+	throw new Error(res.error);
+});

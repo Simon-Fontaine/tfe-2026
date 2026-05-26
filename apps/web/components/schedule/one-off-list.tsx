@@ -62,7 +62,13 @@ export function OneOffList({ oneOffs, teamId }: OneOffListProps) {
 				</CardContent>
 			</Card>
 
-			<AddWindowDialog open={open} onOpenChange={setOpen} defaultType="one_off" teamId={teamId} />
+			<AddWindowDialog
+				open={open}
+				onOpenChange={setOpen}
+				defaultType="one_off"
+				teamId={teamId}
+				existingWindows={oneOffs}
+			/>
 		</>
 	);
 }

@@ -1,4 +1,8 @@
-import { ArrowRight01Icon, GameController01Icon } from "@hugeicons/core-free-icons";
+import {
+	ArrowRight01Icon,
+	GameController01Icon,
+	Notification01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -12,9 +16,11 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UpdatePostCard } from "@/components/updates/update-post-card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
+import { getPublicUpdates } from "@/lib/data/updates";
 import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({
@@ -84,6 +90,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 	const twitterHref = getSafeExternalHref(org.twitter);
 	const isMember = userOrgRole !== null;
 	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
+	const orgUpdates = await getPublicUpdates({ organizationId: org.id }).catch(() => []);
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
@@ -314,6 +321,30 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 									</Badge>
 								)}
 							</Link>
+						))}
+					</div>
+				)}
+			</PublicPageSection>
+
+			<PublicPageSection
+				title="Organization updates"
+				description="Public announcements from this organization."
+			>
+				{orgUpdates.slice(0, 3).length === 0 ? (
+					<EmptyStateBlock
+						icon={Notification01Icon}
+						title="No public updates yet"
+						description="This organization has not published any public updates."
+						variant="card"
+					/>
+				) : (
+					<div className="space-y-4">
+						{orgUpdates.slice(0, 3).map((post) => (
+							<UpdatePostCard
+								key={post.id}
+								post={post}
+								detailHref={publicRoutes.updates.byId(post.id)}
+							/>
 						))}
 					</div>
 				)}

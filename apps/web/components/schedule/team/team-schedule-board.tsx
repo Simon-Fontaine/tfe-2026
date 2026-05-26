@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function formatWindow(row: TeamSchedule["availability"][number]) {
+	const time = `${row.startTime}–${row.endTime}`;
 	if (row.dayOfWeek !== null) {
-		return `${DAYS[row.dayOfWeek]} ${row.startTime}-${row.endTime}`;
+		return `${DAYS[row.dayOfWeek]} ${time} · ${row.timezone}`;
 	}
-	return `${row.specificDate ?? "Date"} ${row.startTime}-${row.endTime}`;
+	return `${row.specificDate ?? "Date"} ${time} · ${row.timezone}`;
 }
 
 export function TeamScheduleBoard({
@@ -54,7 +55,9 @@ export function TeamScheduleBoard({
 									</p>
 								</div>
 							</div>
-							{windows.length === 0 ? (
+							{member.availabilityHidden ? (
+								<p className="text-xs italic text-muted-foreground">Availability set to private.</p>
+							) : windows.length === 0 ? (
 								<p className="text-xs text-muted-foreground">No availability submitted yet.</p>
 							) : (
 								<div className="flex flex-wrap gap-1.5">

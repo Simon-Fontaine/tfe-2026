@@ -1434,6 +1434,7 @@ export type TeamScheduleMember = {
 	status: RosterStatus;
 	gameRole: OW2Role | null;
 	staffRole: StaffRole | null;
+	availabilityHidden: boolean;
 };
 
 export type TeamSchedule = {

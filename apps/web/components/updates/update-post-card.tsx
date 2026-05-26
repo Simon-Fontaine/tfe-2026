@@ -23,9 +23,15 @@ interface UpdatePostCardProps {
 	post: UpdatePostSummary;
 	actions?: React.ReactNode;
 	showScopeLink?: boolean;
+	detailHref?: string;
 }
 
-export function UpdatePostCard({ post, actions, showScopeLink = false }: UpdatePostCardProps) {
+export function UpdatePostCard({
+	post,
+	actions,
+	showScopeLink = false,
+	detailHref,
+}: UpdatePostCardProps) {
 	const scopeHref = showScopeLink ? getScopeHref(post) : null;
 
 	return (
@@ -64,6 +70,11 @@ export function UpdatePostCard({ post, actions, showScopeLink = false }: UpdateP
 				</div>
 
 				<div className="flex shrink-0 flex-wrap items-center gap-2">
+					{detailHref ? (
+						<Button asChild size="sm" variant="outline">
+							<Link href={detailHref}>View update</Link>
+						</Button>
+					) : null}
 					{scopeHref ? (
 						<Button asChild size="sm" variant="outline">
 							<Link href={scopeHref}>Open source</Link>

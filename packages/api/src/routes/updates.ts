@@ -382,4 +382,40 @@ publicUpdatesRoutes.get("/", async (c) => {
 	return c.json({ data: posts });
 });
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+publicUpdatesRoutes.get("/:id", async (c) => {
+	const id = c.req.param("id");
+	if (!UUID_RE.test(id)) return c.json({ error: "Update not found." }, 404);
+	const row = await db.query.updatePostTable.findFirst({
+		where: and(eq(updatePostTable.id, id), eq(updatePostTable.visibility, "public")),
+		with: {
+			author: {
+				columns: {
+					id: true,
+					displayName: true,
+				},
+			},
+			team: {
+				columns: {
+					id: true,
+					name: true,
+					tag: true,
+					organizationId: true,
+				},
+			},
+			organization: {
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+				},
+			},
+		},
+	});
+	if (!row) return c.json({ error: "Update not found." }, 404);
+	const post = mapUpdatePost(row, { canManage: false });
+	return c.json({ data: post });
+});
+
 export { publicUpdatesRoutes, updatesRoutes };
