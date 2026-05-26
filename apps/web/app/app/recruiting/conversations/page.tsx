@@ -1,7 +1,7 @@
-import { ChatWorkspace } from "@/components/chat/chat-workspace";
+import { RecruitmentConversationWorkspace } from "@/components/recruit/recruitment-conversation-workspace";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
-import { getRecruitmentChatConversations } from "@/lib/data/chat";
+import { getMyRecruitmentConversationSummaries } from "@/lib/data/chat";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 interface AppRecruitingConversationsPageProps {
@@ -14,7 +14,7 @@ export default async function AppRecruitingConversationsPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { conversation } = await searchParams;
-	const conversations = await getRecruitmentChatConversations();
+	const conversations = await getMyRecruitmentConversationSummaries();
 
 	return (
 		<PageContainer>
@@ -22,13 +22,10 @@ export default async function AppRecruitingConversationsPage({
 				title="Recruiting Conversations"
 				description="Follow up on every conversation that started from a recruiting listing or application."
 			/>
-			<ChatWorkspace
-				contextKey="recruiting"
+			<RecruitmentConversationWorkspace
 				currentUserId={user.id}
 				conversations={conversations}
 				initialConversationId={conversation ?? null}
-				emptyTitle="No recruiting conversations yet"
-				emptyDescription="Publish a listing or send an application to start a recruiting conversation."
 			/>
 		</PageContainer>
 	);

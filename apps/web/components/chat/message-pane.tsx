@@ -13,9 +13,15 @@ interface MessagePaneProps {
 	conversationId: string;
 	currentUserId: string;
 	conversation: ChatConversationSummary | undefined;
+	isArchived?: boolean;
 }
 
-export function MessagePane({ conversationId, currentUserId, conversation }: MessagePaneProps) {
+export function MessagePane({
+	conversationId,
+	currentUserId,
+	conversation,
+	isArchived,
+}: MessagePaneProps) {
 	const { setMessages, appendMessage, clearUnread } = useChatStore();
 	const messages = useChatStore((s) => s.messages[conversationId] ?? []);
 	const isLoading = useChatStore(
@@ -141,15 +147,22 @@ export function MessagePane({ conversationId, currentUserId, conversation }: Mes
 
 			<MessageList conversationId={conversationId} currentUserId={currentUserId} />
 
-			{conversation && !conversation.isArchived ? (
-				<MessageInput conversationId={conversationId} onSend={handleSend} />
-			) : conversation?.isArchived ? (
-				<div className="border-t px-4 py-3">
-					<p className="text-center text-xs text-muted-foreground">
-						This conversation is archived and read-only.
-					</p>
-				</div>
-			) : null}
+			{(() => {
+				const effectivelyArchived = isArchived ?? conversation?.isArchived;
+				if (effectivelyArchived) {
+					return (
+						<div className="border-t px-4 py-3">
+							<p className="text-center text-xs text-muted-foreground">
+								This conversation is archived — sending is disabled.
+							</p>
+						</div>
+					);
+				}
+				if (effectivelyArchived === false) {
+					return <MessageInput conversationId={conversationId} onSend={handleSend} />;
+				}
+				return null;
+			})()}
 		</div>
 	);
 }

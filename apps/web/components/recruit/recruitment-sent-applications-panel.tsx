@@ -31,6 +31,7 @@ function SentApplicationCard({
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [draftMessage, setDraftMessage] = useState(application.message ?? "");
+	const [hasSubmittedEdit, setHasSubmittedEdit] = useState(false);
 
 	const { submit: submitWithdraw, isPending: isWithdrawPending } = useFormAction(
 		withdrawRecruitmentApplicationAction,
@@ -70,7 +71,8 @@ function SentApplicationCard({
 	function saveEdit() {
 		const fd = new FormData();
 		fd.set("applicationId", application.id);
-		if (draftMessage) fd.set("message", draftMessage);
+		fd.set("message", draftMessage);
+		setHasSubmittedEdit(true);
 		submitEdit(fd);
 	}
 
@@ -114,7 +116,9 @@ function SentApplicationCard({
 								className="text-sm"
 								disabled={isEditPending}
 							/>
-							{editState?.error && <p className="text-xs text-destructive">{editState.error}</p>}
+							{hasSubmittedEdit && editState?.error && (
+								<p className="text-xs text-destructive">{editState.error}</p>
+							)}
 						</div>
 					) : (
 						application.message && (
@@ -143,7 +147,10 @@ function SentApplicationCard({
 						<Button
 							size="sm"
 							variant="outline"
-							onClick={() => setIsEditing(true)}
+							onClick={() => {
+								setIsEditing(true);
+								setHasSubmittedEdit(false);
+							}}
 							disabled={isWithdrawPending}
 						>
 							Edit

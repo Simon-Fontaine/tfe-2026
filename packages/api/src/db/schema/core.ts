@@ -695,6 +695,9 @@ export const recruitmentApplicationTable = pgTable(
 		message: text("message"),
 		status: recruitmentApplicationStatusEnum("status").notNull().default("pending"),
 
+		reviewerNotes: text("reviewer_notes"),
+		isShortlisted: boolean("is_shortlisted").notNull().default(false),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()

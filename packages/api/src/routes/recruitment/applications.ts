@@ -142,10 +142,27 @@ recruitmentApplicationsRoutes.patch("/:id", async (c) => {
 		);
 	}
 
-	await db
+	const updated = await db
 		.update(recruitmentApplicationTable)
-		.set({ message: parsed.output.message ?? null })
-		.where(eq(recruitmentApplicationTable.id, applicationId));
+		.set({ message: parsed.output.message || null })
+		.where(
+			and(
+				eq(recruitmentApplicationTable.id, applicationId),
+				eq(recruitmentApplicationTable.status, "pending")
+			)
+		)
+		.returning({ id: recruitmentApplicationTable.id });
+
+	if (updated.length === 0) {
+		return c.json(
+			{
+				error: "This application can no longer be edited. Open the conversation to follow up.",
+				canWithdraw: false,
+				conversationId: application.chatChannels[0]?.id ?? null,
+			},
+			409
+		);
+	}
 
 	return c.json({ success: true });
 });
@@ -463,6 +480,101 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 	});
 
 	return c.json({ success: true });
+});
+
+recruitmentApplicationsRoutes.patch("/:id/reviewer-notes", async (c) => {
+	const user = c.get("user");
+	const applicationId = c.req.param("id");
+	const body = await c.req.json().catch(() => null);
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const notesSchema = v.object({
+		reviewerNotes: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(2000)))),
+	});
+	const parsed = v.safeParse(notesSchema, body);
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const application = await db.query.recruitmentApplicationTable.findFirst({
+		where: eq(recruitmentApplicationTable.id, applicationId),
+		columns: { id: true },
+		with: {
+			listing: {
+				columns: { id: true, userId: true, ownerType: true, teamId: true, organizationId: true },
+			},
+		},
+	});
+	if (!application?.listing) return c.json({ error: "Application not found." }, 404);
+	if (!(await canManageRecruitmentListing(application.listing, user.id)))
+		return c.json(
+			{ error: "You do not have permission to update notes for this application." },
+			403
+		);
+
+	await db
+		.update(recruitmentApplicationTable)
+		.set({ reviewerNotes: parsed.output.reviewerNotes ?? null })
+		.where(eq(recruitmentApplicationTable.id, applicationId));
+
+	return c.json({ success: true });
+});
+
+recruitmentApplicationsRoutes.post("/:id/shortlist", async (c) => {
+	const user = c.get("user");
+	const applicationId = c.req.param("id");
+
+	const application = await db.query.recruitmentApplicationTable.findFirst({
+		where: eq(recruitmentApplicationTable.id, applicationId),
+		columns: { id: true, isShortlisted: true, status: true },
+		with: {
+			listing: {
+				columns: { id: true, userId: true, ownerType: true, teamId: true, organizationId: true },
+			},
+		},
+	});
+	if (!application?.listing) return c.json({ error: "Application not found." }, 404);
+	if (!(await canManageRecruitmentListing(application.listing, user.id)))
+		return c.json({ error: "You do not have permission to manage this application." }, 403);
+	if (application.status !== "pending")
+		return c.json({ error: "Cannot shortlist a settled application." }, 400);
+
+	const newValue = !application.isShortlisted;
+	await db
+		.update(recruitmentApplicationTable)
+		.set({ isShortlisted: newValue })
+		.where(eq(recruitmentApplicationTable.id, applicationId));
+
+	return c.json({ success: true, isShortlisted: newValue });
+});
+
+recruitmentApplicationsRoutes.post("/:id/request-follow-up", async (c) => {
+	const user = c.get("user");
+	const applicationId = c.req.param("id");
+
+	const application = await db.query.recruitmentApplicationTable.findFirst({
+		where: eq(recruitmentApplicationTable.id, applicationId),
+		columns: { id: true, status: true },
+		with: {
+			listing: {
+				columns: { id: true, userId: true, ownerType: true, teamId: true, organizationId: true },
+			},
+			chatChannels: { columns: { id: true } },
+		},
+	});
+	if (!application?.listing) return c.json({ error: "Application not found." }, 404);
+	if (!(await canManageRecruitmentListing(application.listing, user.id)))
+		return c.json({ error: "You do not have permission to manage this application." }, 403);
+	if (application.status !== "pending")
+		return c.json({ error: "This application is no longer active." }, 400);
+
+	const conversationId = application.chatChannels[0]?.id;
+	if (!conversationId) return c.json({ error: "No conversation found for this application." }, 400);
+
+	await sendRecruitmentSystemMessage(
+		conversationId,
+		"The team has requested additional information. Please reply in this conversation."
+	);
+
+	return c.json({ success: true, conversationId });
 });
 
 export { recruitmentApplicationsRoutes };

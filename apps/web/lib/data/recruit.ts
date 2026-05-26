@@ -1,4 +1,5 @@
 import type {
+	RecruitmentApplicationReviewSummary,
 	RecruitmentApplicationSummary,
 	RecruitmentListingCategory,
 	RecruitmentListingSummary,
@@ -20,6 +21,7 @@ export type {
 	RecruitmentListingCategory,
 	RecruitmentListingSummary,
 	RecruitmentApplicationSummary,
+	RecruitmentApplicationReviewSummary,
 };
 
 export const getManageableRecruitEntities = cache(
@@ -95,8 +97,8 @@ export const getMyRecruitmentApplications = cache(
 );
 
 export const getRecruitmentApplicationsForListing = cache(
-	async (listingId: string): Promise<RecruitmentApplicationSummary[]> => {
-		const res = await apiGet<RecruitmentApplicationSummary[]>(
+	async (listingId: string): Promise<RecruitmentApplicationReviewSummary[]> => {
+		const res = await apiGet<RecruitmentApplicationReviewSummary[]>(
 			apiRoutes.recruitment.listings.applications(listingId)
 		);
 		if ("data" in res) return res.data;

@@ -4,7 +4,7 @@ import {
 	UpdateRecruitmentListingSchema,
 	UpdateRecruitmentListingStatusSchema,
 } from "@scrimflow/shared";
-import { and, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -28,6 +28,7 @@ import {
 	createRecruitmentConversation,
 	isPlayerRecruitingDiscoverable,
 	mapRecruitmentApplication,
+	mapRecruitmentApplicationReview,
 	mapRecruitmentListing,
 } from "@/utils/recruit";
 import { getTeamAccessContext } from "@/utils/team";
@@ -271,6 +272,19 @@ recruitmentListingsRoutes.get("/:id/applications", async (c) => {
 
 	const rows = await db.query.recruitmentApplicationTable.findMany({
 		where: eq(recruitmentApplicationTable.listingId, listingId),
+		columns: {
+			id: true,
+			listingId: true,
+			applicantUserId: true,
+			applicantTeamId: true,
+			applicantOrganizationId: true,
+			message: true,
+			status: true,
+			reviewerNotes: true,
+			isShortlisted: true,
+			createdAt: true,
+			updatedAt: true,
+		},
 		with: {
 			listing: {
 				columns: { id: true, type: true, title: true },
@@ -288,7 +302,7 @@ recruitmentListingsRoutes.get("/:id/applications", async (c) => {
 		orderBy: [desc(recruitmentApplicationTable.createdAt)],
 	});
 
-	return c.json({ data: rows.map((row) => mapRecruitmentApplication(row)) });
+	return c.json({ data: rows.map((row) => mapRecruitmentApplicationReview(row)) });
 });
 
 recruitmentListingsRoutes.post("/", async (c) => {
@@ -507,8 +521,7 @@ recruitmentListingsRoutes.post("/:id/status", async (c) => {
 				resumeOwnerWhere,
 				eq(recruitmentListingTable.ownerType, listing.ownerType),
 				eq(recruitmentListingTable.status, "open"),
-				// Exclude the listing being resumed from the conflict check
-				...[listing.id !== listingId ? eq(recruitmentListingTable.id, listing.id) : undefined]
+				ne(recruitmentListingTable.id, listingId)
 			),
 			columns: { id: true },
 		});

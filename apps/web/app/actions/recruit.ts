@@ -471,6 +471,62 @@ export async function withdrawRecruitmentApplicationAction(
 	return { success: true };
 }
 
+export async function updateApplicationReviewNotesAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const { user } = await getCurrentSession();
+	if (!user) return { error: "You must be signed in." };
+
+	const applicationId = getString(formData, "applicationId");
+	const teamId = getOptionalString(formData, "teamId");
+	const orgId = getOptionalString(formData, "organizationId");
+	const result = await apiPatch(apiRoutes.recruitment.applications.reviewerNotes(applicationId), {
+		reviewerNotes: getOptionalString(formData, "reviewerNotes") ?? null,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateRecruitPaths({ teamId, orgId });
+	return { success: true };
+}
+
+export async function toggleApplicationShortlistAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const { user } = await getCurrentSession();
+	if (!user) return { error: "You must be signed in." };
+
+	const applicationId = getString(formData, "applicationId");
+	const teamId = getOptionalString(formData, "teamId");
+	const orgId = getOptionalString(formData, "organizationId");
+	const result = await apiPost(apiRoutes.recruitment.applications.shortlist(applicationId), {});
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateRecruitPaths({ teamId, orgId });
+	return { success: true };
+}
+
+export async function requestApplicationFollowUpAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult & { conversationId?: string }> {
+	const { user } = await getCurrentSession();
+	if (!user) return { error: "You must be signed in." };
+
+	const applicationId = getString(formData, "applicationId");
+	const teamId = getOptionalString(formData, "teamId");
+	const orgId = getOptionalString(formData, "organizationId");
+	const result = await apiPost<{ conversationId: string }>(
+		apiRoutes.recruitment.applications.requestFollowUp(applicationId),
+		{}
+	);
+	if (isApiActionError(result)) return toFormActionError(result);
+
+	await revalidateRecruitPaths({ teamId, orgId });
+	return { success: true, conversationId: result.conversationId };
+}
+
 export async function decideRecruitmentApplicationAction(
 	_prev: FormActionResult | null,
 	formData: FormData

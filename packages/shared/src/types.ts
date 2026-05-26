@@ -792,6 +792,11 @@ export type RecruitmentApplicationSummary = {
 	listingTitle: string;
 };
 
+export type RecruitmentApplicationReviewSummary = RecruitmentApplicationSummary & {
+	reviewerNotes: string | null;
+	isShortlisted: boolean;
+};
+
 export type RecruitmentConversationSummary = {
 	conversationId: string;
 	applicationId: string;
@@ -799,6 +804,7 @@ export type RecruitmentConversationSummary = {
 	listingCategory: RecruitmentListingCategory;
 	listingTitle: string;
 	listingStatus: RecruitmentListingStatus;
+	applicationStatus: RecruitmentApplicationStatus;
 	counterpartLabel: string;
 	counterpartAvatarUrl: string | null;
 	counterpartType: RecruitmentOwnerType;

@@ -1,12 +1,15 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
+import { PageSection } from "@/components/workspace/page-section";
 import { getRecruitmentApplicationsForListing } from "@/lib/data/recruit";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
@@ -61,6 +64,17 @@ export default async function TeamRecruitingPage({
 					) : undefined
 				}
 			/>
+
+			{team.data.currentUser.canManage && (
+				<PageSection
+					title="Conversations"
+					description="Open recruiting conversations for this team."
+				>
+					<Button asChild variant="outline" size="sm">
+						<Link href={appRoutes.recruiting.conversations}>View recruiting conversations</Link>
+					</Button>
+				</PageSection>
+			)}
 
 			{team.data.ownedListings.length === 0 ? (
 				<EmptyStateBlock

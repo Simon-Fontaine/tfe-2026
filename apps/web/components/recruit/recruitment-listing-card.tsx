@@ -2,7 +2,10 @@
 
 import { LinkIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { RecruitmentApplicationSummary, RecruitmentListingSummary } from "@scrimflow/shared";
+import type {
+	RecruitmentApplicationReviewSummary,
+	RecruitmentListingSummary,
+} from "@scrimflow/shared";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -43,7 +46,7 @@ interface RecruitmentListingCardProps {
 	listing: RecruitmentListingSummary;
 	currentUserId?: string | null;
 	entityOptions?: RecruitEntityOption[];
-	applications?: RecruitmentApplicationSummary[];
+	applications?: RecruitmentApplicationReviewSummary[];
 	teamId?: string;
 	organizationId?: string;
 	conversationHrefBase?: string;

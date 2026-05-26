@@ -78,6 +78,13 @@
       "when": 1779703155730,
       "tag": "0011_recruitment_listing_paused_status",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779739709712,
+      "tag": "0011_talented_star_brand",
+      "breakpoints": true
     }
   ]
 }

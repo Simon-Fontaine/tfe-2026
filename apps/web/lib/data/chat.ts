@@ -3,6 +3,7 @@ import type {
 	ChatConversationSummary,
 	ChatMessagePage,
 	CreateDirectConversationResult,
+	RecruitmentConversationSummary,
 	UserPresence,
 } from "@scrimflow/shared";
 import { cache } from "react";
@@ -26,6 +27,14 @@ export const getRecruitmentChatConversations = cache(
 	async (): Promise<ChatConversationSummary[]> => {
 		const conversations = await getChatConversations();
 		return conversations.filter((conversation) => conversation.type === "recruitment");
+	}
+);
+
+export const getMyRecruitmentConversationSummaries = cache(
+	async (): Promise<RecruitmentConversationSummary[]> => {
+		const res = await apiGet<RecruitmentConversationSummary[]>(apiRoutes.recruitment.conversations);
+		if ("data" in res) return res.data;
+		throw new Error(res.error);
 	}
 );
 

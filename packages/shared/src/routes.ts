@@ -232,7 +232,11 @@ export const apiRoutes = {
 			decision: (applicationId: string) =>
 				`/api/recruitment/applications/${applicationId}/decision`,
 			pendingCount: "/api/recruitment/applications/pending-count",
+			reviewerNotes: (id: string) => `/api/recruitment/applications/${id}/reviewer-notes`,
+			shortlist: (id: string) => `/api/recruitment/applications/${id}/shortlist`,
+			requestFollowUp: (id: string) => `/api/recruitment/applications/${id}/request-follow-up`,
 		},
+		conversations: "/api/recruitment/conversations",
 	},
 	scrims: {
 		root: "/api/scrims",

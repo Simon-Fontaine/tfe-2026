@@ -1,3 +1,4 @@
+import type { RecruitmentApplicationReviewSummary } from "@scrimflow/shared";
 import { and, count, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -485,6 +486,19 @@ export function mapRecruitmentApplication(row: {
 	};
 }
 
+export function mapRecruitmentApplicationReview(
+	row: Parameters<typeof mapRecruitmentApplication>[0] & {
+		reviewerNotes?: string | null;
+		isShortlisted?: boolean;
+	}
+): RecruitmentApplicationReviewSummary {
+	return {
+		...mapRecruitmentApplication(row),
+		reviewerNotes: row.reviewerNotes ?? null,
+		isShortlisted: row.isShortlisted ?? false,
+	};
+}
+
 export async function getRecruitmentConversationsForUser(userId: string) {
 	const conversations = await listConversationsForUser(userId);
 	const recruitmentConversations = conversations.filter(
@@ -584,6 +598,7 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 				listingCategory: listing.category,
 				listingTitle: listing.title,
 				listingStatus: listing.status,
+				applicationStatus: application.status,
 				counterpartLabel: counterpartLabel ?? "Recruitment conversation",
 				counterpartAvatarUrl: counterpartAvatarUrl,
 				counterpartType,

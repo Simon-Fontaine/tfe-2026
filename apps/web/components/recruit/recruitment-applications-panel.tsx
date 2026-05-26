@@ -1,16 +1,23 @@
 "use client";
 
-import type { RecruitmentApplicationSummary } from "@scrimflow/shared";
+import type { RecruitmentApplicationReviewSummary } from "@scrimflow/shared";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { decideRecruitmentApplicationAction } from "@/app/actions/recruit";
+import {
+	decideRecruitmentApplicationAction,
+	requestApplicationFollowUpAction,
+	toggleApplicationShortlistAction,
+	updateApplicationReviewNotesAction,
+} from "@/app/actions/recruit";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import {
+	APPLICATION_STATUS_LABELS,
 	getRecruitmentApplicationAcceptLabel,
 	RANK_LABELS,
 	RECRUITMENT_CATEGORY_LABELS,
@@ -23,8 +30,8 @@ import { cn } from "@/lib/utils";
 const STAFF_OPTIONS = ["coach", "analyst", "manager", "staff"] as const;
 const ROLE_OPTIONS = ["tank", "damage", "support"] as const;
 
-interface RecruitmentApplicationsPanelProps {
-	applications: RecruitmentApplicationSummary[];
+export interface RecruitmentApplicationsPanelProps {
+	applications: RecruitmentApplicationReviewSummary[];
 	teamId?: string;
 	organizationId?: string;
 	conversationHrefBase?: string;
@@ -35,20 +42,54 @@ function RecruitmentApplicationCard({
 	teamId,
 	organizationId,
 	conversationHrefBase,
+	isSettled,
 }: {
-	application: RecruitmentApplicationSummary;
+	application: RecruitmentApplicationReviewSummary;
 	teamId?: string;
 	organizationId?: string;
 	conversationHrefBase?: string;
+	isSettled: boolean;
 }) {
 	const [staffRole, setStaffRole] = useState<"coach" | "analyst" | "manager" | "staff">("staff");
 	const [gameRole, setGameRole] = useState<"tank" | "damage" | "support">(
 		application.senderPrimaryRole ?? "damage"
 	);
-	const { submit, isPending } = useFormAction(decideRecruitmentApplicationAction, {
-		loadingMessage: "Updating application…",
-		successMessage: "Application updated",
+	const [isEditingNotes, setIsEditingNotes] = useState(false);
+	const [draftNotes, setDraftNotes] = useState(application.reviewerNotes ?? "");
+	const [isShortlisted, setIsShortlisted] = useState(application.isShortlisted);
+
+	const { submit: submitDecide, isPending: isDecidePending } = useFormAction(
+		decideRecruitmentApplicationAction,
+		{
+			loadingMessage: "Updating application…",
+			successMessage: "Application updated",
+		}
+	);
+	const {
+		submit: submitShortlist,
+		isPending: isShortlistPending,
+		state: shortlistState,
+	} = useFormAction(toggleApplicationShortlistAction, {
+		loadingMessage: "Updating…",
+		successMessage: isShortlisted ? "Removed from shortlist" : "Shortlisted",
 	});
+	const { submit: submitFollowUp, isPending: isFollowUpPending } = useFormAction(
+		requestApplicationFollowUpAction,
+		{ successMessage: "Follow-up requested — conversation opened" }
+	);
+	const {
+		submit: submitNotes,
+		isPending: isNotesPending,
+		state: notesState,
+	} = useFormAction(updateApplicationReviewNotesAction, { successMessage: "Notes saved" });
+
+	useEffect(() => {
+		if (notesState?.success) setIsEditingNotes(false);
+	}, [notesState]);
+
+	useEffect(() => {
+		if (shortlistState?.success) setIsShortlisted((prev) => !prev);
+	}, [shortlistState]);
 
 	function handleDecision(action: "accept" | "reject") {
 		const fd = new FormData();
@@ -65,7 +106,32 @@ function RecruitmentApplicationCard({
 		if (action === "accept" && application.listingCategory === "lfs") {
 			fd.set("staffRole", staffRole);
 		}
-		submit(fd);
+		submitDecide(fd);
+	}
+
+	function handleShortlist() {
+		const fd = new FormData();
+		fd.set("applicationId", application.id);
+		if (teamId) fd.set("teamId", teamId);
+		if (organizationId) fd.set("organizationId", organizationId);
+		submitShortlist(fd);
+	}
+
+	function handleFollowUp() {
+		const fd = new FormData();
+		fd.set("applicationId", application.id);
+		if (teamId) fd.set("teamId", teamId);
+		if (organizationId) fd.set("organizationId", organizationId);
+		submitFollowUp(fd);
+	}
+
+	function handleSaveNotes() {
+		const fd = new FormData();
+		fd.set("applicationId", application.id);
+		fd.set("reviewerNotes", draftNotes);
+		if (teamId) fd.set("teamId", teamId);
+		if (organizationId) fd.set("organizationId", organizationId);
+		submitNotes(fd);
 	}
 
 	return (
@@ -104,6 +170,11 @@ function RecruitmentApplicationCard({
 						<Badge variant="secondary" className="text-[10px]">
 							{RECRUITMENT_CATEGORY_LABELS[application.listingCategory]}
 						</Badge>
+						{isShortlisted && (
+							<Badge variant="secondary" className="text-[10px]">
+								Shortlisted
+							</Badge>
+						)}
 					</div>
 					<div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
 						{application.senderPrimaryRole && (
@@ -114,7 +185,7 @@ function RecruitmentApplicationCard({
 						{application.senderRank && (
 							<span>{RANK_LABELS[application.senderRank] ?? application.senderRank}</span>
 						)}
-						<span className="capitalize">{application.status}</span>
+						<span>{APPLICATION_STATUS_LABELS[application.status]}</span>
 					</div>
 					{application.message && (
 						<p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
@@ -124,74 +195,148 @@ function RecruitmentApplicationCard({
 				</div>
 			</div>
 
+			{!isSettled && (
+				<>
+					{application.listingCategory === "lfp" || application.listingCategory === "lft" ? (
+						<div className="flex flex-wrap gap-2">
+							{ROLE_OPTIONS.map((option) => (
+								<button
+									key={option}
+									type="button"
+									data-selected={gameRole === option}
+									onClick={() => setGameRole(option)}
+									className={cn(
+										"border px-2.5 py-1 text-[10px] font-medium transition-colors hover:bg-muted",
+										"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+									)}
+								>
+									{ROLE_LABELS[option]}
+								</button>
+							))}
+						</div>
+					) : null}
+
+					{application.listingCategory === "lfs" ? (
+						<div className="flex flex-wrap gap-2">
+							{STAFF_OPTIONS.map((option) => (
+								<button
+									key={option}
+									type="button"
+									data-selected={staffRole === option}
+									onClick={() => setStaffRole(option)}
+									className={cn(
+										"border px-2.5 py-1 text-[10px] font-medium transition-colors hover:bg-muted",
+										"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
+									)}
+								>
+									{STAFF_ROLE_LABELS[option]}
+								</button>
+							))}
+						</div>
+					) : null}
+				</>
+			)}
+
 			<div className="flex flex-wrap items-center gap-2">
-				{application.listingCategory === "lfp" || application.listingCategory === "lft" ? (
-					<div className="flex flex-wrap gap-2">
-						{ROLE_OPTIONS.map((option) => (
-							<button
-								key={option}
-								type="button"
-								data-selected={gameRole === option}
-								onClick={() => setGameRole(option)}
-								className={cn(
-									"border px-2.5 py-1 text-[10px] font-medium transition-colors hover:bg-muted",
-									"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
-								)}
-							>
-								{ROLE_LABELS[option]}
-							</button>
-						))}
-					</div>
-				) : null}
+				{application.conversationId && (
+					<Button asChild size="sm" variant="outline">
+						<Link
+							href={`${
+								conversationHrefBase ?? appRoutes.recruiting.conversations
+							}?conversation=${application.conversationId}`}
+						>
+							Open conversation
+						</Link>
+					</Button>
+				)}
 
-				{application.listingCategory === "lfs" ? (
-					<div className="flex flex-wrap gap-2">
-						{STAFF_OPTIONS.map((option) => (
-							<button
-								key={option}
-								type="button"
-								data-selected={staffRole === option}
-								onClick={() => setStaffRole(option)}
-								className={cn(
-									"border px-2.5 py-1 text-[10px] font-medium transition-colors hover:bg-muted",
-									"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
-								)}
-							>
-								{STAFF_ROLE_LABELS[option]}
-							</button>
-						))}
-					</div>
-				) : null}
-
-				<div className="ml-auto flex flex-wrap gap-2">
-					{application.conversationId && (
-						<Button asChild size="sm" variant="outline">
-							<Link
-								href={`${
-									conversationHrefBase ?? appRoutes.recruiting.conversations
-								}?conversation=${application.conversationId}`}
-							>
-								Open conversation
-							</Link>
+				{!isSettled && (
+					<>
+						<Button
+							size="sm"
+							variant={isShortlisted ? "secondary" : "outline"}
+							onClick={handleShortlist}
+							disabled={isShortlistPending}
+						>
+							{isShortlistPending && <Spinner className="mr-1.5" />}
+							{isShortlisted ? "Shortlisted" : "Shortlist"}
 						</Button>
-					)}
-					{application.status === "pending" && (
-						<>
-							<Button size="sm" onClick={() => handleDecision("accept")} disabled={isPending}>
-								{isPending && <Spinner className="mr-1.5" />}
+						{shortlistState?.error && (
+							<p className="w-full text-[11px] text-destructive">{shortlistState.error}</p>
+						)}
+
+						{application.conversationId && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={handleFollowUp}
+								disabled={isFollowUpPending}
+							>
+								{isFollowUpPending && <Spinner className="mr-1.5" />}
+								Request follow-up
+							</Button>
+						)}
+
+						<div className="ml-auto flex flex-wrap gap-2">
+							<Button size="sm" onClick={() => handleDecision("accept")} disabled={isDecidePending}>
+								{isDecidePending && <Spinner className="mr-1.5" />}
 								{getRecruitmentApplicationAcceptLabel(application)}
 							</Button>
 							<Button
 								size="sm"
 								variant="outline"
 								onClick={() => handleDecision("reject")}
-								disabled={isPending}
+								disabled={isDecidePending}
 							>
 								Reject
 							</Button>
-						</>
-					)}
-				</div>
+						</div>
+					</>
+				)}
+			</div>
+
+			<div className="border-t pt-3">
+				{isEditingNotes ? (
+					<div className="space-y-2">
+						<p className="text-[11px] font-medium text-muted-foreground">Internal notes</p>
+						<Textarea
+							value={draftNotes}
+							onChange={(e) => setDraftNotes(e.target.value)}
+							placeholder="Add internal notes about this applicant…"
+							className="min-h-[80px] text-xs"
+							maxLength={2000}
+						/>
+						{notesState?.error && (
+							<p className="text-[11px] text-destructive">{notesState.error}</p>
+						)}
+						<div className="flex gap-2">
+							<Button size="sm" onClick={handleSaveNotes} disabled={isNotesPending}>
+								{isNotesPending && <Spinner className="mr-1.5" />}
+								Save
+							</Button>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => {
+									setDraftNotes(application.reviewerNotes ?? "");
+									setIsEditingNotes(false);
+								}}
+							>
+								Cancel
+							</Button>
+						</div>
+					</div>
+				) : (
+					<button
+						type="button"
+						className="text-[11px] text-muted-foreground hover:text-foreground"
+						onClick={() => setIsEditingNotes(true)}
+					>
+						{application.reviewerNotes
+							? `Notes: ${application.reviewerNotes.slice(0, 80)}${application.reviewerNotes.length > 80 ? "…" : ""}`
+							: "Add internal notes"}
+					</button>
+				)}
 			</div>
 		</div>
 	);
@@ -207,17 +352,39 @@ export function RecruitmentApplicationsPanel({
 		return <p className="text-xs text-muted-foreground">No applications yet.</p>;
 	}
 
+	const pending = applications.filter((a) => a.status === "pending");
+	const settled = applications.filter((a) => a.status !== "pending");
+
 	return (
 		<div className="space-y-3">
-			{applications.map((application) => (
+			{pending.map((application) => (
 				<RecruitmentApplicationCard
 					key={application.id}
 					application={application}
 					teamId={teamId}
 					organizationId={organizationId}
 					conversationHrefBase={conversationHrefBase}
+					isSettled={false}
 				/>
 			))}
+			{settled.length > 0 && (
+				<>
+					{pending.length > 0 && <div className="border-t" />}
+					<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+						Settled
+					</p>
+					{settled.map((application) => (
+						<RecruitmentApplicationCard
+							key={application.id}
+							application={application}
+							teamId={teamId}
+							organizationId={organizationId}
+							conversationHrefBase={conversationHrefBase}
+							isSettled={true}
+						/>
+					))}
+				</>
+			)}
 		</div>
 	);
 }

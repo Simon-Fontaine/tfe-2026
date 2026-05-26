@@ -16,6 +16,7 @@ import { realtimeRoutes } from "@/routes/realtime";
 import {
 	publicRecruitmentListingsRoutes,
 	recruitmentApplicationsRoutes,
+	recruitmentConversationsRoutes,
 	recruitmentListingsRoutes,
 } from "@/routes/recruitment";
 import { scheduleRoutes } from "@/routes/schedule";
@@ -60,6 +61,9 @@ app.route("/api/recruitment/listings", recruitmentListingsRoutes);
 
 app.use("/api/recruitment/applications/*", requireAuth);
 app.route("/api/recruitment/applications", recruitmentApplicationsRoutes);
+
+app.use("/api/recruitment/conversations/*", requireAuth);
+app.route("/api/recruitment/conversations", recruitmentConversationsRoutes);
 
 app.use("/api/schedule/*", requireAuth);
 app.route("/api/schedule", scheduleRoutes);
