@@ -43,7 +43,7 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 				<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
 					<AvatarImage src={message.senderAvatarUrl ?? undefined} className="rounded-none" />
 					<AvatarFallback className="rounded-none text-[10px] font-bold">
-						{message.senderDisplayName.slice(0, 2).toUpperCase()}
+						{(message.senderDisplayName ?? "?").slice(0, 2).toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
 			) : null}
@@ -100,7 +100,7 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 					</p>
 					{message.editedAt ? <p className="text-[10px] text-muted-foreground">(edited)</p> : null}
 
-					{isOwn && !isDeleted && !isEditing ? (
+					{isOwn && !isDeleted && !isEditing && !message.isSystemMessage ? (
 						<div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 							{onEdit ? (
 								<button

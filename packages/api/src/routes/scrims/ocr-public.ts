@@ -133,6 +133,7 @@ export function registerPublicScrimRoutes(publicScrimRoutes: Hono<AuthEnv>) {
 						organizationId: true,
 						avatarUrl: true,
 						rating: true,
+						isArchived: true,
 					},
 					with: {
 						organization: { columns: { name: true } },
@@ -146,6 +147,7 @@ export function registerPublicScrimRoutes(publicScrimRoutes: Hono<AuthEnv>) {
 						organizationId: true,
 						avatarUrl: true,
 						rating: true,
+						isArchived: true,
 					},
 					with: {
 						organization: { columns: { name: true } },

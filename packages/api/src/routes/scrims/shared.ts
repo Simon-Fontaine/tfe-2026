@@ -35,6 +35,7 @@ export async function findScrimWithRelations(scrimId: string) {
 					organizationId: true,
 					avatarUrl: true,
 					rating: true,
+					isArchived: true,
 				},
 				with: {
 					organization: {
@@ -50,6 +51,7 @@ export async function findScrimWithRelations(scrimId: string) {
 					organizationId: true,
 					avatarUrl: true,
 					rating: true,
+					isArchived: true,
 				},
 				with: {
 					organization: {
@@ -262,8 +264,12 @@ export type ScrimSummaryRow = {
 	updatedAt: Date;
 	createdByUserId: string | null;
 	createdBy: ScrimRow["createdBy"];
-	homeTeam: ScrimRow["homeTeam"];
-	awayTeam: ScrimRow["awayTeam"];
+	homeTeam: ScrimRow["homeTeam"] & { isArchived: boolean };
+	awayTeam: (ScrimRow["awayTeam"] & { isArchived: boolean }) | null;
+	homeTeamNameSnapshot: string | null;
+	homeTeamTagSnapshot: string | null;
+	awayTeamNameSnapshot: string | null;
+	awayTeamTagSnapshot: string | null;
 	confirmations: ScrimRow["confirmations"];
 };
 
@@ -296,6 +302,7 @@ export function mapBaseScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
 			organizationName: scrim.homeTeam.organization?.name ?? null,
 			avatarUrl: scrim.homeTeam.avatarUrl ?? null,
 			rating: scrim.homeTeam.rating,
+			isArchived: scrim.homeTeam.isArchived,
 		},
 		awayTeam: scrim.awayTeam
 			? {
@@ -306,8 +313,17 @@ export function mapBaseScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
 					organizationName: scrim.awayTeam.organization?.name ?? null,
 					avatarUrl: scrim.awayTeam.avatarUrl ?? null,
 					rating: scrim.awayTeam.rating,
+					isArchived: scrim.awayTeam.isArchived,
 				}
 			: null,
+		homeTeamSnapshot:
+			scrim.homeTeamNameSnapshot && scrim.homeTeamTagSnapshot
+				? { name: scrim.homeTeamNameSnapshot, tag: scrim.homeTeamTagSnapshot }
+				: null,
+		awayTeamSnapshot:
+			scrim.awayTeamNameSnapshot && scrim.awayTeamTagSnapshot
+				? { name: scrim.awayTeamNameSnapshot, tag: scrim.awayTeamTagSnapshot }
+				: null,
 		pendingConfirmationCount: scrim.confirmations.filter(
 			(confirmation) => confirmation.status !== "confirmed"
 		).length,

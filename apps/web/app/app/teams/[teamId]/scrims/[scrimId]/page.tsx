@@ -4,6 +4,8 @@ import { ConfirmScrimDialog } from "@/components/scrims/confirm-scrim-dialog";
 import { ReportScrimResultDialog } from "@/components/scrims/report-scrim-result-dialog";
 import { ResolveScrimDisputeDialog } from "@/components/scrims/resolve-scrim-dispute-dialog";
 import { ScrimConfirmationSection } from "@/components/scrims/scrim-confirmation-section";
+import { ScrimDetailRealtimeSync } from "@/components/scrims/scrim-detail-realtime-sync";
+import { ScrimLifecycleTimeline } from "@/components/scrims/scrim-lifecycle-timeline";
 import { ScrimMapsSection } from "@/components/scrims/scrim-maps-section";
 import { ScrimNegotiationHistory } from "@/components/scrims/scrim-negotiation-history";
 import { ScrimOcrJobsPanel } from "@/components/scrims/scrim-ocr-jobs-panel";
@@ -141,9 +143,17 @@ export default async function TeamScrimDetailPage({
 	const disputeResolution =
 		scrim.dispute.resolution ?? (scrim.status === "disputed" ? "pending" : null);
 
-	const title = scrim.awayTeam
-		? `[${scrim.homeTeam.tag}] ${scrim.homeTeam.name} vs [${scrim.awayTeam.tag}] ${scrim.awayTeam.name}`
-		: `[${scrim.homeTeam.tag}] ${scrim.homeTeam.name} vs Open opponent`;
+	const homeDisplayTag = scrim.homeTeamSnapshot?.tag ?? scrim.homeTeam.tag;
+	const homeDisplayName = scrim.homeTeamSnapshot?.name ?? scrim.homeTeam.name;
+	const awayDisplayTag = scrim.awayTeam
+		? (scrim.awayTeamSnapshot?.tag ?? scrim.awayTeam.tag)
+		: (scrim.awayTeamSnapshot?.tag ?? null);
+	const awayDisplayName = scrim.awayTeam
+		? (scrim.awayTeamSnapshot?.name ?? scrim.awayTeam.name)
+		: (scrim.awayTeamSnapshot?.name ?? null);
+	const title = awayDisplayTag
+		? `[${homeDisplayTag}] ${homeDisplayName} vs [${awayDisplayTag}] ${awayDisplayName}`
+		: `[${homeDisplayTag}] ${homeDisplayName} vs Open opponent`;
 	const primaryChatConversation =
 		availableChatConversations.find((c) => c.type === "scrim_lobby") ??
 		availableChatConversations[0] ??
@@ -151,6 +161,7 @@ export default async function TeamScrimDetailPage({
 
 	return (
 		<PageContainer>
+			<ScrimDetailRealtimeSync scrimId={scrim.id} />
 			<PageHeader
 				title={title}
 				detail={`[${team.tag}] ${team.name}`}
@@ -229,6 +240,22 @@ export default async function TeamScrimDetailPage({
 						pendingConfirmationCount={scrim.pendingConfirmationCount}
 					/>
 					<ScrimNegotiationHistory revisions={scrim.negotiationRevisions} />
+					{scrim.status === "cancelled" && team.currentUser.canManage ? (
+						<section className="border p-4">
+							<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+								Schedule recovery
+							</p>
+							<p className="mt-2 text-sm text-muted-foreground">
+								This scrim was cancelled. You can request a new scrim with the same or a different
+								opponent from the scrim queue.
+							</p>
+							<div className="mt-3">
+								<Button asChild size="sm" variant="outline">
+									<Link href={appRoutes.teams.scrims(team.id)}>Go to scrim queue</Link>
+								</Button>
+							</div>
+						</section>
+					) : null}
 					<ScrimConfirmationSection
 						confirmations={scrim.confirmations}
 						dispute={scrim.dispute}
@@ -287,7 +314,12 @@ export default async function TeamScrimDetailPage({
 							<div className="border p-3">
 								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Home</p>
 								<p className="mt-1 text-sm font-semibold">
-									[{scrim.homeTeam.tag}] {scrim.homeTeam.name}
+									[{homeDisplayTag}] {homeDisplayName}
+									{scrim.homeTeam.isArchived && (
+										<span className="ml-1 text-xs font-normal text-muted-foreground">
+											(archived)
+										</span>
+									)}
 								</p>
 								<p className="mt-1 text-xs text-muted-foreground">Rating {scrim.homeTeam.rating}</p>
 							</div>
@@ -296,18 +328,32 @@ export default async function TeamScrimDetailPage({
 								{scrim.awayTeam ? (
 									<>
 										<p className="mt-1 text-sm font-semibold">
-											[{scrim.awayTeam.tag}] {scrim.awayTeam.name}
+											[{scrim.awayTeamSnapshot?.tag ?? scrim.awayTeam.tag}]{" "}
+											{scrim.awayTeamSnapshot?.name ?? scrim.awayTeam.name}
+											{scrim.awayTeam.isArchived && (
+												<span className="ml-1 text-xs font-normal text-muted-foreground">
+													(archived)
+												</span>
+											)}
 										</p>
 										<p className="mt-1 text-xs text-muted-foreground">
 											Rating {scrim.awayTeam.rating}
 										</p>
 									</>
+								) : scrim.awayTeamSnapshot ? (
+									<p className="mt-1 text-sm font-semibold">
+										[{scrim.awayTeamSnapshot.tag}] {scrim.awayTeamSnapshot.name}
+										<span className="ml-1 text-xs font-normal text-muted-foreground">
+											(no longer available)
+										</span>
+									</p>
 								) : (
 									<p className="mt-1 text-sm font-semibold">No opponent assigned yet</p>
 								)}
 							</div>
 						</div>
 					</section>
+					<ScrimLifecycleTimeline scrim={scrim} />
 				</div>
 			</div>
 		</PageContainer>

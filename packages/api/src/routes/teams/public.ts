@@ -159,7 +159,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 					scheduledAt: true,
 				},
 				with: {
-					awayTeam: { columns: { name: true, tag: true } },
+					awayTeam: { columns: { name: true, tag: true, isArchived: true } },
 				},
 				orderBy: (s, { desc: d }) => [d(s.scheduledAt)],
 				limit: 10,
@@ -175,7 +175,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 					scheduledAt: true,
 				},
 				with: {
-					homeTeam: { columns: { name: true, tag: true } },
+					homeTeam: { columns: { name: true, tag: true, isArchived: true } },
 				},
 				orderBy: (s, { desc: d }) => [d(s.scheduledAt)],
 				limit: 10,
@@ -205,6 +205,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 			id: scrim.id,
 			opponentName: scrim.awayTeam?.name ?? "TBD",
 			opponentTag: scrim.awayTeam?.tag ?? "???",
+			opponentIsArchived: scrim.awayTeam?.isArchived ?? false,
 			result: h === a ? "draw" : h > a ? "win" : "loss",
 			homeMapScore: h,
 			awayMapScore: a,
@@ -222,6 +223,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 			id: scrim.id,
 			opponentName: scrim.homeTeam?.name ?? "TBD",
 			opponentTag: scrim.homeTeam?.tag ?? "???",
+			opponentIsArchived: scrim.homeTeam?.isArchived ?? false,
 			result: h === a ? "draw" : a > h ? "win" : "loss",
 			homeMapScore: h,
 			awayMapScore: a,

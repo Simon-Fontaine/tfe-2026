@@ -8,10 +8,12 @@ interface ScrimNegotiationHistoryProps {
 
 const ACTION_LABELS: Record<ScrimNegotiationRevisionSummary["action"], string> = {
 	accept: "Accepted",
+	cancel: "Cancelled",
 	decline: "Declined",
 	reschedule: "Reschedule proposed",
 	propose_changes: "Terms proposed",
 	expired: "Expired",
+	start: "Marked in progress",
 };
 
 export function ScrimNegotiationHistory({ revisions }: ScrimNegotiationHistoryProps) {
@@ -59,7 +61,9 @@ export function ScrimNegotiationHistory({ revisions }: ScrimNegotiationHistoryPr
 							</p>
 						) : null}
 						{rev.proposedMessage ? (
-							<p className="mt-1 text-xs text-muted-foreground">Message: {rev.proposedMessage}</p>
+							<p className="mt-1 text-xs text-muted-foreground">
+								{rev.action === "cancel" ? "Reason" : "Message"}: {rev.proposedMessage}
+							</p>
 						) : null}
 						<p className="mt-1 text-[11px] text-muted-foreground">
 							{new Date(rev.createdAt).toLocaleString()}

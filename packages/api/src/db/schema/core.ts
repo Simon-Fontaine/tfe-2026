@@ -875,6 +875,11 @@ export const scrimTable = pgTable(
 		/** Optional message from the requester. */
 		message: text("message"),
 
+		homeTeamNameSnapshot: text("home_team_name_snapshot"),
+		homeTeamTagSnapshot: text("home_team_tag_snapshot"),
+		awayTeamNameSnapshot: text("away_team_name_snapshot"),
+		awayTeamTagSnapshot: text("away_team_tag_snapshot"),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()

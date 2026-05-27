@@ -218,6 +218,9 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 									<div>
 										<p className="text-sm font-medium">
 											[{scrim.opponentTag}] {scrim.opponentName}
+											{scrim.opponentIsArchived && (
+												<span className="ml-1 text-xs text-muted-foreground">(archived)</span>
+											)}
 										</p>
 										{scrim.scheduledAt && (
 											<p className="text-xs text-muted-foreground">

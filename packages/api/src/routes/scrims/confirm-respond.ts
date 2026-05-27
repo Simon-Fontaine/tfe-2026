@@ -10,7 +10,7 @@ import { ensureScrimConversationLifecycle } from "@/utils/chat";
 import { applyCompletedScrimRating } from "@/utils/rating";
 import { verifyTeamManager } from "@/utils/team";
 import { canManageAnyScrimTeam, notifyTeamAdmins, resolveScrimStatus } from "./access";
-import { mapScrimDetail } from "./detail";
+import { mapScrimDetail, publishScrimStatusChanged } from "./detail";
 import { findScrimWithRelations, ScrimWorkflowError } from "./shared";
 
 export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
@@ -153,6 +153,9 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after status update." }, 500);
 
+		publishScrimStatusChanged(scrimId, detail.status);
+		await ensureScrimConversationLifecycle(scrimId);
+
 		if (parsed.output.status === "disputed") {
 			await Promise.all(
 				[detail.homeTeam.id, detail.awayTeam?.id ?? null]
@@ -227,12 +230,15 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 							)
 					);
 				}
+				await ensureScrimConversationLifecycle(scrimId);
+				publishScrimStatusChanged(scrimId, "cancelled");
 				return c.json({ error: "This scrim request has expired and has been cancelled." }, 409);
 			}
 		}
 
 		const action = parsed.output.action;
 		let rescheduleIsHomeTeamActor = false;
+		let cancelActorTeamId: string = scrim.homeTeamId;
 
 		if (action === "accept") {
 			if (!scrim.awayTeamId) {
@@ -370,6 +376,58 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 					proposedMessage: parsed.output.message ?? null,
 				});
 			});
+		} else if (action === "start") {
+			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
+				return c.json({ error: "Only a team manager can mark this scrim as in progress." }, 403);
+			}
+			if (scrim.status !== "accepted" && scrim.status !== "scheduled") {
+				return c.json(
+					{ error: "Only accepted or scheduled scrims can be marked as in progress." },
+					400
+				);
+			}
+			if (!scrim.awayTeamId) {
+				return c.json({ error: "Both teams must be assigned before the scrim can start." }, 400);
+			}
+			const isHomeTeamActor = await verifyTeamManager(scrim.homeTeamId, user.id);
+			const startActorTeamId = isHomeTeamActor ? scrim.homeTeamId : scrim.awayTeamId;
+			try {
+				await db.transaction(async (tx) => {
+					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+					const lockedScrim = await tx.query.scrimTable.findFirst({
+						where: eq(scrimTable.id, scrimId),
+						columns: { id: true, status: true },
+					});
+					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status !== "accepted" && lockedScrim.status !== "scheduled") {
+						throw new ScrimWorkflowError(
+							409,
+							"This scrim has already been updated by another action. Refresh to see the current state."
+						);
+					}
+					await tx
+						.update(scrimTable)
+						.set({ status: "in_progress" })
+						.where(eq(scrimTable.id, scrimId));
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: user.id,
+						actorTeamId: startActorTeamId,
+						action: "start",
+						priorScheduledAt: scrim.scheduledAt,
+						proposedScheduledAt: null,
+						priorConfig: scrim.config,
+						proposedConfig: null,
+						priorMessage: scrim.message,
+						proposedMessage: null,
+					});
+				});
+			} catch (error) {
+				if (error instanceof ScrimWorkflowError) {
+					return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+				}
+				throw error;
+			}
 		} else {
 			// cancel
 			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
@@ -387,8 +445,69 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			if (scrim.status === "cancelled") {
 				return c.json({ error: "This scrim is already cancelled." }, 400);
 			}
+			if (scrim.status === "completed") {
+				return c.json({ error: "Completed scrims cannot be changed." }, 400);
+			}
 
-			await db.update(scrimTable).set({ status: "cancelled" }).where(eq(scrimTable.id, scrimId));
+			cancelActorTeamId = (await verifyTeamManager(scrim.homeTeamId, user.id))
+				? scrim.homeTeamId
+				: (scrim.awayTeamId ?? scrim.homeTeamId);
+
+			try {
+				await db.transaction(async (tx) => {
+					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+
+					const lockedScrim = await tx.query.scrimTable.findFirst({
+						where: eq(scrimTable.id, scrimId),
+						columns: {
+							id: true,
+							status: true,
+							homeTeamId: true,
+							awayTeamId: true,
+							scheduledAt: true,
+							config: true,
+							message: true,
+						},
+					});
+
+					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status === "awaiting_confirmation" || lockedScrim.status === "disputed") {
+						throw new ScrimWorkflowError(
+							400,
+							"Once results have been reported, this scrim must be settled through confirmations or dispute resolution."
+						);
+					}
+					if (lockedScrim.status === "cancelled") {
+						throw new ScrimWorkflowError(400, "This scrim is already cancelled.");
+					}
+					if (lockedScrim.status === "completed") {
+						throw new ScrimWorkflowError(400, "Completed scrims cannot be changed.");
+					}
+
+					await tx
+						.update(scrimTable)
+						.set({ status: "cancelled" })
+						.where(eq(scrimTable.id, scrimId));
+
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: user.id,
+						actorTeamId: cancelActorTeamId,
+						action: "cancel",
+						priorScheduledAt: lockedScrim.scheduledAt,
+						proposedScheduledAt: null,
+						priorConfig: lockedScrim.config,
+						proposedConfig: null,
+						priorMessage: lockedScrim.message,
+						proposedMessage: parsed.output.cancelReason ?? null,
+					});
+				});
+			} catch (error) {
+				if (error instanceof ScrimWorkflowError) {
+					return c.json({ error: error.message }, { status: error.status as 400 | 404 });
+				}
+				throw error;
+			}
 		}
 
 		await ensureScrimConversationLifecycle(scrimId);
@@ -435,8 +554,14 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 				body: `${detail.awayTeam?.name ?? "The opponent"} proposed updated terms for your scrim request.`,
 				scrimId: detail.id,
 			});
-		} else {
-			// cancel
+		} else if (action === "cancel") {
+			const cancelActorTeamName =
+				cancelActorTeamId === detail.homeTeam.id
+					? detail.homeTeam.name
+					: (detail.awayTeam?.name ?? detail.homeTeam.name);
+			const cancelReasonSuffix = parsed.output.cancelReason
+				? ` Reason: ${parsed.output.cancelReason}`
+				: "";
 			await Promise.all(
 				[detail.homeTeam.id, detail.awayTeam?.id ?? null]
 					.filter((teamId): teamId is string => !!teamId)
@@ -446,11 +571,36 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 							actorUserId: user.id,
 							type: "scrim_cancelled",
 							title: "Scrim cancelled",
-							body: `${detail.homeTeam.name}${detail.awayTeam ? ` vs ${detail.awayTeam.name}` : ""} has been cancelled.`,
+							body: `${cancelActorTeamName} cancelled the scrim between ${detail.homeTeam.name}${detail.awayTeam ? ` and ${detail.awayTeam.name}` : ""}.${cancelReasonSuffix}`,
 							scrimId: detail.id,
 						})
 					)
 			);
+		} else if (action === "start") {
+			await Promise.all(
+				[detail.homeTeam.id, detail.awayTeam?.id ?? null]
+					.filter((teamId): teamId is string => !!teamId)
+					.map((teamId) =>
+						notifyTeamAdmins({
+							teamId,
+							actorUserId: user.id,
+							type: "scrim_started",
+							title: "Scrim is now in progress",
+							body: `${detail.homeTeam.name}${detail.awayTeam ? ` vs ${detail.awayTeam.name}` : ""} has started. Report results when done.`,
+							scrimId: detail.id,
+						})
+					)
+			);
+		}
+
+		if (action === "accept") {
+			publishScrimStatusChanged(scrimId, detail.status);
+		} else if (action === "decline" || action === "cancel") {
+			publishScrimStatusChanged(scrimId, "cancelled");
+		} else if (action === "reschedule") {
+			publishScrimStatusChanged(scrimId, "scheduled");
+		} else if (action === "start") {
+			publishScrimStatusChanged(scrimId, "in_progress");
 		}
 
 		return c.json({ data: mapScrimDetail(detail) });

@@ -60,6 +60,14 @@ function mapOcrJobRealtimePayload(
 	};
 }
 
+export function publishScrimStatusChanged(scrimId: string, status: ScrimDetail["status"]) {
+	publishScrimEvent({
+		scrimId,
+		event: "scrim:status-changed",
+		payload: { status, occurredAt: new Date().toISOString() },
+	});
+}
+
 export function publishOcrJobRealtimeUpdate(
 	job: Pick<
 		ScrimDetail["ocrJobs"][number],

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."notification_type" ADD VALUE 'scrim_started' BEFORE 'scrim_reminder';

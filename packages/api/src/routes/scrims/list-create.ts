@@ -75,6 +75,7 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 					organizationId: true,
 					avatarUrl: true,
 					rating: true,
+					isArchived: true,
 				},
 				with: {
 					organization: { columns: { name: true } },
@@ -88,6 +89,7 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 					organizationId: true,
 					avatarUrl: true,
 					rating: true,
+					isArchived: true,
 				},
 				with: {
 					organization: { columns: { name: true } },
@@ -206,10 +208,25 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 			return c.json({ error: "You do not have permission to create scrims for this team." }, 403);
 		}
 
+		const homeTeamRow = await db.query.teamTable.findFirst({
+			where: eq(teamTable.id, parsed.output.homeTeamId),
+			columns: { id: true, name: true, tag: true },
+		});
+		if (!homeTeamRow) return c.json({ error: "Home team not found." }, 404);
+
+		let awayTeamSnapshot: { name: string; tag: string } | null = null;
+
 		if (parsed.output.awayTeamId) {
 			const awayTeam = await db.query.teamTable.findFirst({
 				where: eq(teamTable.id, parsed.output.awayTeamId),
-				columns: { id: true, lifecycleStatus: true, isArchived: true, isPublic: true },
+				columns: {
+					id: true,
+					name: true,
+					tag: true,
+					lifecycleStatus: true,
+					isArchived: true,
+					isPublic: true,
+				},
 			});
 			if (!awayTeam) return c.json({ error: "Away team not found." }, 404);
 			if (awayTeam.lifecycleStatus !== "active" || awayTeam.isArchived || !awayTeam.isPublic) {
@@ -218,6 +235,7 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 					422
 				);
 			}
+			awayTeamSnapshot = { name: awayTeam.name, tag: awayTeam.tag };
 
 			const { homeTeamId, awayTeamId } = parsed.output;
 			const BLOCKING_STATUSES = ["pending", "accepted", "scheduled", "in_progress"] as const;
@@ -254,6 +272,10 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 					scheduledAt: parsed.output.scheduledAt ? new Date(parsed.output.scheduledAt) : null,
 					config: parsed.output.config ?? {},
 					createdByUserId: user.id,
+					homeTeamNameSnapshot: homeTeamRow.name,
+					homeTeamTagSnapshot: homeTeamRow.tag,
+					awayTeamNameSnapshot: awayTeamSnapshot?.name ?? null,
+					awayTeamTagSnapshot: awayTeamSnapshot?.tag ?? null,
 				})
 				.returning({ id: scrimTable.id });
 

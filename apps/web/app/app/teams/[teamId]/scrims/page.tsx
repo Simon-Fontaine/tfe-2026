@@ -32,8 +32,24 @@ function formatScheduledAt(value: string | null) {
 	}).format(new Date(value));
 }
 
-function getOpponent(scrim: ScrimSummary, teamId: string) {
-	return scrim.homeTeam.id === teamId ? scrim.awayTeam : scrim.homeTeam;
+function getOpponentDisplay(
+	scrim: ScrimSummary,
+	teamId: string
+): { label: string; isArchived: boolean } {
+	const isHome = scrim.homeTeam.id === teamId;
+	const opponent = isHome ? scrim.awayTeam : scrim.homeTeam;
+	const snapshot = isHome ? scrim.awayTeamSnapshot : scrim.homeTeamSnapshot;
+
+	if (!opponent) {
+		return {
+			label: snapshot ? `[${snapshot.tag}] ${snapshot.name}` : "Open opponent slot",
+			isArchived: false,
+		};
+	}
+	if (snapshot) {
+		return { label: `[${snapshot.tag}] ${snapshot.name}`, isArchived: opponent.isArchived };
+	}
+	return { label: `[${opponent.tag}] ${opponent.name}`, isArchived: opponent.isArchived };
 }
 
 function isNeedsAction(scrim: ScrimSummary, teamId: string): boolean {
@@ -43,7 +59,7 @@ function isNeedsAction(scrim: ScrimSummary, teamId: string): boolean {
 }
 
 function ScrimRow({ scrim, teamId }: { scrim: ScrimSummary; teamId: string }) {
-	const opponent = getOpponent(scrim, teamId);
+	const opponentDisplay = getOpponentDisplay(scrim, teamId);
 	const pendingSteps = scrim.pendingConfirmationCount;
 
 	return (
@@ -52,7 +68,10 @@ function ScrimRow({ scrim, teamId }: { scrim: ScrimSummary; teamId: string }) {
 				<div className="space-y-2">
 					<div className="flex flex-wrap items-center gap-2">
 						<p className="text-sm font-semibold">
-							{opponent ? `[${opponent.tag}] ${opponent.name}` : "Open opponent slot"}
+							{opponentDisplay.label}
+							{opponentDisplay.isArchived && (
+								<span className="ml-1.5 text-xs font-normal text-muted-foreground">(archived)</span>
+							)}
 						</p>
 						<ScrimStatusBadge status={scrim.status} />
 					</div>

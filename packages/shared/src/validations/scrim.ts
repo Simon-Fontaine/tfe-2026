@@ -13,6 +13,7 @@ const SCRIM_RESPONSE_ACTION_VALUES = [
 	"decline",
 	"reschedule",
 	"propose_changes",
+	"start",
 ] as const;
 const SCRIM_DISPUTE_RESOLUTION_ACTION_VALUES = ["confirm_reported_result", "void_scrim"] as const;
 
@@ -54,6 +55,7 @@ export const RespondToScrimSchema = v.object({
 		})
 	),
 	message: optionalTrimmedString(1000, "Message cannot exceed 1000 characters"),
+	cancelReason: optionalTrimmedString(500, "Cancel reason cannot exceed 500 characters"),
 });
 
 export type RespondToScrimInput = v.InferOutput<typeof RespondToScrimSchema>;

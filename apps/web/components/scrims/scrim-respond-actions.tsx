@@ -55,12 +55,13 @@ function toIsoTimestamp(value: string) {
 	return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 }
 
-type RespondAction = "accept" | "cancel" | "decline" | "reschedule" | "propose_changes";
+type RespondAction = "accept" | "cancel" | "decline" | "reschedule" | "propose_changes" | "start";
 
 interface ExtraFields {
 	scheduledAt?: string;
 	config?: { bestOf?: number; format?: string };
 	message?: string;
+	cancelReason?: string;
 }
 
 export function ScrimRespondActions({
@@ -78,6 +79,7 @@ export function ScrimRespondActions({
 	const [declineOpen, setDeclineOpen] = useState(false);
 	const [rescheduleOpen, setRescheduleOpen] = useState(false);
 	const [proposeOpen, setProposeOpen] = useState(false);
+	const [startOpen, setStartOpen] = useState(false);
 
 	const [acceptScheduledAt, setAcceptScheduledAt] = useState(toDateTimeLocal(scheduledAt));
 	const [rescheduleScheduledAt, setRescheduleScheduledAt] = useState(toDateTimeLocal(scheduledAt));
@@ -85,6 +87,7 @@ export function ScrimRespondActions({
 	const [proposeFormat, setProposeFormat] = useState("");
 	const [proposeScheduledAt, setProposeScheduledAt] = useState(toDateTimeLocal(scheduledAt));
 	const [proposeMessage, setProposeMessage] = useState("");
+	const [cancelReason, setCancelReason] = useState("");
 
 	const [acceptError, setAcceptError] = useState<string | undefined>(undefined);
 	const [rescheduleError, setRescheduleError] = useState<string | undefined>(undefined);
@@ -103,9 +106,26 @@ export function ScrimRespondActions({
 	const canDecline = canManage && isAwayTeamContext && scrimStatus === "pending";
 	const canProposeChanges = canManage && isAwayTeamContext && scrimStatus === "pending";
 	const canReschedule = canManage && (scrimStatus === "accepted" || scrimStatus === "scheduled");
-	const canCancel = canManage && scrimStatus !== "cancelled" && scrimStatus !== "completed";
+	const canStart =
+		canManage && (scrimStatus === "accepted" || scrimStatus === "scheduled") && !!awayTeamId;
+	const canCancel =
+		canManage &&
+		scrimStatus !== "cancelled" &&
+		scrimStatus !== "completed" &&
+		scrimStatus !== "awaiting_confirmation" &&
+		scrimStatus !== "disputed";
+	const showLockedGuidance =
+		canManage && (scrimStatus === "awaiting_confirmation" || scrimStatus === "disputed");
 
-	if (!canAccept && !canDecline && !canProposeChanges && !canReschedule && !canCancel) {
+	if (
+		!canAccept &&
+		!canDecline &&
+		!canProposeChanges &&
+		!canReschedule &&
+		!canStart &&
+		!canCancel &&
+		!showLockedGuidance
+	) {
 		return null;
 	}
 
@@ -130,6 +150,7 @@ export function ScrimRespondActions({
 								: extra?.scheduledAt,
 					config: extra?.config,
 					message: extra?.message,
+					cancelReason: extra?.cancelReason,
 				}),
 			});
 			const payload = await readApiPayload<ScrimDetail>(response);
@@ -154,6 +175,7 @@ export function ScrimRespondActions({
 				decline: "Scrim request declined.",
 				reschedule: "Reschedule proposed.",
 				propose_changes: "Updated terms proposed.",
+				start: "Scrim marked as in progress.",
 			};
 			toast.success(successMessages[action]);
 
@@ -162,6 +184,7 @@ export function ScrimRespondActions({
 			setDeclineOpen(false);
 			setRescheduleOpen(false);
 			setProposeOpen(false);
+			setStartOpen(false);
 
 			startTransition(() => {
 				router.refresh();
@@ -183,7 +206,14 @@ export function ScrimRespondActions({
 	}
 
 	return (
-		<div className="flex flex-wrap gap-2">
+		<div className="flex flex-wrap items-center gap-2">
+			{showLockedGuidance ? (
+				<p className="text-sm text-muted-foreground">
+					{scrimStatus === "awaiting_confirmation"
+						? "Results have been reported — confirm or dispute using the section below."
+						: "This scrim is under dispute — use the dispute resolution section below."}
+				</p>
+			) : null}
 			{canAccept ? (
 				<Dialog open={acceptOpen} onOpenChange={setAcceptOpen}>
 					<DialogTrigger asChild>
@@ -447,8 +477,42 @@ export function ScrimRespondActions({
 				</Dialog>
 			) : null}
 
+			{canStart ? (
+				<AlertDialog open={startOpen} onOpenChange={setStartOpen}>
+					<AlertDialogTrigger asChild>
+						<Button size="sm">Start scrim</Button>
+					</AlertDialogTrigger>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Mark scrim as in progress?</AlertDialogTitle>
+							<AlertDialogDescription>
+								Both teams will see the scrim as in progress. Either team manager can still report
+								results when done.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={pendingAction !== null}>Cancel</AlertDialogCancel>
+							<Button
+								size="sm"
+								onClick={() => void submitAction("start")}
+								disabled={pendingAction !== null}
+							>
+								{pendingAction === "start" && <Spinner className="mr-1.5" />}
+								Start
+							</Button>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			) : null}
+
 			{canCancel ? (
-				<AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+				<AlertDialog
+					open={cancelOpen}
+					onOpenChange={(open) => {
+						setCancelOpen(open);
+						if (!open) setCancelReason("");
+					}}
+				>
 					<AlertDialogTrigger asChild>
 						<Button size="sm" variant="outline">
 							Cancel scrim
@@ -462,12 +526,29 @@ export function ScrimRespondActions({
 								confirmation stop here.
 							</AlertDialogDescription>
 						</AlertDialogHeader>
+						<div className="px-1 pb-2">
+							<Field>
+								<FieldLabel>Reason (optional)</FieldLabel>
+								<Input
+									placeholder="Brief reason for both teams"
+									value={cancelReason}
+									onChange={(e) => setCancelReason(e.target.value)}
+									disabled={pendingAction !== null}
+									maxLength={500}
+								/>
+								<FieldDescription>
+									Visible to both teams in the negotiation history.
+								</FieldDescription>
+							</Field>
+						</div>
 						<AlertDialogFooter>
 							<AlertDialogCancel disabled={pendingAction !== null}>Back</AlertDialogCancel>
 							<Button
 								size="sm"
 								variant="destructive"
-								onClick={() => void submitAction("cancel")}
+								onClick={() =>
+									void submitAction("cancel", { cancelReason: cancelReason || undefined })
+								}
 								disabled={pendingAction !== null}
 							>
 								{pendingAction === "cancel" && <Spinner className="mr-1.5" />}

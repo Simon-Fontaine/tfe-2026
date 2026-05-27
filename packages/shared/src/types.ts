@@ -491,6 +491,7 @@ export type TeamPublicPreview = {
 		id: string;
 		opponentName: string;
 		opponentTag: string;
+		opponentIsArchived: boolean;
 		result: "win" | "loss" | "draw";
 		homeMapScore: number;
 		awayMapScore: number;
@@ -1035,6 +1036,12 @@ export type AppRealtimeEvent =
 			job: ScrimOcrJobRealtimePayload;
 	  }
 	| {
+			type: "scrim:status-changed";
+			scrimId: string;
+			status: ScrimStatus;
+			occurredAt: IsoDateString;
+	  }
+	| {
 			type: "recruit:application-received";
 			listingId: string;
 			application: RecruitmentApplicationSummary;
@@ -1151,6 +1158,7 @@ export type ScrimTeamSummary = {
 	organizationName: string | null;
 	avatarUrl: string | null;
 	rating: number;
+	isArchived: boolean;
 };
 
 export type ScrimConfirmationSummary = {
@@ -1312,7 +1320,7 @@ export type ScrimResultRevisionSummary = {
 
 export type ScrimNegotiationRevisionSummary = {
 	id: string;
-	action: "accept" | "decline" | "reschedule" | "propose_changes" | "expired";
+	action: "accept" | "cancel" | "decline" | "reschedule" | "propose_changes" | "expired" | "start";
 	actorUserId: string | null;
 	actorDisplayName: string | null;
 	actorTeamId: string | null;
@@ -1368,6 +1376,8 @@ export type ScrimSummary = {
 	createdByDisplayName: string | null;
 	homeTeam: ScrimTeamSummary;
 	awayTeam: ScrimTeamSummary | null;
+	homeTeamSnapshot: { name: string; tag: string } | null;
+	awayTeamSnapshot: { name: string; tag: string } | null;
 	pendingConfirmationCount: number;
 };
 

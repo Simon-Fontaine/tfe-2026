@@ -78,15 +78,17 @@ export function MessageList({ conversationId, currentUserId, participantNames }:
 		return () => observer.disconnect();
 	}, [loadOlder, nextCursor, isLoadingOlder]);
 
-	// Mark conversation read when messages are visible
+	// Mark conversation read when messages are visible.
+	// Skip temp-* optimistic IDs — use the last real message instead so a pending
+	// optimistic send doesn't permanently block the read receipt.
 	useEffect(() => {
-		const lastMessage = messages[messages.length - 1];
-		if (!lastMessage) return;
+		const lastRealMessage = [...messages].reverse().find((m) => !m.id.startsWith("temp-"));
+		if (!lastRealMessage) return;
 		void fetch(apiRoutes.chat.read(conversationId), {
 			method: "POST",
 			credentials: "include",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ lastReadMessageId: lastMessage.id }),
+			body: JSON.stringify({ lastReadMessageId: lastRealMessage.id }),
 		});
 	}, [messages, conversationId]);
 

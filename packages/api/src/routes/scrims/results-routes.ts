@@ -12,10 +12,11 @@ import { db } from "@/db";
 import { scrimConfirmationTable, scrimResultRevisionTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
+import { ensureScrimConversationLifecycle } from "@/utils/chat";
 import { applyCompletedScrimRating } from "@/utils/rating";
 import { verifyTeamManager } from "@/utils/team";
 import { canResolveScrimDispute, notifyTeamAdmins } from "./access";
-import { mapScrimDetail } from "./detail";
+import { mapScrimDetail, publishScrimStatusChanged } from "./detail";
 import {
 	buildOcrResultSnapshot,
 	buildPersistedScrimResultSnapshot,
@@ -279,6 +280,9 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after result submission." }, 500);
 
+		publishScrimStatusChanged(scrimId, detail.status);
+		await ensureScrimConversationLifecycle(scrimId);
+
 		return c.json({ data: mapScrimDetail(detail) });
 	});
 
@@ -359,6 +363,9 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after dispute resolution." }, 500);
+
+		publishScrimStatusChanged(scrimId, detail.status);
+		await ensureScrimConversationLifecycle(scrimId);
 
 		await Promise.all(
 			[detail.homeTeam.id, detail.awayTeam?.id ?? null]

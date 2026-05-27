@@ -261,7 +261,7 @@ export async function ensureScrimConversationLifecycle(scrimId: string) {
 			awayTeam: scrim.awayTeam,
 		}),
 		memberUserIds: rosterUserIds,
-		isArchived: scrim.status === "cancelled",
+		isArchived: scrim.status === "cancelled" || scrim.status === "completed",
 	});
 	await archiveScrimConversation(scrimId, "scrim_negotiation");
 
