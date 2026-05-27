@@ -8,9 +8,11 @@ import { db } from "@/db";
 import { sessionTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { disconnectChatSession } from "@/realtime/chat-hub";
 import { disconnectRealtimeSession } from "@/realtime/scrim-hub";
+import logger from "@/utils/logger";
 
 const sessionRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
@@ -93,6 +95,13 @@ sessionRoutes.delete("/:id", async (c) => {
 	await invalidateSession(sessionId, "manual_logout");
 	disconnectRealtimeSession(sessionId, "session_revoked");
 	disconnectChatSession(sessionId, "session_revoked");
+
+	createNotification({
+		userId: session.userId,
+		type: "session_revoked_alert",
+		title: "A session was signed out",
+		body: "You signed out another active session from your account.",
+	}).catch((err: unknown) => logger.error({ err }, "session revoke notification failed"));
 
 	const client = c.get("client");
 	writeAuditLog(session.userId, "logout", client.ip, client.userAgent, null, null, {

@@ -35,6 +35,9 @@ function getNotificationHref(notification: NotificationSummary): string | null {
 			) {
 				return appRoutes.settings.security;
 			}
+			if (notification.type === "account_deletion_requested") {
+				return appRoutes.settings.account;
+			}
 			return null;
 	}
 }

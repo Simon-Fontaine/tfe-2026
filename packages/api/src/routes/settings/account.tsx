@@ -13,7 +13,9 @@ import { sendMail } from "@/email/mailer";
 import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import logger from "@/utils/logger";
 
 const DELETION_GRACE_PERIOD_MS = 1_000 * 60 * 60 * 24 * 30; // 30 days
 
@@ -113,6 +115,13 @@ accountRoutes.post("/deletion/request", async (c) => {
 			reason: body.reason ?? null,
 		}
 	);
+
+	createNotification({
+		userId: session.userId,
+		type: "account_deletion_requested",
+		title: "Account deletion requested",
+		body: "Check your email to confirm. Deletion is pending until confirmed.",
+	}).catch((err: unknown) => logger.error({ err }, "account deletion notification failed"));
 
 	return c.json({ success: true });
 });

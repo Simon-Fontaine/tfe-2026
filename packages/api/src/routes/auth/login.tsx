@@ -13,6 +13,7 @@ import { sendMail } from "@/email/mailer";
 import { SecurityAlertEmail } from "@/email/templates/SecurityAlertEmail";
 import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter, resetRateLimit } from "@/rate-limit";
 import { fetchGeoData, formatLocation, type GeoData } from "@/utils/geo";
 import logger from "@/utils/logger";
@@ -57,6 +58,13 @@ function sendNewLoginAlert(
 		geo.city,
 		{ device: client.deviceName, location: formatLocation(geo) }
 	);
+
+	createNotification({
+		userId: user.id,
+		type: isNewDevice ? "new_device_login" : "new_location_login",
+		title: isNewDevice ? "New device sign-in" : "New location sign-in",
+		body: `Device: ${client.deviceName ?? "Unknown"}, Location: ${formatLocation(geo)}`,
+	}).catch((err: unknown) => logger.error({ err }, "security notification failed"));
 }
 
 const loginRoutes = new Hono<RequestContextEnv>();

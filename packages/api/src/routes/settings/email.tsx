@@ -15,10 +15,12 @@ import { sendMail } from "@/email/mailer";
 import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { disconnectChatSession } from "@/realtime/chat-hub";
 import { disconnectRealtimeSession } from "@/realtime/scrim-hub";
 import { fetchGeoData } from "@/utils/geo";
+import logger from "@/utils/logger";
 
 const emailRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
@@ -90,6 +92,13 @@ emailRoutes.post("/request", async (c) => {
 			/>
 		),
 	});
+
+	createNotification({
+		userId: session.userId,
+		type: "email_change_requested",
+		title: "Email change requested",
+		body: "A verification code was sent to your new email address.",
+	}).catch((err: unknown) => logger.error({ err }, "email change notification failed"));
 
 	return c.json({ success: true });
 });
