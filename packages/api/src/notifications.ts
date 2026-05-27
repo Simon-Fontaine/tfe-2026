@@ -2,6 +2,7 @@ import { appRoutes, type NotificationSummary } from "@scrimflow/shared";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
+	chatChannelTable,
 	notificationTable,
 	type notificationTypeEnum,
 	ocrJobTable,
@@ -110,6 +111,39 @@ async function resolveNotificationDestinationHref(row: NotificationRow, userId: 
 		if (!scrim) return appRoutes.inbox;
 		const teamId = await resolveParticipantTeamId(userId, scrim);
 		return teamId ? appRoutes.teams.scrimById(teamId, scrim.id) : appRoutes.inbox;
+	}
+
+	if (row.referenceType === "chat_channel") {
+		const channel = await db.query.chatChannelTable.findFirst({
+			where: eq(chatChannelTable.id, row.referenceId),
+			columns: { id: true, channelType: true, teamId: true, scrimId: true },
+		});
+		if (!channel) return appRoutes.inbox;
+
+		if (channel.channelType === "recruitment") {
+			return `${appRoutes.recruiting.conversations}?conversation=${row.referenceId}`;
+		}
+
+		if (channel.channelType === "team" && channel.teamId) {
+			return `${appRoutes.teams.chat(channel.teamId)}?conversation=${row.referenceId}`;
+		}
+
+		if (
+			(channel.channelType === "scrim_lobby" || channel.channelType === "scrim_negotiation") &&
+			channel.scrimId
+		) {
+			const scrim = await db.query.scrimTable.findFirst({
+				where: eq(scrimTable.id, channel.scrimId),
+				columns: { id: true, homeTeamId: true, awayTeamId: true },
+			});
+			if (!scrim) return appRoutes.inbox;
+			const teamId = await resolveParticipantTeamId(userId, scrim);
+			return teamId
+				? `${appRoutes.teams.chat(teamId)}?conversation=${row.referenceId}`
+				: appRoutes.inbox;
+		}
+
+		return appRoutes.inbox;
 	}
 
 	return null;
