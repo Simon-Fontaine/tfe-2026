@@ -1015,6 +1015,9 @@ export type AppRealtimeEvent =
 			type: "notification:read-all";
 			unreadCount: number;
 	  }
+	| { type: "notification:unread"; notificationId: string; unreadCount: number }
+	| { type: "notification:dismissed"; notificationId: string; unreadCount: number }
+	| { type: "notification:restored"; notificationId: string }
 	| {
 			type: "update:created";
 			teamId: string;
@@ -1402,6 +1405,7 @@ export type NotificationSummary = {
 	referenceId: string | null;
 	destinationHref: string | null;
 	isRead: boolean;
+	isDismissed: boolean;
 	createdAt: IsoDateString;
 };
 

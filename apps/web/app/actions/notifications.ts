@@ -32,3 +32,39 @@ export async function markAllNotificationsReadAction(
 	revalidateNotificationSurfaces();
 	return { success: true };
 }
+
+export async function markNotificationUnreadAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const notificationId = String(formData.get("notificationId") ?? "");
+	const res = await apiPost(apiRoutes.notifications.unread(notificationId));
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	revalidateNotificationSurfaces();
+	return { success: true };
+}
+
+export async function dismissNotificationAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const notificationId = String(formData.get("notificationId") ?? "");
+	const res = await apiPost(apiRoutes.notifications.dismiss(notificationId));
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	revalidateNotificationSurfaces();
+	return { success: true };
+}
+
+export async function restoreNotificationAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const notificationId = String(formData.get("notificationId") ?? "");
+	const res = await apiPost(apiRoutes.notifications.restore(notificationId));
+	if ("error" in res) return { error: res.error, fieldErrors: res.fieldErrors };
+
+	revalidateNotificationSurfaces();
+	return { success: true };
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Notification01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Notification01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import React from "react";
@@ -45,6 +45,8 @@ function getNotificationHref(notification: NotificationSummary): string | null {
 interface NotificationItemProps {
 	notification: NotificationSummary;
 	onMarkRead?: (notificationId: string) => Promise<void> | void;
+	onMarkUnread?: (notificationId: string) => Promise<void> | void;
+	onDismiss?: (notificationId: string) => Promise<void> | void;
 	isPending?: boolean;
 }
 
@@ -74,6 +76,8 @@ function useRelativeTime(iso: string): string {
 export function NotificationItem({
 	notification,
 	onMarkRead,
+	onMarkUnread,
+	onDismiss,
 	isPending: externalPending,
 }: NotificationItemProps) {
 	const relativeTime = useRelativeTime(notification.createdAt);
@@ -143,6 +147,30 @@ export function NotificationItem({
 					disabled={isBusy}
 				>
 					Mark read
+				</Button>
+			)}
+
+			{notification.isRead && onMarkUnread && (
+				<Button
+					size="sm"
+					variant="ghost"
+					className="h-7 shrink-0 text-xs text-muted-foreground"
+					onClick={() => void onMarkUnread(notification.id)}
+					disabled={isBusy}
+				>
+					Mark unread
+				</Button>
+			)}
+
+			{onDismiss && (
+				<Button
+					size="icon"
+					variant="ghost"
+					className="size-6 shrink-0 text-muted-foreground"
+					onClick={() => void onDismiss(notification.id)}
+					disabled={isBusy}
+				>
+					<HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3.5" />
 				</Button>
 			)}
 		</div>

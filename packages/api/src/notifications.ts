@@ -75,6 +75,7 @@ type NotificationRow = {
 	referenceType: string | null;
 	referenceId: string | null;
 	isRead: boolean;
+	isDismissed: boolean;
 	createdAt: Date;
 };
 
@@ -180,6 +181,7 @@ export async function mapNotification(
 		referenceId: row.referenceId,
 		destinationHref: await resolveNotificationDestinationHref(row, userId),
 		isRead: row.isRead,
+		isDismissed: row.isDismissed,
 		createdAt: row.createdAt.toISOString(),
 	};
 }
@@ -188,7 +190,13 @@ async function getUnreadNotificationCount(userId: string) {
 	const [result] = await db
 		.select({ count: count() })
 		.from(notificationTable)
-		.where(and(eq(notificationTable.userId, userId), eq(notificationTable.isRead, false)));
+		.where(
+			and(
+				eq(notificationTable.userId, userId),
+				eq(notificationTable.isRead, false),
+				eq(notificationTable.isDismissed, false)
+			)
+		);
 
 	return Number(result?.count ?? 0);
 }
@@ -243,6 +251,7 @@ export async function createNotification(
 					referenceType: notificationTable.referenceType,
 					referenceId: notificationTable.referenceId,
 					isRead: notificationTable.isRead,
+					isDismissed: notificationTable.isDismissed,
 					createdAt: notificationTable.createdAt,
 				});
 			if (!updated) return null;
@@ -277,6 +286,7 @@ export async function createNotification(
 			referenceType: notificationTable.referenceType,
 			referenceId: notificationTable.referenceId,
 			isRead: notificationTable.isRead,
+			isDismissed: notificationTable.isDismissed,
 			createdAt: notificationTable.createdAt,
 		});
 

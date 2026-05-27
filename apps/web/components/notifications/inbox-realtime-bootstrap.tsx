@@ -28,6 +28,15 @@ export function InboxRealtimeBootstrap({ initialUnreadCount }: InboxRealtimeBoot
 				case "notification:read-all":
 					store.markAllNotificationsRead(event.unreadCount);
 					break;
+				case "notification:unread":
+					store.markNotificationUnread(event.notificationId, event.unreadCount);
+					break;
+				case "notification:dismissed":
+					store.dismissNotification(event.notificationId, event.unreadCount);
+					break;
+				case "notification:restored":
+					store.restoreNotification(event.notificationId);
+					break;
 				default:
 					break;
 			}

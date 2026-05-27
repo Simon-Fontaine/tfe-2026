@@ -1323,6 +1323,7 @@ export const notificationTable = pgTable(
 		referenceId: uuid("reference_id"),
 
 		isRead: boolean("is_read").notNull().default(false),
+		isDismissed: boolean("is_dismissed").notNull().default(false),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 	},

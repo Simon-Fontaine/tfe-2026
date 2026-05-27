@@ -264,6 +264,9 @@ export const apiRoutes = {
 		unreadCount: "/api/notifications/unread-count",
 		read: (notificationId: string) => `/api/notifications/${notificationId}/read`,
 		readAll: "/api/notifications/read-all",
+		unread: (notificationId: string) => `/api/notifications/${notificationId}/unread`,
+		dismiss: (notificationId: string) => `/api/notifications/${notificationId}/dismiss`,
+		restore: (notificationId: string) => `/api/notifications/${notificationId}/restore`,
 	},
 	updates: {
 		root: "/api/updates",
