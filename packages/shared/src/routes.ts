@@ -335,6 +335,7 @@ export const appRoutes = {
 		invites: (orgId: string) => `/app/orgs/${orgId}/invites`,
 		brand: (orgId: string) => `/app/orgs/${orgId}/brand`,
 		recruiting: (orgId: string) => `/app/orgs/${orgId}/recruiting`,
+		updates: (orgId: string) => `/app/orgs/${orgId}/updates`,
 		settings: (orgId: string) => `/app/orgs/${orgId}/settings`,
 	},
 } as const;

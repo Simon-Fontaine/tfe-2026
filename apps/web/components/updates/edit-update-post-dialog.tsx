@@ -1,28 +1,23 @@
 "use client";
 
 import type { UpdatePostSummary, UpdatePostVisibility } from "@scrimflow/shared";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRoutes } from "@/lib/routes";
 
 type FormFieldErrors = Partial<Record<"title" | "body" | "visibility", string[]>>;
-
-function getFieldErrorText(fieldErrors: FormFieldErrors, field: "title" | "body" | "visibility") {
-	return fieldErrors[field]?.join(" ");
-}
 
 async function readApiPayload<T>(response: Response): Promise<{
 	data?: T;
@@ -32,32 +27,32 @@ async function readApiPayload<T>(response: Response): Promise<{
 	return response.json().catch(() => ({}));
 }
 
-type CreateUpdatePostDialogProps = {
+interface EditUpdatePostDialogProps {
+	post: UpdatePostSummary;
+	onUpdated?: (post: UpdatePostSummary) => void;
 	children: React.ReactNode;
-	onCreated?: (post: UpdatePostSummary) => void;
-} & ({ teamId: string; organizationId?: never } | { organizationId: string; teamId?: never });
+}
 
-export function CreateUpdatePostDialog({
-	children,
-	teamId,
-	organizationId,
-	onCreated,
-}: CreateUpdatePostDialogProps) {
+export function EditUpdatePostDialog({ post, onUpdated, children }: EditUpdatePostDialogProps) {
 	const [open, setOpen] = useState(false);
-	const [title, setTitle] = useState("");
-	const [body, setBody] = useState("");
-	const [visibility, setVisibility] = useState<UpdatePostVisibility>("workspace");
+	const [title, setTitle] = useState(post.title);
+	const [body, setBody] = useState(post.body);
+	const [visibility, setVisibility] = useState<UpdatePostVisibility>(post.visibility);
 	const [formError, setFormError] = useState<string | undefined>(undefined);
 	const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
 	const [submitting, setSubmitting] = useState(false);
 
-	function reset() {
-		setTitle("");
-		setBody("");
-		setVisibility("workspace");
+	const postRef = useRef(post);
+	postRef.current = post;
+
+	useEffect(() => {
+		if (!open) return;
+		setTitle(postRef.current.title);
+		setBody(postRef.current.body);
+		setVisibility(postRef.current.visibility);
 		setFormError(undefined);
 		setFieldErrors({});
-	}
+	}, [open]);
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -68,30 +63,22 @@ export function CreateUpdatePostDialog({
 		setFieldErrors({});
 
 		try {
-			const response = await fetch(apiRoutes.updates.root, {
-				method: "POST",
+			const response = await fetch(apiRoutes.updates.byId(post.id), {
+				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({
-					scopeType: teamId ? "team" : "organization",
-					teamId: teamId ?? undefined,
-					organizationId: organizationId ?? undefined,
-					visibility,
-					title,
-					body,
-				}),
+				body: JSON.stringify({ title, body, visibility }),
 			});
 			const payload = await readApiPayload<UpdatePostSummary>(response);
 
 			if (!response.ok || !payload.data) {
 				setFieldErrors((payload.fieldErrors ?? {}) as FormFieldErrors);
-				setFormError(payload.error ?? "Unable to publish update.");
+				setFormError(payload.error ?? "Unable to save update.");
 				return;
 			}
 
-			onCreated?.(payload.data);
-			toast.success("Update published.");
-			reset();
+			onUpdated?.(payload.data);
+			toast.success("Update saved.");
 			setOpen(false);
 		} catch {
 			setFormError("Unable to reach the API server.");
@@ -101,22 +88,11 @@ export function CreateUpdatePostDialog({
 	}
 
 	return (
-		<Dialog
-			open={open}
-			onOpenChange={(nextOpen) => {
-				setOpen(nextOpen);
-				if (!nextOpen) reset();
-			}}
-		>
+		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{children}</DialogTrigger>
 			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
-					<DialogTitle>
-						{teamId ? "Publish team update" : "Publish organization update"}
-					</DialogTitle>
-					<DialogDescription>
-						Announcements live in the dedicated updates feed now, separate from recruiting.
-					</DialogDescription>
+					<DialogTitle>Edit update</DialogTitle>
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
@@ -132,7 +108,7 @@ export function CreateUpdatePostDialog({
 							maxLength={120}
 							disabled={submitting}
 						/>
-						<FieldError>{getFieldErrorText(fieldErrors, "title")}</FieldError>
+						<FieldError>{fieldErrors.title?.join(" ")}</FieldError>
 					</Field>
 
 					<Field>
@@ -146,14 +122,9 @@ export function CreateUpdatePostDialog({
 							}}
 							rows={8}
 							maxLength={4000}
-							placeholder="Scrim results, roster changes, schedule shifts, or any team announcement."
 							disabled={submitting}
 						/>
-						<FieldDescription>
-							Workspace-only updates stay inside the team feed. Public updates also appear on the
-							public updates directory.
-						</FieldDescription>
-						<FieldError>{getFieldErrorText(fieldErrors, "body")}</FieldError>
+						<FieldError>{fieldErrors.body?.join(" ")}</FieldError>
 					</Field>
 
 					<Field>
@@ -184,7 +155,7 @@ export function CreateUpdatePostDialog({
 								Public
 							</Button>
 						</div>
-						<FieldError>{getFieldErrorText(fieldErrors, "visibility")}</FieldError>
+						<FieldError>{fieldErrors.visibility?.join(" ")}</FieldError>
 					</Field>
 
 					{formError ? <p className="text-xs text-destructive">{formError}</p> : null}
@@ -192,16 +163,13 @@ export function CreateUpdatePostDialog({
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={submitting}>
 							{submitting ? <Spinner className="mr-1.5" /> : null}
-							Publish update
+							Save update
 						</Button>
 						<Button
 							type="button"
 							size="sm"
 							variant="outline"
-							onClick={() => {
-								reset();
-								setOpen(false);
-							}}
+							onClick={() => setOpen(false)}
 							disabled={submitting}
 						>
 							Cancel

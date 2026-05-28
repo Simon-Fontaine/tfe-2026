@@ -178,6 +178,11 @@ export function WorkspaceSidebar({
 								href: appRoutes.orgs.staff(activeOrgId),
 								icon: UserGroupIcon,
 							},
+							{
+								label: "Updates",
+								href: appRoutes.orgs.updates(activeOrgId),
+								icon: Notification01Icon,
+							},
 							...(canManageOrg
 								? [
 										{

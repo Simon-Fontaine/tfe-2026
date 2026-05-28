@@ -40,15 +40,30 @@ export const getTeamUpdatesRouteState = cache(
 			withQuery(apiRoutes.updates.root, { teamId, cursor })
 		);
 		if ("data" in res) {
-			const paginated = res as unknown as { data: UpdatePostSummary[]; nextCursor: string | null };
-			return routeStateSuccess({
-				posts: paginated.data,
-				nextCursor: paginated.nextCursor ?? null,
-			});
+			const nextCursor = (res as unknown as { nextCursor: string | null }).nextCursor ?? null;
+			return routeStateSuccess({ posts: res.data, nextCursor });
 		}
 		if (res.status === 404) return routeStateMissing();
 		if (res.status === 403) return routeStateNoAccess();
-		throw new Error(res.error);
+		throw new Error(`API error ${res.status}: ${res.error ?? "unknown error"}`);
+	}
+);
+
+export const getOrgUpdatesRouteState = cache(
+	async (
+		organizationId: string,
+		cursor?: string
+	): Promise<RouteStateResult<{ posts: UpdatePostSummary[]; nextCursor: string | null }>> => {
+		const res = await apiGet<UpdatePostSummary[]>(
+			withQuery(apiRoutes.updates.root, { organizationId, cursor })
+		);
+		if ("data" in res) {
+			const nextCursor = (res as unknown as { nextCursor: string | null }).nextCursor ?? null;
+			return routeStateSuccess({ posts: res.data, nextCursor });
+		}
+		if (res.status === 404) return routeStateMissing();
+		if (res.status === 403) return routeStateNoAccess();
+		throw new Error(`API error ${res.status}: ${res.error ?? "unknown error"}`);
 	}
 );
 

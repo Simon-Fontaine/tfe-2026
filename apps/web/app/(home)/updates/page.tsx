@@ -107,7 +107,12 @@ async function UpdatesListSection({ scope }: { scope: "all" | "team" | "organiza
 	return (
 		<div className="space-y-3">
 			{filteredUpdates.map((post) => (
-				<UpdatePostCard key={post.id} post={post} showScopeLink />
+				<UpdatePostCard
+					key={post.id}
+					post={post}
+					showScopeLink
+					detailHref={publicRoutes.updates.byId(post.id)}
+				/>
 			))}
 		</div>
 	);

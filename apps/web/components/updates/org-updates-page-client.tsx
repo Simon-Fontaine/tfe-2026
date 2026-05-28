@@ -1,12 +1,11 @@
 "use client";
 
-import type { AppRealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
+import type { UpdatePostSummary } from "@scrimflow/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { apiRoutes } from "@/lib/routes";
-import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { CreateUpdatePostDialog } from "./create-update-post-dialog";
 import { EditUpdatePostDialog } from "./edit-update-post-dialog";
 import { UpdatePostCard } from "./update-post-card";
@@ -17,60 +16,23 @@ function sortUpdates(updates: UpdatePostSummary[]) {
 	});
 }
 
-interface TeamUpdatesPageClientProps {
-	teamId: string;
+interface OrgUpdatesPageClientProps {
+	organizationId: string;
 	canManage: boolean;
 	initialUpdates: UpdatePostSummary[];
 }
 
-export function TeamUpdatesPageClient({
-	teamId,
+export function OrgUpdatesPageClient({
+	organizationId,
 	canManage,
 	initialUpdates,
-}: TeamUpdatesPageClientProps) {
+}: OrgUpdatesPageClientProps) {
 	const [updates, setUpdates] = useState(initialUpdates);
 	const [deletingUpdateId, setDeletingUpdateId] = useState<string | null>(null);
 
 	useEffect(() => {
 		setUpdates(initialUpdates);
 	}, [initialUpdates]);
-
-	useEffect(() => {
-		function handleEvent(event: AppRealtimeEvent) {
-			if (!("teamId" in event) || event.teamId !== teamId) return;
-
-			switch (event.type) {
-				case "update:created":
-					setUpdates((current) =>
-						sortUpdates([
-							event.update,
-							...current.filter((update) => update.id !== event.update.id),
-						])
-					);
-					break;
-				case "update:updated":
-					setUpdates((current) =>
-						sortUpdates(
-							current.map((update) => (update.id === event.update.id ? event.update : update))
-						)
-					);
-					break;
-				case "update:deleted":
-					setUpdates((current) => current.filter((update) => update.id !== event.updateId));
-					break;
-				default:
-					break;
-			}
-		}
-
-		realtimeSocket.subscribeTeam(teamId);
-		const removeListener = realtimeSocket.addListener(handleEvent);
-
-		return () => {
-			removeListener();
-			realtimeSocket.unsubscribeTeam(teamId);
-		};
-	}, [teamId]);
 
 	async function handleDelete(updateId: string) {
 		if (!canManage || deletingUpdateId) return;
@@ -110,13 +72,13 @@ export function TeamUpdatesPageClient({
 			<div className="space-y-4">
 				<EmptyStateBlock
 					title="No updates posted"
-					description="Team announcements and scrim recaps will appear here when managers post them."
+					description="Organization announcements will appear here when managers post them."
 					variant="card"
 				/>
 				{canManage ? (
 					<div className="flex justify-start">
 						<CreateUpdatePostDialog
-							teamId={teamId}
+							organizationId={organizationId}
 							onCreated={(update) => {
 								setUpdates((current) => sortUpdates([update, ...current]));
 							}}
@@ -124,9 +86,7 @@ export function TeamUpdatesPageClient({
 							<Button size="sm">Post an update</Button>
 						</CreateUpdatePostDialog>
 					</div>
-				) : (
-					<p className="text-sm text-muted-foreground">No team updates have been posted yet.</p>
-				)}
+				) : null}
 			</div>
 		);
 	}
@@ -136,7 +96,7 @@ export function TeamUpdatesPageClient({
 			{canManage ? (
 				<div className="flex justify-start">
 					<CreateUpdatePostDialog
-						teamId={teamId}
+						organizationId={organizationId}
 						onCreated={(update) => {
 							setUpdates((current) => sortUpdates([update, ...current]));
 						}}
