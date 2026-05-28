@@ -33,6 +33,9 @@ import {
 	recruitmentListingCategoryEnum,
 	recruitmentListingStatusEnum,
 	recruitmentOwnerTypeEnum,
+	reportCategoryEnum,
+	reportStatusEnum,
+	reportTargetTypeEnum,
 	rosterStatusEnum,
 	scrimStatusEnum,
 	staffRoleEnum,
@@ -1610,4 +1613,49 @@ export const chatMessageReadTable = pgTable(
 		// "Who has read this message" — for seen-by display in UI
 		index("chat_message_read_msg_idx").on(table.messageId),
 	]
+);
+
+// ============================================================================
+// USER REPORTS — User-submitted trust and safety reports
+// ============================================================================
+
+export const userReportTable = pgTable(
+	"user_report",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		reporterId: uuid("reporter_id")
+			.notNull()
+			.references(() => userTable.id, { onDelete: "cascade" }),
+		targetType: reportTargetTypeEnum("target_type").notNull(),
+		targetId: uuid("target_id").notNull(),
+		category: reportCategoryEnum("category").notNull(),
+		reason: text("reason").notNull(),
+		status: reportStatusEnum("status").notNull().default("pending"),
+		/** Snapshot of target metadata captured at submission time. */
+		targetSnapshot: jsonb("target_snapshot"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("user_report_reporter_idx").on(table.reporterId),
+		index("user_report_target_idx").on(table.targetType, table.targetId),
+		index("user_report_status_idx").on(table.status),
+	]
+);
+
+export const userReportSupplementTable = pgTable(
+	"user_report_supplement",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		reportId: uuid("report_id")
+			.notNull()
+			.references(() => userReportTable.id, { onDelete: "cascade" }),
+		authorId: uuid("author_id").references(() => userTable.id, { onDelete: "set null" }),
+		content: text("content").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [index("user_report_supplement_report_idx").on(table.reportId)]
 );

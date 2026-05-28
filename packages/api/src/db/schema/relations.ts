@@ -38,6 +38,8 @@ import {
 	teamTable,
 	updatePostTable,
 	userDeviceTable,
+	userReportSupplementTable,
+	userReportTable,
 	userTable,
 } from "./index";
 
@@ -594,3 +596,22 @@ export const scrimNegotiationRevisionRelations = relations(
 		}),
 	})
 );
+
+export const userReportRelations = relations(userReportTable, ({ one, many }) => ({
+	reporter: one(userTable, {
+		fields: [userReportTable.reporterId],
+		references: [userTable.id],
+	}),
+	supplements: many(userReportSupplementTable),
+}));
+
+export const userReportSupplementRelations = relations(userReportSupplementTable, ({ one }) => ({
+	report: one(userReportTable, {
+		fields: [userReportSupplementTable.reportId],
+		references: [userReportTable.id],
+	}),
+	author: one(userTable, {
+		fields: [userReportSupplementTable.authorId],
+		references: [userTable.id],
+	}),
+}));

@@ -1561,6 +1561,39 @@ export type PermissionDenialReason =
 	| "settlement-lock"
 	| "moderation";
 
+// ─── Report types ─────────────────────────────────────────────────────────
+
+export type ReportCategory =
+	| "harassment"
+	| "spam"
+	| "impersonation"
+	| "abuse"
+	| "evidence_manipulation"
+	| "dispute_abuse"
+	| "suspicious_recruiting"
+	| "other";
+
+export type ReportTargetType =
+	| "user"
+	| "team"
+	| "organization"
+	| "listing"
+	| "message"
+	| "scrim"
+	| "update"
+	| "ocr_evidence";
+
+export type ReportStatus = "pending" | "under_review" | "resolved" | "dismissed";
+
+export type MyReportSummary = {
+	id: string;
+	targetType: ReportTargetType;
+	targetId: string;
+	category: ReportCategory;
+	status: ReportStatus;
+	createdAt: string; // ISO string
+};
+
 // ─── Hero types ────────────────────────────────────────────────────────────
 
 export type HeroRow = {

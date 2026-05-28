@@ -1,9 +1,10 @@
 "use client";
 
-import { Delete01Icon, Edit01Icon } from "@hugeicons/core-free-icons";
+import { Delete01Icon, Edit01Icon, Flag01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ChatMessage } from "@scrimflow/shared";
 import { useState } from "react";
+import { ReportDialog } from "@/components/reports/report-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -100,9 +101,9 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 					</p>
 					{message.editedAt ? <p className="text-[10px] text-muted-foreground">(edited)</p> : null}
 
-					{isOwn && !isDeleted && !isEditing && !message.isSystemMessage ? (
+					{!isDeleted && !isEditing && !message.isSystemMessage ? (
 						<div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-							{onEdit ? (
+							{isOwn && onEdit ? (
 								<button
 									type="button"
 									title="Edit message"
@@ -112,7 +113,7 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 									<HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-3" />
 								</button>
 							) : null}
-							{onDelete ? (
+							{isOwn && onDelete ? (
 								<button
 									type="button"
 									title="Delete message"
@@ -121,6 +122,21 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 								>
 									<HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-3" />
 								</button>
+							) : null}
+							{!isOwn ? (
+								<ReportDialog
+									targetType="message"
+									targetId={message.id}
+									targetDisplayName={message.senderDisplayName ?? undefined}
+								>
+									<button
+										type="button"
+										className="text-muted-foreground hover:text-foreground"
+										aria-label="Report message"
+									>
+										<HugeiconsIcon icon={Flag01Icon} strokeWidth={2} className="size-3" />
+									</button>
+								</ReportDialog>
 							) : null}
 						</div>
 					) : null}

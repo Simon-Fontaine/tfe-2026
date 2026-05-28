@@ -286,6 +286,11 @@ export const apiRoutes = {
 		publicRoot: "/api/public/players",
 		publicByUsername: (username: string) => `/api/public/players/${username}`,
 	},
+	reports: {
+		root: "/api/reports",
+		mine: "/api/reports/mine",
+		supplement: (reportId: string) => `/api/reports/${reportId}/supplement`,
+	},
 	publicStats: "/api/public/stats",
 	chat: {
 		conversations: "/api/chat/conversations",

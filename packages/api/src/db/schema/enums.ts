@@ -219,6 +219,38 @@ export const auditActionEnum = pgEnum("audit_action", [
 /** Player stat side in a scrim map — which team perspective the OCR extracted. */
 export const playerStatSideEnum = pgEnum("player_stat_side", ["home", "away", "unknown"]);
 
+/** User report categories. */
+export const reportCategoryEnum = pgEnum("report_category", [
+	"harassment",
+	"spam",
+	"impersonation",
+	"abuse",
+	"evidence_manipulation",
+	"dispute_abuse",
+	"suspicious_recruiting",
+	"other",
+]);
+
+/** Target entity type for a user report. */
+export const reportTargetTypeEnum = pgEnum("report_target_type", [
+	"user",
+	"team",
+	"organization",
+	"listing",
+	"message",
+	"scrim",
+	"update",
+	"ocr_evidence",
+]);
+
+/** User report lifecycle status. */
+export const reportStatusEnum = pgEnum("report_status", [
+	"pending",
+	"under_review",
+	"resolved",
+	"dismissed",
+]);
+
 /** Notification delivery channel. */
 export const notificationTypeEnum = pgEnum("notification_type", [
 	"scrim_request",

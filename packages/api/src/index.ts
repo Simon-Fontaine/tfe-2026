@@ -19,6 +19,7 @@ import {
 	recruitmentConversationsRoutes,
 	recruitmentListingsRoutes,
 } from "@/routes/recruitment";
+import { reportRoutes } from "@/routes/reports";
 import { scheduleRoutes } from "@/routes/schedule";
 import { publicScrimRoutes, scrimRoutes } from "@/routes/scrims";
 import { settingsRoutes } from "@/routes/settings";
@@ -79,6 +80,9 @@ app.route("/api/scrims", scrimRoutes);
 
 app.use("/api/realtime/*", requireAuth);
 app.route("/api/realtime", realtimeRoutes);
+
+app.use("/api/reports/*", requireAuth);
+app.route("/api/reports", reportRoutes);
 
 app.use("/api/updates/*", requireAuth);
 app.route("/api/updates", updatesRoutes);

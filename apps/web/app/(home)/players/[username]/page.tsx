@@ -7,6 +7,7 @@ import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
+import { ReportDialog } from "@/components/reports/report-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -137,6 +138,17 @@ export default async function PlayerProfilePage({
 						<Link href={publicRoutes.auth.step("register")}>Create an account</Link>
 					</Button>
 				)}
+				{user && user.id !== player.id ? (
+					<ReportDialog
+						targetType="user"
+						targetId={player.id}
+						targetDisplayName={player.displayName}
+					>
+						<Button size="sm" variant="ghost">
+							Report user
+						</Button>
+					</ReportDialog>
+				) : null}
 			</div>
 
 			{(player.battletag || player.scrimStats) && (

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { RecruitmentApplicationDialog } from "@/components/recruit/recruitment-application-dialog";
 import { RecruitmentApplicationsPanel } from "@/components/recruit/recruitment-applications-panel";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
+import { ReportListingActions } from "@/components/reports/report-listing-actions";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -80,19 +81,24 @@ export default async function AppRecruitingListingDetailPage({
 				detail={`Listing ${listing.id}`}
 				description={RECRUITMENT_CATEGORY_DESCRIPTIONS[listing.category]}
 				actions={
-					listing.canManage ? (
-						<RecruitmentListingFormDialog
-							mode="edit"
-							listing={listing}
-							ownerOptions={entityOptions}
-							triggerContent="Edit listing"
-							triggerVariant="outline"
-						/>
-					) : canApply ? (
-						<RecruitmentApplicationDialog listing={listing} entityOptions={entityOptions}>
-							<Button size="sm">Apply</Button>
-						</RecruitmentApplicationDialog>
-					) : undefined
+					<div className="flex items-center gap-2">
+						{listing.canManage ? (
+							<RecruitmentListingFormDialog
+								mode="edit"
+								listing={listing}
+								ownerOptions={entityOptions}
+								triggerContent="Edit listing"
+								triggerVariant="outline"
+							/>
+						) : canApply ? (
+							<RecruitmentApplicationDialog listing={listing} entityOptions={entityOptions}>
+								<Button size="sm">Apply</Button>
+							</RecruitmentApplicationDialog>
+						) : null}
+						{!listing.canManage ? (
+							<ReportListingActions listingId={listing.id} listingTitle={listing.title} />
+						) : null}
+					</div>
 				}
 			>
 				<div className="flex flex-wrap gap-2">
