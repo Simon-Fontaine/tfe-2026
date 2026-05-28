@@ -119,6 +119,7 @@ export const ocrJobStatusEnum = pgEnum("ocr_job_status", [
 	"completed",
 	"failed",
 	"requires_review",
+	"superseded",
 ]);
 
 /** Update feed owner scope. */

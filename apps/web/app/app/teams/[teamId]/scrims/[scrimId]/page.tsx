@@ -275,6 +275,8 @@ export default async function TeamScrimDetailPage({
 						scrimId={scrim.id}
 						jobs={scrim.ocrJobs}
 						canManage={team.currentUser.canManage}
+						resultRevisions={scrim.resultRevisions}
+						maps={scrim.maps}
 					/>
 				</div>
 

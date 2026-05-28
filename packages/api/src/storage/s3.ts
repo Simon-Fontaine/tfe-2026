@@ -150,6 +150,17 @@ export async function headFile(
 	};
 }
 
+export async function createGetSignedUrl(
+	bucket: string,
+	key: string,
+	expiresInSeconds = 1800
+): Promise<string> {
+	const client = getS3Client();
+	return getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+		expiresIn: expiresInSeconds,
+	});
+}
+
 /**
  * Extracts the object key from a public storage URL.
  * Returns null if the URL does not match the expected pattern.

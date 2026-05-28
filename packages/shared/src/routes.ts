@@ -248,6 +248,10 @@ export const apiRoutes = {
 		ocrJobs: (scrimId: string) => `/api/scrims/${scrimId}/ocr-jobs`,
 		retryOcrJob: (scrimId: string, jobId: string) =>
 			`/api/scrims/${scrimId}/ocr-jobs/${jobId}/retry`,
+		ocrJobEvidenceUrl: (scrimId: string, jobId: string) =>
+			`/api/scrims/${scrimId}/ocr-jobs/${jobId}/evidence-url`,
+		supersedeOcrJob: (scrimId: string, jobId: string) =>
+			`/api/scrims/${scrimId}/ocr-jobs/${jobId}/supersede`,
 		publicRoot: "/api/public/scrims",
 	},
 	uploads: {

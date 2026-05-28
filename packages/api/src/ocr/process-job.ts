@@ -7,6 +7,7 @@ import { eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { db } from "@/db";
 import { ocrJobTable } from "@/db/schema";
+import { createNotification } from "@/notifications";
 import { GeminiApiError, requestGeminiStructuredOutput } from "@/ocr/gemini";
 import { buildScrimOcrPrompt, OCR_PROMPT_VERSION } from "@/ocr/prompts";
 import { buildOcrResponseJsonSchema } from "@/ocr/schema";
@@ -88,6 +89,30 @@ function publishJobRealtimeUpdate(params: {
 			},
 		},
 	});
+}
+
+async function notifyTerminalOcrJob(params: {
+	jobId: string;
+	submittedByUserId: string | null;
+	status: "completed" | "failed" | "requires_review";
+}) {
+	if (!params.submittedByUserId) return;
+	try {
+		const type = params.status === "failed" ? "ocr_failed" : "ocr_completed";
+		const title =
+			params.status === "completed"
+				? "OCR extraction complete"
+				: params.status === "requires_review"
+					? "OCR extraction needs review"
+					: "OCR extraction failed";
+		await createNotification({
+			userId: params.submittedByUserId,
+			type,
+			title,
+			referenceType: "ocr_job",
+			referenceId: params.jobId,
+		});
+	} catch {}
 }
 
 async function setJobStage(
@@ -301,6 +326,11 @@ export async function processClaimedOcrJob(job: ClaimedOcrJob) {
 				rawOcrOutput: null,
 				retryCount: job.retryCount,
 			});
+			await notifyTerminalOcrJob({
+				jobId: job.id,
+				submittedByUserId: job.submittedByUserId,
+				status: "failed",
+			});
 			return;
 		}
 
@@ -333,6 +363,11 @@ export async function processClaimedOcrJob(job: ClaimedOcrJob) {
 				status: "requires_review",
 				processingTimeMs: Date.now() - startedAt,
 			});
+			await notifyTerminalOcrJob({
+				jobId: job.id,
+				submittedByUserId: job.submittedByUserId,
+				status: "requires_review",
+			});
 			return;
 		}
 
@@ -348,6 +383,11 @@ export async function processClaimedOcrJob(job: ClaimedOcrJob) {
 				status: "requires_review",
 				processingTimeMs: Date.now() - startedAt,
 			});
+			await notifyTerminalOcrJob({
+				jobId: job.id,
+				submittedByUserId: job.submittedByUserId,
+				status: "requires_review",
+			});
 			return;
 		}
 
@@ -362,6 +402,11 @@ export async function processClaimedOcrJob(job: ClaimedOcrJob) {
 			retryCount: job.retryCount,
 			processingTimeMs: Date.now() - startedAt,
 			providerModel: geminiResponse.model,
+		});
+		await notifyTerminalOcrJob({
+			jobId: job.id,
+			submittedByUserId: job.submittedByUserId,
+			status: confidenceFlags.length > 0 ? "requires_review" : "completed",
 		});
 	} catch (error) {
 		if (
@@ -393,6 +438,11 @@ export async function processClaimedOcrJob(job: ClaimedOcrJob) {
 				status: "requires_review",
 				processingTimeMs: Date.now() - startedAt,
 			});
+			await notifyTerminalOcrJob({
+				jobId: job.id,
+				submittedByUserId: job.submittedByUserId,
+				status: "requires_review",
+			});
 			return;
 		}
 
@@ -404,6 +454,11 @@ export async function processClaimedOcrJob(job: ClaimedOcrJob) {
 			rawOcrOutput: error instanceof GeminiApiError ? error.rawResponse : null,
 			retryCount: job.retryCount,
 			processingTimeMs: Date.now() - startedAt,
+		});
+		await notifyTerminalOcrJob({
+			jobId: job.id,
+			submittedByUserId: job.submittedByUserId,
+			status: "failed",
 		});
 	}
 }

@@ -1074,7 +1074,13 @@ export type ScrimDisputeResolution =
 	| "away_confirmed"
 	| "admin_resolved"
 	| "voided";
-export type OcrJobStatus = "queued" | "processing" | "completed" | "failed" | "requires_review";
+export type OcrJobStatus =
+	| "queued"
+	| "processing"
+	| "completed"
+	| "failed"
+	| "requires_review"
+	| "superseded";
 export type OcrJobProgressStage =
 	| "queued"
 	| "claimed"

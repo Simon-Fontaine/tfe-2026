@@ -7,7 +7,12 @@ import {
 	RefreshIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { AppRealtimeEvent, OcrJobSummary } from "@scrimflow/shared";
+import type {
+	AppRealtimeEvent,
+	OcrJobSummary,
+	ScrimMapSummary,
+	ScrimResultRevisionSummary,
+} from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +38,7 @@ function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 function getJobBadgeVariant(job: OcrJobSummary) {
 	if (job.status === "failed") return "destructive" as const;
 	if (job.status === "completed") return "secondary" as const;
+	if (job.status === "superseded") return "outline" as const;
 	return "outline" as const;
 }
 
@@ -40,6 +46,7 @@ function getStageLabel(job: OcrJobSummary) {
 	if (job.status === "failed") return "Failed";
 	if (job.status === "requires_review") return "Requires review";
 	if (job.status === "completed") return "Completed";
+	if (job.status === "superseded") return "Superseded";
 
 	switch (job.progressStage) {
 		case "claimed":
@@ -104,12 +111,22 @@ interface ScrimOcrJobsPanelProps {
 	scrimId: string;
 	jobs: OcrJobSummary[];
 	canManage: boolean;
+	resultRevisions?: ScrimResultRevisionSummary[];
+	maps?: ScrimMapSummary[];
 }
 
-export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPanelProps) {
+export function ScrimOcrJobsPanel({
+	scrimId,
+	jobs,
+	canManage,
+	resultRevisions = [],
+	maps = [],
+}: ScrimOcrJobsPanelProps) {
 	const router = useRouter();
 	const [liveJobs, setLiveJobs] = useState(jobs);
 	const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+	const [supersedingJobId, setSupersedingJobId] = useState<string | null>(null);
+	const [fetchingEvidenceJobId, setFetchingEvidenceJobId] = useState<string | null>(null);
 	const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
@@ -157,7 +174,8 @@ export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPane
 			if (
 				event.job.status === "completed" ||
 				event.job.status === "requires_review" ||
-				event.job.status === "failed"
+				event.job.status === "failed" ||
+				event.job.status === "superseded"
 			) {
 				scheduleRefresh();
 			}
@@ -216,6 +234,75 @@ export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPane
 		}
 	}
 
+	async function handleSupersede(jobId: string) {
+		if (supersedingJobId) return;
+		setSupersedingJobId(jobId);
+		const loading = toast.loading("Superseding OCR job…");
+
+		try {
+			const response = await fetch(apiRoutes.scrims.supersedeOcrJob(scrimId, jobId), {
+				method: "POST",
+				credentials: "include",
+			});
+			const payload = await readApiPayload<OcrJobSummary>(response);
+
+			if (!response.ok || !payload.data) {
+				toast.error(payload.error ?? "Unable to supersede OCR job.", { id: loading });
+				return;
+			}
+
+			toast.success("OCR job marked superseded.", { id: loading });
+			startTransition(() => {
+				router.refresh();
+			});
+		} catch {
+			toast.error("Unable to reach the API server.", { id: loading });
+		} finally {
+			setSupersedingJobId(null);
+		}
+	}
+
+	async function handleOpenEvidence(jobId: string) {
+		if (fetchingEvidenceJobId) return;
+		setFetchingEvidenceJobId(jobId);
+
+		try {
+			const response = await fetch(apiRoutes.scrims.ocrJobEvidenceUrl(scrimId, jobId), {
+				credentials: "include",
+			});
+			const payload = await readApiPayload<{ url: string; expiresAt: string }>(response);
+
+			if (!response.ok || !payload.data) {
+				toast.error(payload.error ?? "Unable to generate evidence URL.");
+				return;
+			}
+
+			window.open(payload.data.url, "_blank", "noreferrer");
+		} catch {
+			toast.error("Unable to reach the API server.");
+		} finally {
+			setFetchingEvidenceJobId(null);
+		}
+	}
+
+	const revisionsByOcrJobId = new Map<string, ScrimResultRevisionSummary[]>();
+	for (const revision of resultRevisions) {
+		if (revision.sourceOcrJobId) {
+			const existing = revisionsByOcrJobId.get(revision.sourceOcrJobId) ?? [];
+			existing.push(revision);
+			revisionsByOcrJobId.set(revision.sourceOcrJobId, existing);
+		}
+	}
+
+	const mapsByOcrJobId = new Map<string, ScrimMapSummary[]>();
+	for (const map of maps) {
+		if (map.ocrJobId) {
+			const existing = mapsByOcrJobId.get(map.ocrJobId) ?? [];
+			existing.push(map);
+			mapsByOcrJobId.set(map.ocrJobId, existing);
+		}
+	}
+
 	return (
 		<section className="border p-4">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -241,7 +328,10 @@ export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPane
 				) : (
 					<div className="space-y-3">
 						{liveJobs.map((job) => (
-							<div key={job.id} className="border p-3">
+							<div
+								key={job.id}
+								className={`border p-3${job.status === "superseded" ? " opacity-60" : ""}`}
+							>
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div>
 										<p className="text-sm font-semibold capitalize">
@@ -269,6 +359,20 @@ export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPane
 												Retry
 											</Button>
 										) : null}
+										{canManage &&
+										(job.status === "completed" ||
+											job.status === "failed" ||
+											job.status === "requires_review") ? (
+											<Button
+												type="button"
+												size="sm"
+												variant="ghost"
+												onClick={() => handleSupersede(job.id)}
+												disabled={!!supersedingJobId}
+											>
+												Mark superseded
+											</Button>
+										) : null}
 									</div>
 								</div>
 
@@ -293,14 +397,14 @@ export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPane
 											</span>
 										</div>
 										<div className="flex items-center gap-2">
-											<a
-												href={job.imageUrl}
-												target="_blank"
-												rel="noreferrer"
-												className="underline-offset-4 hover:underline"
+											<button
+												type="button"
+												onClick={() => handleOpenEvidence(job.id)}
+												disabled={!!fetchingEvidenceJobId}
+												className="underline-offset-4 hover:underline disabled:opacity-50"
 											>
-												Open uploaded screenshot
-											</a>
+												{fetchingEvidenceJobId === job.id ? "Opening…" : "Open uploaded screenshot"}
+											</button>
 										</div>
 									</div>
 								</div>
@@ -411,6 +515,24 @@ export function ScrimOcrJobsPanel({ scrimId, jobs, canManage }: ScrimOcrJobsPane
 								{job.errorMessage ? (
 									<p className="mt-3 text-xs text-destructive">{job.errorMessage}</p>
 								) : null}
+
+								{(() => {
+									const linkedRevisions = revisionsByOcrJobId.get(job.id);
+									const linkedMaps = mapsByOcrJobId.get(job.id);
+									if (!linkedRevisions?.length && !linkedMaps?.length) return null;
+									return (
+										<div className="mt-3 space-y-1 text-xs text-muted-foreground">
+											{linkedRevisions?.map((revision) => (
+												<p key={revision.id}>Used in revision #{revision.revisionNumber}</p>
+											))}
+											{linkedMaps?.map((map) => (
+												<p key={map.id}>
+													Scoreboard for map {map.mapOrder}: {map.mapName}
+												</p>
+											))}
+										</div>
+									);
+								})()}
 							</div>
 						))}
 					</div>

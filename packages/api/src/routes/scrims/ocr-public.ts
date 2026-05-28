@@ -7,10 +7,13 @@ import { ocrJobTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
+import { createGetSignedUrl, keyFromUrl } from "@/storage/s3";
 import { canAccessScrim, canManageAnyScrimTeam } from "./access";
 import { PUBLIC_SCRIM_STATUSES } from "./constants";
 import { mapOcrJob, mapScrimDetail, mapScrimSummary, publishOcrJobRealtimeUpdate } from "./detail";
 import { findScrimWithRelations } from "./shared";
+
+const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
 
 export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 	scrimRoutes.get("/:id/ocr-jobs", async (c) => {
@@ -40,14 +43,43 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		if (!(await canAccessScrim(user.id, scrim))) {
 			return c.json({ error: "You do not have access to this scrim." }, 403);
 		}
+		if (scrim.status === "completed" || scrim.status === "cancelled") {
+			return c.json(
+				{ error: "OCR processing cannot be started for a scrim in this lifecycle state." },
+				409
+			);
+		}
+
+		const { screenshotType, imageUrl } = parsed.output;
+		const [existingJob] = await db
+			.select({ id: ocrJobTable.id })
+			.from(ocrJobTable)
+			.where(
+				and(
+					eq(ocrJobTable.scrimId, scrimId),
+					eq(ocrJobTable.imageUrl, imageUrl),
+					eq(ocrJobTable.screenshotType, screenshotType),
+					inArray(ocrJobTable.status, ["queued", "processing", "completed", "requires_review"])
+				)
+			)
+			.limit(1);
+		if (existingJob) {
+			return c.json(
+				{
+					error:
+						"An active or completed OCR job already exists for this evidence. Supersede the existing job before submitting a new one.",
+				},
+				409
+			);
+		}
 
 		const [job] = await db
 			.insert(ocrJobTable)
 			.values({
 				scrimId,
 				submittedByUserId: user.id,
-				screenshotType: parsed.output.screenshotType,
-				imageUrl: parsed.output.imageUrl,
+				screenshotType,
+				imageUrl,
 				status: "queued",
 				progressStage: "queued",
 				runAfter: new Date(),
@@ -61,7 +93,9 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const createdJob =
 			mapScrimDetail(detail).ocrJobs.find((ocrJob) => ocrJob.id === job.id) ?? null;
 		if (createdJob) {
-			publishOcrJobRealtimeUpdate(createdJob);
+			try {
+				publishOcrJobRealtimeUpdate(createdJob);
+			} catch {}
 		}
 
 		return c.json({ data: createdJob }, 201);
@@ -81,6 +115,9 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const existingJob = scrim.ocrJobs.find((job) => job.id === jobId);
 		if (!existingJob) {
 			return c.json({ error: "OCR job not found." }, 404);
+		}
+		if (existingJob.status === "superseded") {
+			return c.json({ error: "Superseded OCR jobs cannot be retried." }, 409);
 		}
 
 		await db
@@ -112,6 +149,77 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		return c.json({
 			data: retriedJob ? mapOcrJob(retriedJob) : null,
 		});
+	});
+
+	scrimRoutes.get("/:id/ocr-jobs/:jobId/evidence-url", async (c) => {
+		const user = c.get("user");
+		const scrimId = c.req.param("id");
+		const jobId = c.req.param("jobId");
+
+		const scrim = await findScrimWithRelations(scrimId);
+		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+		if (!(await canAccessScrim(user.id, scrim))) {
+			return c.json({ error: "You do not have access to this scrim." }, 403);
+		}
+
+		const job = scrim.ocrJobs.find((j) => j.id === jobId);
+		if (!job) return c.json({ error: "OCR job not found." }, 404);
+
+		const key = keyFromUrl(job.imageUrl, SCREENSHOT_BUCKET);
+		if (!key) {
+			return c.json({ error: "Evidence URL cannot be resolved to a storage key." }, 422);
+		}
+
+		const url = await createGetSignedUrl(SCREENSHOT_BUCKET, key, 1800);
+		return c.json({
+			data: {
+				url,
+				expiresAt: new Date(Date.now() + 1800_000).toISOString(),
+			},
+		});
+	});
+
+	scrimRoutes.post("/:id/ocr-jobs/:jobId/supersede", async (c) => {
+		const user = c.get("user");
+		const scrimId = c.req.param("id");
+		const jobId = c.req.param("jobId");
+
+		const scrim = await findScrimWithRelations(scrimId);
+		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+		if (!(await canManageAnyScrimTeam(user.id, scrim))) {
+			return c.json({ error: "Only a team manager can supersede OCR jobs for this scrim." }, 403);
+		}
+		if (scrim.status === "completed" || scrim.status === "cancelled") {
+			return c.json(
+				{ error: "OCR jobs cannot be superseded for a scrim in this lifecycle state." },
+				409
+			);
+		}
+
+		const existingJob = scrim.ocrJobs.find((job) => job.id === jobId);
+		if (!existingJob) return c.json({ error: "OCR job not found." }, 404);
+
+		if (existingJob.status === "superseded") {
+			return c.json({ error: "This OCR job has already been superseded." }, 409);
+		}
+		if (existingJob.status === "queued" || existingJob.status === "processing") {
+			return c.json({ error: "OCR jobs that are queued or processing cannot be superseded." }, 409);
+		}
+
+		await db.update(ocrJobTable).set({ status: "superseded" }).where(eq(ocrJobTable.id, jobId));
+
+		const detail = await findScrimWithRelations(scrimId);
+		if (!detail) return c.json({ error: "Scrim not found after supersede." }, 500);
+
+		const updatedJob = detail.ocrJobs.find((j) => j.id === jobId);
+		if (updatedJob) {
+			try {
+				publishOcrJobRealtimeUpdate(mapOcrJob(updatedJob));
+			} catch {}
+		}
+
+		if (!updatedJob) return c.json({ error: "OCR job not found after supersede." }, 500);
+		return c.json({ data: mapOcrJob(updatedJob) });
 	});
 }
 

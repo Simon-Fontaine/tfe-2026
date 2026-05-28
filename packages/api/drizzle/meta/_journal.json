@@ -127,6 +127,13 @@
       "when": 1779964544060,
       "tag": "0017_living_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1779978859040,
+      "tag": "0018_bent_namor",
+      "breakpoints": true
     }
   ]
 }

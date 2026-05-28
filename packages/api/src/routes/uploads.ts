@@ -56,6 +56,7 @@ async function getScrimAccess(scrimId: string, userId: string) {
 			id: true,
 			homeTeamId: true,
 			awayTeamId: true,
+			status: true,
 		},
 	});
 	if (!scrim) return { scrim: null, canAccess: false };
@@ -105,6 +106,12 @@ uploadRoutes.post("/scrim-evidence/intents", async (c) => {
 	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
 	if (!canAccess) {
 		return c.json({ error: "You do not have access to upload evidence for this scrim." }, 403);
+	}
+	if (scrim.status === "completed" || scrim.status === "cancelled") {
+		return c.json(
+			{ error: "Evidence upload is not permitted for a scrim in this lifecycle state." },
+			409
+		);
 	}
 
 	const extension =
@@ -157,6 +164,12 @@ uploadRoutes.post("/scrim-evidence/finalize", async (c) => {
 	if (!scrim) return c.json({ error: "Scrim not found." }, 404);
 	if (!canAccess) {
 		return c.json({ error: "You do not have access to finalize evidence for this scrim." }, 403);
+	}
+	if (scrim.status === "completed" || scrim.status === "cancelled") {
+		return c.json(
+			{ error: "Evidence upload is not permitted for a scrim in this lifecycle state." },
+			409
+		);
 	}
 
 	const requiredPrefix = `private/scrims/${scrim.id}/${user.id}/${parsed.output.screenshotType}/`;
