@@ -17,6 +17,9 @@ export default async function AppOrgSettingsPage({
 	const { orgId } = await params;
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
+	if (org.kind === "no-access") {
+		return <AccessGate title="Settings" resourceType="organization" reason={org.reason} />;
+	}
 	if (org.kind !== "success") {
 		return <AccessGate title="Settings" resourceType="organization" />;
 	}
@@ -26,16 +29,7 @@ export default async function AppOrgSettingsPage({
 		!org.data.currentUser.canLeave &&
 		!org.data.currentUser.canDelete
 	) {
-		return (
-			<PageContainer>
-				<PageHeader title="Settings" detail={`/${org.data.slug}`} />
-				<EmptyStateBlock
-					title="No access"
-					description="You don't have permission to manage this organization's settings."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Settings" resourceType="organization" reason="role" />;
 	}
 
 	return (

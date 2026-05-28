@@ -44,7 +44,7 @@ export const getTeamUpdatesRouteState = cache(
 			return routeStateSuccess({ posts: res.data, nextCursor });
 		}
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(`API error ${res.status}: ${res.error ?? "unknown error"}`);
 	}
 );
@@ -62,7 +62,7 @@ export const getOrgUpdatesRouteState = cache(
 			return routeStateSuccess({ posts: res.data, nextCursor });
 		}
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(`API error ${res.status}: ${res.error ?? "unknown error"}`);
 	}
 );

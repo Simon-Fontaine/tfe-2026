@@ -884,8 +884,24 @@ orgRoutes.post("/", async (c) => {
 
 orgRoutes.get("/:id", async (c) => {
 	const user = c.get("user");
-	const detail = await getOrgWorkspaceDetail(c.req.param("id"), user.id);
-	if (!detail) return c.json({ error: "Organisation not found or inaccessible." }, 404);
+	const orgId = c.req.param("id");
+	const detail = await getOrgWorkspaceDetail(orgId, user.id);
+	if (!detail) {
+		const org = await db.query.organizationTable.findFirst({
+			where: eq(organizationTable.id, orgId),
+			columns: { id: true, lifecycleStatus: true },
+		});
+		if (!org) return c.json({ error: "Organisation not found." }, 404);
+		const reason =
+			org.lifecycleStatus === "archived" || org.lifecycleStatus === "deletion_pending"
+				? "lifecycle"
+				: "role";
+		logger.warn(
+			{ userId: user.id, orgId, action: "view-org-workspace", reason },
+			"permission denied"
+		);
+		return c.json({ error: "You do not have access to this organisation workspace.", reason }, 403);
+	}
 	return c.json({ data: detail });
 });
 

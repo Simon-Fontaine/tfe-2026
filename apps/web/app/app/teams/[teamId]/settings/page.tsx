@@ -2,6 +2,7 @@ import { LockIcon } from "@hugeicons/core-free-icons";
 import { notFound } from "next/navigation";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
@@ -19,30 +20,16 @@ export default async function AppTeamSettingsPage({
 	if (team.kind === "missing") notFound();
 	if (team.kind !== "success") {
 		return (
-			<PageContainer>
-				<PageHeader title="Settings" detail="team workspace" />
-				<EmptyStateBlock
-					icon={LockIcon}
-					title="No access"
-					description="You need an active team membership before you can open this settings workspace."
-					variant="card"
-				/>
-			</PageContainer>
+			<AccessGate
+				title="Settings"
+				resourceType="team"
+				reason={team.kind === "no-access" ? team.reason : undefined}
+			/>
 		);
 	}
 
 	if (!team.data.currentUser.canManageSettings && !team.data.currentUser.canLeave) {
-		return (
-			<PageContainer>
-				<PageHeader title="Settings" detail={`[${team.data.tag}] ${team.data.name}`} />
-				<EmptyStateBlock
-					icon={LockIcon}
-					title="No access"
-					description="You don't have permission to manage this team's settings."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Settings" resourceType="team" reason="role" />;
 	}
 
 	return (

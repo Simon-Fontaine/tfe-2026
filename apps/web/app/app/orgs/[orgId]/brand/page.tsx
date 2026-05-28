@@ -14,7 +14,13 @@ export default async function AppOrgBrandPage({ params }: { params: Promise<{ or
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
 	if (org.kind !== "success") {
-		return <AccessGate title="Brand" resourceType="organization" />;
+		return (
+			<AccessGate
+				title="Brand"
+				resourceType="organization"
+				reason={org.kind === "no-access" ? org.reason : undefined}
+			/>
+		);
 	}
 
 	if (!org.data.currentUser.canManageBrand) {

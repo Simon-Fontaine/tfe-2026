@@ -18,6 +18,7 @@ import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
 import { UploadScrimEvidenceDialog } from "@/components/scrims/upload-scrim-evidence-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getScrimChatRouteState } from "@/lib/data/chat";
@@ -80,19 +81,7 @@ export default async function TeamScrimDetailPage({
 
 	if (scrimState.kind === "missing") notFound();
 	if (scrimState.kind === "no-access") {
-		return (
-			<PageContainer>
-				<PageHeader
-					title="Scrim detail"
-					detail={`[${teamState.data.tag}] ${teamState.data.name}`}
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="This scrim belongs to a workspace you cannot review from the current team shell."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Scrim detail" resourceType="scrim" reason={scrimState.reason} />;
 	}
 	if (scrimState.kind === "wrong-context") {
 		return (

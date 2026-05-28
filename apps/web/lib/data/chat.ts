@@ -50,7 +50,7 @@ export const getTeamChatRouteState = cache(
 		const res = await apiGet<ChatConversationSummary[]>(apiRoutes.chat.teamConversations(teamId));
 		if ("data" in res) return routeStateSuccess(res.data);
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(res.error);
 	}
 );
@@ -67,7 +67,7 @@ export const getScrimChatRouteState = cache(
 		const res = await apiGet<ChatConversationSummary[]>(apiRoutes.chat.scrimConversations(scrimId));
 		if ("data" in res) return routeStateSuccess(res.data);
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(res.error);
 	}
 );

@@ -57,6 +57,7 @@ import {
 	getLifecycleRecoveryUntil,
 	mapLifecycleWorkflow,
 } from "@/utils/lifecycle";
+import logger from "@/utils/logger";
 import { verifyOrgManager } from "@/utils/org";
 import {
 	getCurrentOwnershipWorkflow,
@@ -860,8 +861,13 @@ teamRoutes.get("/:id", async (c) => {
 	const detail = await getTeamWorkspaceDetail(teamId, user.id);
 	if (!detail) {
 		const team = await getTeamById(teamId);
-		if (team) return c.json({ error: "You do not have access to this team workspace." }, 403);
-		return c.json({ error: "Team not found." }, 404);
+		if (!team) return c.json({ error: "Team not found." }, 404);
+		const reason = team.lifecycleStatus !== "active" ? "lifecycle" : "role";
+		logger.warn(
+			{ userId: user.id, teamId, action: "view-team-workspace", reason },
+			"permission denied"
+		);
+		return c.json({ error: "You do not have access to this team workspace.", reason }, 403);
 	}
 	return c.json({ data: detail });
 });

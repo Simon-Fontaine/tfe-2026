@@ -109,7 +109,10 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const scrim = await findScrimWithRelations(scrimId);
 		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
 		if (!(await canManageAnyScrimTeam(user.id, scrim))) {
-			return c.json({ error: "Only a team manager can retry OCR jobs for this scrim." }, 403);
+			return c.json(
+				{ error: "Only a team manager can retry OCR jobs for this scrim.", reason: "role" },
+				403
+			);
 		}
 
 		const existingJob = scrim.ocrJobs.find((job) => job.id === jobId);
@@ -187,7 +190,10 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const scrim = await findScrimWithRelations(scrimId);
 		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
 		if (!(await canManageAnyScrimTeam(user.id, scrim))) {
-			return c.json({ error: "Only a team manager can supersede OCR jobs for this scrim." }, 403);
+			return c.json(
+				{ error: "Only a team manager can supersede OCR jobs for this scrim.", reason: "role" },
+				403
+			);
 		}
 		if (scrim.status === "completed" || scrim.status === "cancelled") {
 			return c.json(

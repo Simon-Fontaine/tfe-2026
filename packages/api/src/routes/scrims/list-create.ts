@@ -13,6 +13,7 @@ import {
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { ensureScrimConversationLifecycle } from "@/utils/chat";
+import logger from "@/utils/logger";
 import { verifyTeamManager } from "@/utils/team";
 import { canAccessScrim, canViewTeam, notifyTeamAdmins } from "./access";
 import { TEAM_VIEWABLE_STATUSES } from "./constants";
@@ -183,10 +184,15 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 	scrimRoutes.get("/:id", async (c) => {
 		const user = c.get("user");
-		const scrim = await findScrimWithRelations(c.req.param("id"));
+		const scrimId = c.req.param("id");
+		const scrim = await findScrimWithRelations(scrimId);
 		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
 		if (!(await canAccessScrim(user.id, scrim))) {
-			return c.json({ error: "You do not have access to this scrim." }, 403);
+			logger.warn(
+				{ userId: user.id, scrimId, action: "view-scrim" },
+				"permission denied: not a scrim participant"
+			);
+			return c.json({ error: "You do not have access to this scrim.", reason: "role" }, 403);
 		}
 
 		return c.json({ data: mapScrimDetail(scrim) });

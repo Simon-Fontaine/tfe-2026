@@ -39,7 +39,7 @@ export const getTeamScrimsRouteState = cache(
 			});
 		}
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(res.error);
 	}
 );
@@ -54,7 +54,7 @@ export const getScrimRouteState = cache(
 		const res = await apiGet<ScrimDetail>(apiRoutes.scrims.byId(scrimId));
 		if ("data" in res) return routeStateSuccess(res.data);
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(res.error);
 	}
 );

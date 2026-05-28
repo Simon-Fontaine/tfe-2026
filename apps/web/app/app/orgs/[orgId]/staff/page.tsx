@@ -8,6 +8,7 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -76,18 +77,11 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 	if (org.kind === "missing") notFound();
 	if (org.kind !== "success") {
 		return (
-			<PageContainer>
-				<PageHeader
-					title="Staff"
-					detail="organization workspace"
-					description="Org admins, coaches, and operational members for this workspace."
-				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You do not have permission to open this organization staff workspace."
-					variant="card"
-				/>
-			</PageContainer>
+			<AccessGate
+				title="Staff"
+				resourceType="organization"
+				reason={org.kind === "no-access" ? org.reason : undefined}
+			/>
 		);
 	}
 	const orgDetail = org.data;

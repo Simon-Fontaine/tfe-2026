@@ -6,6 +6,7 @@ import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-
 import { OrgWorkspaceInvitesEmptyState } from "@/components/orgs/org-workspace-state";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -22,16 +23,16 @@ export default async function AppOrgInvitesPage({
 	const { orgId } = await params;
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
+	if (org.kind === "no-access") {
+		return <AccessGate title="Invites" resourceType="organization" reason={org.reason} />;
+	}
 	if (org.kind !== "success" || !org.data.currentUser.canManage) {
 		return (
-			<PageContainer>
-				<PageHeader title="Invites" detail="organization workspace" />
-				<EmptyStateBlock
-					title="No access"
-					description="You don't have permission to manage this organization's invites."
-					variant="card"
-				/>
-			</PageContainer>
+			<AccessGate
+				title="Invites"
+				resourceType="organization"
+				reason={org.kind === "success" ? "role" : undefined}
+			/>
 		);
 	}
 	const orgDetail = org.data;

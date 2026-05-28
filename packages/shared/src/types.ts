@@ -1550,6 +1550,17 @@ export type PublicPlayerDetail = PublicPlayerSummary & {
 	scrimStats: { scrimsPlayed: number; wins: number; losses: number; draws: number } | null;
 };
 
+// ─── Permission types ──────────────────────────────────────────────────────
+
+export type PermissionDenialReason =
+	| "role"
+	| "lifecycle"
+	| "ownership"
+	| "verification"
+	| "privacy"
+	| "settlement-lock"
+	| "moderation";
+
 // ─── Hero types ────────────────────────────────────────────────────────────
 
 export type HeroRow = {

@@ -43,3 +43,7 @@ export function canApplyToInvite(status: InviteLifecycleStatus, expiresAt: strin
 	const expiry = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
 	return expiry.getTime() > Date.now();
 }
+
+export function canApplyToTeam(rosterStatus: string | null | undefined): boolean {
+	return rosterStatus === "active";
+}

@@ -47,7 +47,7 @@ export const getTeamWithRosterRouteState = cache(
 		const res = await apiGet<TeamWithRoster>(apiRoutes.teams.byId(teamId));
 		if ("data" in res) return routeStateSuccess(res.data);
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(res.error);
 	}
 );
@@ -86,7 +86,7 @@ export const getTeamScheduleRouteState = cache(
 		const res = await apiGet<TeamSchedule>(apiRoutes.schedule.teamById(teamId));
 		if ("data" in res) return routeStateSuccess(res.data);
 		if (res.status === 404) return routeStateMissing();
-		if (res.status === 403) return routeStateNoAccess();
+		if (res.status === 403) return routeStateNoAccess(res.reason);
 		throw new Error(res.error);
 	}
 );

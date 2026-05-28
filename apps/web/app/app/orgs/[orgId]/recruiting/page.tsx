@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
@@ -26,17 +27,11 @@ export default async function AppOrgRecruitingPage({
 	const { orgId } = await params;
 	const org = await getOrgWithTeamsRouteState(orgId, user.id);
 	if (org.kind === "missing") notFound();
+	if (org.kind === "no-access") {
+		return <AccessGate title="Recruiting" resourceType="organization" reason={org.reason} />;
+	}
 	if (org.kind !== "success" || !org.data.currentUser.canManage) {
-		return (
-			<PageContainer>
-				<PageHeader title="Recruiting" detail="organization workspace" />
-				<EmptyStateBlock
-					title="No access"
-					description="You don't have permission to manage this organization's recruiting workspace."
-					variant="card"
-				/>
-			</PageContainer>
-		);
+		return <AccessGate title="Recruiting" resourceType="organization" reason="role" />;
 	}
 	const orgDetail = org.data;
 

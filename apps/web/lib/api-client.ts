@@ -1,5 +1,6 @@
 "use server";
 
+import type { PermissionDenialReason } from "@scrimflow/shared";
 import { cookies } from "next/headers";
 
 const API_URL = process.env.API_URL ?? "http://localhost:3001";
@@ -8,7 +9,12 @@ const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
 type ApiSuccess<T> = { data: T };
 type ApiMutationSuccess = { success: true };
-type ApiError = { error: string; status: number; fieldErrors?: Partial<Record<string, string[]>> };
+type ApiError = {
+	error: string;
+	status: number;
+	reason?: PermissionDenialReason;
+	fieldErrors?: Partial<Record<string, string[]>>;
+};
 type ApiResponse<T> = ApiSuccess<T> | ApiError;
 type ApiMutationResponse = ApiMutationSuccess | ApiError;
 
@@ -35,6 +41,16 @@ async function readJsonSafe(res: Response): Promise<Record<string, unknown> | nu
 	return res.json().catch(() => null);
 }
 
+const VALID_DENIAL_REASONS: ReadonlyArray<string> = [
+	"role",
+	"lifecycle",
+	"ownership",
+	"verification",
+	"privacy",
+	"settlement-lock",
+	"moderation",
+];
+
 function normalizeApiError(params: {
 	status: number;
 	body: Record<string, unknown> | null;
@@ -42,10 +58,15 @@ function normalizeApiError(params: {
 }): ApiError {
 	const { status, body, fallbackMessage } = params;
 	const fieldErrors = body?.fieldErrors;
+	const reason =
+		typeof body?.reason === "string" && VALID_DENIAL_REASONS.includes(body.reason)
+			? (body.reason as PermissionDenialReason)
+			: undefined;
 
 	return {
 		error: typeof body?.error === "string" ? body.error : fallbackMessage,
 		status,
+		...(reason && { reason }),
 		...(fieldErrors && typeof fieldErrors === "object"
 			? { fieldErrors: fieldErrors as Partial<Record<string, string[]>> }
 			: {}),

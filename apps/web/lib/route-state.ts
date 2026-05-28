@@ -1,3 +1,5 @@
+import type { PermissionDenialReason } from "@scrimflow/shared";
+
 export type WorkspaceRouteScope = "personal" | "org" | "team";
 
 export interface RouteStateMissing {
@@ -6,6 +8,7 @@ export interface RouteStateMissing {
 
 export interface RouteStateNoAccess {
 	kind: "no-access";
+	reason?: PermissionDenialReason;
 }
 
 export interface RouteStateWrongContext {
@@ -35,8 +38,8 @@ export function routeStateMissing(): RouteStateMissing {
 	return { kind: "missing" };
 }
 
-export function routeStateNoAccess(): RouteStateNoAccess {
-	return { kind: "no-access" };
+export function routeStateNoAccess(reason?: PermissionDenialReason): RouteStateNoAccess {
+	return { kind: "no-access", ...(reason && { reason }) };
 }
 
 export function routeStateWrongContext(
