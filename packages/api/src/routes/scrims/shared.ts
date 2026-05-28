@@ -111,6 +111,7 @@ export async function findScrimWithRelations(scrimId: string) {
 					ratingDelta: true,
 					ratingDeviationBefore: true,
 					ratingDeviationAfter: true,
+					algorithmVersion: true,
 					createdAt: true,
 				},
 				with: {

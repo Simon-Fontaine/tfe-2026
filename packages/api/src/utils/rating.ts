@@ -168,6 +168,7 @@ export async function applyCompletedScrimRating(tx: DbTransaction, scrimId: stri
 			ratingDelta: homeUpdate.ratingDelta,
 			ratingDeviationBefore: homeUpdate.ratingDeviationBefore,
 			ratingDeviationAfter: homeUpdate.ratingDeviationAfter,
+			algorithmVersion: "glicko-1.0",
 		},
 		{
 			teamId: awayUpdate.teamId,
@@ -177,6 +178,7 @@ export async function applyCompletedScrimRating(tx: DbTransaction, scrimId: stri
 			ratingDelta: awayUpdate.ratingDelta,
 			ratingDeviationBefore: awayUpdate.ratingDeviationBefore,
 			ratingDeviationAfter: awayUpdate.ratingDeviationAfter,
+			algorithmVersion: "glicko-1.0",
 		},
 	]);
 

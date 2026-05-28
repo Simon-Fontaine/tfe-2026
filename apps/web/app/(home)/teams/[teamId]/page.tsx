@@ -42,6 +42,14 @@ export async function generateMetadata({
 	};
 }
 
+function formatTimestamp(iso: string): string {
+	return new Intl.DateTimeFormat("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	}).format(new Date(iso));
+}
+
 export default async function TeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
 	const { teamId } = await params;
 
@@ -189,6 +197,61 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 						<p className="mt-1 text-sm font-semibold">{team.rating}</p>
 					</div>
 				</div>
+			</div>
+
+			<div className="border p-5">
+				<h2 className="text-sm font-semibold">Recent rating changes</h2>
+				<p className="mt-1 text-sm text-muted-foreground">
+					Rating changes from confirmed scrim results.
+				</p>
+				{team.ratingHistory.length === 0 ? (
+					<div className="mt-3 border px-3 py-4">
+						<p className="text-sm font-semibold">No rated scrims yet</p>
+						<p className="mt-1 text-xs text-muted-foreground">
+							Rating changes appear once both teams confirm a scrim result.
+						</p>
+					</div>
+				) : (
+					<div className="mt-3 divide-y border">
+						{team.ratingHistory.map((entry) => {
+							const deltaText =
+								entry.ratingDelta > 0 ? `+${entry.ratingDelta}` : `${entry.ratingDelta}`;
+							const resultVariant =
+								entry.result === "win"
+									? "secondary"
+									: entry.result === "loss"
+										? "destructive"
+										: "outline";
+							const resultClass =
+								entry.result === "win"
+									? "text-green-600"
+									: entry.result === "draw"
+										? "border-muted-foreground/40 text-muted-foreground"
+										: undefined;
+							return (
+								<div
+									key={entry.id}
+									className="flex flex-wrap items-center justify-between gap-3 px-3 py-3"
+								>
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-sm font-semibold">
+											{entry.opponentTeamTag && entry.opponentTeamName
+												? `vs [${entry.opponentTeamTag}] ${entry.opponentTeamName}`
+												: "Rated scrim"}
+										</p>
+										<p className="mt-1 text-xs text-muted-foreground">
+											{entry.teamMapScore} - {entry.opponentMapScore} · Rating {entry.ratingBefore}{" "}
+											→ {entry.ratingAfter} · {formatTimestamp(entry.createdAt)}
+										</p>
+									</div>
+									<Badge variant={resultVariant} className={resultClass}>
+										{entry.result} {deltaText}
+									</Badge>
+								</div>
+							);
+						})}
+					</div>
+				)}
 			</div>
 
 			<PublicPageSection

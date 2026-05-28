@@ -1,6 +1,7 @@
 import type {
 	DiscoveryTeam,
 	PublicRosterMemberSummary,
+	PublicTeamRatingEntry,
 	TeamPublicPreview,
 } from "@scrimflow/shared";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
@@ -180,6 +181,33 @@ publicTeamRoutes.get("/:id", async (c) => {
 				orderBy: (s, { desc: d }) => [d(s.scheduledAt)],
 				limit: 10,
 			},
+			ratingEvents: {
+				columns: {
+					id: true,
+					ratingBefore: true,
+					ratingAfter: true,
+					ratingDelta: true,
+					algorithmVersion: true,
+					createdAt: true,
+				},
+				with: {
+					scrim: {
+						columns: {
+							id: true,
+							homeTeamId: true,
+							awayTeamId: true,
+							homeMapScore: true,
+							awayMapScore: true,
+						},
+						with: {
+							homeTeam: { columns: { name: true, tag: true } },
+							awayTeam: { columns: { name: true, tag: true } },
+						},
+					},
+				},
+				orderBy: (t, { desc: d }) => [d(t.createdAt)],
+				limit: 5,
+			},
 		},
 	});
 
@@ -248,6 +276,29 @@ publicTeamRoutes.get("/:id", async (c) => {
 		else if (member.roleInTeam === "support") roleBreakdown.support++;
 	}
 
+	const ratingHistory: PublicTeamRatingEntry[] = (team.ratingEvents ?? []).map((event) => {
+		const isHomeTeam = event.scrim.homeTeamId === teamId;
+		const opponentTeam = isHomeTeam ? event.scrim.awayTeam : event.scrim.homeTeam;
+		const teamMapScore = isHomeTeam ? event.scrim.homeMapScore : event.scrim.awayMapScore;
+		const opponentMapScore = isHomeTeam ? event.scrim.awayMapScore : event.scrim.homeMapScore;
+		const result: "win" | "loss" | "draw" =
+			teamMapScore > opponentMapScore ? "win" : teamMapScore < opponentMapScore ? "loss" : "draw";
+		return {
+			id: event.id,
+			scrimId: event.scrim.id,
+			opponentTeamName: opponentTeam?.name ?? null,
+			opponentTeamTag: opponentTeam?.tag ?? null,
+			teamMapScore,
+			opponentMapScore,
+			result,
+			ratingBefore: event.ratingBefore,
+			ratingAfter: event.ratingAfter,
+			ratingDelta: event.ratingDelta,
+			algorithmVersion: event.algorithmVersion,
+			createdAt: event.createdAt.toISOString(),
+		};
+	});
+
 	const data: TeamPublicPreview = {
 		id: team.id,
 		organizationId: team.organizationId,
@@ -286,6 +337,7 @@ publicTeamRoutes.get("/:id", async (c) => {
 		draws,
 		roleBreakdown,
 		recentScrims,
+		ratingHistory,
 	};
 
 	return c.json({ data });

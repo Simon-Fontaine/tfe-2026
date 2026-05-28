@@ -1235,6 +1235,7 @@ export const teamRatingEventTable = pgTable(
 		ratingDelta: integer("rating_delta").notNull(),
 		ratingDeviationBefore: integer("rating_deviation_before"),
 		ratingDeviationAfter: integer("rating_deviation_after"),
+		algorithmVersion: text("algorithm_version").notNull().default("glicko-1.0"),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 	},

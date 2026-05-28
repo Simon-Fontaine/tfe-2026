@@ -168,6 +168,7 @@ export function mapScrimDetail(scrim: ScrimRow): ScrimDetail {
 			ratingDelta: event.ratingDelta,
 			ratingDeviationBefore: event.ratingDeviationBefore ?? null,
 			ratingDeviationAfter: event.ratingDeviationAfter ?? null,
+			algorithmVersion: event.algorithmVersion,
 			createdAt: event.createdAt.toISOString(),
 		})),
 		ocrJobs: scrim.ocrJobs.map(mapOcrJob),

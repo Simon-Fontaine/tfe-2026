@@ -289,6 +289,8 @@ export default async function TeamScrimDetailPage({
 						ratingEvents={scrim.ratingEvents}
 						chatConversations={availableChatConversations}
 						teamId={team.id}
+						scrimStatus={scrim.status}
+						disputeResolution={disputeResolution}
 					/>
 					<ScrimOcrJobsPanel
 						scrimId={scrim.id}

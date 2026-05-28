@@ -407,6 +407,21 @@ export type TeamRatingHistoryEntry = {
 	createdAt: IsoDateString;
 };
 
+export type PublicTeamRatingEntry = {
+	id: string;
+	scrimId: string;
+	opponentTeamName: string | null;
+	opponentTeamTag: string | null;
+	teamMapScore: number;
+	opponentMapScore: number;
+	result: "win" | "loss" | "draw";
+	ratingBefore: number;
+	ratingAfter: number;
+	ratingDelta: number;
+	algorithmVersion: string;
+	createdAt: IsoDateString;
+};
+
 export type TeamWorkspaceConversation = RecruitmentConversationSummary;
 
 export type OwnershipActorSummary = {
@@ -497,6 +512,7 @@ export type TeamPublicPreview = {
 		awayMapScore: number;
 		scheduledAt: IsoDateString | null;
 	}[];
+	ratingHistory: PublicTeamRatingEntry[];
 };
 
 // ─── Organization types ────────────────────────────────────────────────────
@@ -1193,6 +1209,7 @@ export type ScrimRatingEventSummary = {
 	ratingDelta: number;
 	ratingDeviationBefore: number | null;
 	ratingDeviationAfter: number | null;
+	algorithmVersion: string;
 	createdAt: IsoDateString;
 };
 
