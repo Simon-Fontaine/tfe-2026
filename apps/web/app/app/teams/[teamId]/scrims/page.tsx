@@ -52,9 +52,10 @@ function getOpponentDisplay(
 	return { label: `[${opponent.tag}] ${opponent.name}`, isArchived: opponent.isArchived };
 }
 
-function isNeedsAction(scrim: ScrimSummary, teamId: string): boolean {
+function isNeedsAction(scrim: ScrimSummary, teamId: string, canResolveDispute: boolean): boolean {
 	if (scrim.status === "awaiting_confirmation") return true;
 	if (scrim.status === "pending" && scrim.awayTeam?.id === teamId) return true;
+	if (scrim.status === "disputed" && canResolveDispute) return true;
 	return false;
 }
 
@@ -73,7 +74,7 @@ function ScrimRow({ scrim, teamId }: { scrim: ScrimSummary; teamId: string }) {
 								<span className="ml-1.5 text-xs font-normal text-muted-foreground">(archived)</span>
 							)}
 						</p>
-						<ScrimStatusBadge status={scrim.status} />
+						<ScrimStatusBadge status={scrim.status} disputeResolution={scrim.disputeResolution} />
 					</div>
 					<p className="text-xs text-muted-foreground">
 						{scrim.message ?? "No manager note added yet."}
@@ -153,15 +154,19 @@ export default async function TeamScrimsPage({
 
 	const teamData = team.data;
 	const { scrims, nextCursor } = scrimsState.data;
+	const canResolveDispute =
+		teamData.currentUser.orgRole === "owner" || teamData.currentUser.orgRole === "admin";
 
-	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, teamData.id));
+	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, teamData.id, canResolveDispute));
 	const upcomingScrims = scrims.filter(
 		(s) =>
-			!isNeedsAction(s, teamData.id) && ["accepted", "scheduled", "in_progress"].includes(s.status)
+			!isNeedsAction(s, teamData.id, canResolveDispute) &&
+			["accepted", "scheduled", "in_progress"].includes(s.status)
 	);
 	const pastScrims = scrims.filter(
 		(s) =>
-			!isNeedsAction(s, teamData.id) && ["completed", "cancelled", "disputed"].includes(s.status)
+			!isNeedsAction(s, teamData.id, canResolveDispute) &&
+			["completed", "cancelled", "disputed"].includes(s.status)
 	);
 	const needsActionCount = needsActionScrims.length;
 

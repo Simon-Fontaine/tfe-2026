@@ -1,4 +1,4 @@
-import type { ScrimStatus } from "@scrimflow/shared";
+import type { ScrimDisputeResolution, ScrimStatus } from "@scrimflow/shared";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,21 @@ const SCRIM_STATUS_LABELS: Record<ScrimStatus, string> = {
 	disputed: "Disputed",
 };
 
-export function ScrimStatusBadge({ status }: { status: ScrimStatus }) {
+export function ScrimStatusBadge({
+	status,
+	disputeResolution,
+}: {
+	status: ScrimStatus;
+	disputeResolution?: ScrimDisputeResolution | null;
+}) {
+	if (status === "cancelled" && disputeResolution === "voided") {
+		return (
+			<Badge variant="outline" className="text-muted-foreground">
+				Voided
+			</Badge>
+		);
+	}
+
 	if (status === "disputed") {
 		return <Badge variant="destructive">{SCRIM_STATUS_LABELS[status]}</Badge>;
 	}

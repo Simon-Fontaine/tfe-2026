@@ -172,7 +172,9 @@ export default async function TeamScrimDetailPage({
 				title={title}
 				detail={`[${team.tag}] ${team.name}`}
 				description={`Scheduled ${formatTimestamp(scrim.scheduledAt, "when both teams lock a time")}. Result reporting, confirmations, and evidence for this matchup all live here.`}
-				badge={<ScrimStatusBadge status={scrim.status} />}
+				badge={
+					<ScrimStatusBadge status={scrim.status} disputeResolution={scrim.dispute.resolution} />
+				}
 				actions={
 					<div className="flex flex-wrap gap-2">
 						<Button asChild size="sm" variant="outline">

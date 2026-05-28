@@ -1391,6 +1391,7 @@ export type ScrimSummary = {
 	homeTeamSnapshot: { name: string; tag: string } | null;
 	awayTeamSnapshot: { name: string; tag: string } | null;
 	pendingConfirmationCount: number;
+	disputeResolution: ScrimDisputeResolution | null;
 };
 
 export type ScrimDetail = ScrimSummary & {

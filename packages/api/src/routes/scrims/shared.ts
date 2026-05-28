@@ -276,6 +276,7 @@ export type ScrimSummaryRow = {
 	awayTeamNameSnapshot: string | null;
 	awayTeamTagSnapshot: string | null;
 	confirmations: ScrimRow["confirmations"];
+	disputeResolution: ScrimRow["disputeResolution"];
 };
 
 export function toIsoDate(date: Date | null): string | null {
@@ -332,5 +333,6 @@ export function mapBaseScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
 		pendingConfirmationCount: scrim.confirmations.filter(
 			(confirmation) => confirmation.status !== "confirmed"
 		).length,
+		disputeResolution: scrim.disputeResolution ?? null,
 	};
 }
