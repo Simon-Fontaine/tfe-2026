@@ -61,6 +61,20 @@ function deriveLifecycleEvents(scrim: ScrimDetail): LifecycleEvent[] {
 		});
 	}
 
+	for (const confirmation of scrim.confirmations) {
+		if (confirmation.status === "disputed" && confirmation.confirmedAt) {
+			events.push({
+				id: `dispute-raised-${confirmation.id}`,
+				label: "Dispute raised",
+				actor:
+					confirmation.confirmedByDisplayName ??
+					`[${confirmation.teamTag}] ${confirmation.teamName}`,
+				timestamp: confirmation.confirmedAt,
+				detail: confirmation.disputeReason ? `Reason: ${confirmation.disputeReason}` : null,
+			});
+		}
+	}
+
 	if (scrim.dispute.resolvedAt && scrim.dispute.resolution) {
 		const disputeLabel =
 			scrim.dispute.resolution === "voided"
@@ -73,6 +87,15 @@ function deriveLifecycleEvents(scrim: ScrimDetail): LifecycleEvent[] {
 			label: disputeLabel,
 			actor: scrim.dispute.resolvedByDisplayName,
 			timestamp: scrim.dispute.resolvedAt,
+		});
+	}
+
+	if (scrim.dispute.disputeRespondedAt) {
+		events.push({
+			id: "dispute-response",
+			label: "Dispute response submitted",
+			actor: scrim.dispute.disputeRespondedByDisplayName,
+			timestamp: scrim.dispute.disputeRespondedAt,
 		});
 	}
 

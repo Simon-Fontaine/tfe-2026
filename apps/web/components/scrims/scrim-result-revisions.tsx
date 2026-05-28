@@ -1,6 +1,6 @@
 import { Calendar03Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { ScrimDetail } from "@scrimflow/shared";
+import type { ScrimDetail, ScrimDisputeResolution } from "@scrimflow/shared";
 
 function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 	return value
@@ -40,9 +40,15 @@ function getSupportingScoreboardJobCount(revision: ScrimDetail["resultRevisions"
 
 interface ScrimResultRevisionsProps {
 	resultRevisions: ScrimDetail["resultRevisions"];
+	scrimStatus: ScrimDetail["status"];
+	disputeResolution?: ScrimDisputeResolution | null;
 }
 
-export function ScrimResultRevisions({ resultRevisions }: ScrimResultRevisionsProps) {
+export function ScrimResultRevisions({
+	resultRevisions,
+	scrimStatus,
+	disputeResolution,
+}: ScrimResultRevisionsProps) {
 	return (
 		<section className="border p-4">
 			<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -58,12 +64,13 @@ export function ScrimResultRevisions({ resultRevisions }: ScrimResultRevisionsPr
 						</p>
 					</div>
 				) : (
-					resultRevisions.map((revision) => {
+					resultRevisions.map((revision, index) => {
 						const visibleFieldChanges = revision.changeSummary.fieldChanges.slice(0, 8);
 						const hiddenChangeCount =
 							revision.changeSummary.fieldChanges.length - visibleFieldChanges.length;
 						const supportingScoreboardJobCount = getSupportingScoreboardJobCount(revision);
 						const hasOcrEvidence = !!revision.sourceOcrJobId || supportingScoreboardJobCount > 0;
+						const isLatest = index === 0;
 
 						return (
 							<div key={revision.id} className="border p-3">
@@ -97,6 +104,16 @@ export function ScrimResultRevisions({ resultRevisions }: ScrimResultRevisionsPr
 												{supportingScoreboardJobCount} scoreboard OCR job(s)
 											</span>
 										) : null}
+										{isLatest && scrimStatus === "completed" ? (
+											<span className="inline-flex items-center rounded-sm border border-green-500/50 px-2 py-0.5 text-xs font-semibold text-green-700 dark:text-green-400">
+												Settled result
+											</span>
+										) : null}
+										{isLatest && disputeResolution === "voided" ? (
+											<span className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+												Result voided — not applied
+											</span>
+										) : null}
 									</div>
 								</div>
 
@@ -120,9 +137,9 @@ export function ScrimResultRevisions({ resultRevisions }: ScrimResultRevisionsPr
 
 								{revision.sourceOcrJobId || supportingScoreboardJobCount > 0 ? (
 									<p className="mt-3 text-xs text-muted-foreground">
-										Primary OCR draft: {revision.sourceOcrJobId ?? "none"}
+										{revision.sourceOcrJobId ? "Game history OCR source" : "Manual entry"}
 										{supportingScoreboardJobCount > 0
-											? ` · Supporting scoreboard jobs: ${supportingScoreboardJobCount}`
+											? ` · ${supportingScoreboardJobCount} supporting scoreboard OCR job(s)`
 											: ""}
 									</p>
 								) : null}

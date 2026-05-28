@@ -280,7 +280,11 @@ export default async function TeamScrimDetailPage({
 						canResolveDispute={canResolveDispute}
 					/>
 					<ScrimMapsSection maps={scrim.maps} />
-					<ScrimResultRevisions resultRevisions={scrim.resultRevisions} />
+					<ScrimResultRevisions
+						resultRevisions={scrim.resultRevisions}
+						scrimStatus={scrim.status}
+						disputeResolution={disputeResolution}
+					/>
 					<ScrimRatingSection
 						ratingEvents={scrim.ratingEvents}
 						chatConversations={availableChatConversations}
