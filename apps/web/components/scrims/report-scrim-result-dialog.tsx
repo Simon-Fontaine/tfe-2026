@@ -483,6 +483,21 @@ export function ReportScrimResultDialog({
 					</DialogDescription>
 				</DialogHeader>
 
+				{scrim.status === "completed" ? (
+					<div className="border border-muted p-3 text-xs text-muted-foreground">
+						<strong>This result is locked.</strong> Both teams have confirmed — the result can no
+						longer be replaced through this editor.
+					</div>
+				) : scrim.maps.length > 0 ||
+					scrim.status === "awaiting_confirmation" ||
+					scrim.status === "disputed" ? (
+					<div className="border border-muted p-3 text-xs text-muted-foreground">
+						<strong>Existing result will be replaced.</strong> Submitting overwrites the current map
+						rows and resets both teams&apos; confirmations. The previous result is preserved in
+						revision history.
+					</div>
+				) : null}
+
 				<form onSubmit={handleSubmit} className="space-y-6">
 					<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
 						<div className="space-y-4 border p-4">

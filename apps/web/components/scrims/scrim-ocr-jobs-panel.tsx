@@ -303,6 +303,19 @@ export function ScrimOcrJobsPanel({
 		}
 	}
 
+	const latestRevision =
+		resultRevisions.length > 0
+			? resultRevisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a))
+			: null;
+	const importedScoreboardJobIds = new Set<string>();
+	if (latestRevision) {
+		for (const map of latestRevision.snapshot.maps) {
+			if (map.scoreboardOcrJobId) {
+				importedScoreboardJobIds.add(map.scoreboardOcrJobId);
+			}
+		}
+	}
+
 	return (
 		<section className="border p-4">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -494,6 +507,17 @@ export function ScrimOcrJobsPanel({
 											</p>
 										) : null}
 									</div>
+								) : null}
+
+								{job.status === "completed" &&
+								job.validatedOutput &&
+								!revisionsByOcrJobId.has(job.id) &&
+								!mapsByOcrJobId.has(job.id) &&
+								!importedScoreboardJobIds.has(job.id) ? (
+									<p className="mt-3 text-xs text-muted-foreground">
+										This is unreviewed OCR extraction — use <strong>Review result</strong> to import
+										it into the scrim record.
+									</p>
 								) : null}
 
 								{job.confidenceFlags.length > 0 ? (
