@@ -5,6 +5,7 @@ import { RecruitingRealtimeBootstrap } from "@/components/recruit/recruiting-rea
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
 import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
+import { RealtimeConnectionMonitor } from "./realtime-connection-monitor";
 import { WorkspaceHeader } from "./workspace-header";
 import { WorkspaceSidebar } from "./workspace-sidebar";
 
@@ -36,6 +37,7 @@ export function WorkspaceShell({
 				pendingApplicationCount={pendingApplicationCount}
 			/>
 			<SidebarInset>
+				<RealtimeConnectionMonitor />
 				<WorkspaceHeader orgs={contextOrgs} teams={contextTeams} unreadCount={unreadCount} />
 				{children}
 			</SidebarInset>

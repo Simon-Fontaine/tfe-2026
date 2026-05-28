@@ -16,6 +16,8 @@ class RealtimeSocketService {
 	private scrimSubscriptions = new Set<string>();
 	private teamSubscriptions = new Set<string>();
 	private listeners = new Set<RealtimeListener>();
+	private connected = false;
+	private connectionListeners = new Set<(connected: boolean) => void>();
 
 	connect(): void {
 		if (typeof window === "undefined") return;
@@ -45,6 +47,8 @@ class RealtimeSocketService {
 			for (const teamId of this.teamSubscriptions) {
 				this.sendCommand({ type: "subscribe:team", teamId });
 			}
+			this.connected = true;
+			for (const fn of this.connectionListeners) fn(true);
 			this.startHeartbeat();
 		};
 
@@ -59,6 +63,8 @@ class RealtimeSocketService {
 
 		this.ws.onclose = () => {
 			this.stopHeartbeat();
+			this.connected = false;
+			for (const fn of this.connectionListeners) fn(false);
 			if (!this.intentionalClose) {
 				this.scheduleReconnect();
 			}
@@ -103,6 +109,14 @@ class RealtimeSocketService {
 		this.connect();
 		return () => {
 			this.listeners.delete(listener);
+		};
+	}
+
+	addConnectionListener(fn: (connected: boolean) => void): () => void {
+		this.connectionListeners.add(fn);
+		fn(this.connected);
+		return () => {
+			this.connectionListeners.delete(fn);
 		};
 	}
 

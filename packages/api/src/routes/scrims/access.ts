@@ -75,7 +75,8 @@ export async function notifyTeamAdmins(params: {
 		| "scrim_disputed"
 		| "scrim_resolved"
 		| "scrim_rescheduled"
-		| "scrim_started";
+		| "scrim_started"
+		| "scrim_result_reported";
 	title: string;
 	body: string;
 	scrimId: string;

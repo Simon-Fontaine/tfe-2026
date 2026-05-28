@@ -120,6 +120,13 @@
       "when": 1779922304846,
       "tag": "0016_outgoing_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1779964544060,
+      "tag": "0017_living_loners",
+      "breakpoints": true
     }
   ]
 }

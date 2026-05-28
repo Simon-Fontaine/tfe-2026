@@ -283,6 +283,28 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 		publishScrimStatusChanged(scrimId, detail.status);
 		await ensureScrimConversationLifecycle(scrimId);
 
+		const opposingTeamId =
+			parsed.output.reportingTeamId === scrim.homeTeamId ? scrim.awayTeamId : scrim.homeTeamId;
+		const reportingTeamName =
+			parsed.output.reportingTeamId === scrim.homeTeamId
+				? detail.homeTeam.name
+				: (detail.awayTeam?.name ?? "Opponent");
+
+		if (opposingTeamId) {
+			try {
+				await notifyTeamAdmins({
+					teamId: opposingTeamId,
+					actorUserId: user.id,
+					type: "scrim_result_reported",
+					title: "Scrim result submitted",
+					body: `${reportingTeamName} submitted results for your confirmation.`,
+					scrimId,
+				});
+			} catch (err) {
+				console.error("Failed to notify opposing team admins of result report:", err);
+			}
+		}
+
 		return c.json({ data: mapScrimDetail(detail) });
 	});
 

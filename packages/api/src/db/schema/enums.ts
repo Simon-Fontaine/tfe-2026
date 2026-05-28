@@ -227,6 +227,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 	"scrim_resolved",
 	"scrim_rescheduled",
 	"scrim_started",
+	"scrim_result_reported",
 	"scrim_reminder",
 	"recruitment_application",
 	"recruitment_accepted",

@@ -21,6 +21,8 @@ class ChatSocketService {
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private subscriptions = new Set<string>();
 	private intentionalClose = false;
+	private connected = false;
+	private connectionListeners = new Set<(connected: boolean) => void>();
 
 	// ─── Connection ─────────────────────────────────────────────────────────
 
@@ -50,6 +52,8 @@ class ChatSocketService {
 			for (const conversationId of this.subscriptions) {
 				this.sendCommand({ type: "subscribe", conversationId });
 			}
+			this.connected = true;
+			for (const fn of this.connectionListeners) fn(true);
 			this.startHeartbeat();
 		};
 
@@ -64,6 +68,8 @@ class ChatSocketService {
 
 		this.ws.onclose = () => {
 			this.stopHeartbeat();
+			this.connected = false;
+			for (const fn of this.connectionListeners) fn(false);
 			if (!this.intentionalClose) {
 				this.scheduleReconnect();
 			}
@@ -98,6 +104,14 @@ class ChatSocketService {
 		this.sendCommand({ type: "unsubscribe", conversationId });
 	}
 
+	addConnectionListener(fn: (connected: boolean) => void): () => void {
+		this.connectionListeners.add(fn);
+		fn(this.connected);
+		return () => {
+			this.connectionListeners.delete(fn);
+		};
+	}
+
 	// ─── Typing ──────────────────────────────────────────────────────────────
 
 	sendTypingStart(conversationId: string): void {
@@ -116,6 +130,7 @@ class ChatSocketService {
 	}
 
 	private scheduleReconnect(): void {
+		if (this.reconnectTimer) return;
 		const delay = Math.min(BASE_RECONNECT_MS * 2 ** this.reconnectAttempts, MAX_RECONNECT_MS);
 		this.reconnectAttempts++;
 		this.reconnectTimer = setTimeout(() => {

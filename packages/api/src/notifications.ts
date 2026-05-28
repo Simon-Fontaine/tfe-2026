@@ -41,6 +41,7 @@ const OPTIONAL_NOTIFICATION_BY_TYPE: Partial<
 	scrim_started: "scrimChanges",
 	ocr_completed: "results",
 	ocr_failed: "results",
+	scrim_result_reported: "results",
 	sr_updated: "results",
 	scrim_disputed: "disputes",
 	scrim_resolved: "disputes",
