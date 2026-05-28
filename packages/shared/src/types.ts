@@ -1202,6 +1202,9 @@ export type ScrimDisputeSummary = {
 	resolvedByDisplayName: string | null;
 	resolvedAt: IsoDateString | null;
 	notes: string | null;
+	disputeResponse: string | null;
+	disputeRespondedAt: IsoDateString | null;
+	disputeRespondedByDisplayName: string | null;
 };
 
 export type ScrimPlayerStatSummary = {

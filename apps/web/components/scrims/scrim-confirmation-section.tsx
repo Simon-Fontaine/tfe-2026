@@ -140,6 +140,29 @@ export function ScrimConfirmationSection({
 									Resolution notes: {dispute.notes}
 								</p>
 							) : null}
+
+							<div className="mt-3 border-t pt-3">
+								<p className="text-xs font-semibold text-muted-foreground">
+									Reporting team response
+								</p>
+								{dispute.disputeResponse ? (
+									<div className="mt-2 space-y-1">
+										<p className="text-xs">{dispute.disputeResponse}</p>
+										<p className="text-[11px] text-muted-foreground">
+											{dispute.disputeRespondedByDisplayName
+												? `Submitted by ${dispute.disputeRespondedByDisplayName}`
+												: "Submitted"}
+											{dispute.disputeRespondedAt
+												? ` · ${formatTimestamp(dispute.disputeRespondedAt)}`
+												: ""}
+										</p>
+									</div>
+								) : (
+									<p className="mt-2 text-xs text-muted-foreground">
+										No response yet — the reporting team has not replied to this dispute.
+									</p>
+								)}
+							</div>
 						</div>
 					</div>
 				</section>

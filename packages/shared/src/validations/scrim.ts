@@ -114,6 +114,13 @@ export const ResolveScrimDisputeSchema = v.object({
 
 export type ResolveScrimDisputeInput = v.InferOutput<typeof ResolveScrimDisputeSchema>;
 
+export const RespondToScrimDisputeSchema = v.object({
+	reportingTeamId: v.pipe(v.string(), v.uuid()),
+	responseText: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(1000)),
+});
+
+export type RespondToScrimDisputeInput = v.InferOutput<typeof RespondToScrimDisputeSchema>;
+
 export const CreateScrimOcrJobSchema = v.object({
 	screenshotType: v.picklist(OCR_SCREENSHOT_TYPE_VALUES, "Invalid screenshot type"),
 	imageUrl: v.pipe(v.string(), v.trim(), v.url("Invalid image URL")),

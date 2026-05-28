@@ -197,6 +197,9 @@ export function mapScrimDetail(scrim: ScrimRow): ScrimDetail {
 			resolvedByDisplayName: scrim.disputeResolvedBy?.displayName ?? null,
 			resolvedAt: toIsoDate(scrim.disputeResolvedAt),
 			notes: scrim.disputeNotes ?? null,
+			disputeResponse: scrim.disputeResponse ?? null,
+			disputeRespondedAt: toIsoDate(scrim.disputeRespondedAt),
+			disputeRespondedByDisplayName: scrim.disputeRespondedBy?.displayName ?? null,
 		},
 	};
 }

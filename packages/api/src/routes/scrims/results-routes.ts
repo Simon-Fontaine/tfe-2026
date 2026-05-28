@@ -4,7 +4,11 @@ import type {
 	ScrimResultDiffBasis,
 	ScrimResultRevisionSnapshot,
 } from "@scrimflow/shared";
-import { ResolveScrimDisputeSchema, SubmitScrimResultSchema } from "@scrimflow/shared";
+import {
+	ResolveScrimDisputeSchema,
+	RespondToScrimDisputeSchema,
+	SubmitScrimResultSchema,
+} from "@scrimflow/shared";
 import { desc, eq, sql } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
@@ -406,6 +410,71 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 					})
 				)
 		);
+
+		return c.json({ data: mapScrimDetail(detail) });
+	});
+
+	scrimRoutes.post("/:id/dispute-respond", async (c) => {
+		const user = c.get("user");
+		const scrimId = c.req.param("id");
+		const body = await c.req.json().catch(() => null);
+		if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+		const parsed = v.safeParse(RespondToScrimDisputeSchema, body);
+		if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+		const scrim = await findScrimWithRelations(scrimId);
+		if (!scrim) return c.json({ error: "Scrim not found." }, 404);
+
+		const lastRevision = scrim.resultRevisions[0] ?? null;
+		if (!lastRevision) {
+			return c.json({ error: "No result has been reported for this scrim." }, 400);
+		}
+		if (lastRevision.reportingTeamId !== parsed.output.reportingTeamId) {
+			return c.json({ error: "Only the reporting team can respond to this dispute." }, 403);
+		}
+		if (!(await verifyTeamManager(parsed.output.reportingTeamId, user.id))) {
+			return c.json(
+				{ error: "Only a manager for the reporting team can respond to this dispute." },
+				403
+			);
+		}
+
+		try {
+			await db.transaction(async (tx) => {
+				await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+
+				const lockedScrim = await tx.query.scrimTable.findFirst({
+					where: eq(scrimTable.id, scrimId),
+					columns: { id: true, status: true, disputeResponse: true },
+				});
+
+				if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+				if (lockedScrim.status !== "disputed") {
+					throw new ScrimWorkflowError(400, "Only disputed scrims can receive a dispute response.");
+				}
+				if (lockedScrim.disputeResponse !== null) {
+					throw new ScrimWorkflowError(409, "A dispute response has already been submitted.");
+				}
+
+				await tx
+					.update(scrimTable)
+					.set({
+						disputeResponse: parsed.output.responseText,
+						disputeRespondedAt: new Date(),
+						disputeRespondedByUserId: user.id,
+					})
+					.where(eq(scrimTable.id, scrimId));
+			});
+		} catch (error) {
+			if (error instanceof ScrimWorkflowError) {
+				return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+			}
+			throw error;
+		}
+
+		const detail = await findScrimWithRelations(scrimId);
+		if (!detail) return c.json({ error: "Scrim not found after dispute response." }, 500);
 
 		return c.json({ data: mapScrimDetail(detail) });
 	});

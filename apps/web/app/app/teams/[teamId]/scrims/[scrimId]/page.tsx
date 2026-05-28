@@ -5,6 +5,7 @@ import { ReportScrimResultDialog } from "@/components/scrims/report-scrim-result
 import { ResolveScrimDisputeDialog } from "@/components/scrims/resolve-scrim-dispute-dialog";
 import { ScrimConfirmationSection } from "@/components/scrims/scrim-confirmation-section";
 import { ScrimDetailRealtimeSync } from "@/components/scrims/scrim-detail-realtime-sync";
+import { ScrimDisputeResponseDialog } from "@/components/scrims/scrim-dispute-response-dialog";
 import { ScrimLifecycleTimeline } from "@/components/scrims/scrim-lifecycle-timeline";
 import { ScrimMapsSection } from "@/components/scrims/scrim-maps-section";
 import { ScrimNegotiationHistory } from "@/components/scrims/scrim-negotiation-history";
@@ -128,13 +129,18 @@ export default async function TeamScrimDetailPage({
 		scrim.status !== "pending" &&
 		scrim.status !== "cancelled" &&
 		scrim.status !== "completed";
-	const canReviewConfirmation =
-		team.currentUser.canManage &&
-		!!currentConfirmation &&
-		(scrim.status === "awaiting_confirmation" || scrim.status === "disputed");
 	const canResolveDispute =
 		scrim.status === "disputed" &&
 		(team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin");
+	const reportingTeamFromLastRevision = scrim.resultRevisions[0]?.reportingTeamId ?? null;
+	const canRespondToDispute =
+		team.currentUser.canManage &&
+		scrim.status === "disputed" &&
+		team.id === reportingTeamFromLastRevision;
+	const canReviewConfirmation =
+		team.currentUser.canManage &&
+		!canRespondToDispute &&
+		(scrim.status === "awaiting_confirmation" || scrim.status === "disputed");
 	const canUploadEvidence =
 		team.currentUser.canManage &&
 		!!scrim.awayTeam &&
@@ -185,16 +191,23 @@ export default async function TeamScrimDetailPage({
 								<Button size="sm">Review result</Button>
 							</ReportScrimResultDialog>
 						) : null}
-						{canReviewConfirmation && currentConfirmation ? (
+						{canReviewConfirmation ? (
 							<ConfirmScrimDialog
 								scrimId={scrim.id}
 								teamId={team.id}
-								currentStatus={currentConfirmation.status}
+								currentStatus={currentConfirmation?.status ?? "pending"}
 							>
 								<Button size="sm" variant="outline">
 									Review confirmation
 								</Button>
 							</ConfirmScrimDialog>
+						) : null}
+						{canRespondToDispute ? (
+							<ScrimDisputeResponseDialog scrimId={scrim.id} reportingTeamId={team.id}>
+								<Button size="sm" variant="outline">
+									Respond to dispute
+								</Button>
+							</ScrimDisputeResponseDialog>
 						) : null}
 						{canResolveDispute ? (
 							<ResolveScrimDisputeDialog scrimId={scrim.id}>

@@ -245,6 +245,7 @@ export const apiRoutes = {
 		result: (scrimId: string) => `/api/scrims/${scrimId}/result`,
 		confirm: (scrimId: string) => `/api/scrims/${scrimId}/confirm`,
 		resolveDispute: (scrimId: string) => `/api/scrims/${scrimId}/resolve-dispute`,
+		disputeRespond: (scrimId: string) => `/api/scrims/${scrimId}/dispute-respond`,
 		ocrJobs: (scrimId: string) => `/api/scrims/${scrimId}/ocr-jobs`,
 		retryOcrJob: (scrimId: string, jobId: string) =>
 			`/api/scrims/${scrimId}/ocr-jobs/${jobId}/retry`,

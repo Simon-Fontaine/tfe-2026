@@ -94,15 +94,36 @@ interface ScrimLifecycleTimelineProps {
 	scrim: ScrimDetail;
 }
 
+const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000;
+
+function getStaleLifecycleCue(scrim: ScrimDetail): string | null {
+	if (scrim.status === "awaiting_confirmation" && scrim.endedAt) {
+		const elapsed = Date.now() - new Date(scrim.endedAt).getTime();
+		if (elapsed > STALE_THRESHOLD_MS) {
+			return "Pending confirmation — awaiting opponent response";
+		}
+	}
+	if (scrim.status === "disputed" && !scrim.dispute.resolution) {
+		return "Disputed — pending admin review";
+	}
+	return null;
+}
+
 export function ScrimLifecycleTimeline({ scrim }: ScrimLifecycleTimelineProps) {
 	const events = deriveLifecycleEvents(scrim);
-	if (events.length <= 1) return null;
+	const staleLifecycleCue = getStaleLifecycleCue(scrim);
+	if (events.length <= 1 && !staleLifecycleCue) return null;
 
 	return (
 		<section className="border p-4">
 			<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 				Lifecycle history
 			</p>
+			{staleLifecycleCue ? (
+				<p className="mt-3 rounded-sm border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+					{staleLifecycleCue}
+				</p>
+			) : null}
 			<div className="mt-4 space-y-3">
 				{events.map((event) => (
 					<div key={event.id} className="border p-3 text-sm">

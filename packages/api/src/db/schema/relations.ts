@@ -297,6 +297,11 @@ export const scrimRelations = relations(scrimTable, ({ one, many }) => ({
 		references: [userTable.id],
 		relationName: "scrimDisputeResolvedBy",
 	}),
+	disputeRespondedBy: one(userTable, {
+		fields: [scrimTable.disputeRespondedByUserId],
+		references: [userTable.id],
+		relationName: "scrimDisputeRespondedBy",
+	}),
 	resultRevisions: many(scrimResultRevisionTable),
 	negotiationRevisions: many(scrimNegotiationRevisionTable),
 	maps: many(scrimMapTable),

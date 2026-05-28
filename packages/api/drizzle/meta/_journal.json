@@ -134,6 +134,13 @@
       "when": 1779978859040,
       "tag": "0018_bent_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1779987545874,
+      "tag": "0019_steep_triathlon",
+      "breakpoints": true
     }
   ]
 }

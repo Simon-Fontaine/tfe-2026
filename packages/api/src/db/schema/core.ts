@@ -867,6 +867,17 @@ export const scrimTable = pgTable(
 		/** Admin notes on the dispute resolution. */
 		disputeNotes: text("dispute_notes"),
 
+		/** Reporting team's text response to a dispute (before org-level resolution). */
+		disputeResponse: text("dispute_response"),
+
+		/** Timestamp when the reporting team responded to the dispute. */
+		disputeRespondedAt: timestamp("dispute_responded_at", { withTimezone: true }),
+
+		/** User who submitted the dispute response on behalf of the reporting team. */
+		disputeRespondedByUserId: uuid("dispute_responded_by_user_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+
 		/** User who created this scrim request. */
 		createdByUserId: uuid("created_by_user_id").references(() => userTable.id, {
 			onDelete: "set null",

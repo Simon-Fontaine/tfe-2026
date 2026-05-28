@@ -71,6 +71,11 @@ export async function findScrimWithRelations(scrimId: string) {
 					displayName: true,
 				},
 			},
+			disputeRespondedBy: {
+				columns: {
+					displayName: true,
+				},
+			},
 			confirmations: {
 				columns: {
 					id: true,
