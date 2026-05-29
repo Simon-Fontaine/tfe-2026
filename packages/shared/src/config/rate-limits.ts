@@ -85,8 +85,10 @@ export const rateLimits = {
 	sensitiveActionVerify: { limit: 5, windowMs: minutes(15) },
 
 	// ── Reports ──────────────────────────────────────────────────────────────
-	/** Report submission per user per hour. */
-	reportSubmit: { limit: 5, windowMs: hours(1) },
+	/** Report submission per user per minute. */
+	reportSubmit: { limit: 5, windowMs: minutes(1) },
 	/** Report supplement submission per user per hour. */
 	reportSupplement: { limit: 10, windowMs: hours(1) },
+	/** Data export download per user per 10 minutes. */
+	dataExport: { limit: 1, windowMs: minutes(10) },
 } as const satisfies Record<string, RateLimitRule>;
