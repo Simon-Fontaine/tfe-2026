@@ -297,6 +297,7 @@ export const apiRoutes = {
 		report: (reportId: string) => `/api/moderation/reports/${reportId}`,
 		actions: "/api/moderation/actions",
 		action: (actionId: string) => `/api/moderation/actions/${actionId}`,
+		audit: "/api/moderation/audit",
 	},
 	chat: {
 		conversations: "/api/chat/conversations",
@@ -346,6 +347,7 @@ export const appRoutes = {
 	moderation: {
 		root: "/app/moderation",
 		report: (reportId: string) => `/app/moderation/${reportId}`,
+		audit: "/app/moderation/audit",
 	},
 	orgs: {
 		root: "/app/orgs",

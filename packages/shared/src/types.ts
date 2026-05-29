@@ -1703,6 +1703,66 @@ export type ModerationActionsResponse = {
 	actions: ModerationAction[];
 };
 
+// ─── Domain audit log types ──────────────────────────────────────────────
+
+export type DomainAuditDomain =
+	| "ownership"
+	| "permissions"
+	| "moderation"
+	| "result"
+	| "evidence"
+	| "data_lifecycle"
+	| "admin";
+
+export type DomainAuditActorType = "user" | "system" | "worker";
+
+export type DomainAuditActionType =
+	| "ownership_transfer_initiated"
+	| "ownership_transfer_accepted"
+	| "ownership_transfer_declined"
+	| "ownership_recovery_initiated"
+	| "ownership_recovery_resolved"
+	| "permission_role_changed"
+	| "permission_member_removed"
+	| "moderation_action_taken"
+	| "moderation_action_reversed"
+	| "result_correction_applied"
+	| "dispute_initiated"
+	| "dispute_responded"
+	| "dispute_resolved"
+	| "dispute_voided"
+	| "evidence_uploaded"
+	| "evidence_removed"
+	| "account_deletion_requested"
+	| "account_deletion_confirmed"
+	| "account_deletion_cancelled"
+	| "data_export_requested"
+	| "lifecycle_archived"
+	| "lifecycle_restored"
+	| "lifecycle_deletion_pending";
+
+export type DomainAuditEvent = {
+	id: string;
+	actorId: string | null;
+	actorType: DomainAuditActorType;
+	domain: DomainAuditDomain;
+	actionType: DomainAuditActionType;
+	targetType: string | null;
+	targetId: string | null;
+	outcome: string | null;
+	reason: string | null;
+	metadata: Record<string, unknown> | null;
+	linkedCaseId: string | null;
+	linkedScrimId: string | null;
+	createdAt: string; // ISO string
+};
+
+export type DomainAuditEventsResponse = {
+	events: DomainAuditEvent[];
+	hasMore: boolean;
+	nextCursor: string | null;
+};
+
 // ─── Hero types ────────────────────────────────────────────────────────────
 
 export type HeroRow = {

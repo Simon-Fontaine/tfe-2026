@@ -22,7 +22,7 @@ import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createElement } from "react";
 import * as v from "valibot";
-
+import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import {
 	createSensitiveActionVerification,
 	deleteSensitiveActionVerification,
@@ -1075,6 +1075,20 @@ orgRoutes.post("/:id/ownership", async (c) => {
 		});
 	}
 
+	writeDomainAuditEvent({
+		actorId: user.id,
+		actorType: "user",
+		domain: "ownership",
+		actionType:
+			parsed.output.kind === "transfer"
+				? "ownership_transfer_initiated"
+				: "ownership_recovery_initiated",
+		targetType: "organization",
+		targetId: orgId,
+		outcome: "success",
+		reason: parsed.output.reason ?? null,
+		metadata: { workflowId: workflow.id, kind: parsed.output.kind },
+	});
 	return c.json({
 		success: true,
 		workflowId: workflow.id,
@@ -1169,6 +1183,16 @@ orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 				referenceId: workflow.id,
 			});
 		}
+		writeDomainAuditEvent({
+			actorId: user.id,
+			actorType: "user",
+			domain: "ownership",
+			actionType: "ownership_transfer_declined",
+			targetType: "organization",
+			targetId: orgId,
+			outcome: "success",
+			metadata: { workflowId },
+		});
 		return c.json({ success: true, status: "rejected" });
 	}
 
@@ -1247,6 +1271,16 @@ orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 		referenceId: workflow.id,
 	});
 
+	writeDomainAuditEvent({
+		actorId: user.id,
+		actorType: "user",
+		domain: "ownership",
+		actionType: "ownership_transfer_accepted",
+		targetType: "organization",
+		targetId: orgId,
+		outcome: "success",
+		metadata: { workflowId },
+	});
 	return c.json({ success: true, status: "accepted" });
 });
 

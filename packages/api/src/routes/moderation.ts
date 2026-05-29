@@ -1,4 +1,5 @@
 import type {
+	DomainAuditEvent,
 	ModerationAction,
 	ModerationActionType,
 	ModerationCaseAction,
@@ -11,17 +12,19 @@ import type {
 } from "@scrimflow/shared";
 import {
 	CreateModerationActionSchema,
+	DomainAuditQuerySchema,
 	ModerationCasePatchSchema,
 	ModerationQueueFilterSchema,
 } from "@scrimflow/shared";
-import { and, asc, count, desc, eq, isNull, lt, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, lt, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import * as v from "valibot";
-
+import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
 import {
 	chatMessageTable,
+	domainAuditEventTable,
 	moderationActionTable,
 	moderationCaseEventTable,
 	organizationTable,
@@ -54,6 +57,24 @@ function toModerationAction(row: typeof moderationActionTable.$inferSelect): Mod
 		isReversible: row.isReversible,
 		reversedByModerationActionId: row.reversedByModerationActionId ?? null,
 		reversedAt: row.reversedAt?.toISOString() ?? null,
+		createdAt: row.createdAt.toISOString(),
+	};
+}
+
+function toDomainAuditEvent(row: typeof domainAuditEventTable.$inferSelect): DomainAuditEvent {
+	return {
+		id: row.id,
+		actorId: row.actorId ?? null,
+		actorType: row.actorType,
+		domain: row.domain,
+		actionType: row.actionType,
+		targetType: row.targetType ?? null,
+		targetId: row.targetId ?? null,
+		outcome: row.outcome ?? null,
+		reason: row.reason ?? null,
+		metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+		linkedCaseId: row.linkedCaseId ?? null,
+		linkedScrimId: row.linkedScrimId ?? null,
 		createdAt: row.createdAt.toISOString(),
 	};
 }
@@ -674,7 +695,20 @@ moderationRoutes.post("/actions", async (c) => {
 	}
 
 	// biome-ignore lint/style/noNonNullAssertion: actionRow is set by the transaction above
-	return c.json({ action: toModerationAction(actionRow!) }, 201);
+	const completedAction = actionRow!;
+	writeDomainAuditEvent({
+		actorId: user.id,
+		actorType: "user",
+		domain: "moderation",
+		actionType: "moderation_action_taken",
+		targetType: input.targetType,
+		targetId: input.targetId,
+		outcome: "success",
+		reason: input.reason,
+		metadata: { actionType: input.actionType, actionId: completedAction.id },
+		linkedCaseId: input.caseId ?? null,
+	});
+	return c.json({ action: toModerationAction(completedAction) }, 201);
 });
 
 moderationRoutes.post("/actions/:actionId/reverse", async (c) => {
@@ -784,7 +818,77 @@ moderationRoutes.post("/actions/:actionId/reverse", async (c) => {
 	}
 
 	// biome-ignore lint/style/noNonNullAssertion: newAction is set by the transaction above
-	return c.json({ action: toModerationAction(newAction!) });
+	const compensatingAction = newAction!;
+	writeDomainAuditEvent({
+		actorId: user.id,
+		actorType: "user",
+		domain: "moderation",
+		actionType: "moderation_action_reversed",
+		targetType: original.targetType,
+		targetId: original.targetId,
+		outcome: "success",
+		reason: `Reversal of action ${actionId}`,
+		metadata: { originalActionId: actionId, compensatingActionId: compensatingAction.id },
+		linkedCaseId: original.caseId ?? null,
+	});
+	return c.json({ action: toModerationAction(compensatingAction) });
+});
+
+moderationRoutes.get("/audit", async (c) => {
+	const user = c.get("user");
+	if (!user.isModerator)
+		return c.json({ error: "Moderator access required.", reason: "role" }, 403);
+
+	const rawQuery = Object.fromEntries(new URL(c.req.url).searchParams.entries());
+	if (rawQuery.limit) {
+		const n = Number(rawQuery.limit);
+		if (!Number.isFinite(n)) return c.json({ error: "Invalid query parameters." }, 400);
+		rawQuery.limit = n as unknown as string;
+	}
+	const parsed = v.safeParse(DomainAuditQuerySchema, rawQuery);
+	if (!parsed.success)
+		return c.json({ error: "Invalid query parameters.", issues: parsed.issues }, 400);
+
+	const q = parsed.output;
+	const limit = q.limit ?? 50;
+	const conditions = [];
+
+	if (q.actorId) conditions.push(eq(domainAuditEventTable.actorId, q.actorId));
+	if (q.domain) conditions.push(eq(domainAuditEventTable.domain, q.domain));
+	if (q.actionType) conditions.push(eq(domainAuditEventTable.actionType, q.actionType));
+	if (q.targetType) conditions.push(eq(domainAuditEventTable.targetType, q.targetType));
+	if (q.targetId) conditions.push(eq(domainAuditEventTable.targetId, q.targetId));
+	if (q.outcome) conditions.push(eq(domainAuditEventTable.outcome, q.outcome));
+	if (q.from) conditions.push(gte(domainAuditEventTable.createdAt, new Date(q.from)));
+	if (q.to) conditions.push(lte(domainAuditEventTable.createdAt, new Date(q.to)));
+
+	// Compound keyset cursor: "<ISO timestamp>_<uuid>" — stable across same-millisecond events
+	if (q.cursor) {
+		const sepIdx = q.cursor.indexOf("_");
+		if (sepIdx === -1) return c.json({ error: "Invalid cursor." }, 400);
+		const cursorTs = new Date(q.cursor.slice(0, sepIdx));
+		const cursorId = q.cursor.slice(sepIdx + 1);
+		if (!Number.isFinite(cursorTs.getTime()) || !cursorId) {
+			return c.json({ error: "Invalid cursor." }, 400);
+		}
+		const cursorCondition = or(
+			lt(domainAuditEventTable.createdAt, cursorTs),
+			and(eq(domainAuditEventTable.createdAt, cursorTs), lt(domainAuditEventTable.id, cursorId))
+		);
+		if (cursorCondition) conditions.push(cursorCondition);
+	}
+
+	const rows = await db.query.domainAuditEventTable.findMany({
+		where: conditions.length > 0 ? and(...conditions) : undefined,
+		orderBy: [desc(domainAuditEventTable.createdAt), desc(domainAuditEventTable.id)],
+		limit: limit + 1,
+	});
+
+	const hasMore = rows.length > limit;
+	const events = rows.slice(0, limit).map(toDomainAuditEvent);
+	const nextCursor = hasMore ? `${rows[limit].createdAt.toISOString()}_${rows[limit].id}` : null;
+
+	return c.json({ events, hasMore, nextCursor });
 });
 
 export { moderationRoutes };

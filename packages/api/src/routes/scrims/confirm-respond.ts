@@ -2,6 +2,7 @@ import { ConfirmScrimSchema, RespondToScrimSchema } from "@scrimflow/shared";
 import { eq, sql } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
+import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
 import { scrimConfirmationTable, scrimNegotiationRevisionTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
@@ -157,6 +158,17 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		await ensureScrimConversationLifecycle(scrimId);
 
 		if (parsed.output.status === "disputed") {
+			writeDomainAuditEvent({
+				actorId: user.id,
+				actorType: "user",
+				domain: "result",
+				actionType: "dispute_initiated",
+				targetType: "scrim",
+				targetId: scrimId,
+				outcome: "success",
+				reason: parsed.output.disputeReason ?? null,
+				linkedScrimId: scrimId,
+			});
 			await Promise.all(
 				[detail.homeTeam.id, detail.awayTeam?.id ?? null]
 					.filter((teamId): teamId is string => !!teamId)

@@ -2,6 +2,7 @@ import { rateLimits } from "@scrimflow/shared";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
+import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import {
 	createSensitiveActionVerification,
 	deleteSensitiveActionVerification,
@@ -181,6 +182,15 @@ accountRoutes.post("/deletion/confirm", async (c) => {
 			scheduledDeletionAt: scheduledDeletionAt.toISOString(),
 		}
 	);
+	writeDomainAuditEvent({
+		actorId: session.userId,
+		actorType: "user",
+		domain: "data_lifecycle",
+		actionType: "account_deletion_confirmed",
+		targetType: "user",
+		targetId: session.userId,
+		outcome: "success",
+	});
 
 	return c.json({ success: true });
 });

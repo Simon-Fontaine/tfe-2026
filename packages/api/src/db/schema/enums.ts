@@ -216,6 +216,48 @@ export const auditActionEnum = pgEnum("audit_action", [
 	"new_location_detected",
 ]);
 
+export const domainAuditDomainEnum = pgEnum("domain_audit_domain", [
+	"ownership",
+	"permissions",
+	"moderation",
+	"result",
+	"evidence",
+	"data_lifecycle",
+	"admin",
+]);
+
+export const domainAuditActorTypeEnum = pgEnum("domain_audit_actor_type", [
+	"user",
+	"system",
+	"worker",
+]);
+
+export const domainAuditActionTypeEnum = pgEnum("domain_audit_action_type", [
+	"ownership_transfer_initiated",
+	"ownership_transfer_accepted",
+	"ownership_transfer_declined",
+	"ownership_recovery_initiated",
+	"ownership_recovery_resolved",
+	"permission_role_changed",
+	"permission_member_removed",
+	"moderation_action_taken",
+	"moderation_action_reversed",
+	"result_correction_applied",
+	"dispute_initiated",
+	"dispute_responded",
+	"dispute_resolved",
+	"dispute_voided",
+	"evidence_uploaded",
+	"evidence_removed",
+	"account_deletion_requested",
+	"account_deletion_confirmed",
+	"account_deletion_cancelled",
+	"data_export_requested",
+	"lifecycle_archived",
+	"lifecycle_restored",
+	"lifecycle_deletion_pending",
+]);
+
 /** Player stat side in a scrim map — which team perspective the OCR extracted. */
 export const playerStatSideEnum = pgEnum("player_stat_side", ["home", "away", "unknown"]);
 

@@ -118,6 +118,15 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 			/>
 
 			<PageSection>
+				<Link
+					href={appRoutes.moderation.audit}
+					className="text-sm text-primary underline-offset-2 hover:underline"
+				>
+					View Audit Log →
+				</Link>
+			</PageSection>
+
+			<PageSection>
 				{/* Status pills — Links preserve all other active filters */}
 				<div className="flex flex-wrap gap-2">
 					{STATUS_FILTERS.map((filter) => {

@@ -12,6 +12,7 @@ import {
 import { desc, eq, sql } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
+import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
 import { scrimConfirmationTable, scrimResultRevisionTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
@@ -411,6 +412,19 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 				)
 		);
 
+		const resolution = parsed.output.action === "confirm_reported_result" ? "finalized" : "voided";
+		writeDomainAuditEvent({
+			actorId: user.id,
+			actorType: "user",
+			domain: "result",
+			actionType: resolution === "voided" ? "dispute_voided" : "dispute_resolved",
+			targetType: "scrim",
+			targetId: scrimId,
+			outcome: "success",
+			reason: parsed.output.notes ?? null,
+			metadata: { resolution, resolvedByUserId: user.id },
+			linkedScrimId: scrimId,
+		});
 		return c.json({ data: mapScrimDetail(detail) });
 	});
 

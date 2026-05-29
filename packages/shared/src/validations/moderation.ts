@@ -74,3 +74,54 @@ export const CreateModerationActionSchema = v.object({
 });
 
 export type CreateModerationActionInput = v.InferOutput<typeof CreateModerationActionSchema>;
+
+const DOMAIN_AUDIT_DOMAIN_VALUES = [
+	"ownership",
+	"permissions",
+	"moderation",
+	"result",
+	"evidence",
+	"data_lifecycle",
+	"admin",
+] as const;
+
+const DOMAIN_AUDIT_ACTION_TYPE_VALUES = [
+	"ownership_transfer_initiated",
+	"ownership_transfer_accepted",
+	"ownership_transfer_declined",
+	"ownership_recovery_initiated",
+	"ownership_recovery_resolved",
+	"permission_role_changed",
+	"permission_member_removed",
+	"moderation_action_taken",
+	"moderation_action_reversed",
+	"result_correction_applied",
+	"dispute_initiated",
+	"dispute_responded",
+	"dispute_resolved",
+	"dispute_voided",
+	"evidence_uploaded",
+	"evidence_removed",
+	"account_deletion_requested",
+	"account_deletion_confirmed",
+	"account_deletion_cancelled",
+	"data_export_requested",
+	"lifecycle_archived",
+	"lifecycle_restored",
+	"lifecycle_deletion_pending",
+] as const;
+
+export const DomainAuditQuerySchema = v.object({
+	actorId: v.optional(v.pipe(v.string(), v.uuid())),
+	domain: v.optional(v.picklist(DOMAIN_AUDIT_DOMAIN_VALUES)),
+	actionType: v.optional(v.picklist(DOMAIN_AUDIT_ACTION_TYPE_VALUES)),
+	targetType: v.optional(v.string()),
+	targetId: v.optional(v.pipe(v.string(), v.uuid())),
+	outcome: v.optional(v.string()),
+	from: v.optional(v.pipe(v.string(), v.isoTimestamp())),
+	to: v.optional(v.pipe(v.string(), v.isoTimestamp())),
+	cursor: v.optional(v.string()),
+	limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100))),
+});
+
+export type DomainAuditQueryInput = v.InferOutput<typeof DomainAuditQuerySchema>;

@@ -7,6 +7,7 @@ import { desc, eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import * as v from "valibot";
 import { writeAuditLog } from "@/auth/audit";
+import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
 import { accountDeletionRequestTable, playerProfileTable, userTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
@@ -143,6 +144,15 @@ dataExportRoute.get("/download", async (c) => {
 	const client = c.get("client");
 	writeAuditLog(session.userId, "data_export_request", client.ip, client.userAgent, null, null, {
 		mode: "immediate_download",
+	});
+	writeDomainAuditEvent({
+		actorId: session.userId,
+		actorType: "user",
+		domain: "data_lifecycle",
+		actionType: "data_export_requested",
+		targetType: "user",
+		targetId: session.userId,
+		outcome: "success",
 	});
 	c.header("Content-Type", "application/json");
 	c.header("Content-Disposition", 'attachment; filename="scrimflow-data-export.json"');
