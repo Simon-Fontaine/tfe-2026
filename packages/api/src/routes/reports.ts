@@ -4,7 +4,7 @@ import {
 	rateLimits,
 	SubmitReportSchema,
 } from "@scrimflow/shared";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, or, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
@@ -24,6 +24,7 @@ import {
 import type { AuthEnv } from "@/middleware/auth";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { extractErrors } from "@/routes/auth/utils";
+import { decodeCursor, encodeCursor } from "@/utils/cursor";
 
 const reportRoutes = new Hono<AuthEnv>();
 
@@ -162,12 +163,29 @@ reportRoutes.post("/", async (c) => {
 	return c.json({ reportId: inserted.id, status: "pending" }, 201);
 });
 
+const REPORTS_PAGE_SIZE = 25;
+
 // GET /api/reports/mine — reporter's own reports
 reportRoutes.get("/mine", async (c) => {
 	const user = c.get("user");
+	const cursorParam = c.req.query("cursor");
+
+	let cursorWhere: SQL | undefined;
+	if (cursorParam) {
+		try {
+			const { id: cursorId, createdAt: cursorCreatedAt } = decodeCursor(cursorParam);
+			const cursorDate = new Date(cursorCreatedAt);
+			cursorWhere = or(
+				gt(userReportTable.createdAt, cursorDate),
+				and(eq(userReportTable.createdAt, cursorDate), gt(userReportTable.id, cursorId))
+			);
+		} catch {
+			return c.json({ error: "Invalid cursor." }, 400);
+		}
+	}
 
 	const rows = await db.query.userReportTable.findMany({
-		where: eq(userReportTable.reporterId, user.id),
+		where: and(eq(userReportTable.reporterId, user.id), cursorWhere),
 		columns: {
 			id: true,
 			targetType: true,
@@ -176,20 +194,29 @@ reportRoutes.get("/mine", async (c) => {
 			status: true,
 			createdAt: true,
 		},
-		orderBy: (table, { desc }) => [desc(table.createdAt)],
-		limit: 50,
+		orderBy: (table, { asc }) => [asc(table.createdAt), asc(table.id)],
+		limit: REPORTS_PAGE_SIZE + 1,
 	});
 
-	const reports = rows.map((r) => ({
-		id: r.id,
-		targetType: r.targetType,
-		targetId: r.targetId,
-		category: r.category,
-		status: r.status,
-		createdAt: r.createdAt.toISOString(),
-	}));
+	const hasMore = rows.length > REPORTS_PAGE_SIZE;
+	const items = hasMore ? rows.slice(0, REPORTS_PAGE_SIZE) : rows;
+	const lastItem = items.at(-1);
+	const nextCursor =
+		hasMore && lastItem
+			? encodeCursor({ id: lastItem.id, createdAt: lastItem.createdAt.toISOString() })
+			: null;
 
-	return c.json(reports);
+	return c.json({
+		items: items.map((r) => ({
+			id: r.id,
+			targetType: r.targetType,
+			targetId: r.targetId,
+			category: r.category,
+			status: r.status,
+			createdAt: r.createdAt.toISOString(),
+		})),
+		nextCursor,
+	});
 });
 
 // POST /api/reports/:id/supplement — add supplemental context

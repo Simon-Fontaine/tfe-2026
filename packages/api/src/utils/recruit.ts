@@ -1,5 +1,20 @@
 import type { RecruitmentApplicationReviewSummary } from "@scrimflow/shared";
-import { and, count, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gt,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	ne,
+	or,
+	sql,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -12,6 +27,8 @@ import {
 	teamRosterTable,
 } from "@/db/schema";
 import { listConversationsForUser } from "@/utils/chat";
+import type { CursorPayload } from "@/utils/cursor";
+import { encodeCursor } from "@/utils/cursor";
 import { getOrgPermissions } from "@/utils/org";
 import { getTeamAccessContext } from "@/utils/team";
 
@@ -613,6 +630,184 @@ export async function getRecruitmentConversationsForUser(userId: string) {
 			};
 		})
 		.filter((row): row is NonNullable<typeof row> => row !== null);
+}
+
+export async function getRecruitmentConversationsPage(
+	userId: string,
+	pagination: { cursor: CursorPayload | null; limit: number }
+) {
+	const { cursor, limit } = pagination;
+
+	const cursorWhere = cursor
+		? or(
+				gt(chatChannelMemberTable.createdAt, new Date(cursor.createdAt)),
+				and(
+					eq(chatChannelMemberTable.createdAt, new Date(cursor.createdAt)),
+					gt(chatChannelTable.id, cursor.id)
+				)
+			)
+		: undefined;
+
+	const rows = await db
+		.select({
+			membershipCreatedAt: chatChannelMemberTable.createdAt,
+			lastReadAt: chatChannelMemberTable.lastReadAt,
+			channelId: chatChannelTable.id,
+			channelName: chatChannelTable.name,
+			channelIsArchived: chatChannelTable.isArchived,
+			channelScrimId: chatChannelTable.scrimId,
+			channelTeamId: chatChannelTable.teamId,
+			channelRecruitmentApplicationId: chatChannelTable.recruitmentApplicationId,
+		})
+		.from(chatChannelMemberTable)
+		.innerJoin(chatChannelTable, eq(chatChannelMemberTable.channelId, chatChannelTable.id))
+		.where(
+			and(
+				eq(chatChannelMemberTable.userId, userId),
+				isNull(chatChannelMemberTable.leftAt),
+				eq(chatChannelTable.channelType, "recruitment"),
+				isNotNull(chatChannelTable.recruitmentApplicationId),
+				cursorWhere
+			)
+		)
+		.orderBy(asc(chatChannelMemberTable.createdAt), asc(chatChannelTable.id))
+		.limit(limit + 1);
+
+	const hasMore = rows.length > limit;
+	const pageRows = hasMore ? rows.slice(0, limit) : rows;
+
+	if (pageRows.length === 0) {
+		return { items: [], nextCursor: null };
+	}
+
+	const unreadCounts = await Promise.all(
+		pageRows.map(async (row) => {
+			const lastReadAt = row.lastReadAt ?? null;
+			const [unreadRow] = await db
+				.select({ value: count() })
+				.from(chatMessageTable)
+				.where(
+					and(
+						eq(chatMessageTable.channelId, row.channelId),
+						or(isNull(chatMessageTable.senderId), ne(chatMessageTable.senderId, userId)),
+						lastReadAt ? gt(chatMessageTable.createdAt, lastReadAt) : undefined
+					)
+				);
+			return Number(unreadRow?.value ?? 0);
+		})
+	);
+
+	const lastMessages = await Promise.all(
+		pageRows.map((row) =>
+			db.query.chatMessageTable.findFirst({
+				where: eq(chatMessageTable.channelId, row.channelId),
+				orderBy: [desc(chatMessageTable.createdAt)],
+				columns: { content: true, createdAt: true, deletedAt: true },
+			})
+		)
+	);
+
+	const applicationIds = pageRows
+		.map((row) => row.channelRecruitmentApplicationId)
+		.filter((id): id is string => id !== null);
+
+	const applications = await db.query.recruitmentApplicationTable.findMany({
+		where: inArray(recruitmentApplicationTable.id, applicationIds),
+		with: {
+			listing: {
+				with: {
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
+					organization: { columns: { id: true, name: true, slug: true, avatarUrl: true } },
+					team: { columns: { id: true, name: true, tag: true, avatarUrl: true, rating: true } },
+				},
+			},
+			applicant: {
+				columns: { id: true, username: true, displayName: true, avatarUrl: true },
+				with: { profile: { columns: { primaryRole: true, rank: true } } },
+			},
+			applicantTeam: { columns: { id: true, name: true, tag: true } },
+			applicantOrganization: { columns: { id: true, name: true, slug: true } },
+		},
+	});
+
+	const applicationsById = new Map(applications.map((a) => [a.id, a]));
+
+	const items = pageRows
+		.map((row, index) => {
+			const applicationRow = row.channelRecruitmentApplicationId
+				? applicationsById.get(row.channelRecruitmentApplicationId)
+				: null;
+			if (!applicationRow?.listing) return null;
+
+			const listing = mapRecruitmentListing(applicationRow.listing, { viewerId: userId });
+			const application = mapRecruitmentApplication(applicationRow);
+			const currentUserIsSender = application.senderUserId === userId;
+			const counterpartType = currentUserIsSender ? listing.ownerType : application.senderType;
+			const counterpartLabel = currentUserIsSender
+				? counterpartType === "organization"
+					? listing.organizationName
+					: counterpartType === "team"
+						? listing.teamName
+						: listing.ownerDisplayName
+				: application.senderDisplayName;
+			const counterpartAvatarUrl = currentUserIsSender
+				? counterpartType === "organization"
+					? listing.organizationAvatarUrl
+					: counterpartType === "team"
+						? listing.teamAvatarUrl
+						: listing.ownerAvatarUrl
+				: application.senderAvatarUrl;
+			const counterpartUsername = currentUserIsSender
+				? counterpartType === "player"
+					? applicationRow.listing.user.username
+					: null
+				: counterpartType === "player"
+					? applicationRow.applicant.username
+					: null;
+			const counterpartOrgSlug = currentUserIsSender
+				? listing.organizationSlug
+				: application.senderOrganizationSlug;
+
+			const lastMessage = lastMessages[index];
+			const lastMessagePreview = lastMessage
+				? lastMessage.deletedAt
+					? "[deleted]"
+					: lastMessage.content
+				: null;
+
+			return {
+				conversationId: row.channelId,
+				applicationId: application.id,
+				listingId: application.listingId,
+				listingCategory: listing.category,
+				listingTitle: listing.title,
+				listingStatus: listing.status,
+				applicationStatus: application.status,
+				counterpartLabel: counterpartLabel ?? "Recruitment conversation",
+				counterpartAvatarUrl,
+				counterpartType,
+				counterpartUsername,
+				counterpartOrgSlug,
+				organizationId: listing.organizationId,
+				teamId: listing.teamId,
+				lastMessagePreview: lastMessagePreview ?? application.message ?? null,
+				lastMessageAt: lastMessage?.createdAt.toISOString() ?? null,
+				unreadCount: unreadCounts[index] ?? 0,
+				isArchived: row.channelIsArchived,
+			};
+		})
+		.filter((item): item is NonNullable<typeof item> => item !== null);
+
+	const lastRow = pageRows.at(-1);
+	const nextCursor =
+		hasMore && lastRow
+			? encodeCursor({
+					id: lastRow.channelId,
+					createdAt: lastRow.membershipCreatedAt.toISOString(),
+				})
+			: null;
+
+	return { items, nextCursor };
 }
 
 export async function createRecruitmentConversation(params: {
