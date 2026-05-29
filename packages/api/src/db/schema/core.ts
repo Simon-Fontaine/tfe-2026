@@ -1358,6 +1358,9 @@ export const notificationTable = pgTable(
 		// "My unread notifications" — the primary inbox query
 		index("notification_inbox_idx").on(table.userId, table.isRead, table.createdAt),
 		index("notification_user_idx").on(table.userId),
+		uniqueIndex("notification_active_dedup_idx")
+			.on(table.userId, table.type, table.referenceId)
+			.where(sql`${table.isRead} = false`),
 	]
 );
 

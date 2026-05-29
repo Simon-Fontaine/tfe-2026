@@ -1063,6 +1063,7 @@ orgRoutes.post("/:id/ownership", async (c) => {
 			body: "An organization owner has asked you to accept ownership.",
 			referenceType: "ownership_workflow",
 			referenceId: workflow.id,
+			conflictBehavior: "always-insert",
 		});
 	} else if (org.ownerId && org.ownerId !== user.id) {
 		await createNotification({
@@ -1072,6 +1073,7 @@ orgRoutes.post("/:id/ownership", async (c) => {
 			body: "An organization ownership recovery workflow needs review.",
 			referenceType: "ownership_workflow",
 			referenceId: workflow.id,
+			conflictBehavior: "always-insert",
 		});
 	}
 
@@ -1181,6 +1183,7 @@ orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 				body: "The recipient rejected the organization ownership transfer.",
 				referenceType: "ownership_workflow",
 				referenceId: workflow.id,
+				conflictBehavior: "always-insert",
 			});
 		}
 		writeDomainAuditEvent({
@@ -1260,6 +1263,7 @@ orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 			body: "Organization ownership has transferred to the recipient.",
 			referenceType: "ownership_workflow",
 			referenceId: workflow.id,
+			conflictBehavior: "always-insert",
 		});
 	}
 	await createNotification({
@@ -1269,6 +1273,7 @@ orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 		body: "You accepted the ownership transfer. You now hold full organization authority.",
 		referenceType: "ownership_workflow",
 		referenceId: workflow.id,
+		conflictBehavior: "always-insert",
 	});
 
 	writeDomainAuditEvent({
@@ -1455,6 +1460,7 @@ orgRoutes.post("/:id/ownership/:workflowId/resolve", async (c) => {
 					: "Organization ownership recovery was not approved.",
 			referenceType: "ownership_workflow",
 			referenceId: workflowId,
+			conflictBehavior: "always-insert",
 		});
 	}
 

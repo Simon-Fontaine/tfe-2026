@@ -1,6 +1,7 @@
 import { ConfirmScrimSchema, RespondToScrimSchema } from "@scrimflow/shared";
 import { eq, sql } from "drizzle-orm";
 import type { Hono } from "hono";
+import { DatabaseError } from "pg";
 import * as v from "valibot";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
@@ -13,6 +14,8 @@ import { verifyTeamManager } from "@/utils/team";
 import { canManageAnyScrimTeam, notifyTeamAdmins, resolveScrimStatus } from "./access";
 import { mapScrimDetail, publishScrimStatusChanged } from "./detail";
 import { findScrimWithRelations, ScrimWorkflowError } from "./shared";
+
+const SCRIM_LOCK_TIMEOUT_MS = 5000;
 
 export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 	scrimRoutes.post("/:id/confirm", async (c) => {
@@ -207,44 +210,67 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		if (scrim.status === "pending") {
 			const PENDING_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 			if (Date.now() - scrim.createdAt.getTime() > PENDING_EXPIRY_MS) {
-				await db.transaction(async (tx) => {
-					await tx
-						.update(scrimTable)
-						.set({ status: "cancelled" })
-						.where(eq(scrimTable.id, scrimId));
-					await tx.insert(scrimNegotiationRevisionTable).values({
-						scrimId,
-						actorUserId: null,
-						actorTeamId: null,
-						action: "expired",
-						priorScheduledAt: scrim.scheduledAt,
-						proposedScheduledAt: null,
-						priorConfig: scrim.config,
-						proposedConfig: null,
-						priorMessage: scrim.message,
-						proposedMessage: null,
+				try {
+					await db.transaction(async (tx) => {
+						await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
+						await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+						const lockedScrim = await tx.query.scrimTable.findFirst({
+							where: eq(scrimTable.id, scrimId),
+							columns: { id: true, status: true },
+						});
+						if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+						if (lockedScrim.status !== "pending") {
+							throw new ScrimWorkflowError(
+								409,
+								"This scrim request has already been updated. Refresh to see the current state."
+							);
+						}
+						await tx
+							.update(scrimTable)
+							.set({ status: "cancelled" })
+							.where(eq(scrimTable.id, scrimId));
+						await tx.insert(scrimNegotiationRevisionTable).values({
+							scrimId,
+							actorUserId: null,
+							actorTeamId: null,
+							action: "expired",
+							priorScheduledAt: scrim.scheduledAt,
+							proposedScheduledAt: null,
+							priorConfig: scrim.config,
+							proposedConfig: null,
+							priorMessage: scrim.message,
+							proposedMessage: null,
+						});
 					});
-				});
-				const expiredDetail = await findScrimWithRelations(scrimId);
-				if (expiredDetail) {
-					await Promise.all(
-						[expiredDetail.homeTeam.id, expiredDetail.awayTeam?.id ?? null]
-							.filter((teamId): teamId is string => !!teamId)
-							.map((teamId) =>
-								notifyTeamAdmins({
-									teamId,
-									actorUserId: user.id,
-									type: "scrim_cancelled",
-									title: "Scrim request expired",
-									body: `The scrim request for ${expiredDetail.homeTeam.name}${expiredDetail.awayTeam ? ` vs ${expiredDetail.awayTeam.name}` : ""} has expired and been cancelled.`,
-									scrimId: expiredDetail.id,
-								})
-							)
-					);
+					const expiredDetail = await findScrimWithRelations(scrimId);
+					if (expiredDetail) {
+						await Promise.all(
+							[expiredDetail.homeTeam.id, expiredDetail.awayTeam?.id ?? null]
+								.filter((teamId): teamId is string => !!teamId)
+								.map((teamId) =>
+									notifyTeamAdmins({
+										teamId,
+										actorUserId: user.id,
+										type: "scrim_cancelled",
+										title: "Scrim request expired",
+										body: `The scrim request for ${expiredDetail.homeTeam.name}${expiredDetail.awayTeam ? ` vs ${expiredDetail.awayTeam.name}` : ""} has expired and been cancelled.`,
+										scrimId: expiredDetail.id,
+									})
+								)
+						);
+					}
+					await ensureScrimConversationLifecycle(scrimId);
+					publishScrimStatusChanged(scrimId, "cancelled");
+					return c.json({ error: "This scrim request has expired and has been cancelled." }, 409);
+				} catch (error) {
+					if (error instanceof ScrimWorkflowError) {
+						return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+					}
+					if (error instanceof DatabaseError && error.code === "55P03") {
+						return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+					}
+					throw error;
 				}
-				await ensureScrimConversationLifecycle(scrimId);
-				publishScrimStatusChanged(scrimId, "cancelled");
-				return c.json({ error: "This scrim request has expired and has been cancelled." }, 409);
 			}
 		}
 
@@ -266,27 +292,50 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			const acceptedScheduledAt = parsed.output.scheduledAt
 				? new Date(parsed.output.scheduledAt)
 				: scrim.scheduledAt;
-			await db.transaction(async (tx) => {
-				await tx
-					.update(scrimTable)
-					.set({
-						status: acceptedScheduledAt ? "scheduled" : "accepted",
-						scheduledAt: acceptedScheduledAt,
-					})
-					.where(eq(scrimTable.id, scrimId));
-				await tx.insert(scrimNegotiationRevisionTable).values({
-					scrimId,
-					actorUserId: user.id,
-					actorTeamId: scrim.awayTeamId,
-					action: "accept",
-					priorScheduledAt: scrim.scheduledAt,
-					proposedScheduledAt: acceptedScheduledAt,
-					priorConfig: scrim.config,
-					proposedConfig: null,
-					priorMessage: scrim.message,
-					proposedMessage: null,
+			try {
+				await db.transaction(async (tx) => {
+					await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
+					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+					const lockedScrim = await tx.query.scrimTable.findFirst({
+						where: eq(scrimTable.id, scrimId),
+						columns: { id: true, status: true },
+					});
+					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status !== "pending") {
+						throw new ScrimWorkflowError(
+							409,
+							"This scrim request has already been accepted, declined, or expired. Refresh to see the current state."
+						);
+					}
+					await tx
+						.update(scrimTable)
+						.set({
+							status: acceptedScheduledAt ? "scheduled" : "accepted",
+							scheduledAt: acceptedScheduledAt,
+						})
+						.where(eq(scrimTable.id, scrimId));
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: user.id,
+						actorTeamId: scrim.awayTeamId,
+						action: "accept",
+						priorScheduledAt: scrim.scheduledAt,
+						proposedScheduledAt: acceptedScheduledAt,
+						priorConfig: scrim.config,
+						proposedConfig: null,
+						priorMessage: scrim.message,
+						proposedMessage: null,
+					});
 				});
-			});
+			} catch (error) {
+				if (error instanceof ScrimWorkflowError) {
+					return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+				}
+				if (error instanceof DatabaseError && error.code === "55P03") {
+					return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+				}
+				throw error;
+			}
 		} else if (action === "decline") {
 			if (!scrim.awayTeamId) {
 				return c.json({ error: "This scrim does not have an opponent to decline." }, 400);
@@ -297,21 +346,47 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			if (scrim.status !== "pending") {
 				return c.json({ error: "Only pending scrim requests can be declined." }, 400);
 			}
-			await db.transaction(async (tx) => {
-				await tx.update(scrimTable).set({ status: "cancelled" }).where(eq(scrimTable.id, scrimId));
-				await tx.insert(scrimNegotiationRevisionTable).values({
-					scrimId,
-					actorUserId: user.id,
-					actorTeamId: scrim.awayTeamId,
-					action: "decline",
-					priorScheduledAt: scrim.scheduledAt,
-					proposedScheduledAt: null,
-					priorConfig: scrim.config,
-					proposedConfig: null,
-					priorMessage: scrim.message,
-					proposedMessage: null,
+			try {
+				await db.transaction(async (tx) => {
+					await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
+					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+					const lockedScrim = await tx.query.scrimTable.findFirst({
+						where: eq(scrimTable.id, scrimId),
+						columns: { id: true, status: true },
+					});
+					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status !== "pending") {
+						throw new ScrimWorkflowError(
+							409,
+							"This scrim request has already been accepted, declined, or expired. Refresh to see the current state."
+						);
+					}
+					await tx
+						.update(scrimTable)
+						.set({ status: "cancelled" })
+						.where(eq(scrimTable.id, scrimId));
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: user.id,
+						actorTeamId: scrim.awayTeamId,
+						action: "decline",
+						priorScheduledAt: scrim.scheduledAt,
+						proposedScheduledAt: null,
+						priorConfig: scrim.config,
+						proposedConfig: null,
+						priorMessage: scrim.message,
+						proposedMessage: null,
+					});
 				});
-			});
+			} catch (error) {
+				if (error instanceof ScrimWorkflowError) {
+					return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+				}
+				if (error instanceof DatabaseError && error.code === "55P03") {
+					return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+				}
+				throw error;
+			}
 		} else if (action === "reschedule") {
 			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
 				return c.json({ error: "Only a team manager can propose a reschedule." }, 403);
@@ -330,24 +405,47 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 				? scrim.homeTeamId
 				: (scrim.awayTeamId ?? scrim.homeTeamId);
 			const newScheduledAt = new Date(parsed.output.scheduledAt);
-			await db.transaction(async (tx) => {
-				await tx
-					.update(scrimTable)
-					.set({ status: "scheduled", scheduledAt: newScheduledAt })
-					.where(eq(scrimTable.id, scrimId));
-				await tx.insert(scrimNegotiationRevisionTable).values({
-					scrimId,
-					actorUserId: user.id,
-					actorTeamId,
-					action: "reschedule",
-					priorScheduledAt: scrim.scheduledAt,
-					proposedScheduledAt: newScheduledAt,
-					priorConfig: scrim.config,
-					proposedConfig: null,
-					priorMessage: scrim.message,
-					proposedMessage: null,
+			try {
+				await db.transaction(async (tx) => {
+					await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
+					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+					const lockedScrim = await tx.query.scrimTable.findFirst({
+						where: eq(scrimTable.id, scrimId),
+						columns: { id: true, status: true },
+					});
+					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status !== "accepted" && lockedScrim.status !== "scheduled") {
+						throw new ScrimWorkflowError(
+							409,
+							"This scrim has already been updated by another action. Refresh to see the current state."
+						);
+					}
+					await tx
+						.update(scrimTable)
+						.set({ status: "scheduled", scheduledAt: newScheduledAt })
+						.where(eq(scrimTable.id, scrimId));
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: user.id,
+						actorTeamId,
+						action: "reschedule",
+						priorScheduledAt: scrim.scheduledAt,
+						proposedScheduledAt: newScheduledAt,
+						priorConfig: scrim.config,
+						proposedConfig: null,
+						priorMessage: scrim.message,
+						proposedMessage: null,
+					});
 				});
-			});
+			} catch (error) {
+				if (error instanceof ScrimWorkflowError) {
+					return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+				}
+				if (error instanceof DatabaseError && error.code === "55P03") {
+					return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+				}
+				throw error;
+			}
 		} else if (action === "propose_changes") {
 			if (!scrim.awayTeamId) {
 				return c.json({ error: "This scrim request does not have an opponent yet." }, 400);
@@ -405,6 +503,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			const startActorTeamId = isHomeTeamActor ? scrim.homeTeamId : scrim.awayTeamId;
 			try {
 				await db.transaction(async (tx) => {
+					await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
 					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
 					const lockedScrim = await tx.query.scrimTable.findFirst({
 						where: eq(scrimTable.id, scrimId),
@@ -438,6 +537,9 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 				if (error instanceof ScrimWorkflowError) {
 					return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
 				}
+				if (error instanceof DatabaseError && error.code === "55P03") {
+					return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+				}
 				throw error;
 			}
 		} else {
@@ -467,6 +569,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 			try {
 				await db.transaction(async (tx) => {
+					await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
 					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
 
 					const lockedScrim = await tx.query.scrimTable.findFirst({
@@ -517,6 +620,9 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			} catch (error) {
 				if (error instanceof ScrimWorkflowError) {
 					return c.json({ error: error.message }, { status: error.status as 400 | 404 });
+				}
+				if (error instanceof DatabaseError && error.code === "55P03") {
+					return c.json({ error: "Temporarily unavailable, please try again." }, 503);
 				}
 				throw error;
 			}

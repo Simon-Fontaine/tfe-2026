@@ -1,5 +1,5 @@
 import { appRoutes, type NotificationSummary } from "@scrimflow/shared";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	chatChannelTable,
@@ -66,6 +66,14 @@ interface CreateNotificationInput {
 	body?: string;
 	referenceType?: string;
 	referenceId?: string;
+	/**
+	 * Controls conflict handling on the dedup index.
+	 * - undefined / omitted: `onConflictDoNothing` — duplicate silently discarded
+	 * - 'refresh': `onConflictDoUpdate` bumping `createdAt` — use for resend flows
+	 * - 'always-insert': no conflict clause — use when the same referenceId spans
+	 *   multiple semantically distinct events (e.g. ownership workflow transitions)
+	 */
+	conflictBehavior?: "refresh" | "always-insert";
 }
 
 type NotificationRow = {
@@ -229,67 +237,39 @@ export async function createNotification(
 	const client = tx ?? db;
 	if (!(await isNotificationAllowed(input.userId, input.type, client))) return null;
 
-	if (input.type === "new_message" && input.referenceId) {
-		const existing = await client.query.notificationTable.findFirst({
-			where: and(
-				eq(notificationTable.userId, input.userId),
-				eq(notificationTable.type, "new_message"),
-				eq(notificationTable.referenceId, input.referenceId),
-				eq(notificationTable.isRead, false)
-			),
-			columns: { id: true },
-		});
-		if (existing) {
-			const [updated] = await client
-				.update(notificationTable)
-				.set({ title: input.title, body: input.body ?? null, createdAt: new Date() })
-				.where(eq(notificationTable.id, existing.id))
-				.returning({
-					id: notificationTable.id,
-					type: notificationTable.type,
-					title: notificationTable.title,
-					body: notificationTable.body,
-					referenceType: notificationTable.referenceType,
-					referenceId: notificationTable.referenceId,
-					isRead: notificationTable.isRead,
-					isDismissed: notificationTable.isDismissed,
-					createdAt: notificationTable.createdAt,
-				});
-			if (!updated) return null;
-			const notification = await mapNotification(updated, input.userId);
-			if (!tx) {
-				const unreadCount = await getUnreadNotificationCount(input.userId);
-				publishUserRealtimeEvent({
-					userId: input.userId,
-					event: "notification:created",
-					payload: { notification, unreadCount },
-				});
-			}
-			return notification;
-		}
-	}
+	const values = {
+		userId: input.userId,
+		type: input.type,
+		title: input.title,
+		body: input.body,
+		referenceType: input.referenceType,
+		referenceId: input.referenceId,
+	};
+	const returning = {
+		id: notificationTable.id,
+		type: notificationTable.type,
+		title: notificationTable.title,
+		body: notificationTable.body,
+		referenceType: notificationTable.referenceType,
+		referenceId: notificationTable.referenceId,
+		isRead: notificationTable.isRead,
+		isDismissed: notificationTable.isDismissed,
+		createdAt: notificationTable.createdAt,
+	};
 
-	const [created] = await client
-		.insert(notificationTable)
-		.values({
-			userId: input.userId,
-			type: input.type,
-			title: input.title,
-			body: input.body,
-			referenceType: input.referenceType,
-			referenceId: input.referenceId,
-		})
-		.returning({
-			id: notificationTable.id,
-			type: notificationTable.type,
-			title: notificationTable.title,
-			body: notificationTable.body,
-			referenceType: notificationTable.referenceType,
-			referenceId: notificationTable.referenceId,
-			isRead: notificationTable.isRead,
-			isDismissed: notificationTable.isDismissed,
-			createdAt: notificationTable.createdAt,
-		});
+	const [created] = await (input.conflictBehavior === "refresh"
+		? client
+				.insert(notificationTable)
+				.values(values)
+				.onConflictDoUpdate({
+					target: [notificationTable.userId, notificationTable.type, notificationTable.referenceId],
+					targetWhere: sql`${notificationTable.isRead} = false`,
+					set: { createdAt: new Date() },
+				})
+				.returning(returning)
+		: input.conflictBehavior === "always-insert"
+			? client.insert(notificationTable).values(values).returning(returning)
+			: client.insert(notificationTable).values(values).onConflictDoNothing().returning(returning));
 
 	if (!created) return null;
 

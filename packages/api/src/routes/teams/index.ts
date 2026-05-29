@@ -1166,6 +1166,7 @@ teamRoutes.post("/:id/ownership", async (c) => {
 			body: "A team ownership transfer is waiting for your response.",
 			referenceType: "ownership_workflow",
 			referenceId: workflow.id,
+			conflictBehavior: "always-insert",
 		});
 	}
 
@@ -1302,6 +1303,7 @@ teamRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 					: "The recipient rejected the team ownership transfer.",
 			referenceType: "ownership_workflow",
 			referenceId: workflow.id,
+			conflictBehavior: "always-insert",
 		});
 	}
 	// P20: also notify the new owner that they now hold authority.
@@ -1313,6 +1315,7 @@ teamRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 			body: "You accepted the team ownership transfer. You now hold team admin authority.",
 			referenceType: "ownership_workflow",
 			referenceId: workflow.id,
+			conflictBehavior: "always-insert",
 		});
 	}
 
@@ -1501,6 +1504,7 @@ teamRoutes.post("/:id/ownership/:workflowId/resolve", async (c) => {
 					: "Team continuity recovery was not approved.",
 			referenceType: "ownership_workflow",
 			referenceId: workflowId,
+			conflictBehavior: "always-insert",
 		});
 	}
 
@@ -2172,6 +2176,7 @@ teamRoutes.post("/:id/invites/:inviteId/resend", async (c) => {
 		body: `Access: ${invite.permissionRole}.`,
 		referenceType: "team_invite",
 		referenceId: teamId,
+		conflictBehavior: "refresh",
 	});
 
 	return c.json({ success: true });
