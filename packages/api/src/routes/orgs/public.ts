@@ -22,7 +22,8 @@ publicOrgRoutes.get("/", async (c) => {
 	const rows = await db.query.organizationTable.findMany({
 		where: and(
 			eq(organizationTable.isPublic, true),
-			eq(organizationTable.lifecycleStatus, "active")
+			eq(organizationTable.lifecycleStatus, "active"),
+			eq(organizationTable.isModerationSuspended, false)
 		),
 		columns: {
 			id: true,
@@ -80,11 +81,13 @@ publicOrgRoutes.get("/:id", async (c) => {
 		? and(
 				eq(organizationTable.isPublic, true),
 				eq(organizationTable.lifecycleStatus, "active"),
+				eq(organizationTable.isModerationSuspended, false),
 				or(eq(organizationTable.id, idOrSlug), eq(organizationTable.slug, idOrSlug))
 			)
 		: and(
 				eq(organizationTable.isPublic, true),
 				eq(organizationTable.lifecycleStatus, "active"),
+				eq(organizationTable.isModerationSuspended, false),
 				eq(organizationTable.slug, idOrSlug)
 			);
 

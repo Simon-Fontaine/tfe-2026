@@ -1,5 +1,9 @@
 import type {
 	DomainAuditEvent,
+	GovernanceAvailableAction,
+	GovernanceEntityState,
+	GovernancePendingItem,
+	GovernancePendingResponse,
 	ModerationAction,
 	ModerationActionType,
 	ModerationCaseAction,
@@ -15,19 +19,23 @@ import {
 	DomainAuditQuerySchema,
 	ModerationCasePatchSchema,
 	ModerationQueueFilterSchema,
+	ModeratorOwnershipResolutionSchema,
 } from "@scrimflow/shared";
-import { and, asc, count, desc, eq, gte, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import * as v from "valibot";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
 import {
+	accountDeletionRequestTable,
 	chatMessageTable,
 	domainAuditEventTable,
 	moderationActionTable,
 	moderationCaseEventTable,
 	organizationTable,
+	ownershipWorkflowEventTable,
+	ownershipWorkflowTable,
 	recruitmentListingTable,
 	teamTable,
 	updatePostTable,
@@ -37,6 +45,8 @@ import {
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
+import { getCurrentOwnershipWorkflow, mapOwnershipWorkflow } from "@/utils/ownership";
+import { ensureOrganizationMembership, ensureTeamMembership } from "@/utils/recruit";
 
 const moderationRoutes = new Hono<AuthEnv>();
 
@@ -889,6 +899,342 @@ moderationRoutes.get("/audit", async (c) => {
 	const nextCursor = hasMore ? `${rows[limit].createdAt.toISOString()}_${rows[limit].id}` : null;
 
 	return c.json({ events, hasMore, nextCursor });
+});
+
+// ─── Governance: entity inspection ───────────────────────────────────────────
+
+moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => {
+	const user = c.var.user;
+	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
+
+	const { entityType, entityId } = c.req.param();
+	if (!["user", "team", "organization"].includes(entityType)) {
+		return c.json({ error: "Invalid entityType." }, 400);
+	}
+	const entityIdResult = v.safeParse(v.pipe(v.string(), v.uuid()), entityId);
+	if (!entityIdResult.success) return c.json({ error: "Invalid entityId." }, 400);
+
+	const validEntityType = entityType as "user" | "team" | "organization";
+
+	let displayName = "";
+	let isSuspended = false;
+	let isArchived = false;
+	let isDeletionPending = false;
+	let isAnonymized = false;
+	let requiresReverification = false;
+
+	if (validEntityType === "user") {
+		const row = await db.query.userTable.findFirst({
+			where: eq(userTable.id, entityId),
+			columns: {
+				id: true,
+				displayName: true,
+				isBanned: true,
+				isAnonymized: true,
+				requiresReverification: true,
+			},
+		});
+		if (!row) return c.json({ error: "Not found." }, 404);
+		displayName = row.displayName ?? "";
+		isSuspended = row.isBanned ?? false;
+		isAnonymized = row.isAnonymized ?? false;
+		requiresReverification = row.requiresReverification ?? false;
+		const deletionReq = await db.query.accountDeletionRequestTable.findFirst({
+			where: and(
+				eq(accountDeletionRequestTable.userId, entityId),
+				isNull(accountDeletionRequestTable.cancelledAt)
+			),
+			columns: { id: true, confirmedAt: true },
+		});
+		isDeletionPending = !!deletionReq?.confirmedAt;
+	} else if (validEntityType === "team") {
+		const row = await db.query.teamTable.findFirst({
+			where: eq(teamTable.id, entityId),
+			columns: { id: true, name: true, isModerationSuspended: true, isArchived: true },
+		});
+		if (!row) return c.json({ error: "Not found." }, 404);
+		displayName = row.name;
+		isSuspended = row.isModerationSuspended ?? false;
+		isArchived = row.isArchived ?? false;
+	} else {
+		const row = await db.query.organizationTable.findFirst({
+			where: eq(organizationTable.id, entityId),
+			columns: { id: true, name: true, isModerationSuspended: true, isArchived: true },
+		});
+		if (!row) return c.json({ error: "Not found." }, 404);
+		displayName = row.name;
+		isSuspended = row.isModerationSuspended ?? false;
+		isArchived = row.isArchived ?? false;
+	}
+
+	const activeActions = await db.query.moderationActionTable.findMany({
+		where: and(
+			eq(moderationActionTable.targetType, validEntityType),
+			eq(moderationActionTable.targetId, entityId),
+			isNull(moderationActionTable.reversedAt)
+		),
+		orderBy: [desc(moderationActionTable.createdAt)],
+	});
+
+	const recentAuditRows = await db.query.domainAuditEventTable.findMany({
+		where: and(
+			eq(domainAuditEventTable.targetType, validEntityType),
+			eq(domainAuditEventTable.targetId, entityId)
+		),
+		orderBy: [desc(domainAuditEventTable.createdAt)],
+		limit: 10,
+	});
+
+	let ownershipWorkflow = null;
+	if (validEntityType === "team" || validEntityType === "organization") {
+		const wf = await getCurrentOwnershipWorkflow(validEntityType, entityId);
+		if (wf) ownershipWorkflow = mapOwnershipWorkflow(wf, "authorized");
+	}
+
+	const availableActions: GovernanceAvailableAction[] = [];
+	if (isSuspended) {
+		availableActions.push("restore");
+	} else {
+		availableActions.push("suspend");
+	}
+	if (
+		ownershipWorkflow &&
+		(ownershipWorkflow.status === "review_required" || ownershipWorkflow.status === "blocked")
+	) {
+		availableActions.push("resolve_ownership");
+	}
+	if (validEntityType === "user") {
+		if (requiresReverification) {
+			availableActions.push("clear_verification");
+		} else {
+			availableActions.push("require_verification");
+		}
+	}
+
+	const state: GovernanceEntityState = {
+		entityType: validEntityType,
+		entityId,
+		displayName,
+		isSuspended,
+		isArchived,
+		isDeletionPending,
+		isAnonymized,
+		ownershipWorkflow,
+		activeActions: activeActions.map(toModerationAction),
+		recentAuditEvents: recentAuditRows.map(toDomainAuditEvent),
+		availableActions,
+	};
+
+	return c.json(state);
+});
+
+// ─── Governance: moderator ownership resolution ───────────────────────────────
+
+moderationRoutes.post("/governance/ownership/:workflowId/resolve", async (c) => {
+	const user = c.var.user;
+	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
+
+	const { workflowId } = c.req.param();
+	const workflowIdValidation = v.safeParse(v.pipe(v.string(), v.uuid()), workflowId);
+	if (!workflowIdValidation.success) return c.json({ error: "Invalid workflowId." }, 400);
+
+	const body = await c.req.json();
+	const parsed = v.safeParse(ModeratorOwnershipResolutionSchema, body);
+	if (!parsed.success)
+		return c.json({ error: "Invalid input.", issues: extractErrors(parsed.issues) }, 400);
+	const input = parsed.output;
+
+	const workflow = await db.query.ownershipWorkflowTable.findFirst({
+		where: eq(ownershipWorkflowTable.id, workflowId),
+		with: {
+			requester: { columns: { id: true, displayName: true } },
+			currentOwner: { columns: { id: true, displayName: true } },
+			recipient: { columns: { id: true, displayName: true } },
+			recoveryTarget: { columns: { id: true, displayName: true } },
+		},
+	});
+	if (!workflow) return c.json({ error: "Workflow not found." }, 404);
+	if (!["review_required", "blocked"].includes(workflow.status)) {
+		return c.json({ error: "Workflow is not in a resolvable governance state." }, 409);
+	}
+	if (input.action === "approve" && !workflow.recoveryTargetUserId) {
+		return c.json({ error: "Recovery workflow has no target user." }, 409);
+	}
+	if (input.action === "approve" && !["team", "organization"].includes(workflow.entityType)) {
+		return c.json({ error: "Unsupported entity type for ownership resolution." }, 409);
+	}
+
+	const fromStatus = workflow.status;
+	const newStatus = input.action === "approve" ? "approved" : "rejected";
+	const newResult = input.action === "approve" ? "recovered" : "rejected";
+
+	const recoveryTargetUserId = workflow.recoveryTargetUserId;
+
+	await db.transaction(async (tx) => {
+		if (input.action === "approve" && recoveryTargetUserId) {
+			if (workflow.entityType === "team") {
+				await ensureTeamMembership(tx, {
+					teamId: workflow.entityId,
+					userId: recoveryTargetUserId,
+					permissionRole: "admin",
+					status: "active",
+				});
+			} else if (workflow.entityType === "organization") {
+				await ensureOrganizationMembership(tx, {
+					organizationId: workflow.entityId,
+					userId: recoveryTargetUserId,
+					role: "owner",
+				});
+			}
+		}
+
+		const updateRows = await tx
+			.update(ownershipWorkflowTable)
+			.set({
+				status: newStatus,
+				reviewState: input.action === "approve" ? "approved" : "rejected",
+				result: newResult,
+				resolvedAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(ownershipWorkflowTable.id, workflowId),
+					inArray(ownershipWorkflowTable.status, ["review_required", "blocked"])
+				)
+			)
+			.returning({ id: ownershipWorkflowTable.id });
+
+		if (updateRows.length === 0) {
+			throw new Error("Workflow status changed concurrently. Please retry.");
+		}
+
+		await tx.insert(ownershipWorkflowEventTable).values({
+			workflowId,
+			actorUserId: user.id,
+			action: "governance_resolved",
+			fromStatus,
+			toStatus: newStatus,
+			reason: input.reason,
+			metadata: { resultReason: `governance_resolved:moderator:${input.action}` },
+		});
+	});
+
+	writeDomainAuditEvent({
+		domain: "governance",
+		actionType: "governance_recovery_applied",
+		targetType: workflow.entityType,
+		targetId: workflow.entityId,
+		actorId: user.id,
+		actorType: "user",
+		outcome: "success",
+		reason: input.reason,
+		metadata: { workflowId, action: input.action, escalationTier: "moderator" },
+	}).catch(() => {});
+
+	const updatedWorkflow = await db.query.ownershipWorkflowTable.findFirst({
+		where: eq(ownershipWorkflowTable.id, workflowId),
+		with: {
+			requester: { columns: { id: true, displayName: true } },
+			currentOwner: { columns: { id: true, displayName: true } },
+			recipient: { columns: { id: true, displayName: true } },
+			recoveryTarget: { columns: { id: true, displayName: true } },
+		},
+	});
+	if (!updatedWorkflow) return c.json({ error: "Workflow not found after update." }, 500);
+
+	return c.json(mapOwnershipWorkflow(updatedWorkflow, "authorized"));
+});
+
+// ─── Governance: pending cases ────────────────────────────────────────────────
+
+moderationRoutes.get("/governance/pending", async (c) => {
+	const user = c.var.user;
+	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
+
+	const [pendingWorkflows, suspendedUsers, suspendedTeamsRows, suspendedOrgsRows] =
+		await Promise.all([
+			db.query.ownershipWorkflowTable.findMany({
+				where: inArray(ownershipWorkflowTable.status, ["review_required", "blocked"]),
+				orderBy: [desc(ownershipWorkflowTable.updatedAt)],
+			}),
+			db.query.userTable.findMany({
+				where: and(eq(userTable.isBanned, true), eq(userTable.isAnonymized, false)),
+				columns: { id: true, displayName: true, updatedAt: true, createdAt: true },
+				orderBy: [desc(userTable.updatedAt)],
+			}),
+			db.query.teamTable.findMany({
+				where: eq(teamTable.isModerationSuspended, true),
+				columns: { id: true, name: true, updatedAt: true, createdAt: true },
+				orderBy: [desc(teamTable.updatedAt)],
+			}),
+			db.query.organizationTable.findMany({
+				where: eq(organizationTable.isModerationSuspended, true),
+				columns: { id: true, name: true, updatedAt: true, createdAt: true },
+				orderBy: [desc(organizationTable.updatedAt)],
+			}),
+		]);
+
+	// Build entity name map for pending ownership workflows (show entity name, not requester name)
+	const wfTeamIds = pendingWorkflows
+		.filter((wf) => wf.entityType === "team")
+		.map((wf) => wf.entityId);
+	const wfOrgIds = pendingWorkflows
+		.filter((wf) => wf.entityType === "organization")
+		.map((wf) => wf.entityId);
+	const [wfTeams, wfOrgs] = await Promise.all([
+		wfTeamIds.length > 0
+			? db.query.teamTable.findMany({
+					where: inArray(teamTable.id, wfTeamIds),
+					columns: { id: true, name: true },
+				})
+			: [],
+		wfOrgIds.length > 0
+			? db.query.organizationTable.findMany({
+					where: inArray(organizationTable.id, wfOrgIds),
+					columns: { id: true, name: true },
+				})
+			: [],
+	]);
+	const entityNameMap = new Map<string, string>([
+		...wfTeams.map((t) => [t.id, t.name] as [string, string]),
+		...wfOrgs.map((o) => [o.id, o.name] as [string, string]),
+	]);
+
+	const response: GovernancePendingResponse = {
+		pendingOwnershipWorkflows: pendingWorkflows.map((wf) => ({
+			entityType: wf.entityType as "team" | "organization",
+			entityId: wf.entityId,
+			displayName: entityNameMap.get(wf.entityId) ?? wf.entityId,
+			reason: "blocked_ownership" as const,
+			workflowId: wf.id,
+			workflowStatus: wf.status as GovernancePendingItem["workflowStatus"],
+			since: wf.updatedAt.toISOString(),
+		})),
+		suspendedUsers: suspendedUsers.map((u) => ({
+			entityType: "user" as const,
+			entityId: u.id,
+			displayName: u.displayName ?? u.id,
+			reason: "suspended" as const,
+			since: (u.updatedAt ?? u.createdAt).toISOString(),
+		})),
+		suspendedTeams: suspendedTeamsRows.map((t) => ({
+			entityType: "team" as const,
+			entityId: t.id,
+			displayName: t.name,
+			reason: "suspended" as const,
+			since: (t.updatedAt ?? t.createdAt).toISOString(),
+		})),
+		suspendedOrgs: suspendedOrgsRows.map((o) => ({
+			entityType: "organization" as const,
+			entityId: o.id,
+			displayName: o.name,
+			reason: "suspended" as const,
+			since: (o.updatedAt ?? o.createdAt).toISOString(),
+		})),
+	};
+
+	return c.json(response);
 });
 
 export { moderationRoutes };

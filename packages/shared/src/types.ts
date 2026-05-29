@@ -1784,3 +1784,43 @@ export type HeroRow = {
 	imageUrl: string | null;
 	description: string | null;
 };
+
+// ─── Governance types ─────────────────────────────────────────────────────
+
+export type GovernanceAvailableAction =
+	| "suspend"
+	| "restore"
+	| "resolve_ownership"
+	| "require_verification"
+	| "clear_verification";
+
+export type GovernanceEntityState = {
+	entityType: "user" | "team" | "organization";
+	entityId: string;
+	displayName: string;
+	isSuspended: boolean;
+	isArchived: boolean;
+	isDeletionPending: boolean;
+	isAnonymized: boolean;
+	ownershipWorkflow: OwnershipWorkflowSummary | null;
+	activeActions: ModerationAction[];
+	recentAuditEvents: DomainAuditEvent[];
+	availableActions: GovernanceAvailableAction[];
+};
+
+export type GovernancePendingItem = {
+	entityType: "user" | "team" | "organization";
+	entityId: string;
+	displayName: string;
+	reason: "suspended" | "blocked_ownership";
+	workflowId?: string;
+	workflowStatus?: OwnershipWorkflowStatus;
+	since: IsoDateString;
+};
+
+export type GovernancePendingResponse = {
+	pendingOwnershipWorkflows: GovernancePendingItem[];
+	suspendedUsers: GovernancePendingItem[];
+	suspendedTeams: GovernancePendingItem[];
+	suspendedOrgs: GovernancePendingItem[];
+};

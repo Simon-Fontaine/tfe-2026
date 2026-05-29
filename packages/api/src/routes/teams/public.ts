@@ -46,6 +46,7 @@ publicTeamRoutes.get("/", async (c) => {
 			eq(teamTable.isArchived, false),
 			eq(teamTable.isPublic, true),
 			eq(teamTable.lifecycleStatus, "active"),
+			eq(teamTable.isModerationSuspended, false),
 			inArray(teamTable.organizationId, activePublicOrgIds),
 			recruitingFilter !== undefined ? eq(teamTable.isRecruiting, recruitingFilter) : undefined
 		),
@@ -97,7 +98,8 @@ publicTeamRoutes.get("/:id", async (c) => {
 			eq(teamTable.id, teamId),
 			eq(teamTable.isArchived, false),
 			eq(teamTable.isPublic, true),
-			eq(teamTable.lifecycleStatus, "active")
+			eq(teamTable.lifecycleStatus, "active"),
+			eq(teamTable.isModerationSuspended, false)
 		),
 		columns: {
 			id: true,

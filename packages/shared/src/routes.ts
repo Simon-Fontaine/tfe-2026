@@ -298,6 +298,13 @@ export const apiRoutes = {
 		actions: "/api/moderation/actions",
 		action: (actionId: string) => `/api/moderation/actions/${actionId}`,
 		audit: "/api/moderation/audit",
+		governance: {
+			entity: (entityType: "user" | "team" | "organization", entityId: string) =>
+				`/api/moderation/governance/entities/${entityType}/${entityId}`,
+			resolveOwnership: (workflowId: string) =>
+				`/api/moderation/governance/ownership/${workflowId}/resolve`,
+			pending: "/api/moderation/governance/pending",
+		},
 	},
 	chat: {
 		conversations: "/api/chat/conversations",
@@ -348,6 +355,11 @@ export const appRoutes = {
 		root: "/app/moderation",
 		report: (reportId: string) => `/app/moderation/${reportId}`,
 		audit: "/app/moderation/audit",
+		governance: {
+			root: "/app/moderation/governance",
+			entity: (entityType: "user" | "team" | "organization", entityId: string) =>
+				`/app/moderation/governance/${entityType}/${entityId}`,
+		},
 	},
 	orgs: {
 		root: "/app/orgs",

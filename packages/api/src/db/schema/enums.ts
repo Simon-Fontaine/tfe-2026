@@ -224,6 +224,7 @@ export const domainAuditDomainEnum = pgEnum("domain_audit_domain", [
 	"evidence",
 	"data_lifecycle",
 	"admin",
+	"governance",
 ]);
 
 export const domainAuditActorTypeEnum = pgEnum("domain_audit_actor_type", [
@@ -256,6 +257,8 @@ export const domainAuditActionTypeEnum = pgEnum("domain_audit_action_type", [
 	"lifecycle_archived",
 	"lifecycle_restored",
 	"lifecycle_deletion_pending",
+	"governance_recovery_applied",
+	"governance_containment_applied",
 ]);
 
 /** Player stat side in a scrim map — which team perspective the OCR extracted. */

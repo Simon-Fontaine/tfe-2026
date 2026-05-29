@@ -118,12 +118,20 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 			/>
 
 			<PageSection>
-				<Link
-					href={appRoutes.moderation.audit}
-					className="text-sm text-primary underline-offset-2 hover:underline"
-				>
-					View Audit Log →
-				</Link>
+				<div className="flex gap-4">
+					<Link
+						href={appRoutes.moderation.audit}
+						className="text-sm text-primary underline-offset-2 hover:underline"
+					>
+						View Audit Log →
+					</Link>
+					<Link
+						href={appRoutes.moderation.governance.root}
+						className="text-sm text-primary underline-offset-2 hover:underline"
+					>
+						Governance Recovery →
+					</Link>
+				</div>
 			</PageSection>
 
 			<PageSection>
