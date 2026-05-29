@@ -57,11 +57,18 @@ export default async function GovernancePage() {
 
 	const res = await apiGet<GovernancePendingResponse>(apiRoutes.moderation.governance.pending);
 	const data = "data" in res ? res.data : null;
+	const items = data?.items ?? [];
 
-	const pendingWorkflows = data?.pendingOwnershipWorkflows ?? [];
-	const suspendedUsers = data?.suspendedUsers ?? [];
-	const suspendedTeams = data?.suspendedTeams ?? [];
-	const suspendedOrgs = data?.suspendedOrgs ?? [];
+	const pendingWorkflows = items.filter((item) => item.reason === "blocked_ownership");
+	const suspendedUsers = items.filter(
+		(item) => item.reason === "suspended" && item.entityType === "user"
+	);
+	const suspendedTeams = items.filter(
+		(item) => item.reason === "suspended" && item.entityType === "team"
+	);
+	const suspendedOrgs = items.filter(
+		(item) => item.reason === "suspended" && item.entityType === "organization"
+	);
 
 	return (
 		<PageContainer>

@@ -1,5 +1,6 @@
 import { type GovernanceHold, type GovernanceHoldDetail, rateLimits } from "@scrimflow/shared";
 import { and, count, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
@@ -25,65 +26,53 @@ import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import logger from "@/utils/logger";
 
 async function getUserGovernanceHold(userId: string): Promise<GovernanceHold> {
-	const holdDetails: GovernanceHoldDetail[] = [];
+	const tr1 = alias(teamRosterTable, "tr1");
+	const tr2 = alias(teamRosterTable, "tr2");
 
-	// Check sole team admin (permissionRole = "admin")
-	const adminTeams = await db
-		.select({ teamId: teamRosterTable.teamId, teamName: teamTable.name })
-		.from(teamRosterTable)
-		.innerJoin(teamTable, eq(teamRosterTable.teamId, teamTable.id))
-		.where(
+	const soleAdminTeams = await db
+		.select({ teamId: tr1.teamId, teamName: teamTable.name })
+		.from(tr1)
+		.innerJoin(teamTable, eq(tr1.teamId, teamTable.id))
+		.leftJoin(
+			tr2,
 			and(
-				eq(teamRosterTable.userId, userId),
-				eq(teamRosterTable.permissionRole, "admin"),
-				eq(teamRosterTable.status, "active")
+				eq(tr2.teamId, tr1.teamId),
+				eq(tr2.permissionRole, "admin"),
+				eq(tr2.status, "active"),
+				ne(tr2.userId, userId)
 			)
-		);
+		)
+		.where(and(eq(tr1.userId, userId), eq(tr1.permissionRole, "admin"), eq(tr1.status, "active")))
+		.groupBy(tr1.teamId, teamTable.name)
+		.having(eq(count(tr2.userId), 0));
 
-	for (const { teamId, teamName } of adminTeams) {
-		const [{ otherAdmins }] = await db
-			.select({ otherAdmins: count() })
-			.from(teamRosterTable)
-			.where(
-				and(
-					eq(teamRosterTable.teamId, teamId),
-					eq(teamRosterTable.permissionRole, "admin"),
-					eq(teamRosterTable.status, "active"),
-					ne(teamRosterTable.userId, userId)
-				)
-			);
-		if (Number(otherAdmins) === 0) {
-			holdDetails.push({ entityType: "team", entityId: teamId, entityName: teamName });
-		}
-	}
+	const om1 = alias(organizationMemberTable, "om1");
+	const om2 = alias(organizationMemberTable, "om2");
 
-	// Check sole org owner (role = "owner")
-	const ownerOrgs = await db
-		.select({
-			orgId: organizationMemberTable.organizationId,
-			orgName: organizationTable.name,
-		})
-		.from(organizationMemberTable)
-		.innerJoin(organizationTable, eq(organizationMemberTable.organizationId, organizationTable.id))
-		.where(
-			and(eq(organizationMemberTable.userId, userId), eq(organizationMemberTable.role, "owner"))
-		);
+	const soleOwnerOrgs = await db
+		.select({ orgId: om1.organizationId, orgName: organizationTable.name })
+		.from(om1)
+		.innerJoin(organizationTable, eq(om1.organizationId, organizationTable.id))
+		.leftJoin(
+			om2,
+			and(eq(om2.organizationId, om1.organizationId), eq(om2.role, "owner"), ne(om2.userId, userId))
+		)
+		.where(and(eq(om1.userId, userId), eq(om1.role, "owner")))
+		.groupBy(om1.organizationId, organizationTable.name)
+		.having(eq(count(om2.userId), 0));
 
-	for (const { orgId, orgName } of ownerOrgs) {
-		const [{ otherOwners }] = await db
-			.select({ otherOwners: count() })
-			.from(organizationMemberTable)
-			.where(
-				and(
-					eq(organizationMemberTable.organizationId, orgId),
-					eq(organizationMemberTable.role, "owner"),
-					ne(organizationMemberTable.userId, userId)
-				)
-			);
-		if (Number(otherOwners) === 0) {
-			holdDetails.push({ entityType: "organization", entityId: orgId, entityName: orgName });
-		}
-	}
+	const holdDetails: GovernanceHoldDetail[] = [
+		...soleAdminTeams.map(({ teamId, teamName }) => ({
+			entityType: "team" as const,
+			entityId: teamId,
+			entityName: teamName,
+		})),
+		...soleOwnerOrgs.map(({ orgId, orgName }) => ({
+			entityType: "organization" as const,
+			entityId: orgId,
+			entityName: orgName,
+		})),
+	];
 
 	return { blocked: holdDetails.length > 0, holdDetails };
 }

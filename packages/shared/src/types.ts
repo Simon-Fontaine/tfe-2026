@@ -1819,8 +1819,6 @@ export type GovernancePendingItem = {
 };
 
 export type GovernancePendingResponse = {
-	pendingOwnershipWorkflows: GovernancePendingItem[];
-	suspendedUsers: GovernancePendingItem[];
-	suspendedTeams: GovernancePendingItem[];
-	suspendedOrgs: GovernancePendingItem[];
+	items: GovernancePendingItem[];
+	nextCursor: string | null;
 };

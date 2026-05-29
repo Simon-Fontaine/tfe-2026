@@ -3,7 +3,6 @@ import type {
 	GovernanceAvailableAction,
 	GovernanceEntityState,
 	GovernancePendingItem,
-	GovernancePendingResponse,
 	ModerationAction,
 	ModerationActionType,
 	ModerationCaseAction,
@@ -21,7 +20,7 @@ import {
 	ModerationQueueFilterSchema,
 	ModeratorOwnershipResolutionSchema,
 } from "@scrimflow/shared";
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import * as v from "valibot";
@@ -45,12 +44,14 @@ import {
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
+import { decodeCursor, encodeCursor } from "@/utils/cursor";
 import { getCurrentOwnershipWorkflow, mapOwnershipWorkflow } from "@/utils/ownership";
 import { ensureOrganizationMembership, ensureTeamMembership } from "@/utils/recruit";
 
 const moderationRoutes = new Hono<AuthEnv>();
 
 const PAGE_SIZE = 25;
+const GOVERNANCE_PAGE_SIZE = 25;
 
 function toModerationAction(row: typeof moderationActionTable.$inferSelect): ModerationAction {
 	return {
@@ -185,23 +186,18 @@ moderationRoutes.get("/queue", async (c) => {
 		conditions.push(isNull(userReportTable.assignedModeratorId));
 	}
 
-	// P3: compound cursor encodes both updatedAt and id to avoid skips at page boundaries
 	if (filters.cursor) {
-		const pipeIdx = filters.cursor.indexOf("|");
-		const cursorDateStr = pipeIdx > 0 ? filters.cursor.slice(0, pipeIdx) : filters.cursor;
-		const cursorId = pipeIdx > 0 ? filters.cursor.slice(pipeIdx + 1) : undefined;
-		const cursorDate = new Date(cursorDateStr);
-		if (!Number.isNaN(cursorDate.getTime())) {
-			if (cursorId) {
-				conditions.push(
-					or(
-						lt(userReportTable.updatedAt, cursorDate),
-						and(eq(userReportTable.updatedAt, cursorDate), lt(userReportTable.id, cursorId))
-					)
-				);
-			} else {
-				conditions.push(lt(userReportTable.updatedAt, cursorDate));
-			}
+		try {
+			const { id: cursorId, createdAt: cursorCreatedAt } = decodeCursor(filters.cursor);
+			const cursorDate = new Date(cursorCreatedAt);
+			conditions.push(
+				or(
+					gt(userReportTable.createdAt, cursorDate),
+					and(eq(userReportTable.createdAt, cursorDate), gt(userReportTable.id, cursorId))
+				)
+			);
+		} catch {
+			return c.json({ error: "Invalid cursor." }, 400);
 		}
 	}
 
@@ -218,15 +214,16 @@ moderationRoutes.get("/queue", async (c) => {
 		.leftJoin(userReportSupplementTable, eq(userReportTable.id, userReportSupplementTable.reportId))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.groupBy(userReportTable.id, assignedModerator.displayName)
-		.orderBy(desc(userReportTable.updatedAt), desc(userReportTable.createdAt))
+		.orderBy(asc(userReportTable.createdAt), asc(userReportTable.id))
 		.limit(PAGE_SIZE + 1);
 
 	const hasMore = rows.length > PAGE_SIZE;
 	const pageRows = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
 	const lastRow = pageRows[pageRows.length - 1];
-	const nextCursor = hasMore
-		? `${lastRow.report.updatedAt.toISOString()}|${lastRow.report.id}`
-		: null;
+	const nextCursor =
+		hasMore && lastRow
+			? encodeCursor({ id: lastRow.report.id, createdAt: lastRow.report.createdAt.toISOString() })
+			: null;
 
 	const items: ModerationQueueItem[] = pageRows.map((row) => ({
 		id: row.report.id,
@@ -967,29 +964,30 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 		isArchived = row.isArchived ?? false;
 	}
 
-	const activeActions = await db.query.moderationActionTable.findMany({
-		where: and(
-			eq(moderationActionTable.targetType, validEntityType),
-			eq(moderationActionTable.targetId, entityId),
-			isNull(moderationActionTable.reversedAt)
-		),
-		orderBy: [desc(moderationActionTable.createdAt)],
-	});
-
-	const recentAuditRows = await db.query.domainAuditEventTable.findMany({
-		where: and(
-			eq(domainAuditEventTable.targetType, validEntityType),
-			eq(domainAuditEventTable.targetId, entityId)
-		),
-		orderBy: [desc(domainAuditEventTable.createdAt)],
-		limit: 10,
-	});
-
-	let ownershipWorkflow = null;
-	if (validEntityType === "team" || validEntityType === "organization") {
-		const wf = await getCurrentOwnershipWorkflow(validEntityType, entityId);
-		if (wf) ownershipWorkflow = mapOwnershipWorkflow(wf, "authorized");
-	}
+	const [activeActions, recentAuditRows, ownershipWorkflowRaw] = await Promise.all([
+		db.query.moderationActionTable.findMany({
+			where: and(
+				eq(moderationActionTable.targetType, validEntityType),
+				eq(moderationActionTable.targetId, entityId),
+				isNull(moderationActionTable.reversedAt)
+			),
+			orderBy: [desc(moderationActionTable.createdAt)],
+		}),
+		db.query.domainAuditEventTable.findMany({
+			where: and(
+				eq(domainAuditEventTable.targetType, validEntityType),
+				eq(domainAuditEventTable.targetId, entityId)
+			),
+			orderBy: [desc(domainAuditEventTable.createdAt)],
+			limit: 10,
+		}),
+		validEntityType === "team" || validEntityType === "organization"
+			? getCurrentOwnershipWorkflow(validEntityType, entityId)
+			: Promise.resolve(null),
+	]);
+	const ownershipWorkflow = ownershipWorkflowRaw
+		? mapOwnershipWorkflow(ownershipWorkflowRaw, "authorized")
+		: null;
 
 	const availableActions: GovernanceAvailableAction[] = [];
 	if (isSuspended) {
@@ -1152,26 +1150,32 @@ moderationRoutes.get("/governance/pending", async (c) => {
 	const user = c.var.user;
 	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
 
+	const cursorParam = c.req.query("cursor");
+	let cursor: { id: string; createdAt: string } | null = null;
+	if (cursorParam) {
+		try {
+			cursor = decodeCursor(cursorParam);
+		} catch {
+			return c.json({ error: "Invalid cursor." }, 400);
+		}
+	}
+
 	const [pendingWorkflows, suspendedUsers, suspendedTeamsRows, suspendedOrgsRows] =
 		await Promise.all([
 			db.query.ownershipWorkflowTable.findMany({
 				where: inArray(ownershipWorkflowTable.status, ["review_required", "blocked"]),
-				orderBy: [desc(ownershipWorkflowTable.updatedAt)],
 			}),
 			db.query.userTable.findMany({
 				where: and(eq(userTable.isBanned, true), eq(userTable.isAnonymized, false)),
 				columns: { id: true, displayName: true, updatedAt: true, createdAt: true },
-				orderBy: [desc(userTable.updatedAt)],
 			}),
 			db.query.teamTable.findMany({
 				where: eq(teamTable.isModerationSuspended, true),
 				columns: { id: true, name: true, updatedAt: true, createdAt: true },
-				orderBy: [desc(teamTable.updatedAt)],
 			}),
 			db.query.organizationTable.findMany({
 				where: eq(organizationTable.isModerationSuspended, true),
 				columns: { id: true, name: true, updatedAt: true, createdAt: true },
-				orderBy: [desc(organizationTable.updatedAt)],
 			}),
 		]);
 
@@ -1201,8 +1205,12 @@ moderationRoutes.get("/governance/pending", async (c) => {
 		...wfOrgs.map((o) => [o.id, o.name] as [string, string]),
 	]);
 
-	const response: GovernancePendingResponse = {
-		pendingOwnershipWorkflows: pendingWorkflows.map((wf) => ({
+	function getItemCursorId(item: GovernancePendingItem): string {
+		return item.workflowId ?? item.entityId;
+	}
+
+	const allItems: GovernancePendingItem[] = [
+		...pendingWorkflows.map((wf) => ({
 			entityType: wf.entityType as "team" | "organization",
 			entityId: wf.entityId,
 			displayName: entityNameMap.get(wf.entityId) ?? wf.entityId,
@@ -1211,30 +1219,59 @@ moderationRoutes.get("/governance/pending", async (c) => {
 			workflowStatus: wf.status as GovernancePendingItem["workflowStatus"],
 			since: wf.updatedAt.toISOString(),
 		})),
-		suspendedUsers: suspendedUsers.map((u) => ({
+		...suspendedUsers.map((u) => ({
 			entityType: "user" as const,
 			entityId: u.id,
 			displayName: u.displayName ?? u.id,
 			reason: "suspended" as const,
 			since: (u.updatedAt ?? u.createdAt).toISOString(),
 		})),
-		suspendedTeams: suspendedTeamsRows.map((t) => ({
+		...suspendedTeamsRows.map((t) => ({
 			entityType: "team" as const,
 			entityId: t.id,
 			displayName: t.name,
 			reason: "suspended" as const,
 			since: (t.updatedAt ?? t.createdAt).toISOString(),
 		})),
-		suspendedOrgs: suspendedOrgsRows.map((o) => ({
+		...suspendedOrgsRows.map((o) => ({
 			entityType: "organization" as const,
 			entityId: o.id,
 			displayName: o.name,
 			reason: "suspended" as const,
 			since: (o.updatedAt ?? o.createdAt).toISOString(),
 		})),
-	};
+	];
 
-	return c.json(response);
+	// Sort by (since ASC, cursorId ASC)
+	allItems.sort((a, b) => {
+		if (a.since < b.since) return -1;
+		if (a.since > b.since) return 1;
+		const aId = getItemCursorId(a);
+		const bId = getItemCursorId(b);
+		return aId < bId ? -1 : aId > bId ? 1 : 0;
+	});
+
+	// Apply cursor filter
+	let pageItems = allItems;
+	if (cursor) {
+		const { id: cursorId, createdAt: cursorCreatedAt } = cursor;
+		pageItems = allItems.filter((item) => {
+			if (item.since > cursorCreatedAt) return true;
+			if (item.since === cursorCreatedAt && getItemCursorId(item) > cursorId) return true;
+			return false;
+		});
+	}
+
+	// Paginate
+	const hasMore = pageItems.length > GOVERNANCE_PAGE_SIZE;
+	const sliced = hasMore ? pageItems.slice(0, GOVERNANCE_PAGE_SIZE) : pageItems;
+	const lastItem = sliced[sliced.length - 1];
+	const nextCursor =
+		hasMore && lastItem
+			? encodeCursor({ id: getItemCursorId(lastItem), createdAt: lastItem.since })
+			: null;
+
+	return c.json({ items: sliced, nextCursor });
 });
 
 export { moderationRoutes };
