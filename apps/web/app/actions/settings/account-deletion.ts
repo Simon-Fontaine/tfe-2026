@@ -1,5 +1,6 @@
 "use server";
 
+import type { GovernanceHold } from "@scrimflow/shared";
 import { apiDelete, apiGet, apiPost } from "@/lib/api-client";
 import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./password";
@@ -10,12 +11,20 @@ export interface DeletionStatus {
 	scheduledAt: string | null;
 	cancelledAt: string | null;
 	failedAt: string | null;
+	governanceHold: GovernanceHold | null;
 }
 
 export async function getAccountDeletionStatusAction(): Promise<DeletionStatus> {
 	const res = await apiGet<DeletionStatus>(apiRoutes.settings.account.deletion.root);
 	if ("data" in res) return res.data;
-	return { status: "none", isPending: false, scheduledAt: null, cancelledAt: null, failedAt: null };
+	return {
+		status: "none",
+		isPending: false,
+		scheduledAt: null,
+		cancelledAt: null,
+		failedAt: null,
+		governanceHold: null,
+	};
 }
 
 export async function requestAccountDeletionAction(reason?: string): Promise<ActionResult> {

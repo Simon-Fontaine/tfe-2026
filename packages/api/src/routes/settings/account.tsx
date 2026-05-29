@@ -1,5 +1,5 @@
-import { rateLimits } from "@scrimflow/shared";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { type GovernanceHold, type GovernanceHoldDetail, rateLimits } from "@scrimflow/shared";
+import { and, count, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
@@ -9,7 +9,13 @@ import {
 	validateAndConsumeSensitiveAction,
 } from "@/auth/sensitive-action";
 import { db } from "@/db";
-import { accountDeletionRequestTable } from "@/db/schema";
+import {
+	accountDeletionRequestTable,
+	organizationMemberTable,
+	organizationTable,
+	teamRosterTable,
+	teamTable,
+} from "@/db/schema";
 import { sendMail } from "@/email/mailer";
 import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { AuthEnv } from "@/middleware/auth";
@@ -17,6 +23,70 @@ import type { RequestContextEnv } from "@/middleware/request-context";
 import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import logger from "@/utils/logger";
+
+async function getUserGovernanceHold(userId: string): Promise<GovernanceHold> {
+	const holdDetails: GovernanceHoldDetail[] = [];
+
+	// Check sole team admin (permissionRole = "admin")
+	const adminTeams = await db
+		.select({ teamId: teamRosterTable.teamId, teamName: teamTable.name })
+		.from(teamRosterTable)
+		.innerJoin(teamTable, eq(teamRosterTable.teamId, teamTable.id))
+		.where(
+			and(
+				eq(teamRosterTable.userId, userId),
+				eq(teamRosterTable.permissionRole, "admin"),
+				eq(teamRosterTable.status, "active")
+			)
+		);
+
+	for (const { teamId, teamName } of adminTeams) {
+		const [{ otherAdmins }] = await db
+			.select({ otherAdmins: count() })
+			.from(teamRosterTable)
+			.where(
+				and(
+					eq(teamRosterTable.teamId, teamId),
+					eq(teamRosterTable.permissionRole, "admin"),
+					eq(teamRosterTable.status, "active"),
+					ne(teamRosterTable.userId, userId)
+				)
+			);
+		if (Number(otherAdmins) === 0) {
+			holdDetails.push({ entityType: "team", entityId: teamId, entityName: teamName });
+		}
+	}
+
+	// Check sole org owner (role = "owner")
+	const ownerOrgs = await db
+		.select({
+			orgId: organizationMemberTable.organizationId,
+			orgName: organizationTable.name,
+		})
+		.from(organizationMemberTable)
+		.innerJoin(organizationTable, eq(organizationMemberTable.organizationId, organizationTable.id))
+		.where(
+			and(eq(organizationMemberTable.userId, userId), eq(organizationMemberTable.role, "owner"))
+		);
+
+	for (const { orgId, orgName } of ownerOrgs) {
+		const [{ otherOwners }] = await db
+			.select({ otherOwners: count() })
+			.from(organizationMemberTable)
+			.where(
+				and(
+					eq(organizationMemberTable.organizationId, orgId),
+					eq(organizationMemberTable.role, "owner"),
+					ne(organizationMemberTable.userId, userId)
+				)
+			);
+		if (Number(otherOwners) === 0) {
+			holdDetails.push({ entityType: "organization", entityId: orgId, entityName: orgName });
+		}
+	}
+
+	return { blocked: holdDetails.length > 0, holdDetails };
+}
 
 const DELETION_GRACE_PERIOD_MS = 1_000 * 60 * 60 * 24 * 30; // 30 days
 
@@ -26,17 +96,23 @@ const accountRoutes = new Hono<RequestContextEnv & AuthEnv>();
 accountRoutes.get("/deletion", async (c) => {
 	const session = c.get("session");
 
-	const record = await db
-		.select({
-			scheduledDeletionAt: accountDeletionRequestTable.scheduledDeletionAt,
-			cancelledAt: accountDeletionRequestTable.cancelledAt,
-			confirmedAt: accountDeletionRequestTable.confirmedAt,
-		})
-		.from(accountDeletionRequestTable)
-		.where(eq(accountDeletionRequestTable.userId, session.userId))
-		.orderBy(desc(accountDeletionRequestTable.createdAt))
-		.limit(1)
-		.then((rows) => rows[0] ?? null);
+	const [record, governanceHold] = await Promise.all([
+		db
+			.select({
+				scheduledDeletionAt: accountDeletionRequestTable.scheduledDeletionAt,
+				cancelledAt: accountDeletionRequestTable.cancelledAt,
+				confirmedAt: accountDeletionRequestTable.confirmedAt,
+			})
+			.from(accountDeletionRequestTable)
+			.where(eq(accountDeletionRequestTable.userId, session.userId))
+			.orderBy(desc(accountDeletionRequestTable.createdAt))
+			.limit(1)
+			.then((rows) => rows[0] ?? null),
+		getUserGovernanceHold(session.userId).catch(() => ({
+			blocked: false,
+			holdDetails: [] as GovernanceHoldDetail[],
+		})),
+	]);
 
 	const now = new Date();
 	const isPending = Boolean(
@@ -59,6 +135,7 @@ accountRoutes.get("/deletion", async (c) => {
 			scheduledAt: record?.scheduledDeletionAt?.toISOString() ?? null,
 			cancelledAt: record?.cancelledAt?.toISOString() ?? null,
 			failedAt: isExpired ? (record?.scheduledDeletionAt?.toISOString() ?? null) : null,
+			governanceHold,
 		},
 	});
 });
@@ -148,12 +225,37 @@ accountRoutes.post("/deletion/confirm", async (c) => {
 	const body = await c.req.json<{ code: string }>().catch(() => null);
 	if (!body?.code) return c.json({ error: "Code is required." }, 400);
 
+	const hold = await getUserGovernanceHold(session.userId);
+	if (hold.blocked) {
+		return c.json(
+			{
+				error: "You must transfer ownership before deleting your account.",
+				reason: "ownership_block",
+				holdDetails: hold.holdDetails,
+			},
+			409
+		);
+	}
+
 	const result = await validateAndConsumeSensitiveAction(
 		session.userId,
 		"account_deletion",
 		body.code
 	);
 	if (!result.success) return c.json({ error: "Invalid or expired verification code." }, 400);
+
+	// Re-check hold after consuming the code to close the TOCTOU window
+	const finalHold = await getUserGovernanceHold(session.userId);
+	if (finalHold.blocked) {
+		return c.json(
+			{
+				error: "You must transfer ownership before deleting your account.",
+				reason: "ownership_block",
+				holdDetails: finalHold.holdDetails,
+			},
+			409
+		);
+	}
 
 	const reason = typeof result.metadata?.reason === "string" ? result.metadata.reason : null;
 	const scheduledDeletionAt = new Date(Date.now() + DELETION_GRACE_PERIOD_MS);

@@ -1,7 +1,7 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { Alert02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { Alert02Icon, Delete02Icon, InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	appRoutes,
@@ -10,6 +10,7 @@ import {
 	type VerifyCodeInput,
 	VerifyCodeSchema,
 } from "@scrimflow/shared";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -37,6 +38,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Step = "idle" | "reason" | "code-sent";
 
@@ -91,6 +93,7 @@ export function DeleteAccountSection({ initialStatus }: { initialStatus: Deletio
 				scheduledAt: deletionStatus.scheduledAt,
 				cancelledAt: new Date().toISOString(),
 				failedAt: null,
+				governanceHold: deletionStatus.governanceHold ?? null,
 			});
 			toast.success("Account deletion cancelled.");
 		});
@@ -138,22 +141,77 @@ export function DeleteAccountSection({ initialStatus }: { initialStatus: Deletio
 						Your last deletion request was cancelled.
 					</p>
 				)}
+				{deletionStatus.governanceHold?.blocked &&
+					deletionStatus.governanceHold.holdDetails.length > 0 && (
+						<div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+							<div className="flex items-center gap-2">
+								<HugeiconsIcon
+									icon={InformationCircleIcon}
+									className="size-4 shrink-0 text-warning"
+									strokeWidth={2}
+								/>
+								<p className="text-sm font-medium">Transfer ownership before deleting</p>
+							</div>
+							<p className="mt-1 text-muted-foreground text-sm">
+								You are the sole owner of the following. Transfer or disband them first.
+							</p>
+							<ul className="mt-2 space-y-1">
+								{deletionStatus.governanceHold.holdDetails.map((hold) => (
+									<li key={hold.entityId} className="text-sm">
+										<Link
+											href={
+												hold.entityType === "team"
+													? `${appRoutes.teams.settings(hold.entityId)}`
+													: `${appRoutes.orgs.settings(hold.entityId)}`
+											}
+											className="text-primary underline-offset-2 hover:underline"
+										>
+											{hold.entityName}
+										</Link>{" "}
+										<span className="text-muted-foreground">
+											({hold.entityType === "team" ? "team" : "organization"})
+										</span>
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
 				<p className="text-sm text-muted-foreground">
-					Once confirmed, deletion is delayed by a 30-day grace period. Platform records such as
-					teams, scrims, ratings, evidence, moderation, and audit history may be retained or
-					anonymized according to policy.
+					Teams, scrims, ratings, and operational records are retained and attributed to an
+					anonymized deleted account. Once confirmed, deletion is delayed by a 30-day grace period.
 				</p>
 
 				<AlertDialog open={dialogOpen} onOpenChange={onDialogClose}>
-					<AlertDialogTrigger asChild>
-						<Button
-							variant="outline"
-							size="sm"
-							className="border-destructive/40 text-destructive hover:bg-destructive/10"
-						>
-							Delete my account
-						</Button>
-					</AlertDialogTrigger>
+					{deletionStatus.governanceHold?.blocked ? (
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span className="inline-flex">
+										<Button
+											variant="outline"
+											size="sm"
+											className="pointer-events-none border-destructive/40 text-destructive hover:bg-destructive/10"
+											disabled
+											tabIndex={-1}
+										>
+											Delete my account
+										</Button>
+									</span>
+								</TooltipTrigger>
+								<TooltipContent>Transfer ownership before deleting your account.</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					) : (
+						<AlertDialogTrigger asChild>
+							<Button
+								variant="outline"
+								size="sm"
+								className="border-destructive/40 text-destructive hover:bg-destructive/10"
+							>
+								Delete my account
+							</Button>
+						</AlertDialogTrigger>
+					)}
 
 					<AlertDialogContent>
 						{step === "idle" && (

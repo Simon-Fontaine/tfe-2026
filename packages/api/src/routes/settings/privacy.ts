@@ -9,7 +9,17 @@ import * as v from "valibot";
 import { writeAuditLog } from "@/auth/audit";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
-import { accountDeletionRequestTable, playerProfileTable, userTable } from "@/db/schema";
+import {
+	accountDeletionRequestTable,
+	organizationMemberTable,
+	organizationTable,
+	playerProfileTable,
+	recruitmentApplicationTable,
+	recruitmentListingTable,
+	teamRosterTable,
+	teamTable,
+	userTable,
+} from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { extractErrors } from "@/routes/auth/utils";
@@ -112,35 +122,112 @@ dataExportRoute.get("/", (c) =>
 
 dataExportRoute.get("/download", async (c) => {
 	const session = c.get("session");
-	const [user, profile] = await Promise.all([
-		db
-			.select({
-				id: userTable.id,
-				email: userTable.email,
-				username: userTable.username,
-				displayName: userTable.displayName,
-				createdAt: userTable.createdAt,
-			})
-			.from(userTable)
-			.where(eq(userTable.id, session.userId))
-			.limit(1)
-			.then((rows) => rows[0] ?? null),
-		db
-			.select({
-				primaryRole: playerProfileTable.primaryRole,
-				rank: playerProfileTable.rank,
-				battletag: playerProfileTable.battletag,
-				profileVisibility: playerProfileTable.profileVisibility,
-				availabilityVisibility: playerProfileTable.availabilityVisibility,
-				recruitingDiscoverability: playerProfileTable.recruitingDiscoverability,
-				publicHistoryVisibility: playerProfileTable.publicHistoryVisibility,
-			})
-			.from(playerProfileTable)
-			.where(eq(playerProfileTable.userId, session.userId))
-			.limit(1)
-			.then((rows) => rows[0] ?? null),
-	]);
-	const exportData = { exportedAt: new Date().toISOString(), user, profile };
+	const [user, profile, teamMemberships, orgMemberships, recruitingApplications] =
+		await Promise.all([
+			db
+				.select({
+					id: userTable.id,
+					email: userTable.email,
+					username: userTable.username,
+					displayName: userTable.displayName,
+					createdAt: userTable.createdAt,
+					notificationPreferences: userTable.notificationPreferences,
+				})
+				.from(userTable)
+				.where(eq(userTable.id, session.userId))
+				.limit(1)
+				.then((rows) => rows[0] ?? null),
+			db
+				.select({
+					primaryRole: playerProfileTable.primaryRole,
+					rank: playerProfileTable.rank,
+					battletag: playerProfileTable.battletag,
+					profileVisibility: playerProfileTable.profileVisibility,
+					availabilityVisibility: playerProfileTable.availabilityVisibility,
+					recruitingDiscoverability: playerProfileTable.recruitingDiscoverability,
+					publicHistoryVisibility: playerProfileTable.publicHistoryVisibility,
+				})
+				.from(playerProfileTable)
+				.where(eq(playerProfileTable.userId, session.userId))
+				.limit(1)
+				.then((rows) => rows[0] ?? null),
+			db
+				.select({
+					teamId: teamRosterTable.teamId,
+					teamName: teamTable.name,
+					role: teamRosterTable.permissionRole,
+					memberType: teamRosterTable.memberType,
+					joinedAt: teamRosterTable.joinedAt,
+				})
+				.from(teamRosterTable)
+				.innerJoin(teamTable, eq(teamRosterTable.teamId, teamTable.id))
+				.where(eq(teamRosterTable.userId, session.userId)),
+			db
+				.select({
+					orgId: organizationMemberTable.organizationId,
+					orgName: organizationTable.name,
+					role: organizationMemberTable.role,
+					joinedAt: organizationMemberTable.createdAt,
+				})
+				.from(organizationMemberTable)
+				.innerJoin(
+					organizationTable,
+					eq(organizationMemberTable.organizationId, organizationTable.id)
+				)
+				.where(eq(organizationMemberTable.userId, session.userId)),
+			db
+				.select({
+					listingId: recruitmentApplicationTable.listingId,
+					teamId: recruitmentListingTable.teamId,
+					status: recruitmentApplicationTable.status,
+					submittedAt: recruitmentApplicationTable.createdAt,
+				})
+				.from(recruitmentApplicationTable)
+				.innerJoin(
+					recruitmentListingTable,
+					eq(recruitmentApplicationTable.listingId, recruitmentListingTable.id)
+				)
+				.where(eq(recruitmentApplicationTable.applicantUserId, session.userId)),
+		]);
+
+	if (!user) return c.json({ error: "User not found." }, 404);
+
+	const { notificationPreferences, ...userFields } = user;
+	const privacySettings = profile
+		? {
+				profileVisibility: profile.profileVisibility,
+				availabilityVisibility: profile.availabilityVisibility,
+				recruitingDiscoverability: profile.recruitingDiscoverability,
+				publicHistoryVisibility: profile.publicHistoryVisibility,
+			}
+		: null;
+
+	const exportData = {
+		exportedAt: new Date().toISOString(),
+		user: userFields,
+		profile: profile
+			? {
+					primaryRole: profile.primaryRole,
+					rank: profile.rank,
+					battletag: profile.battletag,
+				}
+			: null,
+		privacySettings,
+		notificationPreferences: notificationPreferences ?? {},
+		teamMemberships: teamMemberships.map((m) => ({
+			...m,
+			joinedAt: m.joinedAt ? m.joinedAt.toISOString() : null,
+		})),
+		orgMemberships: orgMemberships.map((m) => ({
+			...m,
+			joinedAt: m.joinedAt ? m.joinedAt.toISOString() : null,
+		})),
+		recruitingApplications: recruitingApplications.map((a) => ({
+			...a,
+			submittedAt: a.submittedAt ? a.submittedAt.toISOString() : null,
+		})),
+	};
+
 	const client = c.get("client");
 	writeAuditLog(session.userId, "data_export_request", client.ip, client.userAgent, null, null, {
 		mode: "immediate_download",
@@ -201,5 +288,6 @@ export async function getAccountLifecycleState(userId: string): Promise<AccountL
 			completedAt: null,
 			downloadUrl: null,
 		},
+		governanceHold: null,
 	};
 }

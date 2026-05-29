@@ -185,6 +185,17 @@ export type DataExportStatus = {
 	completedAt: IsoDateString | null;
 	downloadUrl: string | null;
 };
+export type GovernanceHoldDetail = {
+	entityType: "team" | "organization";
+	entityId: string;
+	entityName: string;
+};
+
+export type GovernanceHold = {
+	blocked: boolean;
+	holdDetails: GovernanceHoldDetail[];
+};
+
 export type AccountLifecycleState = {
 	deletion: {
 		status: "none" | "pending" | "cancelled" | "failed";
@@ -194,6 +205,7 @@ export type AccountLifecycleState = {
 		failedAt: IsoDateString | null;
 	};
 	dataExport: DataExportStatus;
+	governanceHold: GovernanceHold | null;
 };
 export type OnboardingProgressData = {
 	battletag?: string;

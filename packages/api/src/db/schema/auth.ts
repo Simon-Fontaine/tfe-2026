@@ -74,6 +74,11 @@ export const userTable = pgTable(
 		/** Set when a moderation action requires the user to re-verify before continuing. */
 		requiresReverification: boolean("requires_reverification").notNull().default(false),
 
+		/** Set when account has been anonymized after scheduled deletion. */
+		isAnonymized: boolean("is_anonymized").notNull().default(false),
+		/** Timestamp when account was anonymized. */
+		anonymizedAt: timestamp("anonymized_at", { mode: "date" }),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()
