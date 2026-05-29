@@ -1,6 +1,7 @@
 import { CreateScrimOcrJobSchema } from "@scrimflow/shared";
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Hono } from "hono";
+import { DatabaseError } from "pg";
 import * as v from "valibot";
 import { db } from "@/db";
 import { ocrJobTable, scrimTable } from "@/db/schema";
@@ -11,8 +12,9 @@ import { createGetSignedUrl, keyFromUrl } from "@/storage/s3";
 import { canAccessScrim, canManageAnyScrimTeam } from "./access";
 import { PUBLIC_SCRIM_STATUSES } from "./constants";
 import { mapOcrJob, mapScrimDetail, mapScrimSummary, publishOcrJobRealtimeUpdate } from "./detail";
-import { findScrimWithRelations } from "./shared";
+import { findScrimWithRelations, ScrimWorkflowError } from "./shared";
 
+const OCR_LOCK_TIMEOUT_MS = 5000;
 const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
 
 export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
@@ -123,23 +125,54 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 			return c.json({ error: "Superseded OCR jobs cannot be retried." }, 409);
 		}
 
-		await db
-			.update(ocrJobTable)
-			.set({
-				status: "queued",
-				progressStage: "queued",
-				errorCode: null,
-				errorMessage: null,
-				runAfter: new Date(),
-				leaseExpiresAt: null,
-				startedAt: null,
-				completedAt: null,
-				processingTimeMs: null,
-				rawOcrOutput: null,
-				validatedOutput: null,
-				confidenceFlags: [],
-			})
-			.where(eq(ocrJobTable.id, jobId));
+		try {
+			await db.transaction(async (tx) => {
+				await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${OCR_LOCK_TIMEOUT_MS}ms'`));
+				await tx.execute(sql`select id from ocr_job where id = ${jobId} for update`);
+
+				const [lockedJob] = await tx
+					.select({ id: ocrJobTable.id, status: ocrJobTable.status })
+					.from(ocrJobTable)
+					.where(eq(ocrJobTable.id, jobId));
+
+				if (!lockedJob) throw new ScrimWorkflowError(404, "OCR job not found.");
+				if (lockedJob.status === "queued") {
+					throw new ScrimWorkflowError(409, "This OCR job is already queued.");
+				}
+				if (lockedJob.status === "processing") {
+					throw new ScrimWorkflowError(409, "This OCR job is already processing.");
+				}
+				if (lockedJob.status === "superseded") {
+					throw new ScrimWorkflowError(409, "Superseded OCR jobs cannot be retried.");
+				}
+
+				await tx
+					.update(ocrJobTable)
+					.set({
+						status: "queued",
+						progressStage: "queued",
+						errorCode: null,
+						errorMessage: null,
+						runAfter: new Date(),
+						leaseExpiresAt: null,
+						startedAt: null,
+						completedAt: null,
+						processingTimeMs: null,
+						rawOcrOutput: null,
+						validatedOutput: null,
+						confidenceFlags: [],
+					})
+					.where(eq(ocrJobTable.id, jobId));
+			});
+		} catch (error) {
+			if (error instanceof ScrimWorkflowError) {
+				return c.json({ error: error.message }, { status: error.status as 404 | 409 });
+			}
+			if (error instanceof DatabaseError && error.code === "55P03") {
+				return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+			}
+			throw error;
+		}
 
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after OCR retry." }, 500);

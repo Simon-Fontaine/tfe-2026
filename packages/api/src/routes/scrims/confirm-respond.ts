@@ -41,6 +41,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 		try {
 			await db.transaction(async (tx) => {
+				await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
 				await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
 
 				const lockedScrim = await tx.query.scrimTable.findFirst({
@@ -69,10 +70,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 					throw new ScrimWorkflowError(400, "Cancelled scrims cannot be confirmed.");
 				}
 				if (lockedScrim.status === "completed") {
-					throw new ScrimWorkflowError(
-						400,
-						"Completed scrims are locked once ratings have been applied."
-					);
+					throw new ScrimWorkflowError(409, "This scrim result has already been confirmed.");
 				}
 				if (lockedScrim.status !== "awaiting_confirmation" && lockedScrim.status !== "disputed") {
 					throw new ScrimWorkflowError(
@@ -148,9 +146,11 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			});
 		} catch (error) {
 			if (error instanceof ScrimWorkflowError) {
-				return c.json({ error: error.message }, { status: error.status as 400 | 404 });
+				return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
 			}
-
+			if (error instanceof DatabaseError && error.code === "55P03") {
+				return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+			}
 			throw error;
 		}
 
