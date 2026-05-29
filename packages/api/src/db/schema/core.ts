@@ -22,6 +22,7 @@ import {
 	mapTypeEnum,
 	matchResultEnum,
 	memberTypeEnum,
+	moderationCaseActionEnum,
 	notificationTypeEnum,
 	ocrJobStatusEnum,
 	orgInviteStatusEnum,
@@ -1633,6 +1634,11 @@ export const userReportTable = pgTable(
 		status: reportStatusEnum("status").notNull().default("pending"),
 		/** Snapshot of target metadata captured at submission time. */
 		targetSnapshot: jsonb("target_snapshot"),
+		assignedModeratorId: uuid("assigned_moderator_id").references(() => userTable.id, {
+			onDelete: "set null",
+		}),
+		assignedAt: timestamp("assigned_at", { mode: "date" }),
+		resolvedAt: timestamp("resolved_at", { mode: "date" }),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()
@@ -1658,4 +1664,29 @@ export const userReportSupplementTable = pgTable(
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 	},
 	(table) => [index("user_report_supplement_report_idx").on(table.reportId)]
+);
+
+// ============================================================================
+// MODERATION CASE EVENTS — Append-only audit trail for moderator case activity
+// ============================================================================
+
+export const moderationCaseEventTable = pgTable(
+	"moderation_case_event",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		reportId: uuid("report_id")
+			.notNull()
+			.references(() => userReportTable.id, { onDelete: "cascade" }),
+		// No FK: preserves audit trail when a moderator account is deleted
+		moderatorId: uuid("moderator_id").notNull(),
+		action: moderationCaseActionEnum("action").notNull(),
+		/** Action-specific payload — notes content, resolution reason, etc. */
+		metadata: jsonb("metadata"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("moderation_case_event_report_idx").on(table.reportId),
+		index("moderation_case_event_moderator_idx").on(table.moderatorId),
+		index("moderation_case_event_action_idx").on(table.action),
+	]
 );

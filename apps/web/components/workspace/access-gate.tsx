@@ -7,7 +7,7 @@ interface AccessGateProps {
 	/** Page title shown in the header (e.g. "Roster", "Overview") */
 	title: string;
 	/** Resource type used to generate friendly detail label and default description */
-	resourceType: "team" | "organization" | "scrim";
+	resourceType: "team" | "organization" | "scrim" | "moderation";
 	/** Override the default description */
 	description?: string;
 	/** Permission denial reason for contextual recovery guidance */

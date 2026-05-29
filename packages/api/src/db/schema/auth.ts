@@ -68,6 +68,9 @@ export const userTable = pgTable(
 		/** Reason for ban, shown to the user on login attempt. */
 		banReason: text("ban_reason"),
 
+		/** Grants access to /api/moderation/* endpoints. Manually set by ops. */
+		isModerator: boolean("is_moderator").notNull().default(false),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()

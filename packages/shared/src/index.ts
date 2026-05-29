@@ -6,6 +6,7 @@ export * from "./routes";
 export * from "./types";
 export * from "./validations/auth";
 export * from "./validations/chat";
+export * from "./validations/moderation";
 export * from "./validations/ocr";
 export * from "./validations/onboarding";
 export * from "./validations/org";

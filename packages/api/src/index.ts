@@ -6,6 +6,7 @@ import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
 import { chatRoutes } from "@/routes/chat";
 import { heroRoutes } from "@/routes/heroes";
+import { moderationRoutes } from "@/routes/moderation";
 import { notificationRoutes } from "@/routes/notifications";
 import { onboardingRoutes } from "@/routes/onboarding";
 import { orgRoutes } from "@/routes/orgs";
@@ -83,6 +84,9 @@ app.route("/api/realtime", realtimeRoutes);
 
 app.use("/api/reports/*", requireAuth);
 app.route("/api/reports", reportRoutes);
+
+app.use("/api/moderation/*", requireAuth);
+app.route("/api/moderation", moderationRoutes);
 
 app.use("/api/updates/*", requireAuth);
 app.route("/api/updates", updatesRoutes);

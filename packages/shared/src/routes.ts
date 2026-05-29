@@ -292,6 +292,10 @@ export const apiRoutes = {
 		supplement: (reportId: string) => `/api/reports/${reportId}/supplement`,
 	},
 	publicStats: "/api/public/stats",
+	moderation: {
+		queue: "/api/moderation/queue",
+		report: (reportId: string) => `/api/moderation/reports/${reportId}`,
+	},
 	chat: {
 		conversations: "/api/chat/conversations",
 		createDirect: "/api/chat/conversations/direct",
@@ -336,6 +340,10 @@ export const appRoutes = {
 		chat: (teamId: string) => `/app/teams/${teamId}/chat`,
 		updates: (teamId: string) => `/app/teams/${teamId}/updates`,
 		settings: (teamId: string) => `/app/teams/${teamId}/settings`,
+	},
+	moderation: {
+		root: "/app/moderation",
+		report: (reportId: string) => `/app/moderation/${reportId}`,
 	},
 	orgs: {
 		root: "/app/orgs",

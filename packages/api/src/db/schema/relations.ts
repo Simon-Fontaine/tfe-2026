@@ -11,6 +11,7 @@ import {
 	heroTable,
 	lifecycleWorkflowTable,
 	mapTable,
+	moderationCaseEventTable,
 	notificationTable,
 	ocrJobTable,
 	onboardingDraftTable,
@@ -603,6 +604,23 @@ export const userReportRelations = relations(userReportTable, ({ one, many }) =>
 		references: [userTable.id],
 	}),
 	supplements: many(userReportSupplementTable),
+	events: many(moderationCaseEventTable),
+	assignedModerator: one(userTable, {
+		fields: [userReportTable.assignedModeratorId],
+		references: [userTable.id],
+		relationName: "assignedModerator",
+	}),
+}));
+
+export const moderationCaseEventRelations = relations(moderationCaseEventTable, ({ one }) => ({
+	report: one(userReportTable, {
+		fields: [moderationCaseEventTable.reportId],
+		references: [userReportTable.id],
+	}),
+	moderator: one(userTable, {
+		fields: [moderationCaseEventTable.moderatorId],
+		references: [userTable.id],
+	}),
 }));
 
 export const userReportSupplementRelations = relations(userReportSupplementTable, ({ one }) => ({

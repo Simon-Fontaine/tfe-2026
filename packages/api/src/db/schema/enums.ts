@@ -251,6 +251,16 @@ export const reportStatusEnum = pgEnum("report_status", [
 	"dismissed",
 ]);
 
+/** Actions a moderator can take on a case — append-only event log. */
+export const moderationCaseActionEnum = pgEnum("moderation_case_action", [
+	"viewed",
+	"assigned",
+	"unassigned",
+	"noted",
+	"resolved",
+	"dismissed",
+]);
+
 /** Notification delivery channel. */
 export const notificationTypeEnum = pgEnum("notification_type", [
 	"scrim_request",

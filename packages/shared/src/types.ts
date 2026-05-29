@@ -64,6 +64,7 @@ export interface SessionUser {
 	avatarUrl: string | null;
 	emailVerified: boolean;
 	isBanned: boolean;
+	isModerator: boolean;
 	registeredTOTP: boolean;
 	registeredPasskey: boolean;
 	registeredSecurityKey: boolean;
@@ -1592,6 +1593,78 @@ export type MyReportSummary = {
 	category: ReportCategory;
 	status: ReportStatus;
 	createdAt: string; // ISO string
+};
+
+// ─── Moderation types ─────────────────────────────────────────────────────────
+
+export type ModerationUrgencyLevel = "normal" | "urgent" | "overdue";
+
+export type ModerationCaseAction =
+	| "viewed"
+	| "assigned"
+	| "unassigned"
+	| "noted"
+	| "resolved"
+	| "dismissed";
+
+export type ModerationQueueItem = {
+	id: string;
+	category: ReportCategory;
+	targetType: ReportTargetType;
+	targetId: string;
+	status: ReportStatus;
+	assignedModeratorId: string | null;
+	assignedModeratorName: string | null;
+	createdAt: string;
+	updatedAt: string;
+	targetSnapshot: Record<string, unknown> | null;
+	urgencyLevel: ModerationUrgencyLevel;
+	supplementCount: number;
+};
+
+export type ModerationCaseEvent = {
+	id: string;
+	reportId: string;
+	moderatorId: string;
+	moderatorName: string;
+	action: ModerationCaseAction;
+	metadata: Record<string, unknown> | null;
+	createdAt: string;
+};
+
+export type ModerationCaseDetail = {
+	id: string;
+	category: ReportCategory;
+	targetType: ReportTargetType;
+	targetId: string;
+	status: ReportStatus;
+	reason: string;
+	assignedModeratorId: string | null;
+	assignedModeratorName: string | null;
+	assignedAt: string | null;
+	resolvedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	targetSnapshot: Record<string, unknown> | null;
+	urgencyLevel: ModerationUrgencyLevel;
+	supplements: Array<{
+		id: string;
+		authorId: string | null;
+		content: string;
+		createdAt: string;
+	}>;
+	events: ModerationCaseEvent[];
+};
+
+export type ModerationQueueResponse = {
+	items: ModerationQueueItem[];
+	nextCursor: string | null;
+	filters: {
+		status?: ReportStatus;
+		category?: ReportCategory;
+		targetType?: ReportTargetType;
+		assignedTo?: "me" | "unassigned";
+	};
 };
 
 // ─── Hero types ────────────────────────────────────────────────────────────
