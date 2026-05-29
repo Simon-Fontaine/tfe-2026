@@ -2,6 +2,7 @@ import {
 	type AccountLifecycleState,
 	type PersonalPrivacySettings,
 	PersonalPrivacySettingsSchema,
+	rateLimits,
 } from "@scrimflow/shared";
 import { desc, eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
@@ -22,6 +23,7 @@ import {
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
+import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { extractErrors } from "@/routes/auth/utils";
 
 const DEFAULT_PRIVACY_SETTINGS: PersonalPrivacySettings = {
@@ -122,6 +124,18 @@ dataExportRoute.get("/", (c) =>
 
 dataExportRoute.get("/download", async (c) => {
 	const session = c.get("session");
+	const { allowed, retryAfterMs } = await checkRateLimit(
+		`user:${session.userId}:data_export`,
+		rateLimits.dataExport.limit,
+		rateLimits.dataExport.windowMs
+	);
+	if (!allowed) {
+		c.header("Retry-After", Math.ceil(retryAfterMs / 1000).toString());
+		return c.json(
+			{ error: `Rate limit exceeded. Try again in ${formatRetryAfter(retryAfterMs)}.` },
+			429
+		);
+	}
 	const [user, profile, teamMemberships, orgMemberships, recruitingApplications] =
 		await Promise.all([
 			db
