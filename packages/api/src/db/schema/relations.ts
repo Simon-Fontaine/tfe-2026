@@ -11,6 +11,7 @@ import {
 	heroTable,
 	lifecycleWorkflowTable,
 	mapTable,
+	moderationActionTable,
 	moderationCaseEventTable,
 	notificationTable,
 	ocrJobTable,
@@ -631,5 +632,12 @@ export const userReportSupplementRelations = relations(userReportSupplementTable
 	author: one(userTable, {
 		fields: [userReportSupplementTable.authorId],
 		references: [userTable.id],
+	}),
+}));
+
+export const moderationActionRelations = relations(moderationActionTable, ({ one }) => ({
+	case: one(userReportTable, {
+		fields: [moderationActionTable.caseId],
+		references: [userReportTable.id],
 	}),
 }));

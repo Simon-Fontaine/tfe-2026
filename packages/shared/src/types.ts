@@ -65,6 +65,7 @@ export interface SessionUser {
 	emailVerified: boolean;
 	isBanned: boolean;
 	isModerator: boolean;
+	requiresReverification: boolean;
 	registeredTOTP: boolean;
 	registeredPasskey: boolean;
 	registeredSecurityKey: boolean;
@@ -1654,6 +1655,7 @@ export type ModerationCaseDetail = {
 		createdAt: string;
 	}>;
 	events: ModerationCaseEvent[];
+	activeActions: ModerationAction[];
 };
 
 export type ModerationQueueResponse = {
@@ -1665,6 +1667,40 @@ export type ModerationQueueResponse = {
 		targetType?: ReportTargetType;
 		assignedTo?: "me" | "unassigned";
 	};
+};
+
+// ─── Moderation action types ──────────────────────────────────────────────
+
+export type ModerationActionType =
+	| "warn"
+	| "suspend"
+	| "restore"
+	| "hide"
+	| "unhide"
+	| "remove"
+	| "require_verification"
+	| "clear_verification"
+	| "escalate";
+
+export type ModerationAction = {
+	id: string;
+	caseId: string | null;
+	moderatorId: string;
+	targetType: ReportTargetType;
+	targetId: string;
+	actionType: ModerationActionType;
+	reason: string;
+	scope: Record<string, unknown> | null;
+	durationHours: number | null;
+	expiresAt: string | null;
+	isReversible: boolean;
+	reversedByModerationActionId: string | null;
+	reversedAt: string | null;
+	createdAt: string;
+};
+
+export type ModerationActionsResponse = {
+	actions: ModerationAction[];
 };
 
 // ─── Hero types ────────────────────────────────────────────────────────────

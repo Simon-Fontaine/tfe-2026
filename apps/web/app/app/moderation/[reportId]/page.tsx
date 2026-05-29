@@ -2,6 +2,7 @@ import type { ModerationCaseDetail, ReportStatus } from "@scrimflow/shared";
 import { notFound } from "next/navigation";
 
 import { CaseActions } from "@/components/moderation/case-actions";
+import { EnforcementActions } from "@/components/moderation/enforcement-actions";
 import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
@@ -183,12 +184,18 @@ export default async function ModerationCasePage({ params }: ModerationCasePageP
 					</PageSection>
 				</div>
 
-				<div>
+				<div className="space-y-4">
 					<CaseActions
 						reportId={caseDetail.id}
 						currentStatus={caseDetail.status}
 						assignedModeratorId={caseDetail.assignedModeratorId}
 						currentUserId={user.id}
+					/>
+					<EnforcementActions
+						reportId={caseDetail.id}
+						targetType={caseDetail.targetType}
+						targetId={caseDetail.targetId}
+						activeActions={caseDetail.activeActions}
 					/>
 				</div>
 			</div>

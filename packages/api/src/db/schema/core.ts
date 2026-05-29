@@ -22,6 +22,7 @@ import {
 	mapTypeEnum,
 	matchResultEnum,
 	memberTypeEnum,
+	moderationActionTypeEnum,
 	moderationCaseActionEnum,
 	notificationTypeEnum,
 	ocrJobStatusEnum,
@@ -299,6 +300,9 @@ export const organizationTable = pgTable(
 		lifecycleStatus: text("lifecycle_status").notNull().default("active"),
 		lifecycleUpdatedAt: timestamp("lifecycle_updated_at", { mode: "date" }),
 
+		/** Set true when a moderation action suspends the org. */
+		isModerationSuspended: boolean("is_moderation_suspended").notNull().default(false),
+
 		/** Org creator. Denormalized for fast access. */
 		ownerId: uuid("owner_id")
 			.notNull()
@@ -387,6 +391,9 @@ export const teamTable = pgTable(
 		/** Operational lifecycle: active, archived, deletion_pending, or irreversible. */
 		lifecycleStatus: text("lifecycle_status").notNull().default("active"),
 		lifecycleUpdatedAt: timestamp("lifecycle_updated_at", { mode: "date" }),
+
+		/** Set true when a moderation action suspends the team. */
+		isModerationSuspended: boolean("is_moderation_suspended").notNull().default(false),
 
 		/** Whether the team is actively looking for new players. */
 		isRecruiting: boolean("is_recruiting").notNull().default(false),
@@ -600,6 +607,8 @@ export const recruitmentListingTable = pgTable(
 		id: uuid("id").primaryKey().defaultRandom(),
 		type: recruitmentListingCategoryEnum("type").notNull(),
 		status: recruitmentListingStatusEnum("status").notNull().default("open"),
+		/** Set true when moderation hides or removes this listing. */
+		moderationHidden: boolean("moderation_hidden").notNull().default(false),
 		ownerType: recruitmentOwnerTypeEnum("owner_type").notNull().default("player"),
 
 		/** User who created the listing. */
@@ -746,6 +755,8 @@ export const updatePostTable = pgTable(
 
 		title: text("title").notNull(),
 		body: text("body").notNull(),
+		/** Set true when moderation hides or removes this update. */
+		moderationHidden: boolean("moderation_hidden").notNull().default(false),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -1572,6 +1583,9 @@ export const chatMessageTable = pgTable(
 		/** System-generated message flag. */
 		isSystemMessage: boolean("is_system_message").notNull().default(false),
 
+		/** Set true when moderation hides this message. */
+		moderationHidden: boolean("moderation_hidden").notNull().default(false),
+
 		/** Soft-delete timestamp. Content shown as "[deleted]". */
 		deletedAt: timestamp("deleted_at", { mode: "date" }),
 
@@ -1688,5 +1702,43 @@ export const moderationCaseEventTable = pgTable(
 		index("moderation_case_event_report_idx").on(table.reportId),
 		index("moderation_case_event_moderator_idx").on(table.moderatorId),
 		index("moderation_case_event_action_idx").on(table.action),
+	]
+);
+
+// ============================================================================
+// MODERATION ACTIONS — Enforcement records for moderator decisions
+// ============================================================================
+
+export const moderationActionTable = pgTable(
+	"moderation_action",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		/** Optional link to the moderation case that prompted this action. */
+		caseId: uuid("case_id").references(() => userReportTable.id, { onDelete: "set null" }),
+		/** No FK: preserves audit trail when moderator account is deleted. */
+		moderatorId: uuid("moderator_id").notNull(),
+		targetType: reportTargetTypeEnum("target_type").notNull(),
+		targetId: uuid("target_id").notNull(),
+		actionType: moderationActionTypeEnum("action_type").notNull(),
+		reason: text("reason").notNull(),
+		/** Optional jsonb for partial-scope or action-specific metadata. */
+		scope: jsonb("scope"),
+		/** For temporary actions: duration in hours, null = indefinite. */
+		durationHours: integer("duration_hours"),
+		/** Computed from createdAt + durationHours when set. */
+		expiresAt: timestamp("expires_at", { mode: "date" }),
+		/** False for irreversible actions (remove). */
+		isReversible: boolean("is_reversible").notNull().default(true),
+		/** Set when this action is reversed by a later action. */
+		reversedByModerationActionId: uuid("reversed_by_moderation_action_id"),
+		reversedAt: timestamp("reversed_at", { mode: "date" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("moderation_action_target_idx").on(table.targetType, table.targetId),
+		index("moderation_action_case_idx").on(table.caseId),
+		index("moderation_action_moderator_idx").on(table.moderatorId),
+		index("moderation_action_type_idx").on(table.actionType),
+		index("moderation_action_created_idx").on(table.createdAt),
 	]
 );

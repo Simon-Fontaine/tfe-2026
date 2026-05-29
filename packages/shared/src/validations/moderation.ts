@@ -50,3 +50,27 @@ export const ModerationQueueFilterSchema = v.object({
 });
 
 export type ModerationQueueFilterInput = v.InferOutput<typeof ModerationQueueFilterSchema>;
+
+const MODERATION_ACTION_TYPE_VALUES = [
+	"warn",
+	"suspend",
+	"restore",
+	"hide",
+	"unhide",
+	"remove",
+	"require_verification",
+	"clear_verification",
+	"escalate",
+] as const;
+
+export const CreateModerationActionSchema = v.object({
+	caseId: v.optional(v.pipe(v.string(), v.uuid())),
+	targetType: v.picklist(REPORT_TARGET_TYPE_VALUES),
+	targetId: v.pipe(v.string(), v.uuid()),
+	actionType: v.picklist(MODERATION_ACTION_TYPE_VALUES),
+	reason: v.pipe(v.string(), v.trim(), v.minLength(10), v.maxLength(2000)),
+	scope: v.optional(v.record(v.string(), v.unknown())),
+	durationHours: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+});
+
+export type CreateModerationActionInput = v.InferOutput<typeof CreateModerationActionSchema>;

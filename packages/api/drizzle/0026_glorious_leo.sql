@@ -1,0 +1,1 @@
+ALTER TYPE "public"."moderation_action_type" ADD VALUE 'clear_verification' BEFORE 'escalate';

@@ -295,6 +295,8 @@ export const apiRoutes = {
 	moderation: {
 		queue: "/api/moderation/queue",
 		report: (reportId: string) => `/api/moderation/reports/${reportId}`,
+		actions: "/api/moderation/actions",
+		action: (actionId: string) => `/api/moderation/actions/${actionId}`,
 	},
 	chat: {
 		conversations: "/api/chat/conversations",

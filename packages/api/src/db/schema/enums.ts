@@ -261,6 +261,19 @@ export const moderationCaseActionEnum = pgEnum("moderation_case_action", [
 	"dismissed",
 ]);
 
+/** Enforcement action types a moderator can apply to a target entity. */
+export const moderationActionTypeEnum = pgEnum("moderation_action_type", [
+	"warn",
+	"suspend",
+	"restore",
+	"hide",
+	"unhide",
+	"remove",
+	"require_verification",
+	"clear_verification",
+	"escalate",
+]);
+
 /** Notification delivery channel. */
 export const notificationTypeEnum = pgEnum("notification_type", [
 	"scrim_request",

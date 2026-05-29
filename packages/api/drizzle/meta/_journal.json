@@ -176,6 +176,20 @@
       "when": 1780015171473,
       "tag": "0024_cloudy_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1780045858102,
+      "tag": "0025_fluffy_marauders",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1780048484072,
+      "tag": "0026_glorious_leo",
+      "breakpoints": true
     }
   ]
 }

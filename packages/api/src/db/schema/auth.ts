@@ -71,6 +71,9 @@ export const userTable = pgTable(
 		/** Grants access to /api/moderation/* endpoints. Manually set by ops. */
 		isModerator: boolean("is_moderator").notNull().default(false),
 
+		/** Set when a moderation action requires the user to re-verify before continuing. */
+		requiresReverification: boolean("requires_reverification").notNull().default(false),
+
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.notNull()

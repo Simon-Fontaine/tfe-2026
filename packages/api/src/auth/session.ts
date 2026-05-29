@@ -48,6 +48,7 @@ export interface SessionUser {
 	emailVerified: boolean;
 	isBanned: boolean;
 	isModerator: boolean;
+	requiresReverification: boolean;
 	registeredTOTP: boolean;
 	registeredPasskey: boolean;
 	registeredSecurityKey: boolean;
@@ -162,6 +163,7 @@ export async function validateSessionToken(token: string): Promise<SessionValida
 			emailVerified: u.emailVerified,
 			isBanned: u.isBanned,
 			isModerator: u.isModerator,
+			requiresReverification: u.requiresReverification,
 			...twoFactor,
 		},
 	};
