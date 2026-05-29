@@ -42,7 +42,11 @@ function GovernanceItemRow({ item }: { item: GovernancePendingItem }) {
 	);
 }
 
-export default async function GovernancePage() {
+interface GovernancePageProps {
+	searchParams: Promise<{ cursor?: string }>;
+}
+
+export default async function GovernancePage({ searchParams }: GovernancePageProps) {
 	const { user } = await requireWorkspaceSession();
 
 	if (!user.isModerator) {
@@ -55,9 +59,14 @@ export default async function GovernancePage() {
 		);
 	}
 
-	const res = await apiGet<GovernancePendingResponse>(apiRoutes.moderation.governance.pending);
+	const { cursor } = await searchParams;
+	const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+	const res = await apiGet<GovernancePendingResponse>(
+		`${apiRoutes.moderation.governance.pending}${query}`
+	);
 	const data = "data" in res ? res.data : null;
 	const items = data?.items ?? [];
+	const nextCursor = data?.nextCursor ?? null;
 
 	const pendingWorkflows = items.filter((item) => item.reason === "blocked_ownership");
 	const suspendedUsers = items.filter(
@@ -121,6 +130,17 @@ export default async function GovernancePage() {
 					</div>
 				)}
 			</PageSection>
+
+			{nextCursor && (
+				<PageSection>
+					<Link
+						href={`${appRoutes.moderation.governance.root}?cursor=${encodeURIComponent(nextCursor)}`}
+						className="text-sm text-primary underline-offset-2 hover:underline"
+					>
+						Load more
+					</Link>
+				</PageSection>
+			)}
 		</PageContainer>
 	);
 }
