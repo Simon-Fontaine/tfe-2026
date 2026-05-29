@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { requireAuth } from "@/middleware/auth";
+import { requireActiveAccount } from "@/middleware/moderation-gate";
 
 import { accountRoutes } from "./account";
 import { credentialRoutes } from "./credentials";
@@ -17,7 +18,7 @@ import { verificationRoutes } from "./verifications";
 const settingsRoutes = new Hono();
 
 // All settings routes require authentication
-settingsRoutes.use("*", requireAuth);
+settingsRoutes.use("*", requireAuth, requireActiveAccount);
 
 settingsRoutes.route("/password", passwordRoutes);
 settingsRoutes.route("/email", emailRoutes);

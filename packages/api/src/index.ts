@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
 import { requireAuth } from "@/middleware/auth";
 import { errorHandler } from "@/middleware/error-handler";
+import { requireActiveAccount } from "@/middleware/moderation-gate";
 import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
 import { chatRoutes } from "@/routes/chat";
@@ -46,55 +47,55 @@ app.route("/api/auth", authRoutes);
 app.route("/api/settings", settingsRoutes);
 
 // Routes — domain (all require auth)
-app.use("/api/profile/*", requireAuth);
+app.use("/api/profile/*", requireAuth, requireActiveAccount);
 app.route("/api/profile", profileRoutes);
 
-app.use("/api/onboarding/*", requireAuth);
+app.use("/api/onboarding/*", requireAuth, requireActiveAccount);
 app.route("/api/onboarding", onboardingRoutes);
 
-app.use("/api/orgs/*", requireAuth);
+app.use("/api/orgs/*", requireAuth, requireActiveAccount);
 app.route("/api/orgs", orgRoutes);
 
-app.use("/api/teams/*", requireAuth);
+app.use("/api/teams/*", requireAuth, requireActiveAccount);
 app.route("/api/teams", teamRoutes);
 
-app.use("/api/recruitment/listings/*", requireAuth);
+app.use("/api/recruitment/listings/*", requireAuth, requireActiveAccount);
 app.route("/api/recruitment/listings", recruitmentListingsRoutes);
 
-app.use("/api/recruitment/applications/*", requireAuth);
+app.use("/api/recruitment/applications/*", requireAuth, requireActiveAccount);
 app.route("/api/recruitment/applications", recruitmentApplicationsRoutes);
 
-app.use("/api/recruitment/conversations/*", requireAuth);
+app.use("/api/recruitment/conversations/*", requireAuth, requireActiveAccount);
 app.route("/api/recruitment/conversations", recruitmentConversationsRoutes);
 
-app.use("/api/schedule/*", requireAuth);
+app.use("/api/schedule/*", requireAuth, requireActiveAccount);
 app.route("/api/schedule", scheduleRoutes);
 
-app.use("/api/notifications/*", requireAuth);
+app.use("/api/notifications/*", requireAuth, requireActiveAccount);
 app.route("/api/notifications", notificationRoutes);
 
-app.use("/api/chat/*", requireAuth);
+app.use("/api/chat/*", requireAuth, requireActiveAccount);
 app.route("/api/chat", chatRoutes);
 
-app.use("/api/scrims/*", requireAuth);
+app.use("/api/scrims/*", requireAuth, requireActiveAccount);
 app.route("/api/scrims", scrimRoutes);
 
-app.use("/api/realtime/*", requireAuth);
+app.use("/api/realtime/*", requireAuth, requireActiveAccount);
 app.route("/api/realtime", realtimeRoutes);
 
-app.use("/api/reports/*", requireAuth);
+app.use("/api/reports/*", requireAuth, requireActiveAccount);
 app.route("/api/reports", reportRoutes);
 
-app.use("/api/moderation/*", requireAuth);
+app.use("/api/moderation/*", requireAuth, requireActiveAccount);
 app.route("/api/moderation", moderationRoutes);
 
-app.use("/api/updates/*", requireAuth);
+app.use("/api/updates/*", requireAuth, requireActiveAccount);
 app.route("/api/updates", updatesRoutes);
 
-app.use("/api/uploads/*", requireAuth);
+app.use("/api/uploads/*", requireAuth, requireActiveAccount);
 app.route("/api/uploads", uploadRoutes);
 
-app.use("/api/users/*", requireAuth);
+app.use("/api/users/*", requireAuth, requireActiveAccount);
 app.route("/api/users", userRoutes);
 
 // Public routes (no auth)
