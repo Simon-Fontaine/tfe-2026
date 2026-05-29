@@ -99,16 +99,14 @@ reportRoutes.post("/", async (c) => {
 	const user = c.get("user");
 
 	const { allowed, retryAfterMs } = await checkRateLimit(
-		`report:submit:user:${user.id}`,
+		`user:${user.id}:report_submit`,
 		rateLimits.reportSubmit.limit,
 		rateLimits.reportSubmit.windowMs
 	);
 	if (!allowed) {
+		c.header("Retry-After", Math.ceil(retryAfterMs / 1000).toString());
 		return c.json(
-			{
-				error: "Too many reports submitted. Please try again later.",
-				retryAfter: formatRetryAfter(retryAfterMs),
-			},
+			{ error: `Rate limit exceeded. Try again in ${formatRetryAfter(retryAfterMs)}.` },
 			429
 		);
 	}
