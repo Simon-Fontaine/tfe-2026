@@ -16,7 +16,7 @@ export function PageError({ error, reset, retry, title = "Failed to load" }: Pag
 
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-			<div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
+			<div className="flex size-12 items-center justify-center bg-destructive/10">
 				<HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-6 text-destructive" />
 			</div>
 			<div className="space-y-1">
