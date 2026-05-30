@@ -29,11 +29,19 @@ export function ScrimStatusBadge({
 	}
 
 	if (status === "disputed") {
-		return <Badge variant="destructive">{SCRIM_STATUS_LABELS[status]}</Badge>;
+		return (
+			<Badge variant="outline" className="border-destructive text-destructive">
+				{SCRIM_STATUS_LABELS[status]}
+			</Badge>
+		);
 	}
 
 	if (status === "completed") {
-		return <Badge variant="secondary">{SCRIM_STATUS_LABELS[status]}</Badge>;
+		return (
+			<Badge variant="outline" className="border-green-600 text-green-600">
+				{SCRIM_STATUS_LABELS[status]}
+			</Badge>
+		);
 	}
 
 	return (

@@ -1,12 +1,15 @@
+import { Megaphone01Icon } from "@hugeicons/core-free-icons";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { TeamUpdatesPageClient } from "@/components/updates/team-updates-page-client";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { getTeamUpdatesRouteState } from "@/lib/data/updates";
+import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function TeamUpdatesPage({
@@ -36,17 +39,22 @@ export default async function TeamUpdatesPage({
 			<PageContainer>
 				<PageHeader
 					title="Updates"
-					detail={`[${team.data.tag}] ${team.data.name}`}
-					description="Announcements, roster news, and scrim recaps posted by team managers."
-				/>
-				<EmptyStateBlock
-					title={updates.kind === "no-access" ? "No access" : "Updates unavailable"}
-					description={
-						updates.kind === "no-access"
-							? "You do not have permission to read this team's updates."
-							: "This team's update feed could not be opened from the current route."
+					breadcrumbs={
+						<>
+							<Link href="/app" className="hover:underline">
+								Teams
+							</Link>
+							{" / "}
+							<Link href={appRoutes.teams.byId(team.data.id)} className="hover:underline">
+								{team.data.name}
+							</Link>
+							{" / Updates"}
+						</>
 					}
-					variant="card"
+				/>
+				<EmptyState
+					icon={Megaphone01Icon}
+					title={updates.kind === "no-access" ? "No access." : "Updates unavailable."}
 				/>
 			</PageContainer>
 		);
@@ -58,7 +66,18 @@ export default async function TeamUpdatesPage({
 		<PageContainer>
 			<PageHeader
 				title="Updates"
-				description="Announcements, roster news, and scrim recaps posted by your team's managers."
+				breadcrumbs={
+					<>
+						<Link href="/app" className="hover:underline">
+							Teams
+						</Link>
+						{" / "}
+						<Link href={appRoutes.teams.byId(team.data.id)} className="hover:underline">
+							{team.data.name}
+						</Link>
+						{" / Updates"}
+					</>
+				}
 			/>
 
 			<TeamUpdatesPageClient

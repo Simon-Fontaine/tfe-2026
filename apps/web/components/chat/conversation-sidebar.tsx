@@ -45,7 +45,7 @@ export function ConversationSidebar({
 	const list = conversations.length > 0 ? conversations : initialConversations;
 
 	return (
-		<div className="flex flex-col space-y-1 overflow-y-auto border p-2">
+		<div className="flex flex-col overflow-y-auto">
 			{list.map((conversation) => (
 				<ConversationItem
 					key={conversation.id}
@@ -72,8 +72,8 @@ function ConversationItem({
 			type="button"
 			onClick={() => onSelect(conversation.id)}
 			className={cn(
-				"w-full border px-3 py-2 text-left transition-colors hover:bg-muted",
-				isSelected && "border-primary bg-primary/5"
+				"w-full border-b px-3 py-2 text-left transition-colors hover:bg-muted",
+				isSelected && "border-l-2 border-l-primary bg-primary/5"
 			)}
 		>
 			<div className="flex items-center justify-between gap-2">

@@ -1,22 +1,22 @@
-import {
-	Add01Icon,
-	Calendar03Icon,
-	Image01Icon,
-	LinkSquare02Icon,
-} from "@hugeicons/core-free-icons";
+import { Add01Icon, Calendar03Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { CreateScrimDialog } from "@/components/scrims/create-scrim-dialog";
 import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
-import { PageSection } from "@/components/workspace/page-section";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
 import { getTeamScrimsRouteState, type ScrimSummary } from "@/lib/data/scrims";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
@@ -61,49 +61,33 @@ function isNeedsAction(scrim: ScrimSummary, teamId: string, canResolveDispute: b
 
 function ScrimRow({ scrim, teamId }: { scrim: ScrimSummary; teamId: string }) {
 	const opponentDisplay = getOpponentDisplay(scrim, teamId);
-	const pendingSteps = scrim.pendingConfirmationCount;
 
 	return (
-		<div className="border p-4">
-			<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-				<div className="space-y-2">
-					<div className="flex flex-wrap items-center gap-2">
-						<p className="text-sm font-semibold">
-							{opponentDisplay.label}
-							{opponentDisplay.isArchived && (
-								<span className="ml-1.5 text-xs font-normal text-muted-foreground">(archived)</span>
-							)}
-						</p>
-						<ScrimStatusBadge status={scrim.status} disputeResolution={scrim.disputeResolution} />
-					</div>
-					<p className="text-xs text-muted-foreground">
-						{scrim.message ?? "No manager note added yet."}
-					</p>
-				</div>
-
-				<div className="grid gap-2 text-xs text-muted-foreground md:min-w-64">
-					<div className="flex items-center gap-2">
-						<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
-						<span>{formatScheduledAt(scrim.scheduledAt)}</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={2} className="size-3.5" />
-						<span>
-							Series score {scrim.homeMapScore} - {scrim.awayMapScore}
-						</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<HugeiconsIcon icon={Image01Icon} strokeWidth={2} className="size-3.5" />
-						<span>{pendingSteps} confirmation step(s) still open</span>
-					</div>
-				</div>
+		<div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b py-2 text-sm">
+			<div className="min-w-0">
+				<span className="truncate font-medium">
+					{opponentDisplay.label}
+					{opponentDisplay.isArchived && (
+						<span className="ml-1.5 text-xs text-muted-foreground">(archived)</span>
+					)}
+				</span>
 			</div>
-
-			<div className="mt-4 flex justify-end">
-				<Button asChild size="sm" variant="outline">
-					<Link href={appRoutes.teams.scrimById(teamId, scrim.id)}>Open scrim workspace</Link>
-				</Button>
-			</div>
+			<ScrimStatusBadge status={scrim.status} disputeResolution={scrim.disputeResolution} />
+			<span className="whitespace-nowrap text-xs text-muted-foreground">
+				{formatScheduledAt(scrim.scheduledAt)}
+			</span>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button size="icon" variant="ghost" className="size-8">
+						<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+					<DropdownMenuItem asChild>
+						<Link href={appRoutes.teams.scrimById(teamId, scrim.id)}>Open scrim workspace</Link>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 		</div>
 	);
 }
@@ -136,17 +120,22 @@ export default async function TeamScrimsPage({
 			<PageContainer>
 				<PageHeader
 					title="Scrims"
-					detail={`[${team.data.tag}] ${team.data.name}`}
-					description={`Live scrim queue, result confirmation, and evidence tracking for ${team.data.name}.`}
-				/>
-				<EmptyStateBlock
-					title={scrimsState.kind === "no-access" ? "No access" : "Scrims unavailable"}
-					description={
-						scrimsState.kind === "no-access"
-							? "You do not have permission to view this team's scrim queue."
-							: "This team's scrim queue could not be opened from the current route."
+					breadcrumbs={
+						<>
+							<Link href="/app" className="hover:underline">
+								Teams
+							</Link>
+							{" / "}
+							<Link href={appRoutes.teams.byId(teamId)} className="hover:underline">
+								{team.data.name}
+							</Link>
+							{" / Scrims"}
+						</>
 					}
-					variant="card"
+				/>
+				<EmptyState
+					icon={Calendar03Icon}
+					title={scrimsState.kind === "no-access" ? "No access." : "Scrims unavailable."}
 				/>
 			</PageContainer>
 		);
@@ -175,7 +164,7 @@ export default async function TeamScrimsPage({
 			<CreateScrimDialog teamId={teamData.id} opponentOptions={opponentOptions}>
 				<Button size="sm">
 					<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-					New scrim
+					Schedule Scrim
 				</Button>
 			</CreateScrimDialog>
 		) : (
@@ -190,94 +179,83 @@ export default async function TeamScrimsPage({
 		<PageContainer>
 			<PageHeader
 				title="Scrims"
-				description={`Live scrim queue, result confirmation, and evidence tracking for ${teamData.name}.`}
-				actions={createAction}
+				breadcrumbs={
+					<>
+						<Link href="/app" className="hover:underline">
+							Teams
+						</Link>
+						{" / "}
+						<Link href={appRoutes.teams.byId(teamData.id)} className="hover:underline">
+							{teamData.name}
+						</Link>
+						{" / Scrims"}
+					</>
+				}
+				action={createAction}
 			/>
 
 			<ScrimsStoreBootstrap teamId={teamData.id} needsActionCount={needsActionCount} />
 
 			{scrims.length === 0 ? (
-				<>
-					<EmptyStateBlock
-						icon={Calendar03Icon}
-						title="No scrims scheduled"
-						description="Scrim requests and scheduled matches will appear here once your team is active."
-						variant="card"
-					/>
-					{!teamData.currentUser.canManage && (
-						<p className="text-center text-sm text-muted-foreground">
-							Team managers can schedule scrims from this page.
-						</p>
-					)}
-				</>
+				<EmptyState icon={Calendar03Icon} title="No scrims scheduled." action={createAction} />
 			) : (
 				<div className="space-y-6">
-					<PageSection
-						title="Needs action"
-						actions={
-							needsActionCount > 0 ? (
-								<Badge variant="default">
-									{needsActionCount} {needsActionCount === 1 ? "scrim" : "scrims"}
-								</Badge>
-							) : (
-								<Badge variant="outline">0 scrims</Badge>
-							)
-						}
-					>
+					<section>
+						<div className="mb-4 flex items-center justify-between border-b pb-2">
+							<h2 className="text-lg font-semibold">Needs action</h2>
+							<Badge
+								variant="outline"
+								className={needsActionCount > 0 ? "border-foreground text-foreground" : ""}
+							>
+								{needsActionCount} {needsActionCount === 1 ? "scrim" : "scrims"}
+							</Badge>
+						</div>
 						{needsActionScrims.length === 0 ? (
-							<EmptyStateBlock
-								title="Nothing needs attention"
-								description="Scrims waiting for your response or confirmation will appear here."
-								variant="inline"
-							/>
+							<div className="py-8 text-center text-sm text-muted-foreground">
+								Nothing needs attention.
+							</div>
 						) : (
-							<div className="space-y-3">
+							<div>
 								{needsActionScrims.map((scrim) => (
 									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
 							</div>
 						)}
-					</PageSection>
+					</section>
 
-					<PageSection
-						title="Upcoming"
-						actions={
+					<section>
+						<div className="mb-4 flex items-center justify-between border-b pb-2">
+							<h2 className="text-lg font-semibold">Upcoming</h2>
 							<Badge variant="outline">
 								{upcomingScrims.length} {upcomingScrims.length === 1 ? "scrim" : "scrims"}
 							</Badge>
-						}
-					>
+						</div>
 						{upcomingScrims.length === 0 ? (
-							<EmptyStateBlock
-								title="No upcoming scrims"
-								description="Accepted and scheduled scrims will appear here."
-								variant="inline"
-							/>
+							<div className="py-8 text-center text-sm text-muted-foreground">
+								No upcoming scrims.
+							</div>
 						) : (
-							<div className="space-y-3">
+							<div>
 								{upcomingScrims.map((scrim) => (
 									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
 							</div>
 						)}
-					</PageSection>
+					</section>
 
-					<PageSection
-						title="Past"
-						actions={
+					<section>
+						<div className="mb-4 flex items-center justify-between border-b pb-2">
+							<h2 className="text-lg font-semibold">Past</h2>
 							<Badge variant="outline">
 								{pastScrims.length} {pastScrims.length === 1 ? "scrim" : "scrims"}
 							</Badge>
-						}
-					>
+						</div>
 						{pastScrims.length === 0 ? (
-							<EmptyStateBlock
-								title="No completed scrims yet"
-								description="Finished, cancelled, and disputed scrims will appear here."
-								variant="inline"
-							/>
+							<div className="py-8 text-center text-sm text-muted-foreground">
+								No completed scrims yet.
+							</div>
 						) : (
-							<div className="space-y-3">
+							<div>
 								{pastScrims.map((scrim) => (
 									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
@@ -290,7 +268,7 @@ export default async function TeamScrimsPage({
 								)}
 							</div>
 						)}
-					</PageSection>
+					</section>
 				</div>
 			)}
 		</PageContainer>

@@ -193,7 +193,9 @@ function validateUpdateRecruitmentListingInput(
 }
 
 interface RecruitmentListingFormDialogProps {
-	triggerContent: ReactNode;
+	/** When provided, used as the DialogTrigger directly — bypasses the internal Button wrapper. */
+	children?: ReactNode;
+	triggerContent?: ReactNode;
 	triggerVariant?: ComponentProps<typeof Button>["variant"];
 	triggerSize?: ComponentProps<typeof Button>["size"];
 	triggerClassName?: string;
@@ -206,6 +208,7 @@ interface RecruitmentListingFormDialogProps {
 }
 
 export function RecruitmentListingFormDialog({
+	children,
 	triggerContent,
 	triggerVariant = "default",
 	triggerSize = "sm",
@@ -482,9 +485,11 @@ export function RecruitmentListingFormDialog({
 			}}
 		>
 			<DialogTrigger asChild>
-				<Button className={triggerClassName} size={triggerSize} variant={triggerVariant}>
-					{triggerContent}
-				</Button>
+				{children ?? (
+					<Button className={triggerClassName} size={triggerSize} variant={triggerVariant}>
+						{triggerContent}
+					</Button>
+				)}
 			</DialogTrigger>
 			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
 				<DialogHeader>

@@ -1,15 +1,22 @@
 "use client";
 
+import { Megaphone01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { AppRealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { CreateUpdatePostDialog } from "./create-update-post-dialog";
 import { EditUpdatePostDialog } from "./edit-update-post-dialog";
-import { UpdatePostCard } from "./update-post-card";
 
 function sortUpdates(updates: UpdatePostSummary[]) {
 	return [...updates].sort((left, right) => {
@@ -107,34 +114,29 @@ export function TeamUpdatesPageClient({
 
 	if (updates.length === 0) {
 		return (
-			<div className="space-y-4">
-				<EmptyStateBlock
-					title="No updates posted"
-					description="Team announcements and scrim recaps will appear here when managers post them."
-					variant="card"
-				/>
-				{canManage ? (
-					<div className="flex justify-start">
+			<EmptyState
+				icon={Megaphone01Icon}
+				title="No updates posted."
+				action={
+					canManage ? (
 						<CreateUpdatePostDialog
 							teamId={teamId}
 							onCreated={(update) => {
 								setUpdates((current) => sortUpdates([update, ...current]));
 							}}
 						>
-							<Button size="sm">Post an update</Button>
+							<Button size="sm">Publish update</Button>
 						</CreateUpdatePostDialog>
-					</div>
-				) : (
-					<p className="text-sm text-muted-foreground">No team updates have been posted yet.</p>
-				)}
-			</div>
+					) : undefined
+				}
+			/>
 		);
 	}
 
 	return (
-		<div className="space-y-4">
-			{canManage ? (
-				<div className="flex justify-start">
+		<>
+			{canManage && (
+				<div className="mb-4 flex justify-end">
 					<CreateUpdatePostDialog
 						teamId={teamId}
 						onCreated={(update) => {
@@ -144,43 +146,79 @@ export function TeamUpdatesPageClient({
 						<Button size="sm">Publish update</Button>
 					</CreateUpdatePostDialog>
 				</div>
-			) : null}
-
-			<div className="space-y-3">
+			)}
+			<div className="divide-y">
 				{updates.map((post) => (
-					<UpdatePostCard
+					<UpdateListItem
 						key={post.id}
 						post={post}
-						actions={
-							canManage ? (
-								<>
-									<EditUpdatePostDialog
-										post={post}
-										onUpdated={(updated) =>
-											setUpdates((current) =>
-												sortUpdates(current.map((u) => (u.id === updated.id ? updated : u)))
-											)
-										}
-									>
-										<Button type="button" size="sm" variant="outline">
-											Edit
-										</Button>
-									</EditUpdatePostDialog>
-									<Button
-										type="button"
-										size="sm"
-										variant="outline"
-										onClick={() => handleDelete(post.id)}
-										disabled={!!deletingUpdateId}
-									>
-										Delete
-									</Button>
-								</>
-							) : undefined
+						canManage={canManage}
+						onEdit={(updated) =>
+							setUpdates((curr) =>
+								sortUpdates(curr.map((u) => (u.id === updated.id ? updated : u)))
+							)
 						}
+						onDelete={(id) => handleDelete(id)}
+						deletingId={deletingUpdateId}
 					/>
 				))}
 			</div>
+		</>
+	);
+}
+
+interface UpdateListItemProps {
+	post: UpdatePostSummary;
+	canManage: boolean;
+	onEdit: (updated: UpdatePostSummary) => void;
+	onDelete: (id: string) => void;
+	deletingId: string | null;
+}
+
+function UpdateListItem({ post, canManage, onEdit, onDelete, deletingId }: UpdateListItemProps) {
+	const editTriggerRef = useRef<HTMLButtonElement>(null);
+
+	const timestamp = new Intl.DateTimeFormat("en-GB", {
+		dateStyle: "medium",
+	}).format(new Date(post.createdAt));
+
+	return (
+		<div className="flex items-start justify-between gap-4 py-3">
+			<div className="min-w-0 flex-1 space-y-1">
+				<p className="truncate text-sm font-medium">{post.title}</p>
+				<p className="text-xs text-muted-foreground">
+					{timestamp}
+					{post.authorDisplayName ? ` · ${post.authorDisplayName}` : ""}
+				</p>
+			</div>
+			{canManage && (
+				<>
+					<EditUpdatePostDialog post={post} onUpdated={onEdit}>
+						<button ref={editTriggerRef} type="button" className="sr-only" tabIndex={-1}>
+							Edit
+						</button>
+					</EditUpdatePostDialog>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button size="icon" variant="ghost" className="size-8 shrink-0">
+								<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onSelect={() => editTriggerRef.current?.click()}>
+								Edit
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="text-destructive"
+								disabled={deletingId === post.id}
+								onSelect={() => onDelete(post.id)}
+							>
+								Delete
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</>
+			)}
 		</div>
 	);
 }
