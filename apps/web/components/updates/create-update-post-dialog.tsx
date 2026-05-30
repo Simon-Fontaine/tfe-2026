@@ -33,8 +33,10 @@ async function readApiPayload<T>(response: Response): Promise<{
 }
 
 type CreateUpdatePostDialogProps = {
-	children: React.ReactNode;
+	children?: React.ReactNode;
 	onCreated?: (post: UpdatePostSummary) => void;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 } & ({ teamId: string; organizationId?: never } | { organizationId: string; teamId?: never });
 
 export function CreateUpdatePostDialog({
@@ -42,8 +44,17 @@ export function CreateUpdatePostDialog({
 	teamId,
 	organizationId,
 	onCreated,
+	open: controlledOpen,
+	onOpenChange: onControlledOpenChange,
 }: CreateUpdatePostDialogProps) {
-	const [open, setOpen] = useState(false);
+	const isControlled = controlledOpen !== undefined;
+	const [internalOpen, setInternalOpen] = useState(false);
+	const open = isControlled ? controlledOpen : internalOpen;
+
+	function setOpen(o: boolean) {
+		if (!isControlled) setInternalOpen(o);
+		onControlledOpenChange?.(o);
+	}
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [visibility, setVisibility] = useState<UpdatePostVisibility>("workspace");
@@ -108,7 +119,7 @@ export function CreateUpdatePostDialog({
 				if (!nextOpen) reset();
 			}}
 		>
-			<DialogTrigger asChild>{children}</DialogTrigger>
+			{children && <DialogTrigger asChild>{children}</DialogTrigger>}
 			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>

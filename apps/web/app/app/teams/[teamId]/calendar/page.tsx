@@ -1,15 +1,16 @@
+import { Alert01Icon, Block01Icon, Sword03Icon } from "@hugeicons/core-free-icons";
 import type { ScrimStatus, ScrimSummary } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ScheduleGrid } from "@/components/schedule/schedule-grid";
 import { TeamScheduleBoard } from "@/components/schedule/team/team-schedule-board";
 import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { getPlayerAvailability } from "@/lib/data/player";
 import { getTeamScrimsRouteState } from "@/lib/data/scrims";
@@ -50,11 +51,7 @@ function UpcomingScrimsSection({
 	if (scrimsForCalendar === "error") {
 		return (
 			<PageSection title="Upcoming scrims">
-				<EmptyStateBlock
-					title="Scrims unavailable"
-					description="The scrims list could not be loaded. Refresh to retry."
-					variant="inline"
-				/>
+				<EmptyState icon={Alert01Icon} title="Scrims could not be loaded. Refresh to retry." />
 			</PageSection>
 		);
 	}
@@ -62,12 +59,14 @@ function UpcomingScrimsSection({
 	if (scrimsForCalendar.length === 0) {
 		return (
 			<PageSection title="Upcoming scrims">
-				<EmptyStateBlock
-					title="No upcoming scrims"
-					description="Use the Scrims workspace to schedule matches."
-					actionHref={appRoutes.teams.scrims(teamId)}
-					actionLabel="Go to scrims"
-					variant="inline"
+				<EmptyState
+					icon={Sword03Icon}
+					title="No upcoming scrims."
+					action={
+						<Button asChild size="sm" variant="outline">
+							<Link href={appRoutes.teams.scrims(teamId)}>Go to scrims</Link>
+						</Button>
+					}
 				/>
 			</PageSection>
 		);
@@ -89,10 +88,7 @@ function UpcomingScrimsSection({
 						(scrim.status === "pending" && scrim.awayTeam?.id === currentTeamId);
 
 					return (
-						<div
-							key={scrim.id}
-							className="flex flex-wrap items-center gap-3 rounded-md border px-4 py-3"
-						>
+						<div key={scrim.id} className="flex flex-wrap items-center gap-3 border px-4 py-3">
 							<span className="min-w-0 flex-1 truncate font-medium text-sm">{opponent}</span>
 							<ScrimStatusBadge status={scrim.status} />
 							{needsAction && <Badge variant="default">Needs action</Badge>}
@@ -135,22 +131,30 @@ export default async function AppTeamCalendarPage({
 		getPlayerAvailability(user.id, teamId),
 	]);
 
+	const calendarBreadcrumbs = (
+		<>
+			<Link href="/app" className="hover:underline">
+				Teams
+			</Link>
+			{" / "}
+			<Link href={appRoutes.teams.byId(teamId)} className="hover:underline">
+				{team.data.name}
+			</Link>
+			{" / Calendar"}
+		</>
+	);
+
 	if (schedule.kind !== "success") {
 		return (
 			<PageContainer>
-				<PageHeader
-					title="Team schedule"
-					detail={`[${team.data.tag}] ${team.data.name}`}
-					description="Team-wide availability, planning, and scheduling windows."
-				/>
-				<EmptyStateBlock
-					title={schedule.kind === "no-access" ? "No access" : "Calendar unavailable"}
-					description={
+				<PageHeader title="Calendar" breadcrumbs={calendarBreadcrumbs} />
+				<EmptyState
+					icon={schedule.kind === "no-access" ? Block01Icon : Alert01Icon}
+					title={
 						schedule.kind === "no-access"
-							? "You do not have permission to view this team's shared availability."
-							: "This team's calendar could not be opened from the current route."
+							? "You do not have permission to view this team's schedule."
+							: "Team calendar could not be loaded."
 					}
-					variant="card"
 				/>
 			</PageContainer>
 		);
@@ -184,11 +188,7 @@ export default async function AppTeamCalendarPage({
 
 	return (
 		<PageContainer>
-			<PageHeader
-				title="Team schedule"
-				detail={`[${team.data.tag}] ${team.data.name}`}
-				description="Team-wide availability with quick personal editing for recurring and one-off windows."
-			/>
+			<PageHeader title="Calendar" breadcrumbs={calendarBreadcrumbs} />
 			<div className="space-y-6">
 				{scrimsForCalendar !== null && (
 					<UpcomingScrimsSection
@@ -197,13 +197,6 @@ export default async function AppTeamCalendarPage({
 						currentTeamId={team.data.id}
 					/>
 				)}
-				<p className="text-xs text-muted-foreground">
-					Availability windows are stored in each member's own timezone.{" "}
-					<Link href={appRoutes.settings.privacy} className="underline underline-offset-2">
-						Change your availability visibility
-					</Link>{" "}
-					to control what teammates see.
-				</p>
 				<TeamScheduleBoard schedule={schedule.data} currentUserId={user.id} />
 				<ScheduleGrid availability={myAvailability} teams={[teamOption]} activeTeam={teamOption} />
 			</div>

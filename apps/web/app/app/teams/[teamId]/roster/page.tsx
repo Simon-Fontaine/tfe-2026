@@ -2,7 +2,7 @@ import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { RosterTable } from "@/components/teams/roster-table";
 import { TeamInvitesSection } from "@/components/teams/team-invites-section";
@@ -10,10 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppTeamRosterPage({
@@ -48,12 +48,19 @@ export default async function AppTeamRosterPage({
 		<PageContainer>
 			<PageHeader
 				title="Roster"
-				description={
-					isStaffTab
-						? "Manage coaches, analysts, managers, and operational staff."
-						: "Manage rostered players, statuses, and incoming invites."
+				breadcrumbs={
+					<>
+						<Link href="/app" className="hover:underline">
+							Teams
+						</Link>
+						{" / "}
+						<Link href={appRoutes.teams.byId(team.data.id)} className="hover:underline">
+							{team.data.name}
+						</Link>
+						{" / Roster"}
+					</>
 				}
-				actions={
+				action={
 					canManage ? (
 						<InvitePlayerDialog
 							teamId={team.data.id}
@@ -70,76 +77,36 @@ export default async function AppTeamRosterPage({
 				}
 			/>
 
-			<PageSection
-				title="Roster groups"
-				description="Switch between the player roster and staff group."
-			>
-				<div className="flex flex-wrap gap-2">
-					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=players`}>
-						<Badge variant={!isStaffTab ? "default" : "outline"}>
-							Players: {activePlayers} active
-						</Badge>
-					</Link>
-					<Link href={`${appRoutes.teams.roster(team.data.id)}?type=staff`}>
-						<Badge variant={isStaffTab ? "default" : "outline"}>Staff: {activeStaff} active</Badge>
-					</Link>
-					<Badge variant="outline">Admins: {team.data.adminCount}</Badge>
-					<Badge variant="outline">Pending invites: {team.data.pendingInvites.length}</Badge>
-				</div>
-				{canManage ? null : (
-					<p className="mt-3 text-xs text-muted-foreground">
-						Roster changes require team admin access or organisation admin access.
-					</p>
-				)}
-			</PageSection>
+			<div className="flex flex-wrap gap-2">
+				<Link href={`${appRoutes.teams.roster(team.data.id)}?type=players`}>
+					<Badge
+						variant="outline"
+						className={cn(!isStaffTab && "border-foreground text-foreground")}
+					>
+						Players: {activePlayers} active
+					</Badge>
+				</Link>
+				<Link href={`${appRoutes.teams.roster(team.data.id)}?type=staff`}>
+					<Badge
+						variant="outline"
+						className={cn(isStaffTab && "border-foreground text-foreground")}
+					>
+						Staff: {activeStaff} active
+					</Badge>
+				</Link>
+				<Badge variant="outline">Admins: {team.data.adminCount}</Badge>
+				<Badge variant="outline">Pending invites: {team.data.pendingInvites.length}</Badge>
+			</div>
 
-			{activeRoster.length === 0 ? (
-				<>
-					<EmptyStateBlock
-						title={isStaffTab ? "No staff members yet" : "No players yet"}
-						description={
-							isStaffTab
-								? "Invite coaches, analysts, or managers to the staff group."
-								: "Invite players to start building the team roster."
-						}
-						variant="card"
-					/>
-					{canManage ? (
-						<div className="flex justify-start mt-4">
-							<InvitePlayerDialog
-								teamId={team.data.id}
-								canManageAdmins={canManageAdmins}
-								defaultMemberType={isStaffTab ? "staff" : "player"}
-								title={isStaffTab ? "Invite staff" : "Invite player"}
-							>
-								<Button size="sm">
-									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									{isStaffTab ? "Invite staff" : "Invite player"}
-								</Button>
-							</InvitePlayerDialog>
-						</div>
-					) : (
-						<p className="mt-4 text-sm text-muted-foreground">
-							{isStaffTab
-								? "This team hasn't added any staff yet."
-								: "This team hasn't added any players yet."}
-						</p>
-					)}
-				</>
-			) : (
-				<RosterTable
-					roster={activeRoster}
-					canManage={canManage}
-					canManageAdmins={canManageAdmins}
-					teamId={team.data.id}
-				/>
-			)}
+			<RosterTable
+				roster={activeRoster}
+				canManage={canManage}
+				canManageAdmins={canManageAdmins}
+				teamId={team.data.id}
+			/>
 
 			{canManageInvites ? (
-				<PageSection
-					title="Pending invites"
-					description="Invites that have been sent but not yet accepted or declined."
-				>
+				<PageSection title="Pending invites">
 					<TeamInvitesSection teamId={team.data.id} invites={team.data.pendingInvites} />
 				</PageSection>
 			) : null}

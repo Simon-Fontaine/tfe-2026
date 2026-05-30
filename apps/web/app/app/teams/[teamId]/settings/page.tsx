@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
+import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppTeamSettingsPage({
@@ -34,8 +36,18 @@ export default async function AppTeamSettingsPage({
 		<PageContainer>
 			<PageHeader
 				title="Settings"
-				detail={`[${team.data.tag}] ${team.data.name}`}
-				description="Manage team profile, recruiting, and workspace lifecycle actions."
+				breadcrumbs={
+					<>
+						<Link href="/app" className="hover:underline">
+							Teams
+						</Link>
+						{" / "}
+						<Link href={appRoutes.teams.byId(teamId)} className="hover:underline">
+							{team.data.name}
+						</Link>
+						{" / Settings"}
+					</>
+				}
 			/>
 			<TeamSettingsPanel team={team.data} currentUserId={user.id} />
 		</PageContainer>

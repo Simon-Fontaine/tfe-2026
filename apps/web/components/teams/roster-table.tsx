@@ -10,7 +10,6 @@ import {
 	updateTeamMemberAction,
 	updateTeamMemberPermissionAction,
 } from "@/app/actions/team";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
@@ -39,10 +38,10 @@ import { cn } from "@/lib/utils";
 const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
 
 const STATUS_VARIANTS: Record<RosterStatus, string> = {
-	active: "bg-green-500/10 text-green-600 border-0",
-	benched: "bg-yellow-500/10 text-yellow-600 border-0",
-	trial: "bg-blue-500/10 text-blue-600 border-0",
-	inactive: "bg-muted text-muted-foreground border-0",
+	active: "border-green-600 text-green-600",
+	benched: "border-yellow-600 text-yellow-600",
+	trial: "border-blue-600 text-blue-600",
+	inactive: "border-muted-foreground/40 text-muted-foreground",
 };
 
 const RANK_LABELS: Record<string, string> = {
@@ -160,7 +159,10 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 					</p>
 				</div>
 
-				<Badge className={cn("text-[10px] shrink-0", STATUS_VARIANTS[member.status])}>
+				<Badge
+					variant="outline"
+					className={cn("text-[10px] shrink-0", STATUS_VARIANTS[member.status])}
+				>
 					{member.status.charAt(0).toUpperCase() + member.status.slice(1)}
 				</Badge>
 				<Badge variant="outline" className="text-[10px] shrink-0">
@@ -288,8 +290,6 @@ interface RosterTableProps {
 	canManage: boolean;
 	canManageAdmins?: boolean;
 	teamId: string;
-	emptyLabel?: string;
-	emptyDescription?: string;
 }
 
 export function RosterTable({
@@ -297,20 +297,15 @@ export function RosterTable({
 	canManage,
 	canManageAdmins = false,
 	teamId,
-	emptyLabel = "No members yet",
-	emptyDescription = "Use team invites to bring players and staff into this roster.",
 }: RosterTableProps) {
 	const active = roster.filter((r) => r.status !== "inactive");
 	const inactive = roster.filter((r) => r.status === "inactive");
 
 	if (roster.length === 0) {
 		return (
-			<EmptyStateBlock
-				icon={UserIcon}
-				title={emptyLabel}
-				description={emptyDescription}
-				variant="card"
-			/>
+			<div className="border divide-y">
+				<div className="py-8 text-center text-sm text-muted-foreground">No roster members yet.</div>
+			</div>
 		);
 	}
 

@@ -92,7 +92,7 @@ export function TeamInvitesSection({ teamId, invites }: TeamInvitesSectionProps)
 										: "Staff"}
 							</Badge>
 							{invite.permissionRole === "admin" && (
-								<Badge variant="secondary" className="text-[10px]">
+								<Badge variant="outline" className="text-[10px]">
 									Admin access
 								</Badge>
 							)}

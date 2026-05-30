@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { sendTeamInviteAction } from "@/app/actions/team";
 import { renderOw2RoleRankMeta } from "@/components/shared/user-search-meta";
 import { UserSearchPicker } from "@/components/shared/user-search-picker";
@@ -46,7 +46,9 @@ interface InvitePlayerDialogProps {
 	defaultMemberType?: MemberType;
 	title?: string;
 	submitLabel?: string;
-	children: React.ReactNode;
+	children?: React.ReactNode;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
 export function InvitePlayerDialog({
@@ -56,8 +58,19 @@ export function InvitePlayerDialog({
 	title = "Invite member",
 	submitLabel = "Send invite",
 	children,
+	open: controlledOpen,
+	onOpenChange: onControlledOpenChange,
 }: InvitePlayerDialogProps) {
-	const [open, setOpen] = useState(false);
+	const isControlled = controlledOpen !== undefined;
+	const [internalOpen, setInternalOpen] = useState(false);
+	const open = isControlled ? controlledOpen : internalOpen;
+	const setOpen = useCallback(
+		(o: boolean) => {
+			if (!isControlled) setInternalOpen(o);
+			onControlledOpenChange?.(o);
+		},
+		[isControlled, onControlledOpenChange]
+	);
 	const [memberType, setMemberType] = useState<MemberType>(defaultMemberType);
 	const [roleInTeam, setRoleInTeam] = useState<OW2Role>("damage");
 	const [staffRole, setStaffRole] = useState<"coach" | "analyst" | "manager" | "staff">("staff");
@@ -89,7 +102,7 @@ export function InvitePlayerDialog({
 			pendingRef.current = false;
 			setOpen(false);
 		}
-	}, [state]);
+	}, [state, setOpen]);
 
 	function reset() {
 		resetSearch();
@@ -121,7 +134,7 @@ export function InvitePlayerDialog({
 				if (!o) reset();
 			}}
 		>
-			<DialogTrigger asChild>{children}</DialogTrigger>
+			{children && <DialogTrigger asChild>{children}</DialogTrigger>}
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>

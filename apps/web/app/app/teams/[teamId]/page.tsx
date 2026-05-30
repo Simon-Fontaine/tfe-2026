@@ -1,21 +1,13 @@
-import {
-	Mail01Icon,
-	Notification01Icon,
-	Settings01Icon,
-	Sword03Icon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { TimeQuarterPassIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CreateScrimDialog } from "@/components/scrims/create-scrim-dialog";
-import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TeamOverviewHeaderActions } from "@/components/teams/team-overview-header-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CreateUpdatePostDialog } from "@/components/updates/create-update-post-dialog";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
@@ -57,77 +49,42 @@ export default async function AppTeamOverviewPage({
 	const discoveryTeams = canManageTeam ? await getTeamsForDiscovery() : [];
 	const opponentOptions = discoveryTeams.filter((c) => c.id !== team.data.id);
 
+	const headerAction = canManageTeam ? (
+		<TeamOverviewHeaderActions
+			teamId={team.data.id}
+			canManageAdmins={team.data.currentUser.canManageAdmins}
+			opponentOptions={opponentOptions}
+		/>
+	) : undefined;
+
 	return (
 		<PageContainer>
 			<PageHeader
 				title={team.data.name}
-				description={`Rating ${team.data.rating} · ${team.data.matchesPlayed} scrims played`}
-				badge={
-					<>
-						<span className="font-mono text-xs text-muted-foreground">[{team.data.tag}]</span>
-						{team.data.isArchived ? (
+				breadcrumbs={
+					<Link href="/app" className="hover:underline">
+						Teams
+					</Link>
+				}
+				meta={
+					<span className="flex flex-wrap items-center gap-2">
+						<span>[{team.data.tag}]</span>
+						<span>Rating {team.data.rating}</span>
+						<span>{team.data.matchesPlayed} scrims</span>
+						{team.data.isArchived && (
 							<Badge variant="outline" className="text-[10px]">
 								Archived
 							</Badge>
-						) : null}
-						{team.data.isRecruiting ? (
-							<Badge variant="secondary" className="text-[10px] text-green-600">
+						)}
+						{team.data.isRecruiting && (
+							<Badge variant="outline" className="text-[10px] border-green-600 text-green-600">
 								Recruiting
 							</Badge>
-						) : null}
-					</>
+						)}
+					</span>
 				}
-				actions={
-					canManageTeam ? (
-						<div className="flex flex-wrap items-center gap-2 shrink-0">
-							{opponentOptions.length > 0 ? (
-								<CreateScrimDialog teamId={team.data.id} opponentOptions={opponentOptions}>
-									<Button size="sm">
-										<HugeiconsIcon icon={Sword03Icon} strokeWidth={2} className="mr-1.5 size-4" />
-										Schedule scrim
-									</Button>
-								</CreateScrimDialog>
-							) : (
-								<Button size="sm" disabled>
-									<HugeiconsIcon icon={Sword03Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Schedule scrim
-								</Button>
-							)}
-							<InvitePlayerDialog
-								teamId={team.data.id}
-								canManageAdmins={team.data.currentUser.canManageAdmins}
-								defaultMemberType="player"
-								title="Invite player"
-							>
-								<Button size="sm" variant="outline">
-									<HugeiconsIcon icon={Mail01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Invite player
-								</Button>
-							</InvitePlayerDialog>
-							<CreateUpdatePostDialog teamId={team.data.id}>
-								<Button size="sm" variant="outline">
-									<HugeiconsIcon
-										icon={Notification01Icon}
-										strokeWidth={2}
-										className="mr-1.5 size-4"
-									/>
-									Post update
-								</Button>
-							</CreateUpdatePostDialog>
-							<Button size="sm" variant="ghost" asChild>
-								<Link href={appRoutes.teams.settings(team.data.id)}>
-									<HugeiconsIcon icon={Settings01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-									Edit profile
-								</Link>
-							</Button>
-						</div>
-					) : undefined
-				}
-			>
-				{team.data.description ? (
-					<p className="text-xs text-muted-foreground">{team.data.description}</p>
-				) : null}
-			</PageHeader>
+				action={headerAction}
+			/>
 
 			<StatsGrid
 				stats={[
@@ -138,17 +95,12 @@ export default async function AppTeamOverviewPage({
 				]}
 			/>
 
-			<PageSection
-				title="Recent rating changes"
-				description="Ratings only change after both teams confirm the final scrim result."
-			>
+			<PageSection title="Recent rating changes">
 				{team.data.ratingHistory.length === 0 ? (
-					<div className="border px-3 py-4">
-						<p className="text-sm font-semibold">No rated scrims yet</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							Once completed scrims are confirmed, the resulting rating changes will show up here.
-						</p>
-					</div>
+					<EmptyState
+						icon={TimeQuarterPassIcon}
+						title="No rated scrims yet. Once completed scrims are confirmed, rating changes will appear here."
+					/>
 				) : (
 					<div className="space-y-2">
 						{team.data.ratingHistory.map((entry) => (
@@ -169,13 +121,13 @@ export default async function AppTeamOverviewPage({
 									</p>
 								</div>
 								<Badge
-									variant={entry.result === "loss" ? "destructive" : "secondary"}
+									variant="outline"
 									className={
 										entry.result === "win"
-											? "text-green-600"
+											? "border-green-600 text-green-600"
 											: entry.result === "draw"
 												? "border-muted-foreground/40 text-muted-foreground"
-												: undefined
+												: "border-destructive text-destructive"
 									}
 								>
 									{entry.result} {formatSignedRatingDelta(entry.ratingDelta)}
@@ -186,10 +138,7 @@ export default async function AppTeamOverviewPage({
 				)}
 			</PageSection>
 
-			<PageSection
-				title="Team admins"
-				description="Roster and workspace admins with the permissions to run this team day to day."
-			>
+			<PageSection title="Team admins">
 				<div className="space-y-2">
 					{team.data.admins.map((admin) => (
 						<div
