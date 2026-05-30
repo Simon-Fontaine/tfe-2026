@@ -1,11 +1,9 @@
 "use client";
 
-import { DatabaseExportIcon, LockIcon } from "@hugeicons/core-free-icons";
 import type { PersonalPrivacySettings, PrivacyVisibility } from "@scrimflow/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { updatePrivacySettingsAction } from "@/app/actions/settings/privacy";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -18,6 +16,7 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { apiRoutes } from "@/lib/routes";
 
 interface PrivacySettingsSectionProps {
@@ -25,21 +24,9 @@ interface PrivacySettingsSectionProps {
 }
 
 const VISIBILITY_OPTIONS = [
-	{
-		value: "public",
-		label: "Public",
-		description: "Anyone can view your profile and find you in search.",
-	},
-	{
-		value: "teams_only",
-		label: "Teams only",
-		description: "Only members of your teams can view your full profile.",
-	},
-	{
-		value: "private",
-		label: "Private",
-		description: "Your profile is hidden from public search and discovery.",
-	},
+	{ value: "public", label: "Public" },
+	{ value: "teams_only", label: "Teams only" },
+	{ value: "private", label: "Private" },
 ] as const;
 
 export function PrivacySettingsSection({ initialSettings }: PrivacySettingsSectionProps) {
@@ -106,11 +93,11 @@ export function PrivacySettingsSection({ initialSettings }: PrivacySettingsSecti
 
 	return (
 		<>
-			<SettingsSectionCard
-				icon={LockIcon}
-				title="Privacy preferences"
-				description="Control profile, recruiting, availability, and match-history visibility."
-			>
+			{/* Privacy preferences section */}
+			<div>
+				<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+					Privacy preferences
+				</p>
 				<div className="space-y-5">
 					<VisibilityRadioGroup
 						name="profile-visibility"
@@ -133,7 +120,7 @@ export function PrivacySettingsSection({ initialSettings }: PrivacySettingsSecti
 						onChange={(value) => updateSetting("publicHistoryVisibility", value)}
 						error={fieldErrors.publicHistoryVisibility?.[0]}
 					/>
-					<label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-foreground/30 has-[:checked]:bg-muted/40">
+					<label className="flex cursor-pointer items-start gap-3 border p-3 transition-colors has-[:checked]:border-foreground/30 has-[:checked]:bg-muted/40">
 						<input
 							type="checkbox"
 							checked={settings.recruitingDiscoverability}
@@ -142,13 +129,7 @@ export function PrivacySettingsSection({ initialSettings }: PrivacySettingsSecti
 							}
 							className="mt-0.5 accent-foreground"
 						/>
-						<div>
-							<p className="text-sm font-medium">Recruiting discoverability</p>
-							<p className="text-muted-foreground text-sm">
-								Allow public recruiting discovery and player-owned listing visibility when your
-								profile is public.
-							</p>
-						</div>
+						<p className="text-sm font-medium">Recruiting discoverability</p>
 					</label>
 					{fieldErrors.recruitingDiscoverability?.[0] && (
 						<p className="text-sm text-destructive">{fieldErrors.recruitingDiscoverability[0]}</p>
@@ -165,13 +146,13 @@ export function PrivacySettingsSection({ initialSettings }: PrivacySettingsSecti
 						<p className="mt-2 text-sm text-destructive">{formError}</p>
 					)}
 				</div>
-			</SettingsSectionCard>
-
-			<SettingsSectionCard
-				icon={DatabaseExportIcon}
-				title="Data Export"
-				description="Download a JSON copy of permitted personal account and profile data."
-			>
+			</div>
+			<Separator />
+			{/* Data export section */}
+			<div>
+				<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+					Data export
+				</p>
 				<AlertDialog>
 					<AlertDialogTrigger asChild>
 						<Button variant="outline">Request data export</Button>
@@ -192,7 +173,7 @@ export function PrivacySettingsSection({ initialSettings }: PrivacySettingsSecti
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>
-			</SettingsSectionCard>
+			</div>
 		</>
 	);
 }
@@ -217,7 +198,7 @@ function VisibilityRadioGroup({
 				{VISIBILITY_OPTIONS.map((option) => (
 					<label
 						key={option.value}
-						className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-foreground/30 has-[:checked]:bg-muted/40"
+						className="flex cursor-pointer items-start gap-3 border p-3 transition-colors has-[:checked]:border-foreground/30 has-[:checked]:bg-muted/40"
 					>
 						<input
 							type="radio"
@@ -227,10 +208,7 @@ function VisibilityRadioGroup({
 							onChange={() => onChange(option.value)}
 							className="mt-0.5 accent-foreground"
 						/>
-						<div>
-							<p className="text-sm font-medium">{option.label}</p>
-							<p className="text-muted-foreground text-sm">{option.description}</p>
-						</div>
+						<p className="text-sm font-medium">{option.label}</p>
 					</label>
 				))}
 			</div>

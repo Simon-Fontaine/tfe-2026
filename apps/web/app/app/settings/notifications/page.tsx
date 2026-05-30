@@ -2,8 +2,8 @@ import type {
 	MandatoryNotificationPolicy,
 	NotificationPreferenceSettings,
 } from "@scrimflow/shared";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { NotificationPreferencesSection } from "@/components/settings/notification-preferences-section";
-import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
 import { apiGet } from "@/lib/api-client";
 import { apiRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
@@ -37,11 +37,14 @@ export default async function AppNotificationsSettingsPage() {
 					mandatory: MandatoryNotificationPolicy;
 				});
 	return (
-		<SecuritySettingsPageShell>
-			<NotificationPreferencesSection
-				initialMandatoryPolicy={initialPreferences.mandatory}
-				initialPreferences={initialPreferences.optional}
-			/>
-		</SecuritySettingsPageShell>
+		<>
+			<PageHeader breadcrumbs="Settings / Notifications" title="Notifications" />
+			<div className="space-y-6">
+				<NotificationPreferencesSection
+					initialMandatoryPolicy={initialPreferences.mandatory}
+					initialPreferences={initialPreferences.optional}
+				/>
+			</div>
+		</>
 	);
 }

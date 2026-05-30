@@ -1,4 +1,5 @@
-import { InboxErrorBlock, InboxPageClient } from "@/components/notifications/inbox-page-client";
+import { InboxErrorBlock } from "@/components/notifications/inbox-page-client";
+import { InboxWorkspace } from "@/components/notifications/inbox-workspace";
 import { getNotificationsForUser } from "@/lib/data/notifications";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -15,7 +16,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 		const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
 		return (
-			<InboxPageClient
+			<InboxWorkspace
 				initialNotifications={notifications}
 				initialUnreadCount={unreadCount}
 				nextCursor={nextCursor}

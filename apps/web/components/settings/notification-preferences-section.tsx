@@ -1,6 +1,5 @@
 "use client";
 
-import { Notification01Icon } from "@hugeicons/core-free-icons";
 import type {
 	MandatoryNotificationPolicy,
 	NotificationPreferenceSettings,
@@ -8,65 +7,24 @@ import type {
 import { useState } from "react";
 import { toast } from "sonner";
 import { updateNotificationPreferencesAction } from "@/app/actions/settings/notifications";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
 const CATEGORIES = [
-	{
-		key: "invites",
-		label: "Invites",
-		description: "Team, organization, and channel invitations.",
-	},
-	{
-		key: "applications",
-		label: "Applications",
-		description: "Recruiting applications, decisions, and withdrawals.",
-	},
-	{
-		key: "scrimChanges",
-		label: "Scrim changes",
-		description: "Scrim requests, acceptances, cancellations, and reminders.",
-	},
-	{
-		key: "chatActivity",
-		label: "Chat activity",
-		description: "New direct, team, recruiting, and scrim-channel messages.",
-	},
-	{
-		key: "results",
-		label: "Results",
-		description: "OCR completion, result updates, and rating changes.",
-	},
-	{
-		key: "disputes",
-		label: "Disputes",
-		description: "Scrim dispute openings and resolutions.",
-	},
-	{
-		key: "updates",
-		label: "Updates",
-		description: "Team and organization announcements.",
-	},
+	{ key: "invites", label: "Invites" },
+	{ key: "applications", label: "Applications" },
+	{ key: "scrimChanges", label: "Scrim changes" },
+	{ key: "chatActivity", label: "Chat activity" },
+	{ key: "results", label: "Results" },
+	{ key: "disputes", label: "Disputes" },
+	{ key: "updates", label: "Updates" },
 ] as const;
 
 const MANDATORY_CATEGORIES = [
-	{
-		key: "securityCritical",
-		label: "Security-critical notices",
-		description: "New device, new location, and session-revocation alerts remain on.",
-	},
-	{
-		key: "accountLifecycle",
-		label: "Account lifecycle notices",
-		description: "Password reset, email change, deletion, and data lifecycle notices remain on.",
-	},
-	{
-		key: "moderationCritical",
-		label: "Critical moderation notices",
-		description: "Required trust and policy enforcement notices remain on.",
-	},
+	{ key: "securityCritical", label: "Security-critical notices" },
+	{ key: "accountLifecycle", label: "Account lifecycle notices" },
+	{ key: "moderationCritical", label: "Critical moderation notices" },
 ] as const;
 
 interface NotificationPreferencesSectionProps {
@@ -114,22 +72,15 @@ export function NotificationPreferencesSection({
 	}
 
 	return (
-		<SettingsSectionCard
-			icon={Notification01Icon}
-			title="Notification Preferences"
-			description="Choose which email notifications you want to receive."
-		>
+		<>
 			<div className="space-y-0">
 				{CATEGORIES.map((cat, index) => {
 					const fieldError = fieldErrors[cat.key]?.[0];
 					return (
 						<div key={cat.key}>
 							{index > 0 && <Separator />}
-							<div className="flex items-start justify-between gap-4 py-4">
-								<div className="flex-1">
-									<p className="text-sm font-medium">{cat.label}</p>
-									<p className="text-muted-foreground text-sm">{cat.description}</p>
-								</div>
+							<div className="flex items-center justify-between gap-4 py-4">
+								<p className="flex-1 text-sm font-medium">{cat.label}</p>
 								<Switch
 									checked={prefs[cat.key] ?? true}
 									onCheckedChange={(checked) => handleToggle(cat.key, checked)}
@@ -141,7 +92,7 @@ export function NotificationPreferencesSection({
 					);
 				})}
 			</div>
-			<div className="mt-6 rounded-lg border bg-muted/30">
+			<div className="mt-6 border bg-muted/30">
 				<div className="border-b px-4 py-3">
 					<p className="text-sm font-medium">Mandatory notices</p>
 					<p className="text-muted-foreground text-sm">
@@ -152,11 +103,8 @@ export function NotificationPreferencesSection({
 					{MANDATORY_CATEGORIES.map((cat, index) => (
 						<div key={cat.key}>
 							{index > 0 && <Separator />}
-							<div className="flex items-start justify-between gap-4 px-4 py-4">
-								<div className="flex-1">
-									<p className="text-sm font-medium">{cat.label}</p>
-									<p className="text-muted-foreground text-sm">{cat.description}</p>
-								</div>
+							<div className="flex items-center justify-between gap-4 px-4 py-4">
+								<p className="flex-1 text-sm font-medium">{cat.label}</p>
 								<Switch
 									checked={initialMandatoryPolicy[cat.key]}
 									disabled
@@ -178,6 +126,6 @@ export function NotificationPreferencesSection({
 					<p className="mt-2 text-sm text-destructive">{formError}</p>
 				)}
 			</div>
-		</SettingsSectionCard>
+		</>
 	);
 }
