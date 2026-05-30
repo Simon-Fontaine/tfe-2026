@@ -87,6 +87,7 @@ const VALID_RANKS = [
 	"grandmaster",
 	"champion",
 ] as const;
+const MAX_REGION_LENGTH = 50;
 
 async function listListings(params: {
 	viewerId: string | null;
@@ -185,6 +186,9 @@ recruitmentListingsRoutes.get("/", async (c) => {
 	const organizationId = c.req.query("organizationId");
 	const mine = c.req.query("mine") === "true";
 	const regionRaw = c.req.query("region");
+	if (regionRaw && regionRaw.trim().length > MAX_REGION_LENGTH) {
+		return c.json({ error: "region parameter exceeds maximum length." }, 400);
+	}
 	const region = regionRaw?.trim() || undefined;
 	const roleRaw = c.req.query("role");
 	const role = (VALID_ROLES as readonly string[]).includes(roleRaw ?? "")

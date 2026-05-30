@@ -1,6 +1,4 @@
-import { LockIcon } from "@hugeicons/core-free-icons";
 import { notFound } from "next/navigation";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";

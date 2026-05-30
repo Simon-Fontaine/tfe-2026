@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { OrgPendingInvitesSection } from "@/components/orgs/org-pending-invites-section";
 import { OrgWorkspaceInvitesEmptyState } from "@/components/orgs/org-workspace-state";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";

@@ -26,10 +26,18 @@ const nullableInteger = v.nullable(
 	v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(999999))
 );
 
+const scheduledAtCreatePipe = v.optional(
+	v.pipe(
+		v.string(),
+		v.isoTimestamp("Invalid timestamp"),
+		v.check((val) => new Date(val).getTime() >= Date.now(), "scheduledAt cannot be in the past")
+	)
+);
+
 export const CreateScrimSchema = v.object({
 	homeTeamId: v.pipe(v.string(), v.uuid("Invalid home team ID")),
 	awayTeamId: optionalUuid,
-	scheduledAt: optionalIsoDate,
+	scheduledAt: scheduledAtCreatePipe,
 	message: optionalTrimmedString(1000, "Message cannot exceed 1000 characters"),
 	config: v.optional(
 		v.object({

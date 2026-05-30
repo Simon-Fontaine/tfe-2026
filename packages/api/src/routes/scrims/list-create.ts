@@ -216,9 +216,12 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 		const homeTeamRow = await db.query.teamTable.findFirst({
 			where: eq(teamTable.id, parsed.output.homeTeamId),
-			columns: { id: true, name: true, tag: true },
+			columns: { id: true, name: true, tag: true, lifecycleStatus: true },
 		});
 		if (!homeTeamRow) return c.json({ error: "Home team not found." }, 404);
+		if (homeTeamRow.lifecycleStatus !== "active") {
+			return c.json({ error: "Your team is not eligible to create scrims." }, 400);
+		}
 
 		let awayTeamSnapshot: { name: string; tag: string } | null = null;
 

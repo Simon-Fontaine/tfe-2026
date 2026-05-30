@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { OrgSettingsPanel } from "@/components/orgs/org-settings-panel";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageHeader } from "@/components/workspace/page-header";
