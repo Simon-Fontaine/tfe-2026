@@ -19,7 +19,6 @@ import {
 } from "@/app/actions/settings/two-factor-disable";
 import { CodeDisplay } from "@/components/shared/code-display";
 import { RecoveryCodeDialog } from "@/components/shared/recovery-code-dialog";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -128,12 +127,7 @@ export function TotpManagementSection({
 	}, [disableForm]);
 
 	return (
-		<SettingsSectionCard
-			id="totp"
-			icon={Clock01Icon}
-			title="Authenticator app (TOTP)"
-			description={hasTOTP ? "Enabled — your authenticator app is active" : "Not configured"}
-		>
+		<>
 			<RecoveryCodeDialog recoveryCode={recoveryCode} onConfirm={() => setRecoveryCode(null)} />
 
 			{state.step === "idle" && (
@@ -267,6 +261,6 @@ export function TotpManagementSection({
 					</form>
 				</div>
 			)}
-		</SettingsSectionCard>
+		</>
 	);
 }

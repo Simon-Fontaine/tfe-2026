@@ -1,6 +1,6 @@
 "use client";
 
-import { Delete01Icon } from "@hugeicons/core-free-icons";
+import { Delete01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -15,6 +15,12 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CredentialListItemProps {
 	icon: IconSvgElement;
@@ -50,23 +56,22 @@ export function CredentialListItem({
 				</div>
 			</div>
 			<AlertDialog>
-				<AlertDialogTrigger asChild>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						className="text-destructive"
-						disabled={disabled}
-					>
-						<HugeiconsIcon
-							icon={Delete01Icon}
-							strokeWidth={2}
-							className="mr-1.5 size-3.5"
-							aria-hidden="true"
-						/>
-						Remove
-					</Button>
-				</AlertDialogTrigger>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button type="button" variant="ghost" size="icon" disabled={disabled}>
+							<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+							<span className="sr-only">Actions</span>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<AlertDialogTrigger asChild>
+							<DropdownMenuItem className="text-destructive">
+								<HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="mr-2 size-4" />
+								Remove
+							</DropdownMenuItem>
+						</AlertDialogTrigger>
+					</DropdownMenuContent>
+				</DropdownMenu>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Remove "{name}"?</AlertDialogTitle>

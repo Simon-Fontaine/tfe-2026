@@ -1,7 +1,7 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { Cancel01Icon, CheckmarkCircle02Icon, UserCircle02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { type ChangeUsernameInput, ChangeUsernameSchema } from "@scrimflow/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,7 +9,6 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { checkUsernameAction } from "@/app/(auth)/auth/actions";
 import { changeUsernameAction } from "@/app/actions/settings/username";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -86,68 +85,62 @@ export function ChangeUsernameSection({ currentUsername }: ChangeUsernameSection
 	}
 
 	return (
-		<SettingsSectionCard
-			icon={UserCircle02Icon}
-			title="Username"
-			description="Your unique identifier on Scrimflow"
-		>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-				<Controller
-					name="username"
-					control={form.control}
-					render={({ field, fieldState }) => (
-						<Field data-invalid={fieldState.invalid || undefined}>
-							<FieldLabel htmlFor="settings-username">Username</FieldLabel>
-							<InputGroup>
-								<InputGroupAddon align="inline-start" className="text-muted-foreground/70">
-									scrimflow.com/players/
+		<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+			<Controller
+				name="username"
+				control={form.control}
+				render={({ field, fieldState }) => (
+					<Field data-invalid={fieldState.invalid || undefined}>
+						<FieldLabel htmlFor="settings-username">Username</FieldLabel>
+						<InputGroup>
+							<InputGroupAddon align="inline-start" className="text-muted-foreground/70">
+								scrimflow.com/players/
+							</InputGroupAddon>
+							<InputGroupInput
+								{...field}
+								id="settings-username"
+								placeholder="your_username"
+								autoComplete="username"
+								aria-invalid={fieldState.invalid}
+								className="font-mono"
+								onChange={(e) => {
+									field.onChange(e);
+									checkUsername(e.target.value);
+								}}
+							/>
+							{usernameStatus !== "idle" && (
+								<InputGroupAddon align="inline-end">
+									{usernameStatus === "checking" && <Spinner className="size-4" />}
+									{usernameStatus === "available" && (
+										<HugeiconsIcon
+											icon={CheckmarkCircle02Icon}
+											strokeWidth={2}
+											className="size-4 text-emerald-500"
+										/>
+									)}
+									{usernameStatus === "taken" && (
+										<HugeiconsIcon
+											icon={Cancel01Icon}
+											strokeWidth={2}
+											className="size-4 text-destructive"
+										/>
+									)}
 								</InputGroupAddon>
-								<InputGroupInput
-									{...field}
-									id="settings-username"
-									placeholder="your_username"
-									autoComplete="username"
-									aria-invalid={fieldState.invalid}
-									className="font-mono"
-									onChange={(e) => {
-										field.onChange(e);
-										checkUsername(e.target.value);
-									}}
-								/>
-								{usernameStatus !== "idle" && (
-									<InputGroupAddon align="inline-end">
-										{usernameStatus === "checking" && <Spinner className="size-4" />}
-										{usernameStatus === "available" && (
-											<HugeiconsIcon
-												icon={CheckmarkCircle02Icon}
-												strokeWidth={2}
-												className="size-4 text-emerald-500"
-											/>
-										)}
-										{usernameStatus === "taken" && (
-											<HugeiconsIcon
-												icon={Cancel01Icon}
-												strokeWidth={2}
-												className="size-4 text-destructive"
-											/>
-										)}
-									</InputGroupAddon>
-								)}
-							</InputGroup>
-							{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-						</Field>
-					)}
-				/>
-				<Button
-					type="submit"
-					disabled={
-						form.formState.isSubmitting || !form.formState.isDirty || usernameStatus === "taken"
-					}
-				>
-					{form.formState.isSubmitting && <Spinner className="mr-2" />}
-					{form.formState.isSubmitting ? "Saving…" : "Save username"}
-				</Button>
-			</form>
-		</SettingsSectionCard>
+							)}
+						</InputGroup>
+						{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+					</Field>
+				)}
+			/>
+			<Button
+				type="submit"
+				disabled={
+					form.formState.isSubmitting || !form.formState.isDirty || usernameStatus === "taken"
+				}
+			>
+				{form.formState.isSubmitting && <Spinner className="mr-2" />}
+				{form.formState.isSubmitting ? "Saving…" : "Save username"}
+			</Button>
+		</form>
 	);
 }

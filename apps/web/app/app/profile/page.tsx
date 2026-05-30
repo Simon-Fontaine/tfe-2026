@@ -1,12 +1,13 @@
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AvatarUploadSection } from "@/components/profile/avatar-upload-section";
 import { BannerUploadSection } from "@/components/profile/banner-upload-section";
 import { BasicInfoSection } from "@/components/profile/basic-info-section";
 import { GameProfileSection } from "@/components/profile/game-profile-section";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { apiGet } from "@/lib/api-client";
 import { getActiveHeroes } from "@/lib/data/heroes";
 import { getPlayerProfileFull } from "@/lib/data/player";
+import { ROLES } from "@/lib/ow2";
 import { apiRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -29,12 +30,22 @@ export default async function AppProfilePage() {
 
 	const userRow = "data" in userInfoRes ? userInfoRes.data : null;
 
+	let meta: string | undefined;
+	if (profile) {
+		const roleMeta = ROLES.find((r) => r.id === profile.primaryRole);
+		const roleLabel = roleMeta?.label ?? profile.primaryRole;
+		const rankLabel = profile.rank
+			? profile.rankDivision
+				? `${profile.rank.charAt(0).toUpperCase()}${profile.rank.slice(1)} ${profile.rankDivision}`
+				: `${profile.rank.charAt(0).toUpperCase()}${profile.rank.slice(1)}`
+			: null;
+		const metaParts = [profile.battletag, roleLabel, rankLabel].filter(Boolean);
+		if (metaParts.length > 0) meta = metaParts.join(" • ");
+	}
+
 	return (
 		<PageContainer>
-			<PageHeader
-				title="Your profile"
-				description="Manage your player identity, public profile details, roles, and hero pool."
-			/>
+			<PageHeader title="Profile" meta={meta} />
 			<div className="space-y-8">
 				<BannerUploadSection bannerUrl={userRow?.bannerUrl ?? null} />
 				<AvatarUploadSection avatarUrl={userRow?.avatarUrl ?? null} />

@@ -1,7 +1,6 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { Key01Icon } from "@hugeicons/core-free-icons";
 import {
 	type ConfirmPasswordChangeInput,
 	ConfirmPasswordChangeSchema,
@@ -19,7 +18,6 @@ import {
 } from "@/app/actions/settings/password";
 import { PasswordInput } from "@/components/shared/password-input";
 import { PasswordStrengthMeter } from "@/components/shared/password-strength-meter";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -77,11 +75,7 @@ export function ChangePasswordSection({ initialStep = "idle" }: ChangePasswordSe
 	}
 
 	return (
-		<SettingsSectionCard
-			icon={Key01Icon}
-			title="Change password"
-			description="Update your account password"
-		>
+		<>
 			{step === "idle" && (
 				<form onSubmit={requestForm.handleSubmit(onRequest)} className="space-y-3">
 					<FieldGroup>
@@ -188,6 +182,6 @@ export function ChangePasswordSection({ initialStep = "idle" }: ChangePasswordSe
 					</form>
 				</div>
 			)}
-		</SettingsSectionCard>
+		</>
 	);
 }

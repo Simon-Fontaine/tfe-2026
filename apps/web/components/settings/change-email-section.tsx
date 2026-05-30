@@ -17,7 +17,6 @@ import {
 	requestEmailChangeAction,
 	verifyEmailChangeAction,
 } from "@/app/actions/settings/email-change";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -27,13 +26,11 @@ import { Spinner } from "@/components/ui/spinner";
 type Step = "idle" | "code-sent";
 
 interface ChangeEmailSectionProps {
-	currentEmail: string;
 	initialStep?: Step;
 	initialPendingEmail?: string;
 }
 
 export function ChangeEmailSection({
-	currentEmail,
 	initialStep = "idle",
 	initialPendingEmail,
 }: ChangeEmailSectionProps) {
@@ -83,11 +80,7 @@ export function ChangeEmailSection({
 	}
 
 	return (
-		<SettingsSectionCard
-			icon={Mail01Icon}
-			title="Change email"
-			description={`Current: ${currentEmail}`}
-		>
+		<>
 			{step === "idle" && (
 				<form onSubmit={emailForm.handleSubmit(onRequestChange)} className="space-y-3">
 					<Controller
@@ -161,6 +154,6 @@ export function ChangeEmailSection({
 					</form>
 				</div>
 			)}
-		</SettingsSectionCard>
+		</>
 	);
 }

@@ -11,7 +11,6 @@ import {
 	type SessionInfo,
 } from "@/app/actions/settings/session";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -69,38 +68,7 @@ export function ActiveSessionsSection() {
 	const otherSessions = sessions.filter((s) => !s.isCurrent);
 
 	return (
-		<SettingsSectionCard
-			icon={ComputerIcon}
-			title="Active sessions"
-			description="Devices currently signed in to your account"
-			headerRight={
-				otherSessions.length > 0 ? (
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button variant="outline" size="sm" className="text-destructive">
-								Sign out all others
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>Sign out all other sessions?</AlertDialogTitle>
-								<AlertDialogDescription>
-									This will immediately sign out {otherSessions.length} other{" "}
-									{otherSessions.length === 1 ? "session" : "sessions"}. Your current session will
-									not be affected.
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onClick={handleRevokeAll} disabled={revoking}>
-									Sign out all
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-				) : undefined
-			}
-		>
+		<div className="space-y-4">
 			{sessions.length === 0 ? (
 				<EmptyStateBlock
 					icon={ComputerIcon}
@@ -114,6 +82,31 @@ export function ActiveSessionsSection() {
 					))}
 				</div>
 			)}
-		</SettingsSectionCard>
+			{otherSessions.length > 0 && (
+				<AlertDialog>
+					<AlertDialogTrigger asChild>
+						<Button variant="outline" size="sm" className="text-destructive">
+							Sign out all others
+						</Button>
+					</AlertDialogTrigger>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Sign out all other sessions?</AlertDialogTitle>
+							<AlertDialogDescription>
+								This will immediately sign out {otherSessions.length} other{" "}
+								{otherSessions.length === 1 ? "session" : "sessions"}. Your current session will not
+								be affected.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
+							<AlertDialogAction onClick={handleRevokeAll} disabled={revoking}>
+								Sign out all
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			)}
+		</div>
 	);
 }

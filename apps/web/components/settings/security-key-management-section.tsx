@@ -24,7 +24,6 @@ import {
 import { CredentialListItem } from "@/components/shared/credential-list-item";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { RecoveryCodeDialog } from "@/components/shared/recovery-code-dialog";
-import { SettingsSectionCard } from "@/components/shared/settings-section-card";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -144,12 +143,7 @@ export function SecurityKeyManagementSection({
 	}, [disableForm]);
 
 	return (
-		<SettingsSectionCard
-			id="security-keys"
-			icon={Key01Icon}
-			title="Security keys"
-			description="Use a hardware security key for two-factor authentication"
-		>
+		<>
 			<RecoveryCodeDialog recoveryCode={recoveryCode} onConfirm={() => setRecoveryCode(null)} />
 
 			{keys.length === 0 ? (
@@ -247,6 +241,6 @@ export function SecurityKeyManagementSection({
 					</div>
 				</form>
 			)}
-		</SettingsSectionCard>
+		</>
 	);
 }

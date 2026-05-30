@@ -3,15 +3,16 @@ import {
 	listSecurityKeysAction,
 } from "@/app/(auth)/auth/webauthn-setup-actions";
 import { getPendingVerificationsAction } from "@/app/actions/settings/pending-verifications";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ActiveSessionsSection } from "@/components/settings/active-sessions-section";
 import { ChangePasswordSection } from "@/components/settings/change-password-section";
 import { PasskeyManagementSection } from "@/components/settings/passkey-management-section";
 import { RecoveryCodeManagementSection } from "@/components/settings/recovery-code-management-section";
 import { SecurityAccountSummaryCard } from "@/components/settings/security-account-summary-card";
 import { SecurityKeyManagementSection } from "@/components/settings/security-key-management-section";
-import { SecuritySettingsPageShell } from "@/components/settings/security-settings-page-shell";
 import { TotpManagementSection } from "@/components/settings/totp-management-section";
 import { TwoFactorMethodsSection } from "@/components/settings/two-factor-methods-section";
+import { Separator } from "@/components/ui/separator";
 import { apiGet } from "@/lib/api-client";
 import { apiRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
@@ -36,33 +37,69 @@ export default async function AppSecuritySettingsPage() {
 			initialPasskeyCount={passkeys.length}
 			initialSecurityKeyCount={securityKeys.length}
 		>
-			<SecuritySettingsPageShell>
+			<PageHeader breadcrumbs="Settings / Security" title="Security" />
+			<div className="space-y-6">
 				<SecurityAccountSummaryCard email={user.email} hasPassword={hasPassword} />
-
-				<ChangePasswordSection initialStep={pending.passwordChange ? "code-sent" : "idle"} />
-
-				<TwoFactorMethodsSection />
-
-				<RecoveryCodeManagementSection hasRecoveryCode={hasRecoveryCode} />
-
-				<TotpManagementSection initialDisableConfirm={pending.twoFactorDisable} />
-
-				<PasskeyManagementSection
-					userId={user.id}
-					userName={user.username}
-					userDisplayName={user.displayName}
-					initialDisableConfirm={pending.passkeyDisable}
-				/>
-
-				<SecurityKeyManagementSection
-					userId={user.id}
-					userName={user.username}
-					userDisplayName={user.displayName}
-					initialDisableConfirm={pending.securityKeyDisable}
-				/>
-
-				<ActiveSessionsSection />
-			</SecuritySettingsPageShell>
+				<Separator />
+				<section>
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Password
+					</p>
+					<ChangePasswordSection initialStep={pending.passwordChange ? "code-sent" : "idle"} />
+				</section>
+				<Separator />
+				<section>
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Two-Factor Authentication
+					</p>
+					<TwoFactorMethodsSection />
+				</section>
+				<Separator />
+				<section>
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Recovery Codes
+					</p>
+					<RecoveryCodeManagementSection hasRecoveryCode={hasRecoveryCode} />
+				</section>
+				<Separator />
+				<section id="totp">
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Authenticator App (TOTP)
+					</p>
+					<TotpManagementSection initialDisableConfirm={pending.twoFactorDisable} />
+				</section>
+				<Separator />
+				<section id="passkeys">
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Passkeys
+					</p>
+					<PasskeyManagementSection
+						userId={user.id}
+						userName={user.username}
+						userDisplayName={user.displayName}
+						initialDisableConfirm={pending.passkeyDisable}
+					/>
+				</section>
+				<Separator />
+				<section id="security-keys">
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Security Keys
+					</p>
+					<SecurityKeyManagementSection
+						userId={user.id}
+						userName={user.username}
+						userDisplayName={user.displayName}
+						initialDisableConfirm={pending.securityKeyDisable}
+					/>
+				</section>
+				<Separator />
+				<section>
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Active Sessions
+					</p>
+					<ActiveSessionsSection />
+				</section>
+			</div>
 		</SecurityStatusProvider>
 	);
 }

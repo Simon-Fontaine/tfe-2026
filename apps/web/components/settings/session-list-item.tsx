@@ -1,6 +1,11 @@
 "use client";
 
-import { ComputerIcon, GlobeIcon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
+import {
+	ComputerIcon,
+	GlobeIcon,
+	MoreHorizontalIcon,
+	SmartPhone01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { SessionInfo } from "@/app/actions/settings/session";
 import {
@@ -16,6 +21,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SessionListItemProps {
 	session: SessionInfo;
@@ -80,11 +91,19 @@ export function SessionListItem({ session, onRevoke, revoking }: SessionListItem
 			</div>
 			{!session.isCurrent && (
 				<AlertDialog>
-					<AlertDialogTrigger asChild>
-						<Button variant="outline" size="sm" disabled={revoking} className="text-destructive">
-							Revoke
-						</Button>
-					</AlertDialogTrigger>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button type="button" variant="ghost" size="icon" disabled={revoking}>
+								<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+								<span className="sr-only">Actions</span>
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<AlertDialogTrigger asChild>
+								<DropdownMenuItem className="text-destructive">Revoke session</DropdownMenuItem>
+							</AlertDialogTrigger>
+						</DropdownMenuContent>
+					</DropdownMenu>
 					<AlertDialogContent>
 						<AlertDialogHeader>
 							<AlertDialogTitle>Revoke this session?</AlertDialogTitle>
