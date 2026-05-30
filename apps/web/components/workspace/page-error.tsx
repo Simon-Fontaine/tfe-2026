@@ -2,7 +2,9 @@
 
 import { AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { appRoutes } from "@/lib/routes";
 
 interface PageErrorProps {
 	error: Error & { digest?: string };
@@ -12,7 +14,7 @@ interface PageErrorProps {
 }
 
 export function PageError({ error, reset, retry, title = "Failed to load" }: PageErrorProps) {
-	const action = retry ?? reset;
+	const retryAction = retry ?? reset;
 
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
@@ -25,11 +27,16 @@ export function PageError({ error, reset, retry, title = "Failed to load" }: Pag
 					{error.message || "Something went wrong while loading this page."}
 				</p>
 			</div>
-			{action ? (
-				<Button onClick={action} variant="outline" size="sm">
-					Try again
+			<div className="flex items-center gap-2">
+				<Button asChild variant="outline" size="sm">
+					<Link href={appRoutes.me}>Go Back</Link>
 				</Button>
-			) : null}
+				{retryAction ? (
+					<Button onClick={retryAction} variant="outline" size="sm">
+						Try again
+					</Button>
+				) : null}
+			</div>
 		</div>
 	);
 }

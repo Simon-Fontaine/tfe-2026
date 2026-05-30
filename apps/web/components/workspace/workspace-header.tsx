@@ -11,7 +11,6 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { appRoutes } from "@/lib/routes";
 import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
@@ -144,33 +143,30 @@ export function WorkspaceHeader({ orgs, teams, unreadCount }: WorkspaceHeaderPro
 	const crumbs = useBreadcrumbs(pathname, orgs, teams);
 
 	return (
-		<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+		<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background">
 			<div className="flex min-w-0 flex-1 items-center gap-2 px-4">
-				<SidebarTrigger className="-ml-1" />
+				<SidebarTrigger className="-ml-1 md:hidden" />
 				{crumbs.length > 0 && (
-					<>
-						<Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-						<Breadcrumb className="min-w-0">
-							<BreadcrumbList className="min-w-0">
-								{crumbs.map((crumb, i) => (
-									<Fragment key={`${crumb.label}-${crumb.href ?? i}`}>
-										{i > 0 ? <BreadcrumbSeparator /> : null}
-										<BreadcrumbItem>
-											{crumb.href ? (
-												<BreadcrumbLink asChild>
-													<Link href={crumb.href} className="truncate">
-														{crumb.label}
-													</Link>
-												</BreadcrumbLink>
-											) : (
-												<BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
-											)}
-										</BreadcrumbItem>
-									</Fragment>
-								))}
-							</BreadcrumbList>
-						</Breadcrumb>
-					</>
+					<Breadcrumb className="min-w-0">
+						<BreadcrumbList className="min-w-0">
+							{crumbs.map((crumb, i) => (
+								<Fragment key={`${crumb.label}-${crumb.href ?? i}`}>
+									{i > 0 ? <BreadcrumbSeparator /> : null}
+									<BreadcrumbItem>
+										{crumb.href ? (
+											<BreadcrumbLink asChild>
+												<Link href={crumb.href} className="truncate">
+													{crumb.label}
+												</Link>
+											</BreadcrumbLink>
+										) : (
+											<BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
+										)}
+									</BreadcrumbItem>
+								</Fragment>
+							))}
+						</BreadcrumbList>
+					</Breadcrumb>
 				)}
 			</div>
 

@@ -32,7 +32,6 @@ import {
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarRail,
 	useSidebar,
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
@@ -263,7 +262,7 @@ export function WorkspaceSidebar({
 				];
 
 	return (
-		<Sidebar collapsible="icon">
+		<Sidebar collapsible="offcanvas">
 			<SidebarHeader>
 				<ContextSwitcher orgs={contextOrgs} teams={contextTeams} />
 			</SidebarHeader>
@@ -298,7 +297,6 @@ export function WorkspaceSidebar({
 			<SidebarFooter>
 				<SidebarUserNav user={user} />
 			</SidebarFooter>
-			<SidebarRail />
 		</Sidebar>
 	);
 }
