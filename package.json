@@ -18,10 +18,12 @@
 		"db:push": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:push",
 		"db:studio": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:studio",
 		"db:seed": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:seed",
+		"db:seed:playwright": "dotenv -e .env -- bun packages/api/src/db/seeds/playwright-auth.ts",
 		"prepare": "lefthook install"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.15",
+		"@playwright/test": "^1.49.0",
 		"dotenv-cli": "^11.0.0",
 		"lefthook": "^2.1.1",
 		"shadcn": "^4.1.1"

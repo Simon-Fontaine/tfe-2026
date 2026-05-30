@@ -1,0 +1,16 @@
+import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+	globalSetup: "./e2e/setup/auth.setup.ts",
+	testDir: "./e2e",
+	use: {
+		baseURL: "http://localhost:3000",
+		storageState: ".playwright/auth.json",
+	},
+	projects: [
+		{
+			name: "chromium",
+			use: { ...devices["Desktop Chrome"] },
+		},
+	],
+});

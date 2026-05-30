@@ -1,10 +1,7 @@
 import redis from "@/db/redis";
 import logger from "@/utils/logger";
 
-/**
- * Redis-backed rate limiter with permissive Map fallback.
- * Allows non-atomic INCR/EXPIRE race as acceptable trade-off.
- */
+/** Redis-backed rate limiter with in-memory fallback. */
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +49,20 @@ function memReset(id: string): void {
 
 // ─── Redis backend ─────────────────────────────────────────────────────────────
 
+// Atomically increments the counter and ensures the key always has a TTL.
+// Handles orphaned keys (TTL = -1) left by prior non-atomic paths.
+const LUA_RATE_LIMIT = `
+local key = KEYS[1]
+local windowTtl = tonumber(ARGV[1])
+local count = redis.call('INCR', key)
+local ttl = redis.call('TTL', key)
+if ttl < 0 then
+  redis.call('EXPIRE', key, windowTtl)
+  ttl = windowTtl
+end
+return {count, ttl}
+`;
+
 async function redisCheck(
 	client: NonNullable<typeof redis>,
 	id: string,
@@ -59,21 +70,16 @@ async function redisCheck(
 	windowMs: number
 ): Promise<RateLimitResult> {
 	const key = `rl:${id}`;
-	const ttl = Math.ceil(windowMs / 1000);
+	const ttlSeconds = Math.ceil(windowMs / 1000);
 
-	const count = await client.incr(key);
-	if (count === 1) {
-		// Set TTL on first hit
-		await client.expire(key, ttl);
-	}
+	const result = (await client.eval(LUA_RATE_LIMIT, 1, key, ttlSeconds)) as [number, number];
+	const [count, ttl] = result;
 
 	if (count <= limit) {
 		return { allowed: true, retryAfterMs: 0 };
 	}
 
-	// Get remaining TTL to report accurate retry time
-	const remaining = await client.ttl(key);
-	return { allowed: false, retryAfterMs: remaining > 0 ? remaining * 1000 : windowMs };
+	return { allowed: false, retryAfterMs: Math.max(0, ttl * 1000) };
 }
 
 async function redisReset(client: NonNullable<typeof redis>, id: string): Promise<void> {

@@ -58,6 +58,7 @@ cy_rw_videos/
 cypress/videos/
 cypress/screenshots/
 test-results/
+.playwright/
 
 # -----------------------------------------------------------------------------
 # Logs
