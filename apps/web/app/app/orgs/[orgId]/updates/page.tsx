@@ -1,12 +1,15 @@
+import { Alert02Icon } from "@hugeicons/core-free-icons";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { OrgUpdatesPageClient } from "@/components/updates/org-updates-page-client";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { LoadMoreButton } from "@/components/workspace/load-more-button";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
 import { getOrgUpdatesRouteState } from "@/lib/data/updates";
+import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function OrgUpdatesPage({
@@ -31,19 +34,29 @@ export default async function OrgUpdatesPage({
 	if (updates.kind === "no-access") {
 		return <AccessGate title="Updates" resourceType="organization" />;
 	}
+
+	const breadcrumbs = (
+		<>
+			<Link href={appRoutes.orgs.root} className="hover:underline">
+				Orgs
+			</Link>
+			{" / "}
+			<Link href={appRoutes.orgs.byId(org.data.id)} className="hover:underline">
+				{org.data.name}
+			</Link>
+			{" / Updates"}
+		</>
+	);
+
 	if (updates.kind !== "success") {
 		return (
 			<PageContainer>
 				<PageHeader
 					title="Updates"
-					detail={`/${org.data.slug}`}
-					description="Announcements posted by organization managers."
+					breadcrumbs={breadcrumbs}
+					meta={`/${org.data.slug} - feed unavailable`}
 				/>
-				<EmptyStateBlock
-					title="Updates unavailable"
-					description="This organization's update feed could not be loaded."
-					variant="card"
-				/>
+				<EmptyState icon={Alert02Icon} title="Updates unavailable" />
 			</PageContainer>
 		);
 	}
@@ -52,13 +65,10 @@ export default async function OrgUpdatesPage({
 
 	return (
 		<PageContainer>
-			<PageHeader
-				title="Updates"
-				detail={`/${org.data.slug}`}
-				description="Announcements posted by organization managers."
-			/>
 			<OrgUpdatesPageClient
 				organizationId={orgId}
+				orgName={org.data.name}
+				orgSlug={org.data.slug}
 				canManage={org.data.currentUser.canManage}
 				initialUpdates={posts}
 			/>

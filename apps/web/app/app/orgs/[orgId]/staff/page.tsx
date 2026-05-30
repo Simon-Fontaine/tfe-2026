@@ -2,16 +2,15 @@ import { UserAdd01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { InviteMemberDialog } from "@/components/orgs/invite-member-dialog";
 import { MemberActionsDropdown } from "@/components/orgs/member-actions-dropdown";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
-import { PageSection } from "@/components/workspace/page-section";
 import { getOrgWithTeamsRouteState, type OrgMemberSummary } from "@/lib/data/orgs";
 import { appRoutes, publicRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
@@ -22,50 +21,96 @@ const ROLE_LABELS: Record<string, string> = {
 	member: "Member",
 };
 
-function MemberRow({
-	member,
+function formatDate(value: string) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return "Unknown";
+	return new Intl.DateTimeFormat("en", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	}).format(date);
+}
+
+function formatMemberType(member: OrgMemberSummary) {
+	if (member.memberType === "staff") return member.staffRole ?? "Staff";
+	return member.gameRole ?? "Player";
+}
+
+function MemberTable({
+	title,
+	members,
+	emptyTitle,
 	canManage,
 	orgId,
 	viewerRole,
 	userId,
 }: {
-	member: OrgMemberSummary;
+	title: string;
+	members: OrgMemberSummary[];
+	emptyTitle: string;
 	canManage: boolean;
 	orgId: string;
 	viewerRole: OrgMemberSummary["role"];
 	userId: string;
 }) {
 	return (
-		<div className="flex items-center gap-3 border px-3 py-3">
-			<Avatar className="size-8 overflow-hidden rounded-none after:rounded-none">
-				<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
-				<AvatarFallback className="rounded-none text-[10px] font-bold">
-					{member.displayName.slice(0, 2).toUpperCase()}
-				</AvatarFallback>
-			</Avatar>
-			<div className="min-w-0 flex-1">
-				<Link
-					href={publicRoutes.players.byUsername(member.username)}
-					className="truncate text-xs font-medium hover:underline"
-				>
-					{member.displayName}
-				</Link>
-				<p className="text-[11px] text-muted-foreground">
-					{member.memberType === "staff"
-						? (member.staffRole ?? "staff")
-						: (member.gameRole ?? "player")}
-					{" · "}
-					{member.activeTeamCount} active team
-					{member.activeTeamCount === 1 ? "" : "s"}
-				</p>
-			</div>
-			<Badge variant="secondary" className="text-[10px]">
-				{ROLE_LABELS[member.role] ?? member.role}
-			</Badge>
-			{canManage && member.userId !== userId ? (
-				<MemberActionsDropdown orgId={orgId} member={member} viewerRole={viewerRole} />
-			) : null}
-		</div>
+		<section className="flex flex-col gap-4">
+			<h2 className="mb-4 border-b pb-2 text-lg font-semibold">{title}</h2>
+			{members.length === 0 ? (
+				<EmptyState icon={UserGroupIcon} title={emptyTitle} />
+			) : (
+				<div className="overflow-hidden border">
+					<div className="grid grid-cols-[minmax(13rem,1.5fr)_repeat(4,minmax(6rem,1fr))_3rem] gap-3 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+						<span>Member</span>
+						<span>Permission</span>
+						<span>Type</span>
+						<span>Teams</span>
+						<span>Joined</span>
+						<span className="text-right">Actions</span>
+					</div>
+					<div className="divide-y">
+						{members.map((member) => (
+							<div
+								key={member.id}
+								className="grid grid-cols-[minmax(13rem,1.5fr)_repeat(4,minmax(6rem,1fr))_3rem] gap-3 px-4 py-3 text-sm"
+							>
+								<div className="flex min-w-0 items-center gap-3">
+									<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
+										<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
+										<AvatarFallback className="rounded-none text-[10px] font-bold">
+											{member.displayName.slice(0, 2).toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+									<div className="min-w-0">
+										<Link
+											href={publicRoutes.players.byUsername(member.username)}
+											className="block truncate font-medium hover:underline"
+										>
+											{member.displayName}
+										</Link>
+										<p className="truncate text-xs text-muted-foreground">@{member.username}</p>
+									</div>
+								</div>
+								<span>
+									<Badge variant="outline">{ROLE_LABELS[member.role] ?? member.role}</Badge>
+								</span>
+								<span className="capitalize">{formatMemberType(member)}</span>
+								<span>
+									{member.activeTeamCount} active team
+									{member.activeTeamCount === 1 ? "" : "s"}
+								</span>
+								<span>{formatDate(member.joinedAt)}</span>
+								<div className="flex justify-end">
+									{canManage && member.userId !== userId ? (
+										<MemberActionsDropdown orgId={orgId} member={member} viewerRole={viewerRole} />
+									) : null}
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</section>
 	);
 }
 
@@ -98,13 +143,24 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 		<PageContainer>
 			<PageHeader
 				title="Staff"
-				detail={`/${orgDetail.slug}`}
-				description={`Org admins, coaches, and operational members for ${orgDetail.name}.`}
-				actions={
+				breadcrumbs={
+					<>
+						<Link href={appRoutes.orgs.root} className="hover:underline">
+							Orgs
+						</Link>
+						{" / "}
+						<Link href={appRoutes.orgs.byId(orgDetail.id)} className="hover:underline">
+							{orgDetail.name}
+						</Link>
+						{" / Staff"}
+					</>
+				}
+				meta={`/${orgDetail.slug} - ${leadershipAndStaff.length} staff - ${rosterPlayers.length} roster-linked players - ${orgDetail.pendingInvites.length} pending invites`}
+				action={
 					canManage ? (
 						<InviteMemberDialog orgId={orgDetail.id}>
 							<Button size="sm">
-								<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} className="mr-1.5 size-4" />
+								<HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" />
 								Invite member
 							</Button>
 						</InviteMemberDialog>
@@ -112,73 +168,40 @@ export default async function AppOrgStaffPage({ params }: { params: Promise<{ or
 				}
 			/>
 
-			{canManage && (
-				<PageSection
-					title="Invites"
-					description="Pending invites are managed in a dedicated workspace so active staff and outreach stay separate."
-				>
-					<EmptyStateBlock
-						title={`${orgDetail.pendingInvites.length} pending invite${orgDetail.pendingInvites.length === 1 ? "" : "s"}`}
-						description="Review pending invites, resend outreach, or cancel stale requests from the invites workspace."
-						actionHref={appRoutes.orgs.invites(orgDetail.id)}
-						actionLabel="Open invites"
-						variant="card"
-					/>
-				</PageSection>
-			)}
+			{canManage ? (
+				<section className="flex flex-col gap-4">
+					<h2 className="mb-4 border-b pb-2 text-lg font-semibold">Invites</h2>
+					<div className="border-b py-3 text-sm">
+						<Link
+							href={appRoutes.orgs.invites(orgDetail.id)}
+							className="font-medium hover:underline"
+						>
+							{orgDetail.pendingInvites.length} pending invite
+							{orgDetail.pendingInvites.length === 1 ? "" : "s"}
+						</Link>
+					</div>
+				</section>
+			) : null}
 
-			<PageSection
+			<MemberTable
 				title="Leadership & staff"
-				description="Owners, admins, and non-player staff with organization-level responsibilities."
-			>
-				{leadershipAndStaff.length === 0 ? (
-					<EmptyStateBlock
-						title="No org staff yet"
-						description="Invite managers, coaches, or analysts to start delegating org work."
-						variant="card"
-					/>
-				) : (
-					<div className="space-y-2">
-						{leadershipAndStaff.map((member) => (
-							<MemberRow
-								key={member.id}
-								member={member}
-								canManage={canManage}
-								orgId={orgDetail.id}
-								viewerRole={orgDetail.currentUser.role ?? "member"}
-								userId={user.id}
-							/>
-						))}
-					</div>
-				)}
-			</PageSection>
+				members={leadershipAndStaff}
+				emptyTitle="No org staff yet"
+				canManage={canManage}
+				orgId={orgDetail.id}
+				viewerRole={orgDetail.currentUser.role ?? "member"}
+				userId={user.id}
+			/>
 
-			<PageSection
+			<MemberTable
 				title="Roster-linked players"
-				description="Players currently attached to the organization through active teams."
-			>
-				{rosterPlayers.length === 0 ? (
-					<EmptyStateBlock
-						icon={UserGroupIcon}
-						title="No roster-linked players"
-						description="Players will appear here after they join teams under this organization."
-						variant="card"
-					/>
-				) : (
-					<div className="space-y-2">
-						{rosterPlayers.map((member) => (
-							<MemberRow
-								key={member.id}
-								member={member}
-								canManage={canManage}
-								orgId={orgDetail.id}
-								viewerRole={orgDetail.currentUser.role ?? "member"}
-								userId={user.id}
-							/>
-						))}
-					</div>
-				)}
-			</PageSection>
+				members={rosterPlayers}
+				emptyTitle="No roster-linked players"
+				canManage={canManage}
+				orgId={orgDetail.id}
+				viewerRole={orgDetail.currentUser.role ?? "member"}
+				userId={user.id}
+			/>
 		</PageContainer>
 	);
 }

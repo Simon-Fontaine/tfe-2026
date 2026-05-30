@@ -5,7 +5,6 @@ import { updateOrgAction } from "@/app/actions/org";
 import { EntityImageUploadField } from "@/components/shared/entity-image-upload-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,19 +12,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { OrgWithTeams } from "@/lib/data/organization";
-import { cn } from "@/lib/utils";
 
 interface OrgProfilePanelProps {
 	org: OrgWithTeams;
 	title?: string;
-	description?: string;
 }
 
-export function OrgProfilePanel({
-	org,
-	title = "Brand profile",
-	description = "Update your org identity, public slug, and media assets.",
-}: OrgProfilePanelProps) {
+export function OrgProfilePanel({ org, title = "Brand profile" }: OrgProfilePanelProps) {
 	const [name, setName] = useState(org.name);
 	const [slug, setSlug] = useState(org.slug);
 	const [descriptionValue, setDescriptionValue] = useState(org.description ?? "");
@@ -61,19 +54,12 @@ export function OrgProfilePanel({
 	const openListingCount = org.ownedListings.filter((post) => post.status === "open").length;
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">{title}</CardTitle>
-				<CardDescription>{description}</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-4">
+		<section className="space-y-6 border p-6">
+			<h2 className="mb-4 border-b pb-2 text-lg font-semibold">{title}</h2>
+			<div className="space-y-4">
 				<div className="overflow-hidden border">
 					<div
-						className={cn(
-							"h-28 border-b bg-muted/40 bg-cover bg-center",
-							!bannerUrl &&
-								"bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.22),_transparent_45%),linear-gradient(135deg,hsl(var(--muted)),hsl(var(--background)))]"
-						)}
+						className="h-28 border-b bg-muted bg-cover bg-center"
 						style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}
 					/>
 					<div className="flex flex-wrap items-end gap-4 px-4 pb-4">
@@ -87,8 +73,7 @@ export function OrgProfilePanel({
 							<p className="truncate text-sm font-semibold">{name || "Organization name"}</p>
 							<p className="text-xs text-muted-foreground">/{slug || "organization-slug"}</p>
 							<p className="mt-2 text-xs text-muted-foreground">
-								{descriptionValue ||
-									"Add a short description so players and staff understand the org."}
+								{descriptionValue || "No description"}
 							</p>
 						</div>
 						<div className="grid gap-1 text-right text-[11px] text-muted-foreground">
@@ -219,7 +204,7 @@ export function OrgProfilePanel({
 						Save changes
 					</Button>
 				</form>
-			</CardContent>
-		</Card>
+			</div>
+		</section>
 	);
 }

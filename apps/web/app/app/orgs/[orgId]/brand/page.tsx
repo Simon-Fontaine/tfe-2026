@@ -1,10 +1,13 @@
+import { LockIcon } from "@hugeicons/core-free-icons";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { OrgProfilePanel } from "@/components/orgs/org-profile-panel";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
+import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgBrandPage({ params }: { params: Promise<{ orgId: string }> }) {
@@ -23,26 +26,31 @@ export default async function AppOrgBrandPage({ params }: { params: Promise<{ or
 		);
 	}
 
+	const breadcrumbs = (
+		<>
+			<Link href={appRoutes.orgs.root} className="hover:underline">
+				Orgs
+			</Link>
+			{" / "}
+			<Link href={appRoutes.orgs.byId(org.data.id)} className="hover:underline">
+				{org.data.name}
+			</Link>
+			{" / Brand"}
+		</>
+	);
+
 	if (!org.data.currentUser.canManageBrand) {
 		return (
 			<PageContainer>
-				<PageHeader title="Brand" detail={`/${org.data.slug}`} />
-				<EmptyStateBlock
-					title="No access"
-					description="You don't have permission to manage this organization's brand profile."
-					variant="card"
-				/>
+				<PageHeader title="Brand" breadcrumbs={breadcrumbs} meta={`/${org.data.slug}`} />
+				<EmptyState icon={LockIcon} title="No access" />
 			</PageContainer>
 		);
 	}
 
 	return (
 		<PageContainer>
-			<PageHeader
-				title="Brand"
-				detail={`/${org.data.slug}`}
-				description={`Manage ${org.data.name}'s public identity, media assets, and profile presentation.`}
-			/>
+			<PageHeader title="Brand" breadcrumbs={breadcrumbs} meta={`/${org.data.slug}`} />
 			<OrgProfilePanel org={org.data} />
 		</PageContainer>
 	);

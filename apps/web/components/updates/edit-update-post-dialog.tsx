@@ -30,11 +30,26 @@ async function readApiPayload<T>(response: Response): Promise<{
 interface EditUpdatePostDialogProps {
 	post: UpdatePostSummary;
 	onUpdated?: (post: UpdatePostSummary) => void;
-	children: React.ReactNode;
+	children?: React.ReactNode;
+	open?: boolean;
+	onClose?: () => void;
 }
 
-export function EditUpdatePostDialog({ post, onUpdated, children }: EditUpdatePostDialogProps) {
-	const [open, setOpen] = useState(false);
+export function EditUpdatePostDialog({
+	post,
+	onUpdated,
+	children,
+	open: openProp,
+	onClose,
+}: EditUpdatePostDialogProps) {
+	const isControlled = openProp !== undefined;
+	const [openState, setOpenState] = useState(false);
+	const open = isControlled ? openProp : openState;
+
+	function handleOpenChange(next: boolean) {
+		if (!isControlled) setOpenState(next);
+		if (!next) onClose?.();
+	}
 	const [title, setTitle] = useState(post.title);
 	const [body, setBody] = useState(post.body);
 	const [visibility, setVisibility] = useState<UpdatePostVisibility>(post.visibility);
@@ -79,7 +94,7 @@ export function EditUpdatePostDialog({ post, onUpdated, children }: EditUpdatePo
 
 			onUpdated?.(payload.data);
 			toast.success("Update saved.");
-			setOpen(false);
+			handleOpenChange(false);
 		} catch {
 			setFormError("Unable to reach the API server.");
 		} finally {
@@ -88,8 +103,8 @@ export function EditUpdatePostDialog({ post, onUpdated, children }: EditUpdatePo
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>{children}</DialogTrigger>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
+			{children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
 			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Edit update</DialogTitle>
@@ -169,7 +184,7 @@ export function EditUpdatePostDialog({ post, onUpdated, children }: EditUpdatePo
 							type="button"
 							size="sm"
 							variant="outline"
-							onClick={() => setOpen(false)}
+							onClick={() => handleOpenChange(false)}
 							disabled={submitting}
 						>
 							Cancel

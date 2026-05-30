@@ -6,6 +6,7 @@ import type {
 	RecruitmentApplicationReviewSummary,
 	RecruitmentListingSummary,
 } from "@scrimflow/shared";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import {
 	deleteRecruitmentListingAction,
@@ -35,6 +36,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
 import {
+	formatRecruitmentAudience,
+	formatRecruitmentCompRange,
 	MEMBER_TYPE_LABELS,
 	RECRUITMENT_CATEGORY_LABELS,
 	RECRUITMENT_STATUS_LABELS,
@@ -47,6 +50,7 @@ interface RecruitmentListingRowProps {
 	organizationId?: string;
 	canManage: boolean;
 	conversationHrefBase?: string;
+	detailHref?: string;
 }
 
 export function RecruitmentListingRow({
@@ -56,6 +60,7 @@ export function RecruitmentListingRow({
 	organizationId,
 	canManage,
 	conversationHrefBase,
+	detailHref,
 }: RecruitmentListingRowProps) {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [applicationsOpen, setApplicationsOpen] = useState(false);
@@ -73,6 +78,7 @@ export function RecruitmentListingRow({
 	const isTerminal =
 		listing.status === "closed" || listing.status === "fulfilled" || listing.status === "expired";
 	const isStatusPending = statusForm.isPending;
+	const compRange = formatRecruitmentCompRange(listing) ?? "—";
 
 	function submitDelete() {
 		const fd = new FormData();
@@ -109,13 +115,24 @@ export function RecruitmentListingRow({
 					</button>
 				</RecruitmentListingFormDialog>
 			)}
-			<div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-3 px-4 py-3 text-sm">
-				<p className="truncate font-medium">{listing.title}</p>
+			<div className="grid grid-cols-[minmax(12rem,1.5fr)_repeat(6,minmax(5rem,1fr))_3rem] items-center gap-3 px-4 py-3 text-sm">
+				<div className="min-w-0">
+					{detailHref ? (
+						<Link href={detailHref} className="block truncate font-medium hover:underline">
+							{listing.title}
+						</Link>
+					) : (
+						<p className="truncate font-medium">{listing.title}</p>
+					)}
+					<p className="truncate text-xs text-muted-foreground">
+						{listing.region ?? "All regions"}
+					</p>
+				</div>
 				<Badge variant="outline" className="text-[10px]">
 					{RECRUITMENT_CATEGORY_LABELS[listing.category]}
 				</Badge>
 				<Badge variant="outline" className="text-[10px]">
-					{MEMBER_TYPE_LABELS[listing.memberType]}
+					{formatRecruitmentAudience(listing) || MEMBER_TYPE_LABELS[listing.memberType]}
 				</Badge>
 				<Badge
 					variant="outline"
@@ -127,68 +144,92 @@ export function RecruitmentListingRow({
 				>
 					{RECRUITMENT_STATUS_LABELS[listing.status]}
 				</Badge>
+				<span className="truncate text-xs text-muted-foreground">{compRange}</span>
 				<span className="whitespace-nowrap text-xs text-muted-foreground">
 					{applications.length} {applications.length === 1 ? "applicant" : "applicants"}
 				</span>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button size="icon" variant="ghost" className="size-8 shrink-0">
-							<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						{canManage && !isTerminal && (
-							<DropdownMenuItem onSelect={() => editButtonRef.current?.click()}>
-								Edit listing
-							</DropdownMenuItem>
-						)}
-						{canManage && listing.status === "open" && (
-							<DropdownMenuItem disabled={isStatusPending} onSelect={() => submitStatus("paused")}>
-								{isStatusPending && <Spinner className="mr-1.5" />}
-								Pause
-							</DropdownMenuItem>
-						)}
-						{canManage && listing.status === "paused" && (
-							<DropdownMenuItem disabled={isStatusPending} onSelect={() => submitStatus("open")}>
-								{isStatusPending && <Spinner className="mr-1.5" />}
-								Resume
-							</DropdownMenuItem>
-						)}
-						{canManage && !isTerminal && (
-							<DropdownMenuItem
-								disabled={isStatusPending}
-								onSelect={() => submitStatus("fulfilled")}
-							>
-								{isStatusPending && <Spinner className="mr-1.5" />}
-								Mark Fulfilled
-							</DropdownMenuItem>
-						)}
-						{canManage && !isTerminal && (
-							<DropdownMenuItem disabled={isStatusPending} onSelect={() => submitStatus("closed")}>
-								{isStatusPending && <Spinner className="mr-1.5" />}
-								Close
-							</DropdownMenuItem>
-						)}
-						{canManage && applications.length > 0 && (
-							<DropdownMenuItem onSelect={() => setApplicationsOpen(true)}>
-								View applications ({applications.length})
-							</DropdownMenuItem>
-						)}
-						{canManage && (
-							<>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem
-									className="text-destructive"
-									disabled={deleteForm.isPending}
-									onSelect={() => setDeleteOpen(true)}
-								>
-									{deleteForm.isPending && <Spinner className="mr-1.5" />}
-									Delete
-								</DropdownMenuItem>
-							</>
-						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<span className="whitespace-nowrap text-xs text-muted-foreground">
+					{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(
+						new Date(listing.updatedAt)
+					)}
+				</span>
+				<div className="flex justify-end">
+					{detailHref || canManage ? (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button size="icon" variant="ghost" className="size-8 shrink-0">
+									<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								{detailHref ? (
+									<DropdownMenuItem asChild>
+										<Link href={detailHref}>View listing</Link>
+									</DropdownMenuItem>
+								) : null}
+								{canManage && !isTerminal && (
+									<DropdownMenuItem onSelect={() => editButtonRef.current?.click()}>
+										Edit listing
+									</DropdownMenuItem>
+								)}
+								{canManage && listing.status === "open" && (
+									<DropdownMenuItem
+										disabled={isStatusPending}
+										onSelect={() => submitStatus("paused")}
+									>
+										{isStatusPending && <Spinner className="mr-1.5" />}
+										Pause
+									</DropdownMenuItem>
+								)}
+								{canManage && listing.status === "paused" && (
+									<DropdownMenuItem
+										disabled={isStatusPending}
+										onSelect={() => submitStatus("open")}
+									>
+										{isStatusPending && <Spinner className="mr-1.5" />}
+										Resume
+									</DropdownMenuItem>
+								)}
+								{canManage && !isTerminal && (
+									<DropdownMenuItem
+										disabled={isStatusPending}
+										onSelect={() => submitStatus("fulfilled")}
+									>
+										{isStatusPending && <Spinner className="mr-1.5" />}
+										Mark Fulfilled
+									</DropdownMenuItem>
+								)}
+								{canManage && !isTerminal && (
+									<DropdownMenuItem
+										disabled={isStatusPending}
+										onSelect={() => submitStatus("closed")}
+									>
+										{isStatusPending && <Spinner className="mr-1.5" />}
+										Close
+									</DropdownMenuItem>
+								)}
+								{canManage && applications.length > 0 && (
+									<DropdownMenuItem onSelect={() => setApplicationsOpen(true)}>
+										View applications ({applications.length})
+									</DropdownMenuItem>
+								)}
+								{canManage && (
+									<>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											className="text-destructive"
+											disabled={deleteForm.isPending}
+											onSelect={() => setDeleteOpen(true)}
+										>
+											{deleteForm.isPending && <Spinner className="mr-1.5" />}
+											Delete
+										</DropdownMenuItem>
+									</>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					) : null}
+				</div>
 			</div>
 
 			<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

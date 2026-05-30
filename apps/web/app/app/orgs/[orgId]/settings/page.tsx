@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { OrgSettingsPanel } from "@/components/orgs/org-settings-panel";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
+import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgSettingsPage({
@@ -35,8 +37,19 @@ export default async function AppOrgSettingsPage({
 		<PageContainer>
 			<PageHeader
 				title="Settings"
-				detail={`/${org.data.slug}`}
-				description={`Ownership, membership, and danger-zone actions for ${org.data.name}.`}
+				breadcrumbs={
+					<>
+						<Link href={appRoutes.orgs.root} className="hover:underline">
+							Orgs
+						</Link>
+						{" / "}
+						<Link href={appRoutes.orgs.byId(org.data.id)} className="hover:underline">
+							{org.data.name}
+						</Link>
+						{" / Settings"}
+					</>
+				}
+				meta={`/${org.data.slug} - ${org.data.currentUser.role ?? "member"} - ${org.data.lifecycleStatus}`}
 			/>
 			<OrgSettingsPanel org={org.data} currentUserId={user.id} includeProfile={false} />
 		</PageContainer>

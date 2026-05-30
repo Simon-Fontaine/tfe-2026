@@ -13,7 +13,7 @@ import {
 import { DeleteOrgDialog } from "@/components/orgs/delete-org-dialog";
 import { OrgProfilePanel } from "@/components/orgs/org-profile-panel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { OrgWithTeams } from "@/lib/data/organization";
@@ -122,240 +122,225 @@ export function OrgSettingsPanel({
 		org.currentUser.canManageSettings;
 
 	return (
-		<div className="space-y-4">
-			{includeProfile ? (
-				<OrgProfilePanel
-					org={org}
-					title="Profile"
-					description="Manage the organization profile, slug, and media assets."
-				/>
-			) : null}
+		<div className="space-y-6">
+			{includeProfile ? <OrgProfilePanel org={org} title="Profile" /> : null}
 
 			{org.currentUser.canTransferOwnership && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm">Ownership</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<p className="text-xs text-muted-foreground">
-							Transfer ownership to another member. The recipient must accept before ownership
-							settles.
-						</p>
-						{org.ownershipWorkflow ? (
-							<div className="space-y-2 border px-3 py-3">
-								<div>
-									<p className="text-xs font-medium capitalize">
-										{org.ownershipWorkflow.kind} {org.ownershipWorkflow.status.replaceAll("_", " ")}
-									</p>
-									<p className="mt-1 text-[11px] text-muted-foreground">
-										Recipient:{" "}
-										{org.ownershipWorkflow.recipient?.displayName ??
-											org.ownershipWorkflow.recoveryTarget?.displayName ??
-											"Pending"}
-									</p>
-								</div>
-								<p className="text-[11px] text-muted-foreground">
-									Ownership-sensitive actions stay bound to the current owner until this workflow
-									settles.
+				<section className="space-y-3">
+					<div>
+						<h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+							Ownership
+						</h2>
+					</div>
+					{org.ownershipWorkflow ? (
+						<div className="space-y-2 border px-3 py-3">
+							<div>
+								<p className="text-xs font-medium capitalize">
+									{org.ownershipWorkflow.kind} {org.ownershipWorkflow.status.replaceAll("_", " ")}
 								</p>
-								{canRespondToOwnership ? (
-									<div className="flex flex-wrap gap-2">
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() =>
-												respondOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "accept")
-											}
-											disabled={respondOwnershipForm.isPending}
-										>
-											{respondOwnershipForm.isPending && <Spinner className="mr-1.5" />}
-											Accept transfer
-										</Button>
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() =>
-												respondOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "reject")
-											}
-											disabled={respondOwnershipForm.isPending}
-										>
-											Reject transfer
-										</Button>
-									</div>
-								) : null}
-								{canResolveRecovery ? (
-									<div className="flex flex-wrap gap-2">
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() =>
-												resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "approve")
-											}
-											disabled={resolveOwnershipForm.isPending}
-										>
-											{resolveOwnershipForm.isPending && <Spinner className="mr-1.5" />}
-											Approve recovery
-										</Button>
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() =>
-												resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "reject")
-											}
-											disabled={resolveOwnershipForm.isPending}
-										>
-											Reject recovery
-										</Button>
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() =>
-												resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "block")
-											}
-											disabled={resolveOwnershipForm.isPending}
-										>
-											Block recovery
-										</Button>
-									</div>
-								) : null}
-								{org.currentUser.canTransferOwnership ? (
+								<p className="mt-1 text-[11px] text-muted-foreground">
+									Recipient:{" "}
+									{org.ownershipWorkflow.recipient?.displayName ??
+										org.ownershipWorkflow.recoveryTarget?.displayName ??
+										"Pending"}
+								</p>
+							</div>
+							<p className="text-[11px] text-muted-foreground">
+								Ownership-sensitive actions stay bound to the current owner until this workflow
+								settles.
+							</p>
+							{canRespondToOwnership ? (
+								<div className="flex flex-wrap gap-2">
 									<Button
 										size="sm"
 										variant="outline"
-										onClick={() => cancelOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown")}
-										disabled={cancelOwnershipForm.isPending}
+										onClick={() =>
+											respondOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "accept")
+										}
+										disabled={respondOwnershipForm.isPending}
 									>
-										{cancelOwnershipForm.isPending && <Spinner className="mr-1.5" />}
-										Cancel workflow
+										{respondOwnershipForm.isPending && <Spinner className="mr-1.5" />}
+										Accept transfer
 									</Button>
-								) : null}
-							</div>
-						) : ownershipCandidates.length === 0 ? (
-							<div className="border px-3 py-3">
-								<p className="text-xs font-medium">No eligible transfer target</p>
-								<p className="mt-1 text-[11px] text-muted-foreground">
-									Invite another organization member before transferring ownership.
-								</p>
-							</div>
-						) : (
-							<div className="space-y-2">
-								<textarea
-									value={transferReason}
-									onChange={(event) => setTransferReason(event.target.value)}
-									maxLength={800}
-									rows={2}
-									className="min-h-16 w-full rounded-md border bg-background px-3 py-2 text-xs"
-									placeholder="Optional transfer note for audit history"
-								/>
-								{ownershipCandidates.map((member) => (
-									<div
-										key={member.id}
-										className="flex items-center justify-between border px-3 py-2"
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() =>
+											respondOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "reject")
+										}
+										disabled={respondOwnershipForm.isPending}
 									>
-										<div>
-											<p className="text-xs font-medium">{member.displayName}</p>
-											<p className="text-[11px] text-muted-foreground capitalize">{member.role}</p>
-										</div>
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() => transferOwnership(member.id)}
-											disabled={transferForm.isPending}
-										>
-											{transferForm.isPending && <Spinner className="mr-1.5" />}
-											Request transfer
-										</Button>
+										Reject transfer
+									</Button>
+								</div>
+							) : null}
+							{canResolveRecovery ? (
+								<div className="flex flex-wrap gap-2">
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() =>
+											resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "approve")
+										}
+										disabled={resolveOwnershipForm.isPending}
+									>
+										{resolveOwnershipForm.isPending && <Spinner className="mr-1.5" />}
+										Approve recovery
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() =>
+											resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "reject")
+										}
+										disabled={resolveOwnershipForm.isPending}
+									>
+										Reject recovery
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() =>
+											resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "block")
+										}
+										disabled={resolveOwnershipForm.isPending}
+									>
+										Block recovery
+									</Button>
+								</div>
+							) : null}
+							{org.currentUser.canTransferOwnership ? (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => cancelOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown")}
+									disabled={cancelOwnershipForm.isPending}
+								>
+									{cancelOwnershipForm.isPending && <Spinner className="mr-1.5" />}
+									Cancel workflow
+								</Button>
+							) : null}
+						</div>
+					) : ownershipCandidates.length === 0 ? (
+						<div className="border px-3 py-3">
+							<p className="text-xs font-medium">No eligible transfer target</p>
+							<p className="mt-1 text-[11px] text-muted-foreground">
+								Invite another organization member before transferring ownership.
+							</p>
+						</div>
+					) : (
+						<div className="space-y-2">
+							<textarea
+								value={transferReason}
+								onChange={(event) => setTransferReason(event.target.value)}
+								maxLength={800}
+								rows={2}
+								className="min-h-16 w-full border bg-background px-3 py-2 text-sm"
+								placeholder="Optional transfer note for audit history"
+							/>
+							{ownershipCandidates.map((member) => (
+								<div key={member.id} className="flex items-center justify-between border px-3 py-2">
+									<div>
+										<p className="text-xs font-medium">{member.displayName}</p>
+										<p className="text-[11px] text-muted-foreground capitalize">{member.role}</p>
 									</div>
-								))}
-							</div>
-						)}
-					</CardContent>
-				</Card>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => transferOwnership(member.id)}
+										disabled={transferForm.isPending}
+									>
+										{transferForm.isPending && <Spinner className="mr-1.5" />}
+										Request transfer
+									</Button>
+								</div>
+							))}
+						</div>
+					)}
+				</section>
 			)}
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-sm">Danger Zone</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<p className="text-xs text-muted-foreground">
-						Archive hides public discovery and suspends active workflows while preserving history.
-						Deletion-pending keeps records recoverable during the policy window.
-					</p>
-					{org.lifecycleWorkflow ? (
-						<div className="border px-3 py-3">
-							<p className="text-xs font-medium capitalize">
-								{/* P25: distinct label for irreversible state */}
-								{org.lifecycleWorkflow.status === "irreversible"
-									? "Irreversibly settled — no further actions available"
-									: org.lifecycleWorkflow.status.replaceAll("_", " ")}
-							</p>
-							{org.lifecycleWorkflow.recoveryUntil ? (
-								<p className="mt-1 text-[11px] text-muted-foreground">
-									{/* P29: format ISO date as human-readable */}
-									Recovery window until:{" "}
-									{new Date(org.lifecycleWorkflow.recoveryUntil).toLocaleString()}
-								</p>
-							) : (
-								<p className="mt-1 text-[11px] text-muted-foreground">
-									Recovery window: not applicable
-								</p>
-							)}
-						</div>
-					) : null}
-					{/* P32: explain to non-owners why delete is unavailable */}
-					{!org.currentUser.canDelete && (
-						<p className="text-[11px] text-muted-foreground">
-							Archive and deletion actions are restricted to the organization owner.
+			<Separator />
+
+			<section className="space-y-3">
+				<div>
+					<h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						Danger Zone
+					</h2>
+				</div>
+				{org.lifecycleWorkflow ? (
+					<div className="border px-3 py-3">
+						<p className="text-xs font-medium capitalize">
+							{/* P25: distinct label for irreversible state */}
+							{org.lifecycleWorkflow.status === "irreversible"
+								? "Irreversibly settled — no further actions available"
+								: org.lifecycleWorkflow.status.replaceAll("_", " ")}
 						</p>
-					)}
+						{org.lifecycleWorkflow.recoveryUntil ? (
+							<p className="mt-1 text-[11px] text-muted-foreground">
+								{/* P29: format ISO date as human-readable */}
+								Recovery window until:{" "}
+								{new Date(org.lifecycleWorkflow.recoveryUntil).toLocaleString()}
+							</p>
+						) : (
+							<p className="mt-1 text-[11px] text-muted-foreground">
+								Recovery window: not applicable
+							</p>
+						)}
+					</div>
+				) : null}
+				{/* P32: explain to non-owners why delete is unavailable */}
+				{!org.currentUser.canDelete && (
+					<p className="text-[11px] text-muted-foreground">
+						Archive and deletion actions are restricted to the organization owner.
+					</p>
+				)}
+				{org.currentUser.canDelete && (
 					<textarea
 						value={lifecycleReason}
 						onChange={(event) => setLifecycleReason(event.target.value)}
 						maxLength={800}
 						rows={2}
-						className="min-h-16 w-full rounded-md border bg-background px-3 py-2 text-xs"
+						className="min-h-16 w-full border bg-background px-3 py-2 text-sm"
 						placeholder="Lifecycle reason for archive or restore history"
 					/>
-					<div className="flex flex-wrap gap-2">
-						{org.currentUser.canLeave && (
-							<Button size="sm" variant="outline" onClick={leaveOrg} disabled={leaveForm.isPending}>
-								{leaveForm.isPending && <Spinner className="mr-1.5" />}
-								Leave organization
+				)}
+				<div className="flex flex-wrap gap-2">
+					{org.currentUser.canLeave && (
+						<Button size="sm" variant="outline" onClick={leaveOrg} disabled={leaveForm.isPending}>
+							{leaveForm.isPending && <Spinner className="mr-1.5" />}
+							Leave organization
+						</Button>
+					)}
+					{/* P24: only show archive/restore for active or archived status */}
+					{org.currentUser.canDelete &&
+						(org.lifecycleStatus === "active" || org.lifecycleStatus === "archived") && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={
+									org.lifecycleStatus === "archived"
+										? submitLifecycleRestore
+										: submitLifecycleArchive
+								}
+								disabled={archiveForm.isPending || restoreForm.isPending}
+							>
+								{(archiveForm.isPending || restoreForm.isPending) && <Spinner className="mr-1.5" />}
+								{org.lifecycleStatus === "archived"
+									? "Restore organization"
+									: "Archive organization"}
 							</Button>
 						)}
-						{/* P24: only show archive/restore for active or archived status */}
-						{org.currentUser.canDelete &&
-							(org.lifecycleStatus === "active" || org.lifecycleStatus === "archived") && (
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={
-										org.lifecycleStatus === "archived"
-											? submitLifecycleRestore
-											: submitLifecycleArchive
-									}
-									disabled={archiveForm.isPending || restoreForm.isPending}
-								>
-									{(archiveForm.isPending || restoreForm.isPending) && (
-										<Spinner className="mr-1.5" />
-									)}
-									{org.lifecycleStatus === "archived"
-										? "Restore organization"
-										: "Archive organization"}
-								</Button>
-							)}
-						{/* P24: only show delete when org is not irreversible */}
-						{org.currentUser.canDelete && org.lifecycleStatus !== "irreversible" && (
-							<DeleteOrgDialog orgId={org.id} orgName={org.name}>
-								<Button size="sm" variant="destructive">
-									Delete organization
-								</Button>
-							</DeleteOrgDialog>
-						)}
-					</div>
-				</CardContent>
-			</Card>
+					{/* P24: only show delete when org is not irreversible */}
+					{org.currentUser.canDelete && org.lifecycleStatus !== "irreversible" && (
+						<DeleteOrgDialog orgId={org.id} orgName={org.name}>
+							<Button size="sm" variant="destructive">
+								Delete organization
+							</Button>
+						</DeleteOrgDialog>
+					)}
+				</div>
+			</section>
 		</div>
 	);
 }

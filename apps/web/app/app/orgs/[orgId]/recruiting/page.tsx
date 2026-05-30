@@ -1,13 +1,13 @@
-import { Add01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { RecruitmentListingRow } from "@/components/recruit/recruitment-listing-row";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
-import { PageSection } from "@/components/workspace/page-section";
 import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
 import {
 	getManageableRecruitEntities,
@@ -56,9 +56,20 @@ export default async function AppOrgRecruitingPage({
 		<PageContainer>
 			<PageHeader
 				title="Recruiting"
-				detail={`/${orgDetail.slug}`}
-				description={`Manage recruiting listings owned directly by ${orgDetail.name}.`}
-				actions={
+				breadcrumbs={
+					<>
+						<Link href={appRoutes.orgs.root} className="hover:underline">
+							Orgs
+						</Link>
+						{" / "}
+						<Link href={appRoutes.orgs.byId(orgDetail.id)} className="hover:underline">
+							{orgDetail.name}
+						</Link>
+						{" / Recruiting"}
+					</>
+				}
+				meta={`/${orgDetail.slug} - ${listings.length} listings - ${orgDetail.currentUser.role ?? "member"}`}
+				action={
 					<RecruitmentListingFormDialog
 						ownerOptions={entityOptions}
 						fixedOwnerType="organization"
@@ -73,48 +84,38 @@ export default async function AppOrgRecruitingPage({
 				}
 			/>
 
-			<PageSection
-				title="Organization listings"
-				description="Org-owned recruiting listings, including entries that are no longer open."
-			>
+			<section className="flex flex-col gap-4">
+				<h2 className="mb-4 border-b pb-2 text-lg font-semibold">Organization listings</h2>
 				{listings.length === 0 ? (
-					<div className="space-y-3">
-						<EmptyStateBlock
-							title="No organization listings yet"
-							description="Publish an organization-owned listing to recruit players, ringers, or staff for the whole org."
-							variant="card"
-						/>
-						<div className="flex justify-start">
-							<RecruitmentListingFormDialog
-								ownerOptions={entityOptions}
-								fixedOwnerType="organization"
-								fixedOrganizationId={orgId}
-								triggerContent={
-									<>
-										<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />
-										New listing
-									</>
-								}
-							/>
+					<EmptyState icon={UserSearch01Icon} title="No organization listings yet" />
+				) : (
+					<div className="overflow-hidden border">
+						<div className="grid grid-cols-[minmax(12rem,1.5fr)_repeat(6,minmax(5rem,1fr))_3rem] gap-3 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+							<span>Listing</span>
+							<span>Category</span>
+							<span>Target</span>
+							<span>Status</span>
+							<span>Range</span>
+							<span>Applications</span>
+							<span>Updated</span>
+							<span className="text-right">Actions</span>
+						</div>
+						<div className="divide-y">
+							{listings.map((listing) => (
+								<RecruitmentListingRow
+									key={listing.id}
+									listing={listing}
+									applications={applicationsByListing.get(listing.id) ?? []}
+									organizationId={orgId}
+									canManage={org.data.currentUser.canManage}
+									conversationHrefBase={appRoutes.recruiting.conversations}
+									detailHref={appRoutes.recruiting.byId(listing.id)}
+								/>
+							))}
 						</div>
 					</div>
-				) : (
-					<div className="space-y-4">
-						{listings.map((listing) => (
-							<RecruitmentListingCard
-								key={listing.id}
-								listing={listing}
-								currentUserId={user.id}
-								entityOptions={entityOptions}
-								applications={applicationsByListing.get(listing.id) ?? []}
-								organizationId={orgId}
-								conversationHrefBase={appRoutes.recruiting.conversations}
-								detailHref={appRoutes.recruiting.byId(listing.id)}
-							/>
-						))}
-					</div>
 				)}
-			</PageSection>
+			</section>
 		</PageContainer>
 	);
 }
