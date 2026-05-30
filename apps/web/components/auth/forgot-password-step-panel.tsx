@@ -42,11 +42,7 @@ export function ForgotPasswordStepPanel() {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={HelpCircleIcon}
-				title="Forgot password?"
-				subtitle={<>Enter your email and we&apos;ll send you a reset link</>}
-			/>
+			<AuthPanelHeader icon={HelpCircleIcon} title="Forgot password?" />
 
 			<form id="form-forgot-password" onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
 				<FieldGroup>

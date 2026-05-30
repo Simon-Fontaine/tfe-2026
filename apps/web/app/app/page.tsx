@@ -1,15 +1,12 @@
 import { canApplyToInvite, type UserTeam } from "@scrimflow/shared";
 import Link from "next/link";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AttentionQueue, type AttentionQueueItem } from "@/components/workspace/attention-queue";
 import { GettingStartedSection } from "@/components/workspace/getting-started-section";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
-import { ProfileSummaryCard } from "@/components/workspace/profile-summary-card";
 import { StatsOverview } from "@/components/workspace/stats-overview";
 import type { NotificationSummary } from "@/lib/data/notifications";
 import type { OrgInviteSummary, UserOrg } from "@/lib/data/organization";
@@ -181,73 +178,47 @@ function WorkspaceContexts({ orgs, teams }: { orgs: UserOrg[]; teams: UserTeam[]
 
 	if (orgs.length === 0 && standaloneTeams.length === 0) {
 		return (
-			<Card>
-				<CardContent className="space-y-3 p-4">
-					<p className="text-sm font-semibold">No teams or organizations yet</p>
-					<p className="text-sm text-muted-foreground">
-						Create a team, join an organization invite, or browse recruiting to connect this account
-						to active workflows.
-					</p>
-					<div className="flex flex-wrap gap-2">
-						<Button asChild size="sm">
-							<Link href={appRoutes.orgs.root}>Open organizations</Link>
-						</Button>
-						<Button asChild size="sm" variant="outline">
-							<Link href={appRoutes.recruiting.root}>Browse recruiting</Link>
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
+			<div className="py-8 text-center text-sm text-muted-foreground">
+				No teams or organizations yet.
+				<div className="mt-4 flex justify-center gap-2">
+					<Button asChild size="sm">
+						<Link href={appRoutes.orgs.root}>Create org</Link>
+					</Button>
+					<Button asChild size="sm" variant="outline">
+						<Link href={appRoutes.recruiting.root}>Browse recruiting</Link>
+					</Button>
+				</div>
+			</div>
 		);
 	}
 
 	return (
-		<div className="grid gap-3 md:grid-cols-2">
+		<div className="divide-y border">
 			{standaloneTeams.map((team) => (
-				<Card key={team.id}>
-					<CardHeader className="pb-2">
-						<div className="flex min-w-0 items-center justify-between gap-3">
-							<CardTitle className="truncate text-sm">
-								[{team.tag}] {team.name}
-							</CardTitle>
-							<Badge variant="secondary" className="shrink-0 text-[10px]">
-								Team
-							</Badge>
-						</div>
-					</CardHeader>
-					<CardContent>
-						<Button asChild size="sm" variant="outline">
-							<Link href={appRoutes.teams.byId(team.id)}>Open team</Link>
-						</Button>
-					</CardContent>
-				</Card>
+				<div key={team.id} className="flex items-center justify-between px-4 py-3 text-sm">
+					<div>
+						<span className="font-medium">
+							[{team.tag}] {team.name}
+						</span>
+						<span className="ml-2 text-xs text-muted-foreground">Team</span>
+					</div>
+					<Button asChild size="sm" variant="outline">
+						<Link href={appRoutes.teams.byId(team.id)}>Open</Link>
+					</Button>
+				</div>
 			))}
 			{orgs.map((org) => (
-				<Card key={org.id}>
-					<CardHeader className="pb-2">
-						<div className="flex min-w-0 items-center justify-between gap-3">
-							<CardTitle className="truncate text-sm">{org.name}</CardTitle>
-							<Badge variant="secondary" className="shrink-0 text-[10px]">
-								{org.role}
-							</Badge>
-						</div>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						<p className="text-xs text-muted-foreground">
-							{org.teamCount} teams - {org.openListingCount} open listings
-						</p>
-						<div className="flex flex-wrap gap-2">
-							<Button asChild size="sm" variant="outline">
-								<Link href={appRoutes.orgs.byId(org.id)}>Open org</Link>
-							</Button>
-							{org.teams.slice(0, 3).map((team) => (
-								<Button key={team.id} asChild size="sm" variant="ghost">
-									<Link href={appRoutes.teams.byId(team.id)}>[{team.tag}]</Link>
-								</Button>
-							))}
-						</div>
-					</CardContent>
-				</Card>
+				<div key={org.id} className="flex items-center justify-between px-4 py-3 text-sm">
+					<div>
+						<span className="font-medium">{org.name}</span>
+						<span className="ml-2 text-xs text-muted-foreground">
+							{org.role} · {org.teamCount} teams
+						</span>
+					</div>
+					<Button asChild size="sm" variant="outline">
+						<Link href={appRoutes.orgs.byId(org.id)}>Open</Link>
+					</Button>
+				</div>
 			))}
 		</div>
 	);
@@ -265,81 +236,56 @@ export default async function AppHomePage() {
 	const teamDone = teams.length > 0;
 
 	return (
-		<PageContainer maxWidth="full">
-			<PageHeader title="Home" description={`Personal command center for ${user.displayName}`} />
+		<PageContainer>
+			<PageHeader title="Home" />
 
-			<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-				<div className="space-y-6">
-					{data.profile.status === "error" ? (
-						<SectionError title="Profile could not be loaded" error={data.profile.error} />
+			<div className="space-y-8">
+				{data.profile.status === "error" ? (
+					<SectionError title="Profile could not be loaded" error={data.profile.error} />
+				) : null}
+				{data.stats.status === "error" ? (
+					<SectionError title="Stats could not be loaded" error={data.stats.error} />
+				) : (
+					<StatsOverview stats={stats} />
+				)}
+
+				<PageSection
+					title="Attention queue"
+					actions={
+						<Button asChild size="sm" variant="outline">
+							<Link href={appRoutes.inbox}>Open inbox</Link>
+						</Button>
+					}
+				>
+					{[
+						data.teamInvites,
+						data.orgInvites,
+						data.scrims,
+						data.recruitingActions,
+						data.myApplications,
+						data.notifications,
+					].some((section) => section.status === "error") ? (
+						<SectionError
+							title="Some attention sources could not be loaded"
+							error="Available sections are still shown. Refresh the page to retry the failed sources."
+						/>
 					) : null}
-					{data.stats.status === "error" ? (
-						<SectionError title="Stats could not be loaded" error={data.stats.error} />
-					) : (
-						<StatsOverview stats={stats} />
-					)}
+					<AttentionQueue items={attentionItems} />
+				</PageSection>
 
-					<PageSection
-						title="Attention queue"
-						description="Actionable invites, scrims, recruiting decisions, and unread workflow updates."
-						actions={
-							<Button asChild size="sm" variant="outline">
-								<Link href={appRoutes.inbox}>Open inbox</Link>
-							</Button>
-						}
-					>
-						{[
-							data.teamInvites,
-							data.orgInvites,
-							data.scrims,
-							data.recruitingActions,
-							data.myApplications,
-							data.notifications,
-						].some((section) => section.status === "error") ? (
-							<SectionError
-								title="Some attention sources could not be loaded"
-								error="Available sections are still shown. Refresh the page to retry the failed sources."
-							/>
-						) : null}
-						<AttentionQueue items={attentionItems} />
-					</PageSection>
+				<PageSection title="Workspaces">
+					{data.orgs.status === "error" ? (
+						<SectionError title="Organizations could not be loaded" error={data.orgs.error} />
+					) : null}
+					{data.teams.status === "error" ? (
+						<SectionError title="Teams could not be loaded" error={data.teams.error} />
+					) : null}
+					{data.orgs.status === "success" || data.teams.status === "success" ? (
+						<WorkspaceContexts orgs={orgs} teams={teams} />
+					) : null}
+				</PageSection>
 
-					<PageSection
-						title="Workspaces"
-						description="Current personal, team, and organization contexts."
-					>
-						{data.orgs.status === "error" ? (
-							<SectionError title="Organizations could not be loaded" error={data.orgs.error} />
-						) : null}
-						{data.teams.status === "error" ? (
-							<SectionError title="Teams could not be loaded" error={data.teams.error} />
-						) : null}
-						{data.orgs.status === "success" || data.teams.status === "success" ? (
-							<WorkspaceContexts orgs={orgs} teams={teams} />
-						) : null}
-					</PageSection>
-				</div>
-
-				<aside className="space-y-4">
-					<GettingStartedSection profile={profile} orgDone={orgDone} teamDone={teamDone} />
-					{profile ? <ProfileSummaryCard profile={profile} /> : null}
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-sm">Next destinations</CardTitle>
-						</CardHeader>
-						<CardContent className="grid gap-2">
-							<Button asChild size="sm" variant="outline" className="justify-start">
-								<Link href={appRoutes.calendar}>Personal schedule</Link>
-							</Button>
-							<Button asChild size="sm" variant="outline" className="justify-start">
-								<Link href={appRoutes.profile}>Profile</Link>
-							</Button>
-							<Button asChild size="sm" variant="outline" className="justify-start">
-								<Link href={appRoutes.settings.account}>Settings</Link>
-							</Button>
-						</CardContent>
-					</Card>
-				</aside>
+				<GettingStartedSection profile={profile} orgDone={orgDone} teamDone={teamDone} />
 			</div>
 		</PageContainer>
 	);

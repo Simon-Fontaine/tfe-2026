@@ -77,11 +77,7 @@ export function HeroPoolStepPanel({ heroes }: HeroPoolStepPanelProps) {
 	return (
 		<div className="space-y-4">
 			<div className="flex items-start justify-between">
-				<AuthPanelHeader
-					icon={GameController01Icon}
-					title="Your hero pool"
-					subtitle="Select the heroes you're comfortable playing in scrims."
-				/>
+				<AuthPanelHeader icon={GameController01Icon} title="Your hero pool" />
 				{selectedHeroes.size > 0 && (
 					<span className="shrink-0 text-[10px] text-muted-foreground">
 						{selectedHeroes.size} selected

@@ -102,12 +102,7 @@ export function TwoFactorStepPanel() {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={SecurityCheckIcon}
-				title="Two-factor authentication"
-				subtitle="Choose a method to verify your identity"
-				centered
-			/>
+			<AuthPanelHeader icon={SecurityCheckIcon} title="Two-factor authentication" centered />
 
 			<Tabs defaultValue={defaultTab}>
 				<TabsList className="w-full">

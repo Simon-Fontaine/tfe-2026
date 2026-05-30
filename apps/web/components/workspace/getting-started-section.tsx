@@ -17,22 +17,13 @@ import { cn } from "@/lib/utils";
 interface ChecklistCardProps {
 	icon: IconSvgElement;
 	title: string;
-	description: string;
 	ctaLabel: string;
 	ctaHref: string;
 	comingSoon?: boolean;
 	done?: boolean;
 }
 
-function ChecklistCard({
-	icon,
-	title,
-	description,
-	ctaLabel,
-	ctaHref,
-	comingSoon,
-	done,
-}: ChecklistCardProps) {
+function ChecklistCard({ icon, title, ctaLabel, ctaHref, comingSoon, done }: ChecklistCardProps) {
 	return (
 		<div className={cn("flex items-start gap-4 border p-4", comingSoon && "opacity-60")}>
 			<div
@@ -61,7 +52,6 @@ function ChecklistCard({
 					)}
 					{done && <Badge className="bg-primary/10 text-primary text-[10px] border-0">Done</Badge>}
 				</div>
-				<p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
 			</div>
 			{!comingSoon && !done && (
 				<Button asChild size="sm" variant="outline" className="shrink-0">
@@ -79,7 +69,6 @@ interface GettingStartedSectionProps {
 }
 
 export function GettingStartedSection({ profile, orgDone, teamDone }: GettingStartedSectionProps) {
-	// Profile is "complete" if the user has a battletag set
 	const profileDone = !!profile?.battletag;
 	const allDone = profileDone && orgDone && teamDone;
 	if (allDone) return null;
@@ -93,7 +82,6 @@ export function GettingStartedSection({ profile, orgDone, teamDone }: GettingSta
 				<ChecklistCard
 					icon={UserCircle02Icon}
 					title="Complete your profile"
-					description="Add your BattleTag, rank, hero pool and availability to attract the right teams."
 					ctaLabel="Set up"
 					ctaHref={appRoutes.profile}
 					done={profileDone}
@@ -101,7 +89,6 @@ export function GettingStartedSection({ profile, orgDone, teamDone }: GettingSta
 				<ChecklistCard
 					icon={UserGroupIcon}
 					title="Create or join an organization"
-					description="Organizations manage one or more teams and handle scrim invitations."
 					ctaLabel="Open Workspace"
 					ctaHref={appRoutes.orgs.root}
 					done={orgDone}
@@ -109,7 +96,6 @@ export function GettingStartedSection({ profile, orgDone, teamDone }: GettingSta
 				<ChecklistCard
 					icon={Search01Icon}
 					title="Find a team"
-					description="Browse recruiting listings or publish your own availability to connect with the right team."
 					ctaLabel="Open Recruit"
 					ctaHref={appRoutes.recruiting.root}
 					done={teamDone}

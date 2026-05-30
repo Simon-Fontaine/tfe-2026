@@ -75,11 +75,7 @@ export function LoginStepPanel({ next }: { next?: string }) {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={HandGripIcon}
-				title="Welcome back"
-				subtitle="Sign in to your Scrimflow account"
-			/>
+			<AuthPanelHeader icon={HandGripIcon} title="Welcome back" />
 
 			<form id="form-login" onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
 				<FieldGroup>

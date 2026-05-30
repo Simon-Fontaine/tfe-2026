@@ -52,11 +52,7 @@ export function ResetPasswordStepPanel({ resetToken }: { resetToken: string }) {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={LockIcon}
-				title="Set a new password"
-				subtitle="Choose a strong password to protect your account"
-			/>
+			<AuthPanelHeader icon={LockIcon} title="Set a new password" />
 
 			<form id="form-reset-password" onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
 				<FieldGroup>

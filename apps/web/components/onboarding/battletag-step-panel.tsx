@@ -43,11 +43,7 @@ export function BattletagStepPanel() {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={UserCircle02Icon}
-				title="What's your BattleTag?"
-				subtitle="Your Overwatch 2 BattleTag links your in-game identity to your Scrimflow profile."
-			/>
+			<AuthPanelHeader icon={UserCircle02Icon} title="What's your BattleTag?" />
 
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
 				<FieldGroup>

@@ -108,11 +108,7 @@ export function RegisterStepPanel() {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={UserAdd01Icon}
-				title="Create an account"
-				subtitle="Join Scrimflow and start coordinating scrims"
-			/>
+			<AuthPanelHeader icon={UserAdd01Icon} title="Create an account" />
 
 			<form id="form-register" onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
 				<FieldGroup>

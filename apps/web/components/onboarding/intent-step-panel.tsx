@@ -101,11 +101,7 @@ export function IntentStepPanel({ nextDestination }: IntentStepPanelProps) {
 
 	return (
 		<div className="space-y-5">
-			<AuthPanelHeader
-				icon={Calendar03Icon}
-				title="How will you use Scrimflow?"
-				subtitle="This shapes recruiting and scheduling defaults without creating team-specific availability yet."
-			/>
+			<AuthPanelHeader icon={Calendar03Icon} title="How will you use Scrimflow?" />
 
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 				<div className="space-y-1.5">

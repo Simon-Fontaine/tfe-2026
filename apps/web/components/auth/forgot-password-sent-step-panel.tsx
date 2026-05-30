@@ -12,12 +12,7 @@ export function ForgotPasswordSentStepPanel() {
 
 	return (
 		<div className="space-y-4">
-			<AuthPanelHeader
-				icon={SentIcon}
-				title="Check your email"
-				subtitle="We sent a password reset link to"
-				centered
-			/>
+			<AuthPanelHeader icon={SentIcon} title="Check your email" centered />
 			{email && <p className="text-center text-xs font-medium">{email}</p>}
 
 			<Alert>

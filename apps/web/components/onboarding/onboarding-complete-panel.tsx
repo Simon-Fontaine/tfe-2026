@@ -15,7 +15,6 @@ export function OnboardingCompletePanel() {
 				icon={CheckmarkCircle02Icon}
 				iconClassName="text-emerald-500"
 				title="You're all set"
-				subtitle="Your player profile is ready. Let's get you into the game."
 				centered
 			/>
 

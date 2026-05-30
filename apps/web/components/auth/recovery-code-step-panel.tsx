@@ -87,11 +87,7 @@ export function RecoveryCodeStepPanel() {
 					<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="mr-1.5 size-4" />
 					Back to 2FA
 				</Button>
-				<AuthPanelHeader
-					icon={Key01Icon}
-					title="Recovery code"
-					subtitle="Enter the recovery code you saved when setting up 2FA"
-				/>
+				<AuthPanelHeader icon={Key01Icon} title="Recovery code" />
 			</div>
 
 			<Alert

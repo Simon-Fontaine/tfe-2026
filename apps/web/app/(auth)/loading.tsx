@@ -7,7 +7,7 @@ export default function AuthLoading() {
 			<div className="space-y-4" aria-hidden="true">
 				{/* Row 1: icon square + title/subtitle stubs */}
 				<div className="flex items-center gap-3">
-					<Skeleton className="h-8 w-8 rounded-md" />
+					<Skeleton className="h-8 w-8" />
 					<div className="space-y-1">
 						<Skeleton className="h-3 w-32" />
 						<Skeleton className="h-2 w-48" />

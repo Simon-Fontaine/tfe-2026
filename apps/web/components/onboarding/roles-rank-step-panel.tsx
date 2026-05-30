@@ -66,11 +66,7 @@ export function RolesAndRankStepPanel() {
 
 	return (
 		<div className="space-y-5">
-			<AuthPanelHeader
-				icon={Award01Icon}
-				title="Your role & rank"
-				subtitle="Tell us how you play to find the right scrims and teammates."
-			/>
+			<AuthPanelHeader icon={Award01Icon} title="Your role & rank" />
 
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 				{/* Primary role */}
