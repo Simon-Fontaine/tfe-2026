@@ -1,10 +1,8 @@
-import { Calendar03Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { UserGroup02Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getActiveTeamsForUser } from "@/lib/data/player";
 import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
@@ -16,60 +14,28 @@ export default async function AppCalendarPage() {
 	if (teams.length === 0) {
 		return (
 			<PageContainer>
-				<PageHeader
-					title="Personal schedule"
-					description="Team-scoped availability will appear here once you join a team."
-				/>
-				<EmptyStateBlock
-					icon={UserGroup02Icon}
-					title="Nothing scheduled"
-					description="Your personal schedule will appear here once you join a team."
-					variant="card"
-				/>
+				<PageHeader title="Calendar" />
+				<EmptyState icon={UserGroup02Icon} title="You are not on any teams yet." />
 			</PageContainer>
 		);
 	}
 
 	return (
 		<PageContainer>
-			<PageHeader
-				title="Personal schedule"
-				description="Your availability is managed per team. Choose a team calendar to review shared availability and edit your windows."
-			/>
-			<div className="space-y-6">
-				<section className="border p-5">
-					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-						<div>
-							<h2 className="text-sm font-semibold">Team calendars</h2>
-							<p className="mt-1 max-w-[64ch] text-sm text-muted-foreground">
-								ScrimFlow keeps scheduling tied to a concrete team so availability edits always
-								apply to the right roster.
-							</p>
-						</div>
-						<Button asChild size="sm" variant="outline">
-							<Link href={appRoutes.orgs.root}>Manage organizations</Link>
-						</Button>
-					</div>
-				</section>
-
-				<div className="grid gap-3 md:grid-cols-2">
+			<PageHeader title="Calendar" />
+			<div>
+				<h2 className="text-lg font-semibold border-b pb-2 mb-4">Team calendars</h2>
+				<div>
 					{teams.map((team) => (
 						<Link
 							key={team.id}
 							href={appRoutes.teams.calendar(team.id)}
-							className="flex items-start gap-3 border p-4 transition-colors hover:bg-muted/50"
+							className="flex items-center justify-between border-b px-0 py-3 text-sm hover:bg-muted/30 transition-colors"
 						>
-							<div className="flex size-9 shrink-0 items-center justify-center bg-primary/10 text-primary">
-								<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-4" />
-							</div>
-							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-semibold">
-									[{team.tag}] {team.name}
-								</p>
-								<p className="mt-1 text-sm text-muted-foreground">
-									Open team schedule and edit your availability for this roster.
-								</p>
-							</div>
+							<span className="font-medium">
+								[{team.tag}] {team.name}
+							</span>
+							<span className="text-muted-foreground">View calendar →</span>
 						</Link>
 					))}
 				</div>

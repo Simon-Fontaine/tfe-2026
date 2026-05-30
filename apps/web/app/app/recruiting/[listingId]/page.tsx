@@ -1,16 +1,16 @@
+import { Block01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { RecruitmentApplicationDialog } from "@/components/recruit/recruitment-application-dialog";
 import { RecruitmentApplicationsPanel } from "@/components/recruit/recruitment-applications-panel";
 import { RecruitmentListingFormDialog } from "@/components/recruit/recruitment-listing-form-dialog";
 import { ReportListingActions } from "@/components/reports/report-listing-actions";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
-import { PageSection } from "@/components/workspace/page-section";
 import {
 	getManageableRecruitEntities,
 	getRecruitmentApplicationsForListing,
@@ -20,11 +20,13 @@ import {
 	formatRecruitmentAudience,
 	formatRecruitmentCompRange,
 	formatRecruitmentOwner,
+	getRecruitmentApplicationLabel,
 	MEMBER_TYPE_LABELS,
 	RECRUITMENT_CATEGORY_DESCRIPTIONS,
 	RECRUITMENT_CATEGORY_LABELS,
 } from "@/lib/recruitment";
-import { publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppRecruitingListingDetailPage({
@@ -41,17 +43,16 @@ export default async function AppRecruitingListingDetailPage({
 	}
 	if (listingResult.kind === "no-access") {
 		return (
-			<PageContainer maxWidth="4xl">
+			<PageContainer>
 				<PageHeader
 					title="Recruiting"
-					detail="Listing detail"
-					description="Review recruiting details from the current workspace without leaving the app shell."
+					breadcrumbs={
+						<Link href={appRoutes.recruiting.root} className="hover:underline">
+							Recruiting
+						</Link>
+					}
 				/>
-				<EmptyStateBlock
-					title="No access"
-					description="You can only open listing details that belong to a workspace you can manage or apply from."
-					variant="card"
-				/>
+				<EmptyState icon={Block01Icon} title="You do not have access to this listing." />
 			</PageContainer>
 		);
 	}
@@ -73,16 +74,142 @@ export default async function AppRecruitingListingDetailPage({
 			? publicRoutes.orgs.bySlug(listing.organizationSlug)
 			: publicRoutes.players.byUsername(listing.ownerUsername);
 	const canApply = listing.canApply && !listing.canManage && listing.status === "open";
+	const isTerminal =
+		listing.status === "closed" || listing.status === "fulfilled" || listing.status === "expired";
 
 	return (
-		<PageContainer maxWidth="4xl">
+		<PageContainer>
 			<PageHeader
 				title={listing.title}
-				detail={`Listing ${listing.id}`}
-				description={RECRUITMENT_CATEGORY_DESCRIPTIONS[listing.category]}
-				actions={
-					<div className="flex items-center gap-2">
-						{listing.canManage ? (
+				breadcrumbs={
+					<Link href={appRoutes.recruiting.root} className="hover:underline">
+						Recruiting
+					</Link>
+				}
+			/>
+
+			<div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+				{/* Main content — left 2/3 */}
+				<div className="col-span-1 space-y-8 md:col-span-2">
+					{listing.status !== "open" && (
+						<div className="border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400">
+							{listing.status === "paused"
+								? "This listing is paused and not currently accepting applications."
+								: `This listing is ${listing.status} and is no longer accepting applications.`}
+						</div>
+					)}
+
+					<section>
+						<h2 className="mb-4 border-b pb-2 text-lg font-semibold">About</h2>
+						<div className="space-y-4">
+							<div className="flex items-center gap-3">
+								<Link href={ownerHref}>
+									<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+										<AvatarImage
+											src={
+												listing.teamAvatarUrl ??
+												listing.organizationAvatarUrl ??
+												listing.ownerAvatarUrl ??
+												undefined
+											}
+											className="rounded-none"
+										/>
+										<AvatarFallback className="rounded-none text-[10px] font-bold">
+											{ownerLabel.slice(0, 2).toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+								</Link>
+								<div>
+									<Link href={ownerHref} className="text-sm font-semibold hover:underline">
+										{ownerLabel}
+									</Link>
+									<p className="text-xs text-muted-foreground">
+										{RECRUITMENT_CATEGORY_DESCRIPTIONS[listing.category]}
+									</p>
+								</div>
+							</div>
+
+							{listing.description ? (
+								<p className="whitespace-pre-wrap text-sm text-muted-foreground">
+									{listing.description}
+								</p>
+							) : (
+								<p className="text-sm text-muted-foreground">No additional description provided.</p>
+							)}
+						</div>
+					</section>
+
+					{listing.canManage && (
+						<section>
+							<h2 className="mb-4 border-b pb-2 text-lg font-semibold">Applications</h2>
+							<RecruitmentApplicationsPanel
+								applications={applications}
+								teamId={listing.teamId ?? undefined}
+								organizationId={listing.organizationId ?? undefined}
+							/>
+						</section>
+					)}
+				</div>
+
+				{/* Right metadata column — 1/3 */}
+				<div className="space-y-6">
+					<div className="space-y-3">
+						<h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+							Details
+						</h3>
+						<div className="flex flex-wrap gap-2">
+							<Badge variant="outline" className="text-[10px]">
+								{RECRUITMENT_CATEGORY_LABELS[listing.category]}
+							</Badge>
+							<Badge variant="outline" className="text-[10px]">
+								{MEMBER_TYPE_LABELS[listing.memberType]}
+							</Badge>
+							<Badge
+								variant="outline"
+								className={cn(
+									"text-[10px]",
+									listing.status === "open"
+										? "border-green-600 text-green-700"
+										: listing.status === "paused"
+											? "border-yellow-600 text-yellow-700"
+											: ""
+								)}
+							>
+								{listing.status}
+							</Badge>
+							<Badge variant="outline" className="text-[10px]">
+								{formatRecruitmentAudience(listing)}
+							</Badge>
+							{compRange && (
+								<Badge variant="outline" className="text-[10px]">
+									{compRange}
+								</Badge>
+							)}
+							{listing.region && (
+								<Badge variant="outline" className="text-[10px]">
+									{listing.region}
+								</Badge>
+							)}
+							<Badge variant="outline" className="text-[10px]">
+								{listing.applicationCount} application
+								{listing.applicationCount === 1 ? "" : "s"}
+							</Badge>
+						</div>
+					</div>
+
+					<div className="space-y-2">
+						{canApply && (
+							<RecruitmentApplicationDialog
+								listing={listing}
+								entityOptions={entityOptions}
+								conversationHrefBase={appRoutes.recruiting.conversations}
+							>
+								<Button size="sm" className="w-full">
+									{getRecruitmentApplicationLabel(listing)}
+								</Button>
+							</RecruitmentApplicationDialog>
+						)}
+						{listing.canManage && !isTerminal && (
 							<RecruitmentListingFormDialog
 								mode="edit"
 								listing={listing}
@@ -90,108 +217,13 @@ export default async function AppRecruitingListingDetailPage({
 								triggerContent="Edit listing"
 								triggerVariant="outline"
 							/>
-						) : canApply ? (
-							<RecruitmentApplicationDialog listing={listing} entityOptions={entityOptions}>
-								<Button size="sm">Apply</Button>
-							</RecruitmentApplicationDialog>
-						) : null}
-						{!listing.canManage ? (
+						)}
+						{!listing.canManage && (
 							<ReportListingActions listingId={listing.id} listingTitle={listing.title} />
-						) : null}
-					</div>
-				}
-			>
-				<div className="flex flex-wrap gap-2">
-					<Badge variant="secondary" className="text-[10px]">
-						{RECRUITMENT_CATEGORY_LABELS[listing.category]}
-					</Badge>
-					<Badge variant="outline" className="text-[10px]">
-						{MEMBER_TYPE_LABELS[listing.memberType]}
-					</Badge>
-					<Badge variant="outline" className="text-[10px] capitalize">
-						{listing.status}
-					</Badge>
-				</div>
-			</PageHeader>
-
-			{listing.status !== "open" && (
-				<div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400">
-					This listing is {listing.status} and is no longer accepting applications.
-				</div>
-			)}
-
-			<PageSection title="About" description="Full listing details and ownership context.">
-				<div className="space-y-4 border p-4">
-					<div className="flex items-center gap-3">
-						<Link href={ownerHref}>
-							<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
-								<AvatarImage
-									src={
-										listing.teamAvatarUrl ??
-										listing.organizationAvatarUrl ??
-										listing.ownerAvatarUrl ??
-										undefined
-									}
-									className="rounded-none"
-								/>
-								<AvatarFallback className="rounded-none text-[10px] font-bold">
-									{ownerLabel.slice(0, 2).toUpperCase()}
-								</AvatarFallback>
-							</Avatar>
-						</Link>
-						<div>
-							<Link href={ownerHref} className="text-sm font-semibold hover:underline">
-								{ownerLabel}
-							</Link>
-							<p className="text-xs text-muted-foreground">
-								{RECRUITMENT_CATEGORY_DESCRIPTIONS[listing.category]}
-							</p>
-						</div>
-					</div>
-
-					<div className="flex flex-wrap gap-2">
-						<Badge variant="outline" className="text-[10px]">
-							{formatRecruitmentAudience(listing)}
-						</Badge>
-						{compRange && (
-							<Badge variant="outline" className="text-[10px]">
-								{compRange}
-							</Badge>
 						)}
-						{listing.region && (
-							<Badge variant="outline" className="text-[10px]">
-								{listing.region}
-							</Badge>
-						)}
-						<Badge variant="secondary" className="text-[10px]">
-							{listing.applicationCount} application{listing.applicationCount === 1 ? "" : "s"}
-						</Badge>
 					</div>
-
-					{listing.description ? (
-						<p className="whitespace-pre-wrap text-sm text-muted-foreground">
-							{listing.description}
-						</p>
-					) : (
-						<p className="text-sm text-muted-foreground">
-							No additional description was provided for this listing.
-						</p>
-					)}
 				</div>
-			</PageSection>
-
-			{listing.canManage && (
-				<PageSection
-					title="Applications"
-					description="Review and respond to incoming applications for this listing."
-				>
-					<RecruitmentApplicationsPanel
-						applications={applications}
-						teamId={listing.teamId ?? undefined}
-						organizationId={listing.organizationId ?? undefined}
-					/>
-				</PageSection>
-			)}
+			</div>
 		</PageContainer>
 	);
 }

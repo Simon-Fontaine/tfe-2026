@@ -4,7 +4,7 @@ import { MessageNotification02Icon } from "@hugeicons/core-free-icons";
 import type { RecruitmentConversationSummary } from "@scrimflow/shared";
 import { useEffect, useState } from "react";
 import { MessagePane } from "@/components/chat/message-pane";
-import { EmptyStateBlock } from "@/components/shared/empty-state-block";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 import { APPLICATION_STATUS_LABELS } from "@/lib/recruitment";
@@ -64,19 +64,13 @@ export function RecruitmentConversationWorkspace({
 	const selectedConversation = conversations.find((c) => c.conversationId === selectedId) ?? null;
 
 	if (conversations.length === 0) {
-		return (
-			<EmptyStateBlock
-				icon={MessageNotification02Icon}
-				title="No recruiting conversations yet"
-				description="Publish a listing or send an application to start a recruiting conversation."
-			/>
-		);
+		return <EmptyState icon={MessageNotification02Icon} title="No recruiting conversations yet." />;
 	}
 
 	return (
 		<div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
 			{/* Sidebar */}
-			<div className="divide-y overflow-hidden rounded-md border">
+			<div className="divide-y overflow-hidden border">
 				{sortedConversations.map((conversation) => {
 					const liveEntry = storeConversations.find((c) => c.id === conversation.conversationId);
 					const unreadCount = liveEntry?.unreadCount ?? conversation.unreadCount;
@@ -124,7 +118,7 @@ export function RecruitmentConversationWorkspace({
 
 			{/* Main pane */}
 			{selectedConversation ? (
-				<div className="flex min-h-[520px] flex-col overflow-hidden rounded-md border">
+				<div className="flex min-h-[520px] flex-col overflow-hidden border">
 					<div className="border-b px-4 py-3">
 						<p className="text-sm font-semibold">{selectedConversation.listingTitle}</p>
 						<div className="mt-1 flex items-center gap-2">
