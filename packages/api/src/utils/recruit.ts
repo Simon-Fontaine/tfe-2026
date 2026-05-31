@@ -288,6 +288,9 @@ export function mapTeamMember(row: {
 			rank: string | null;
 			rankDivision: number | null;
 		} | null;
+		heroPool?: Array<{
+			hero: { id: string; displayName: string; imageUrl: string | null };
+		}> | null;
 	};
 }) {
 	return {
@@ -308,6 +311,14 @@ export function mapTeamMember(row: {
 		joinedAt: row.joinedAt.toISOString(),
 		leftAt: row.leftAt?.toISOString() ?? null,
 		statusChangedAt: row.updatedAt.toISOString(),
+		mainHero:
+			row.memberType === "player" && row.user.heroPool?.[0]
+				? {
+						id: row.user.heroPool[0].hero.id,
+						displayName: row.user.heroPool[0].hero.displayName,
+						imageUrl: row.user.heroPool[0].hero.imageUrl ?? null,
+					}
+				: null,
 	};
 }
 

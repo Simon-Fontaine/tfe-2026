@@ -130,7 +130,7 @@ export default async function PublicRecruitingListingDetailPage({
 
 				<div className="space-y-4">
 					<div className="flex flex-wrap gap-2">
-						<Badge variant="secondary" className="text-[10px]">
+						<Badge variant="outline" className="text-[10px]">
 							{RECRUITMENT_CATEGORY_LABELS[listing.category]}
 						</Badge>
 						<Badge variant="outline" className="text-[10px]">

@@ -14,6 +14,7 @@ import {
 	buildObjectUrl,
 	createPutUploadUrl,
 	deleteFile,
+	ensureBucketPublicPolicy,
 	headFile,
 	keyFromUrl,
 	uploadFile,
@@ -89,6 +90,7 @@ uploadRoutes.post("/assets", async (c) => {
 	const arrayBuffer = await file.arrayBuffer();
 	const buffer = Buffer.from(arrayBuffer);
 	const key = `${user.id}/assets/${kind}/${Date.now()}`;
+	await ensureBucketPublicPolicy(uploadConfig.bucket);
 	const url = await uploadFile(uploadConfig.bucket, key, buffer, file.type);
 
 	return c.json({ url });

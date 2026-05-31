@@ -93,7 +93,7 @@ function SentApplicationCard({
 						>
 							{application.listingTitle}
 						</Link>
-						<Badge variant="secondary" className="text-[10px]">
+						<Badge variant="outline" className="text-[10px]">
 							{RECRUITMENT_CATEGORY_LABELS[application.listingCategory]}
 						</Badge>
 						<Badge variant="outline" className="text-[10px]">

@@ -1,13 +1,13 @@
 import { AlertCircleIcon, LockIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { appRoutes } from "@/lib/routes";
 
 export function OrgWorkspaceMissingState() {
 	return (
 		<PageContainer>
-			<PageHeader title="Organization" description="We couldn't open this workspace." />
+			<PageHeader title="Organization" meta="We couldn't open this workspace." />
 			<EmptyStateBlock
 				icon={AlertCircleIcon}
 				title="Organization unavailable"

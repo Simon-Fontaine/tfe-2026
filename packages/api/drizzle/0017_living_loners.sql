@@ -1,1 +1,0 @@
-ALTER TYPE "public"."notification_type" ADD VALUE 'scrim_result_reported' BEFORE 'scrim_reminder';

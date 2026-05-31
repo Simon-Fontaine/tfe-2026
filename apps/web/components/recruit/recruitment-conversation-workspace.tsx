@@ -101,7 +101,7 @@ export function RecruitmentConversationWorkspace({
 									{APPLICATION_STATUS_LABELS[conversation.applicationStatus]}
 								</Badge>
 								{conversation.listingStatus !== "open" && (
-									<Badge variant="secondary" className="text-[10px] capitalize">
+									<Badge variant="outline" className="text-[10px] capitalize">
 										{conversation.listingStatus}
 									</Badge>
 								)}

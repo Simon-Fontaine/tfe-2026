@@ -84,11 +84,11 @@ export function PendingInviteCard(props: PendingInviteCardProps) {
 						{ROLE_LABELS[role] ?? role}
 					</Badge>
 					{permissionRole === "admin" && (
-						<Badge variant="secondary" className="shrink-0 text-[10px]">
+						<Badge variant="outline" className="shrink-0 text-[10px]">
 							Admin access
 						</Badge>
 					)}
-					<Badge variant="secondary" className="shrink-0 text-[10px]">
+					<Badge variant="outline" className="shrink-0 text-[10px]">
 						{STATUS_LABELS[props.invite.status] ?? props.invite.status}
 					</Badge>
 				</div>

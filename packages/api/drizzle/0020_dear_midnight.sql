@@ -1,1 +1,0 @@
-ALTER TABLE "team_rating_event" ADD COLUMN "algorithm_version" text DEFAULT 'glicko-1.0' NOT NULL;

@@ -333,6 +333,7 @@ export type TeamMemberSummary = {
 	joinedAt: IsoDateString;
 	leftAt: IsoDateString | null;
 	statusChangedAt: IsoDateString;
+	mainHero: { id: string; displayName: string; imageUrl: string | null } | null;
 };
 
 export type RosterMember = TeamMemberSummary;

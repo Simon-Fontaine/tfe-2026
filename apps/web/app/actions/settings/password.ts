@@ -1,7 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { apiDelete, apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export interface ActionResult {
 	error?: string;
@@ -20,6 +21,7 @@ export async function confirmPasswordChangeAction(
 ): Promise<ActionResult> {
 	const res = await apiPost(apiRoutes.settings.password.confirm, { code, newPassword });
 	if ("error" in res) return { error: res.error };
+	revalidatePath(appRoutes.settings.security);
 	return { success: true };
 }
 

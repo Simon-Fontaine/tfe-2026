@@ -333,14 +333,14 @@ webauthnSetupRoutes.post("/security-key/register", async (c) => {
 webauthnSetupRoutes.get("/passkeys", async (c) => {
 	const session = c.get("session");
 	const creds = await getUserPasskeyCredentials(session.userId);
-	return c.json(creds.map((cred) => ({ id: encodeBase64(cred.id), name: cred.name })));
+	return c.json({ data: creds.map((cred) => ({ id: encodeBase64(cred.id), name: cred.name })) });
 });
 
 // GET /security-keys — List security key credentials
 webauthnSetupRoutes.get("/security-keys", async (c) => {
 	const session = c.get("session");
 	const creds = await getUserSecurityKeyCredentials(session.userId);
-	return c.json(creds.map((cred) => ({ id: encodeBase64(cred.id), name: cred.name })));
+	return c.json({ data: creds.map((cred) => ({ id: encodeBase64(cred.id), name: cred.name })) });
 });
 
 export { webauthnSetupRoutes };

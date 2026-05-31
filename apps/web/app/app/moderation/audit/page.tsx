@@ -58,7 +58,7 @@ const OUTCOME_VARIANT: Record<string, "default" | "secondary" | "outline" | "des
 };
 
 function actorTypeBadge(actorType: DomainAuditActorType) {
-	if (actorType === "system") return <Badge variant="secondary">System</Badge>;
+	if (actorType === "system") return <Badge variant="outline">System</Badge>;
 	if (actorType === "worker") return <Badge variant="outline">Worker</Badge>;
 	return <Badge variant="outline">User</Badge>;
 }

@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import type { NotificationSummary } from "@/lib/data/notifications";
 import type { UserTeam } from "@/lib/data/player";
 
@@ -19,9 +20,23 @@ interface ActivityFeedSectionProps {
 }
 
 function resultBadge(result: RecentScrimItem["result"]) {
-	if (result === "win") return <Badge>Win</Badge>;
-	if (result === "loss") return <Badge variant="destructive">Loss</Badge>;
-	return <Badge variant="secondary">Draw</Badge>;
+	if (result === "win")
+		return (
+			<Badge variant="outline" className={STATUS_BADGE_CLASSES.win}>
+				Win
+			</Badge>
+		);
+	if (result === "loss")
+		return (
+			<Badge variant="outline" className={STATUS_BADGE_CLASSES.loss}>
+				Loss
+			</Badge>
+		);
+	return (
+		<Badge variant="outline" className={STATUS_BADGE_CLASSES.draw}>
+			Draw
+		</Badge>
+	);
 }
 
 export function ActivityFeedSection({

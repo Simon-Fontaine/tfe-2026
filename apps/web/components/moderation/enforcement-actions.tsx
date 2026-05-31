@@ -16,6 +16,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
+import { cn } from "@/lib/utils";
 
 const ACTION_TYPE_LABELS: Record<ModerationActionType, string> = {
 	warn: "Warn",
@@ -118,7 +120,10 @@ export function EnforcementActions({
 											{ACTION_TYPE_LABELS[action.actionType]}
 										</span>
 										{!action.isReversible && (
-											<Badge variant="destructive" className="text-xs">
+											<Badge
+												variant="outline"
+												className={cn("text-xs", STATUS_BADGE_CLASSES.irreversible)}
+											>
 												Irreversible
 											</Badge>
 										)}

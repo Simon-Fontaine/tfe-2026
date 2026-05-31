@@ -1,11 +1,11 @@
 import { Add01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { CreateOrgDialog } from "@/components/orgs/create-org-dialog";
 import { OrgCard } from "@/components/orgs/org-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { getOrgsForUser } from "@/lib/data/orgs";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -18,12 +18,12 @@ export default async function AppOrgsPage() {
 		<PageContainer>
 			<PageHeader
 				title="Organizations"
-				description={
+				meta={
 					orgs.length === 0
 						? "Create an organization to get started."
 						: `${orgs.length} organization${orgs.length === 1 ? "" : "s"}`
 				}
-				actions={
+				action={
 					<CreateOrgDialog>
 						<Button size="sm">
 							<HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="mr-1.5 size-4" />

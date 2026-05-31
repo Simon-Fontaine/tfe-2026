@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "notification_active_dedup_idx" ON "notification" USING btree ("user_id","type","reference_id") WHERE "notification"."is_read" = false;

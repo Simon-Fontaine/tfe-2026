@@ -184,7 +184,7 @@ export function RecruitmentDiscoveryFilters({
 			{hasAnyFilter && (
 				<div className="flex flex-wrap gap-1.5">
 					{activeCategory && activeCategory !== "all" && (
-						<Badge variant="secondary" className="gap-1 text-[10px]">
+						<Badge variant="outline" className="gap-1 text-[10px]">
 							{
 								RECRUITMENT_CATEGORY_LABELS[
 									activeCategory as keyof typeof RECRUITMENT_CATEGORY_LABELS
@@ -200,7 +200,7 @@ export function RecruitmentDiscoveryFilters({
 						</Badge>
 					)}
 					{activeRole && activeRole !== "any" && (
-						<Badge variant="secondary" className="gap-1 text-[10px]">
+						<Badge variant="outline" className="gap-1 text-[10px]">
 							{ROLE_LABELS[activeRole as keyof typeof ROLE_LABELS]}
 							<button
 								type="button"
@@ -212,7 +212,7 @@ export function RecruitmentDiscoveryFilters({
 						</Badge>
 					)}
 					{activeRank && activeRank !== "any" && (
-						<Badge variant="secondary" className="gap-1 text-[10px]">
+						<Badge variant="outline" className="gap-1 text-[10px]">
 							{RANK_LABELS[activeRank]}
 							<button
 								type="button"
@@ -224,7 +224,7 @@ export function RecruitmentDiscoveryFilters({
 						</Badge>
 					)}
 					{activeRegion.trim() && (
-						<Badge variant="secondary" className="gap-1 text-[10px]">
+						<Badge variant="outline" className="gap-1 text-[10px]">
 							{activeRegion.trim()}
 							<button
 								type="button"

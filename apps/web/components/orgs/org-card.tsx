@@ -32,7 +32,7 @@ export function OrgCard({ org }: OrgCardProps) {
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-2">
 					<p className="truncate text-sm font-semibold">{org.name}</p>
-					<Badge variant="secondary" className="shrink-0 text-[10px]">
+					<Badge variant="outline" className="shrink-0 text-[10px]">
 						{ROLE_LABELS[org.role] ?? org.role}
 					</Badge>
 				</div>

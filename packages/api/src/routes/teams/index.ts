@@ -329,6 +329,13 @@ async function getTeamWorkspaceDetail(teamId: string, userId: string) {
 								rankDivision: true,
 							},
 						},
+						heroPool: {
+							with: {
+								hero: {
+									columns: { id: true, displayName: true, imageUrl: true },
+								},
+							},
+						},
 					},
 				},
 			},

@@ -1,1 +1,0 @@
-ALTER TYPE "public"."ocr_job_status" ADD VALUE 'superseded';

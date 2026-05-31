@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { apiGet } from "@/lib/api-client";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -21,8 +22,8 @@ function GovernanceItemRow({ item }: { item: GovernancePendingItem }) {
 			: "Suspended";
 	const statusClass =
 		item.reason === "blocked_ownership"
-			? "border-destructive text-destructive"
-			: "border-orange-500 text-orange-500";
+			? STATUS_BADGE_CLASSES.blocked
+			: STATUS_BADGE_CLASSES.suspended;
 
 	return (
 		<tr className="text-sm">

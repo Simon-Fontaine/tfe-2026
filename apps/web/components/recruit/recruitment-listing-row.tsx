@@ -35,6 +35,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormAction } from "@/hooks/use-form-action";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import {
 	formatRecruitmentAudience,
 	formatRecruitmentCompRange,
@@ -42,6 +43,7 @@ import {
 	RECRUITMENT_CATEGORY_LABELS,
 	RECRUITMENT_STATUS_LABELS,
 } from "@/lib/recruitment";
+import { cn } from "@/lib/utils";
 
 interface RecruitmentListingRowProps {
 	listing: RecruitmentListingSummary;
@@ -137,9 +139,7 @@ export function RecruitmentListingRow({
 				<Badge
 					variant="outline"
 					className={
-						listing.status === "open"
-							? "border-green-600 text-[10px] text-green-600"
-							: "text-[10px]"
+						listing.status === "open" ? cn("text-[10px]", STATUS_BADGE_CLASSES.open) : "text-[10px]"
 					}
 				>
 					{RECRUITMENT_STATUS_LABELS[listing.status]}

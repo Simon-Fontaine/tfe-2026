@@ -100,7 +100,7 @@ export function AttentionQueue({ items, className }: AttentionQueueProps) {
 								<div className="min-w-0 space-y-1">
 									<div className="flex min-w-0 flex-wrap items-center gap-2">
 										<p className="min-w-0 truncate text-sm font-semibold">{item.title}</p>
-										<Badge variant="secondary" className="shrink-0 text-[10px]">
+										<Badge variant="outline" className="shrink-0 text-[10px]">
 											{item.statusText}
 										</Badge>
 									</div>

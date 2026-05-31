@@ -1,7 +1,9 @@
 import {
+	CreateBucketCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
+	PutBucketPolicyCommand,
 	PutObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
@@ -24,6 +26,47 @@ function getS3Client(): S3Client {
 		});
 	}
 	return _s3Client;
+}
+
+// Tracks which buckets have had their public-read policy confirmed this process
+// lifetime so we don't pay the round-trip on every upload.
+const _publicPolicyConfirmed = new Set<string>();
+
+/**
+ * Ensures a bucket exists and has a public-read policy.
+ * Runs at most once per bucket per server process (cached after first success).
+ * Safe to call before every upload — subsequent calls are instant no-ops.
+ */
+export async function ensureBucketPublicPolicy(bucket: string): Promise<void> {
+	if (_publicPolicyConfirmed.has(bucket)) return;
+	const client = getS3Client();
+	try {
+		await client.send(new HeadObjectCommand({ Bucket: bucket, Key: ".keep" }));
+	} catch {
+		// Bucket may not exist — create it first.
+		try {
+			await client.send(new CreateBucketCommand({ Bucket: bucket }));
+		} catch {
+			// Already exists — that's fine.
+		}
+	}
+	await client.send(
+		new PutBucketPolicyCommand({
+			Bucket: bucket,
+			Policy: JSON.stringify({
+				Version: "2012-10-17",
+				Statement: [
+					{
+						Effect: "Allow",
+						Principal: "*",
+						Action: ["s3:GetObject"],
+						Resource: [`arn:aws:s3:::${bucket}/*`],
+					},
+				],
+			}),
+		})
+	);
+	_publicPolicyConfirmed.add(bucket);
 }
 
 export function buildObjectUrl(bucket: string, key: string) {

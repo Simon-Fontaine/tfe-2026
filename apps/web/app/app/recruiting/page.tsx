@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageSection } from "@/components/workspace/page-section";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { getPlayerProfileFull } from "@/lib/data/player";
 import {
 	getManageableRecruitEntities,
@@ -26,6 +27,7 @@ import {
 	RECRUITMENT_RANK_VALUES,
 } from "@/lib/recruitment";
 import { appRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const VALID_CATEGORIES = ["lft", "lfp", "lfr", "lfs"] as const;
@@ -186,7 +188,7 @@ export default async function AppRecruitingPage({ searchParams }: AppRecruitingP
 										{listing.hasApplied && (
 											<Badge
 												variant="outline"
-												className="text-[10px] border-green-600 text-green-700"
+												className={cn("text-[10px]", STATUS_BADGE_CLASSES.open)}
 											>
 												Applied
 											</Badge>

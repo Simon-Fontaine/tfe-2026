@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UpdatePostCard } from "@/components/updates/update-post-card";
 import { getCurrentSession } from "@/lib/auth/session";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicTeamPreview } from "@/lib/data/team";
@@ -86,47 +87,59 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 py-12 px-6">
-			{team.bannerUrl && (
-				<div className="relative h-36 w-full overflow-hidden border">
-					<Image src={team.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
-				</div>
-			)}
-			<div className="border p-5">
-				<div className="flex items-start gap-4">
-					<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
-						<AvatarImage src={team.avatarUrl ?? undefined} className="rounded-none" />
-						<AvatarFallback className="rounded-none text-sm font-bold">{team.tag}</AvatarFallback>
-					</Avatar>
-					<div className="min-w-0 flex-1 space-y-2">
-						<div className="flex items-center gap-2">
-							<h1 className="text-lg font-bold sm:text-xl">{team.name}</h1>
-							<span className="font-mono text-xs text-muted-foreground">[{team.tag}]</span>
-							<Link
-								href={publicRoutes.orgs.bySlug(team.organizationSlug)}
-								className="text-xs text-muted-foreground hover:underline"
-							>
-								{team.organizationName}
-							</Link>
-						</div>
-						<p className="text-xs text-muted-foreground">
-							Rating {team.rating} · {team.matchesPlayed} scrims played
-						</p>
-						{team.description && (
-							<p className="text-sm text-muted-foreground">{team.description}</p>
-						)}
-						<div className="flex flex-wrap items-center gap-2">
-							<Badge variant={team.isRecruiting ? "secondary" : "outline"}>
-								{team.isRecruiting ? "Recruiting" : "Not recruiting"}
-							</Badge>
-							<span className="flex items-center gap-1 text-xs text-muted-foreground">
-								<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3" />
-								{team.activeRosterCount} active member{team.activeRosterCount === 1 ? "" : "s"}
-							</span>
-							{team.openListingCount > 0 && (
-								<Badge variant="outline" className="text-[10px]">
-									{team.openListingCount} open listing{team.openListingCount === 1 ? "" : "s"}
-								</Badge>
+			<div className="border">
+				{team.bannerUrl && (
+					<div className="relative h-36 overflow-hidden border-b">
+						<Image
+							src={team.bannerUrl}
+							alt=""
+							fill
+							sizes="(min-width: 896px) 896px, 100vw"
+							unoptimized
+							className="object-cover"
+						/>
+					</div>
+				)}
+				<div className="p-5">
+					<div className="flex items-start gap-4">
+						<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage src={team.avatarUrl ?? undefined} className="rounded-none" />
+							<AvatarFallback className="rounded-none text-sm font-bold">{team.tag}</AvatarFallback>
+						</Avatar>
+						<div className="min-w-0 flex-1 space-y-2">
+							<div className="flex items-center gap-2">
+								<h1 className="text-lg font-bold sm:text-xl">{team.name}</h1>
+								<span className="font-mono text-xs text-muted-foreground">[{team.tag}]</span>
+								<Link
+									href={publicRoutes.orgs.bySlug(team.organizationSlug)}
+									className="text-xs text-muted-foreground hover:underline"
+								>
+									{team.organizationName}
+								</Link>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								Rating {team.rating} · {team.matchesPlayed} scrims played
+							</p>
+							{team.description && (
+								<p className="text-sm text-muted-foreground">{team.description}</p>
 							)}
+							<div className="flex flex-wrap items-center gap-2">
+								<Badge
+									variant="outline"
+									className={team.isRecruiting ? STATUS_BADGE_CLASSES.recruiting : undefined}
+								>
+									{team.isRecruiting ? "Recruiting" : "Not recruiting"}
+								</Badge>
+								<span className="flex items-center gap-1 text-xs text-muted-foreground">
+									<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3" />
+									{team.activeRosterCount} active member{team.activeRosterCount === 1 ? "" : "s"}
+								</span>
+								{team.openListingCount > 0 && (
+									<Badge variant="outline" className="text-[10px]">
+										{team.openListingCount} open listing{team.openListingCount === 1 ? "" : "s"}
+									</Badge>
+								)}
+							</div>
 						</div>
 					</div>
 				</div>
@@ -208,18 +221,12 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 						{team.ratingHistory.map((entry) => {
 							const deltaText =
 								entry.ratingDelta > 0 ? `+${entry.ratingDelta}` : `${entry.ratingDelta}`;
-							const resultVariant =
-								entry.result === "win"
-									? "secondary"
-									: entry.result === "loss"
-										? "destructive"
-										: "outline";
 							const resultClass =
 								entry.result === "win"
-									? "text-green-600"
+									? STATUS_BADGE_CLASSES.win
 									: entry.result === "draw"
-										? "border-muted-foreground/40 text-muted-foreground"
-										: undefined;
+										? STATUS_BADGE_CLASSES.draw
+										: STATUS_BADGE_CLASSES.loss;
 							return (
 								<div
 									key={entry.id}
@@ -236,7 +243,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 											→ {entry.ratingAfter} · {formatTimestamp(entry.createdAt)}
 										</p>
 									</div>
-									<Badge variant={resultVariant} className={resultClass}>
+									<Badge variant="outline" className={resultClass}>
 										{entry.result} {deltaText}
 									</Badge>
 								</div>
@@ -260,12 +267,12 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 				) : (
 					<div className="divide-y border">
 						{team.recentScrims.map((scrim) => {
-							const resultVariant =
+							const scrimResultClass =
 								scrim.result === "win"
-									? "default"
+									? STATUS_BADGE_CLASSES.win
 									: scrim.result === "loss"
-										? "destructive"
-										: "outline";
+										? STATUS_BADGE_CLASSES.loss
+										: STATUS_BADGE_CLASSES.draw;
 							const resultLabel =
 								scrim.result === "win" ? "W" : scrim.result === "loss" ? "L" : "D";
 							return (
@@ -289,7 +296,10 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 										<span className="text-xs text-muted-foreground">
 											{scrim.homeMapScore}–{scrim.awayMapScore}
 										</span>
-										<Badge variant={resultVariant} className="w-6 justify-center text-[10px]">
+										<Badge
+											variant="outline"
+											className={`w-6 justify-center text-[10px] ${scrimResultClass}`}
+										>
 											{resultLabel}
 										</Badge>
 									</div>

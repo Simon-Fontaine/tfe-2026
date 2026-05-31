@@ -1,5 +1,6 @@
 import type { ScrimDisputeResolution, ScrimStatus } from "@scrimflow/shared";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { cn } from "@/lib/utils";
 
 const SCRIM_STATUS_LABELS: Record<ScrimStatus, string> = {
@@ -30,7 +31,7 @@ export function ScrimStatusBadge({
 
 	if (status === "disputed") {
 		return (
-			<Badge variant="outline" className="border-destructive text-destructive">
+			<Badge variant="outline" className={STATUS_BADGE_CLASSES.disputed}>
 				{SCRIM_STATUS_LABELS[status]}
 			</Badge>
 		);
@@ -38,7 +39,7 @@ export function ScrimStatusBadge({
 
 	if (status === "completed") {
 		return (
-			<Badge variant="outline" className="border-green-600 text-green-600">
+			<Badge variant="outline" className={STATUS_BADGE_CLASSES.completed}>
 				{SCRIM_STATUS_LABELS[status]}
 			</Badge>
 		);

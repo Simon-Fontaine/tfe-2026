@@ -55,7 +55,7 @@ export function TeamCard({ team, href, orgId: _orgId }: TeamCardProps) {
 					<Badge variant="outline" className="text-[10px]">
 						{relationshipLabel}
 					</Badge>
-					<Badge variant="secondary" className="text-[10px]">
+					<Badge variant="outline" className="text-[10px]">
 						{visibilityLabel}
 					</Badge>
 				</div>

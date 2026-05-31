@@ -90,29 +90,38 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 py-12 px-6">
-			{org.bannerUrl && (
-				<div className="relative h-36 w-full overflow-hidden border">
-					<Image src={org.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
-				</div>
-			)}
-			<div className="border p-5">
-				<div className="flex items-start gap-4">
-					<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
-						<AvatarImage src={org.avatarUrl ?? undefined} className="rounded-none" />
-						<AvatarFallback className="rounded-none text-sm font-bold">
-							{org.name.substring(0, 2).toUpperCase()}
-						</AvatarFallback>
-					</Avatar>
-					<div className="min-w-0 flex-1">
-						<h1 className="text-lg font-bold sm:text-xl">{org.name}</h1>
-						<p className="text-xs text-muted-foreground">/{org.slug}</p>
-						{org.description && (
-							<p className="mt-2 text-sm text-muted-foreground">{org.description}</p>
-						)}
-						<p className="mt-2 text-xs text-muted-foreground">
-							{org.teamCount} team{org.teamCount === 1 ? "" : "s"} · {org.activeRosterCount} active
-							members
-						</p>
+			<div className="border">
+				{org.bannerUrl && (
+					<div className="relative h-36 overflow-hidden border-b">
+						<Image
+							src={org.bannerUrl}
+							alt=""
+							fill
+							sizes="(min-width: 1024px) 1024px, 100vw"
+							unoptimized
+							className="object-cover"
+						/>
+					</div>
+				)}
+				<div className="p-5">
+					<div className="flex items-start gap-4">
+						<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage src={org.avatarUrl ?? undefined} className="rounded-none" />
+							<AvatarFallback className="rounded-none text-sm font-bold">
+								{org.name.substring(0, 2).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<div className="min-w-0 flex-1">
+							<h1 className="text-lg font-bold sm:text-xl">{org.name}</h1>
+							<p className="text-xs text-muted-foreground">/{org.slug}</p>
+							{org.description && (
+								<p className="mt-2 text-sm text-muted-foreground">{org.description}</p>
+							)}
+							<p className="mt-2 text-xs text-muted-foreground">
+								{org.teamCount} team{org.teamCount === 1 ? "" : "s"} · {org.activeRosterCount}{" "}
+								active members
+							</p>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -228,7 +237,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 								<p className="text-xs text-muted-foreground">Rating {topTeam.rating}</p>
 							</div>
 							{topTeam.isRecruiting && (
-								<Badge variant="secondary" className="text-[10px]">
+								<Badge variant="outline" className="text-[10px]">
 									Recruiting
 								</Badge>
 							)}
@@ -308,7 +317,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 									</p>
 								</div>
 								{team.isRecruiting && (
-									<Badge variant="secondary" className="text-[10px]">
+									<Badge variant="outline" className="text-[10px]">
 										Recruiting
 									</Badge>
 								)}

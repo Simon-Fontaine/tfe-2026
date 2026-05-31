@@ -4,6 +4,7 @@ import type { ScrimDetail, ScrimDisputeResolution } from "@scrimflow/shared";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { appRoutes } from "@/lib/routes";
 
 function formatSignedRatingDelta(value: number) {
@@ -99,12 +100,12 @@ export function ScrimRatingSection({
 											</p>
 										</div>
 										<Badge
-											variant={event.ratingDelta === 0 ? "outline" : "secondary"}
+											variant="outline"
 											className={
 												event.ratingDelta > 0
-													? "text-green-600"
+													? STATUS_BADGE_CLASSES.ratingGain
 													: event.ratingDelta < 0
-														? "text-destructive"
+														? STATUS_BADGE_CLASSES.ratingLoss
 														: undefined
 											}
 										>

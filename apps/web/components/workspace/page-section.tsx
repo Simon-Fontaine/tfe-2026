@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 
 interface PageSectionProps {
 	title?: string;
-	description?: string;
 	actions?: React.ReactNode;
 	children: React.ReactNode;
 	className?: string;

@@ -73,46 +73,52 @@ export default async function PlayerProfilePage({
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6 py-12 px-6">
-			{player.bannerUrl && (
-				<div className="relative h-36 w-full overflow-hidden border">
-					<Image src={player.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
-				</div>
-			)}
-			<div className="border p-5">
-				<div className="flex items-start gap-4">
-					<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
-						<AvatarImage src={player.avatarUrl ?? undefined} className="rounded-none" />
-						<AvatarFallback className="rounded-none text-sm font-bold">
-							{player.displayName.slice(0, 2).toUpperCase()}
-						</AvatarFallback>
-					</Avatar>
-					<div className="min-w-0 flex-1">
-						<h1 className="text-lg font-bold sm:text-xl">{player.displayName}</h1>
-						<p className="text-xs text-muted-foreground">@{player.username}</p>
-						{player.bio && <p className="mt-2 text-sm text-muted-foreground">{player.bio}</p>}
-						<div className="mt-3 flex flex-wrap gap-2">
-							{player.primaryRole && (
+			<div className="border">
+				{player.bannerUrl && (
+					<div className="relative h-36 overflow-hidden border-b">
+						<Image
+							src={player.bannerUrl}
+							alt=""
+							fill
+							sizes="(min-width: 768px) 768px, 100vw"
+							unoptimized
+							className="object-cover"
+						/>
+					</div>
+				)}
+				<div className="p-5">
+					<div className="flex items-start gap-4">
+						<Avatar className="size-14 shrink-0 overflow-hidden rounded-none after:rounded-none">
+							<AvatarImage src={player.avatarUrl ?? undefined} className="rounded-none" />
+							<AvatarFallback className="rounded-none text-sm font-bold">
+								{player.displayName.slice(0, 2).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<div className="min-w-0 flex-1">
+							<h1 className="text-lg font-bold sm:text-xl">{player.displayName}</h1>
+							<p className="text-xs text-muted-foreground">@{player.username}</p>
+							{player.bio && <p className="mt-2 text-sm text-muted-foreground">{player.bio}</p>}
+							<div className="mt-3 flex flex-wrap gap-2">
+								{player.primaryRole && (
+									<Badge variant="outline" className="text-[10px]">
+										{ROLE_LABELS[player.primaryRole]}
+									</Badge>
+								)}
+								{player.secondaryRole && (
+									<Badge variant="outline" className="text-[10px]">
+										{ROLE_LABELS[player.secondaryRole]}
+									</Badge>
+								)}
+								{player.rank && (
+									<Badge variant="outline" className="text-[10px]">
+										{player.rank}
+										{player.rankDivision ? ` ${player.rankDivision}` : ""}
+									</Badge>
+								)}
 								<Badge variant="outline" className="text-[10px]">
-									{ROLE_LABELS[player.primaryRole]}
+									{player.recruitingStatus === "looking" ? "Looking for team" : "Unavailable"}
 								</Badge>
-							)}
-							{player.secondaryRole && (
-								<Badge variant="outline" className="text-[10px]">
-									{ROLE_LABELS[player.secondaryRole]}
-								</Badge>
-							)}
-							{player.rank && (
-								<Badge variant="secondary" className="text-[10px]">
-									{player.rank}
-									{player.rankDivision ? ` ${player.rankDivision}` : ""}
-								</Badge>
-							)}
-							<Badge
-								variant={player.recruitingStatus === "looking" ? "default" : "outline"}
-								className="text-[10px]"
-							>
-								{player.recruitingStatus === "looking" ? "Looking for team" : "Unavailable"}
-							</Badge>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -216,9 +222,21 @@ export default async function PlayerProfilePage({
 									</p>
 									<div className="flex flex-wrap gap-2">
 										{heroes.map((h) => (
-											<Badge key={h.heroId} variant="outline" className="text-[10px]">
-												{h.displayName}
-											</Badge>
+											<div key={h.heroId} className="flex items-center gap-1.5 border px-2 py-1">
+												{h.imageUrl && (
+													<div className="relative size-4 shrink-0 overflow-hidden">
+														<Image
+															src={h.imageUrl}
+															alt=""
+															fill
+															sizes="16px"
+															unoptimized
+															className="object-cover"
+														/>
+													</div>
+												)}
+												<span className="text-[10px]">{h.displayName}</span>
+											</div>
 										))}
 									</div>
 								</div>

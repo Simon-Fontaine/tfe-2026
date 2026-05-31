@@ -1,3 +1,4 @@
+import type { RecruitmentConversationSummary } from "@scrimflow/shared";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { RecruitmentConversationWorkspace } from "@/components/recruit/recruitment-conversation-workspace";
@@ -16,7 +17,14 @@ export default async function AppRecruitingConversationsPage({
 	const { user } = await requireWorkspaceSession();
 
 	const { conversation } = await searchParams;
-	const conversations = await getMyRecruitmentConversationSummaries();
+
+	let conversations: RecruitmentConversationSummary[] = [];
+	let conversationsError = false;
+	try {
+		conversations = await getMyRecruitmentConversationSummaries();
+	} catch {
+		conversationsError = true;
+	}
 
 	return (
 		<PageContainer>
@@ -28,11 +36,15 @@ export default async function AppRecruitingConversationsPage({
 					</Link>
 				}
 			/>
-			<RecruitmentConversationWorkspace
-				currentUserId={user.id}
-				conversations={conversations}
-				initialConversationId={conversation ?? null}
-			/>
+			{conversationsError ? (
+				<p className="text-sm text-muted-foreground">Conversations unavailable. Try again.</p>
+			) : (
+				<RecruitmentConversationWorkspace
+					currentUserId={user.id}
+					conversations={conversations}
+					initialConversationId={conversation ?? null}
+				/>
+			)}
 		</PageContainer>
 	);
 }

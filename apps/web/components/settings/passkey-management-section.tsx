@@ -46,6 +46,7 @@ interface PasskeyManagementSectionProps {
 	userId: string;
 	userName: string;
 	userDisplayName: string;
+	initialPasskeys?: CredentialInfo[];
 	initialDisableConfirm?: { credentialId: string; credentialName: string } | null;
 }
 
@@ -53,9 +54,10 @@ export function PasskeyManagementSection({
 	userId,
 	userName,
 	userDisplayName,
+	initialPasskeys,
 	initialDisableConfirm,
 }: PasskeyManagementSectionProps) {
-	const [passkeys, setPasskeys] = useState<CredentialInfo[]>([]);
+	const [passkeys, setPasskeys] = useState<CredentialInfo[]>(initialPasskeys ?? []);
 	const [registerLoading, setRegisterLoading] = useState(false);
 	const [actionLoading, setActionLoading] = useState(false);
 	const [recoveryCode, setRecoveryCode] = useState<string | null>(null);

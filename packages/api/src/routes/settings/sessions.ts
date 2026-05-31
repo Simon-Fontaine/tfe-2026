@@ -40,8 +40,8 @@ sessionRoutes.get("/", async (c) => {
 		)
 		.orderBy(sessionTable.lastActiveAt);
 
-	return c.json(
-		rows.map((row) => ({
+	return c.json({
+		data: rows.map((row) => ({
 			id: row.id,
 			ipAddress: row.ipAddress,
 			userAgent: row.userAgent,
@@ -50,8 +50,8 @@ sessionRoutes.get("/", async (c) => {
 			lastActiveAt: row.lastActiveAt.toISOString(),
 			createdAt: row.createdAt.toISOString(),
 			isCurrent: row.id === session.id,
-		}))
-	);
+		})),
+	});
 });
 
 // DELETE /:id — Revoke a specific session

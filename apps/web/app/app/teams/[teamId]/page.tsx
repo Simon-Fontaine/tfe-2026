@@ -10,9 +10,11 @@ import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageSection } from "@/components/workspace/page-section";
 import { StatsGrid } from "@/components/workspace/stats-grid";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes, publicRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 function formatSignedRatingDelta(value: number) {
@@ -77,7 +79,10 @@ export default async function AppTeamOverviewPage({
 							</Badge>
 						)}
 						{team.data.isRecruiting && (
-							<Badge variant="outline" className="text-[10px] border-green-600 text-green-600">
+							<Badge
+								variant="outline"
+								className={cn("text-[10px]", STATUS_BADGE_CLASSES.recruiting)}
+							>
 								Recruiting
 							</Badge>
 						)}
@@ -124,10 +129,10 @@ export default async function AppTeamOverviewPage({
 									variant="outline"
 									className={
 										entry.result === "win"
-											? "border-green-600 text-green-600"
+											? STATUS_BADGE_CLASSES.win
 											: entry.result === "draw"
-												? "border-muted-foreground/40 text-muted-foreground"
-												: "border-destructive text-destructive"
+												? STATUS_BADGE_CLASSES.draw
+												: STATUS_BADGE_CLASSES.loss
 									}
 								>
 									{entry.result} {formatSignedRatingDelta(entry.ratingDelta)}

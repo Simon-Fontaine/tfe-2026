@@ -142,7 +142,7 @@ async function PlayerListSection({ role }: { role: PlayerRoleFilter }) {
 								</Badge>
 							)}
 							{player.rank && (
-								<Badge variant="secondary" className="text-[10px]">
+								<Badge variant="outline" className="text-[10px]">
 									{player.rank}
 								</Badge>
 							)}

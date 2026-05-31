@@ -1,4 +1,4 @@
-import { Block01Icon } from "@hugeicons/core-free-icons";
+import { Blockchain01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/workspace/page-container";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import {
 	getManageableRecruitEntities,
 	getRecruitmentApplicationsForListing,
@@ -52,7 +53,7 @@ export default async function AppRecruitingListingDetailPage({
 						</Link>
 					}
 				/>
-				<EmptyState icon={Block01Icon} title="You do not have access to this listing." />
+				<EmptyState icon={Blockchain01Icon} title="You do not have access to this listing." />
 			</PageContainer>
 		);
 	}
@@ -169,9 +170,9 @@ export default async function AppRecruitingListingDetailPage({
 								className={cn(
 									"text-[10px]",
 									listing.status === "open"
-										? "border-green-600 text-green-700"
+										? STATUS_BADGE_CLASSES.open
 										: listing.status === "paused"
-											? "border-yellow-600 text-yellow-700"
+											? STATUS_BADGE_CLASSES.paused
 											: ""
 								)}
 							>

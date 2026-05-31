@@ -9,15 +9,16 @@ import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
-const STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
-	pending: "border-orange-500 text-orange-500",
-	under_review: "border-blue-500 text-blue-500",
-	resolved: "border-green-600 text-green-600",
-	dismissed: "",
-};
+function getReportBadgeClass(status: ReportStatus): string {
+	if (status === "pending") return STATUS_BADGE_CLASSES.reportPending;
+	if (status === "under_review") return STATUS_BADGE_CLASSES.reportUnderReview;
+	if (status === "resolved") return STATUS_BADGE_CLASSES.reportResolved;
+	return STATUS_BADGE_CLASSES.reportDismissed;
+}
 
 const STATUS_LABELS: Record<ReportStatus, string> = {
 	pending: "Pending",
@@ -178,7 +179,7 @@ export default async function ModerationCasePage({ params }: ModerationCasePageP
 						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 							Status
 						</p>
-						<Badge variant="outline" className={STATUS_BADGE_CLASS[caseDetail.status]}>
+						<Badge variant="outline" className={getReportBadgeClass(caseDetail.status)}>
 							{STATUS_LABELS[caseDetail.status]}
 						</Badge>
 						<p className="text-xs text-muted-foreground">

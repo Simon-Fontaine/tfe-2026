@@ -7,6 +7,7 @@ import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
@@ -137,19 +138,19 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 								{state.entityType}
 							</Badge>
 							{state.isSuspended && (
-								<Badge variant="outline" className="border-destructive text-destructive">
+								<Badge variant="outline" className={STATUS_BADGE_CLASSES.suspended}>
 									Suspended
 								</Badge>
 							)}
 							{state.isArchived && <Badge variant="outline">Archived</Badge>}
 							{state.isDeletionPending && (
-								<Badge variant="outline" className="border-destructive text-destructive">
+								<Badge variant="outline" className={STATUS_BADGE_CLASSES.deletionPending}>
 									Deletion Pending
 								</Badge>
 							)}
 							{state.isAnonymized && <Badge variant="outline">Anonymized</Badge>}
 							{openWorkflow && (
-								<Badge variant="outline" className="border-destructive text-destructive">
+								<Badge variant="outline" className={STATUS_BADGE_CLASSES.blocked}>
 									Ownership {openWorkflow.status === "blocked" ? "Blocked" : "Review Required"}
 								</Badge>
 							)}

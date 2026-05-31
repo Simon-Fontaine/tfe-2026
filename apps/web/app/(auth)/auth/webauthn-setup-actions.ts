@@ -1,7 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { apiAuthPost, apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export async function registerPasskeyAction(
 		{ ...data, name: name.trim() || "My Passkey" }
 	);
 	if ("error" in res) return { error: res.error };
+	revalidatePath(appRoutes.settings.security);
 	return { success: true, ...(res.recoveryCode ? { recoveryCode: res.recoveryCode } : {}) };
 }
 
@@ -51,6 +53,7 @@ export async function registerSecurityKeyAction(
 		{ ...data, name: name.trim() || "My Security Key" }
 	);
 	if ("error" in res) return { error: res.error };
+	revalidatePath(appRoutes.settings.security);
 	return { success: true, ...(res.recoveryCode ? { recoveryCode: res.recoveryCode } : {}) };
 }
 

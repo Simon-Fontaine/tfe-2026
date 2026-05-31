@@ -2,6 +2,7 @@
 
 import { MoreHorizontalIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
@@ -31,6 +32,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import type { RosterMember, RosterStatus } from "@/lib/data/team";
 import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -38,10 +40,10 @@ import { cn } from "@/lib/utils";
 const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;
 
 const STATUS_VARIANTS: Record<RosterStatus, string> = {
-	active: "border-green-600 text-green-600",
-	benched: "border-yellow-600 text-yellow-600",
-	trial: "border-blue-600 text-blue-600",
-	inactive: "border-muted-foreground/40 text-muted-foreground",
+	active: STATUS_BADGE_CLASSES.rosterActive,
+	benched: STATUS_BADGE_CLASSES.rosterBenched,
+	trial: STATUS_BADGE_CLASSES.rosterTrial,
+	inactive: STATUS_BADGE_CLASSES.rosterInactive,
 };
 
 const RANK_LABELS: Record<string, string> = {
@@ -157,6 +159,25 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 						{member.rank &&
 							` · ${RANK_LABELS[member.rank] ?? member.rank}${member.rankDivision ? ` ${member.rankDivision}` : ""}`}
 					</p>
+					{member.mainHero && (
+						<div className="mt-1 flex items-center gap-1.5">
+							{member.mainHero.imageUrl && (
+								<div className="relative size-5 shrink-0 overflow-hidden">
+									<Image
+										src={member.mainHero.imageUrl}
+										alt=""
+										fill
+										sizes="20px"
+										unoptimized
+										className="object-cover object-top"
+									/>
+								</div>
+							)}
+							<span className="text-[10px] text-muted-foreground">
+								{member.mainHero.displayName}
+							</span>
+						</div>
+					)}
 				</div>
 
 				<Badge

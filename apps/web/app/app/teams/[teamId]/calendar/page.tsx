@@ -1,4 +1,4 @@
-import { Alert01Icon, Block01Icon, Sword03Icon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, Blockchain01Icon, Sword03Icon } from "@hugeicons/core-free-icons";
 import type { ScrimStatus, ScrimSummary } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -149,7 +149,7 @@ export default async function AppTeamCalendarPage({
 			<PageContainer>
 				<PageHeader title="Calendar" breadcrumbs={calendarBreadcrumbs} />
 				<EmptyState
-					icon={schedule.kind === "no-access" ? Block01Icon : Alert01Icon}
+					icon={schedule.kind === "no-access" ? Blockchain01Icon : Alert01Icon}
 					title={
 						schedule.kind === "no-access"
 							? "You do not have permission to view this team's schedule."

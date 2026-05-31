@@ -4,6 +4,10 @@ import { SecurityCheckIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	confirmRecoveryCodeRegenerateAction,
+	requestRecoveryCodeRegenerateAction,
+} from "@/app/actions/settings/recovery-code";
 import { RecoveryCodeDialog } from "@/components/shared/recovery-code-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -18,7 +22,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiRoutes } from "@/lib/routes";
 
 interface RecoveryCodeManagementSectionProps {
 	hasRecoveryCode: boolean;
@@ -36,11 +39,8 @@ export function RecoveryCodeManagementSection({
 	async function handleRequestCode() {
 		setIsPending(true);
 		try {
-			const res = await fetch(apiRoutes.settings.security.recoveryCodeRegenerateRequest, {
-				method: "POST",
-				credentials: "include",
-			});
-			if (!res.ok) throw new Error("Request failed");
+			const result = await requestRecoveryCodeRegenerateAction();
+			if (result.error) throw new Error(result.error);
 			setCodeSent(true);
 			toast.success("Verification code sent to your email.");
 		} catch {
@@ -53,17 +53,11 @@ export function RecoveryCodeManagementSection({
 	async function handleRegenerate() {
 		setIsPending(true);
 		try {
-			const res = await fetch(apiRoutes.settings.security.recoveryCodeRegenerateConfirm, {
-				method: "POST",
-				credentials: "include",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ code }),
-			});
-			if (!res.ok) throw new Error("Request failed");
-			const json = (await res.json()) as { data: { recoveryCode: string } };
+			const result = await confirmRecoveryCodeRegenerateAction(code);
+			if (result.error || !result.recoveryCode) throw new Error(result.error);
 			setCode("");
 			setCodeSent(false);
-			setNewCode(json.data.recoveryCode);
+			setNewCode(result.recoveryCode);
 		} catch {
 			toast.error("Invalid or expired verification code. Please try again.");
 		} finally {

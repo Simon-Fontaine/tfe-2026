@@ -46,7 +46,7 @@ function ChecklistCard({ icon, title, ctaLabel, ctaHref, comingSoon, done }: Che
 				<div className="flex items-center gap-2">
 					<p className="text-sm font-semibold">{title}</p>
 					{comingSoon && (
-						<Badge variant="secondary" className="text-[10px]">
+						<Badge variant="outline" className="text-[10px]">
 							Coming soon
 						</Badge>
 					)}

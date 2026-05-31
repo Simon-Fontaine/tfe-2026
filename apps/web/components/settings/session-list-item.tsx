@@ -74,7 +74,7 @@ export function SessionListItem({ session, onRevoke, revoking }: SessionListItem
 				<div className="flex items-center gap-2">
 					<span className="truncate text-xs font-medium">{device.name}</span>
 					{session.isCurrent && (
-						<Badge variant="secondary" className="text-xs">
+						<Badge variant="outline" className="text-xs">
 							Current
 						</Badge>
 					)}

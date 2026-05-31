@@ -46,6 +46,7 @@ interface SecurityKeyManagementSectionProps {
 	userId: string;
 	userName: string;
 	userDisplayName: string;
+	initialSecurityKeys?: CredentialInfo[];
 	initialDisableConfirm?: { credentialId: string; credentialName: string } | null;
 }
 
@@ -53,9 +54,10 @@ export function SecurityKeyManagementSection({
 	userId,
 	userName,
 	userDisplayName,
+	initialSecurityKeys,
 	initialDisableConfirm,
 }: SecurityKeyManagementSectionProps) {
-	const [keys, setKeys] = useState<CredentialInfo[]>([]);
+	const [keys, setKeys] = useState<CredentialInfo[]>(initialSecurityKeys ?? []);
 	const [registerLoading, setRegisterLoading] = useState(false);
 	const [actionLoading, setActionLoading] = useState(false);
 	const [recoveryCode, setRecoveryCode] = useState<string | null>(null);

@@ -3,8 +3,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import type { DiscoveryTeam } from "@/lib/data/discovery";
 import { publicRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 
 interface TeamDiscoveryCardProps {
 	team: DiscoveryTeam;
@@ -41,7 +43,10 @@ export function TeamDiscoveryCard({ team }: TeamDiscoveryCardProps) {
 			</div>
 
 			{team.isRecruiting && (
-				<Badge variant="secondary" className="shrink-0 text-[10px] text-green-600">
+				<Badge
+					variant="outline"
+					className={cn("shrink-0 text-[10px]", STATUS_BADGE_CLASSES.recruiting)}
+				>
 					Recruiting
 				</Badge>
 			)}

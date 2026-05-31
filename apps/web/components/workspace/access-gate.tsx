@@ -1,7 +1,7 @@
 import type { PermissionDenialReason } from "@scrimflow/shared";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { PageContainer } from "./page-container";
-import { PageHeader } from "./page-header";
 
 interface AccessGateProps {
 	/** Page title shown in the header (e.g. "Roster", "Overview") */
@@ -90,7 +90,7 @@ export function AccessGate({
 
 	return (
 		<PageContainer>
-			<PageHeader title={title} detail={`${resourceType} workspace`} />
+			<PageHeader title={title} meta={`${resourceType} workspace`} />
 			<EmptyStateBlock
 				title="Access unavailable"
 				description={finalDescription}

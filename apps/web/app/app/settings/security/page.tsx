@@ -77,6 +77,7 @@ export default async function AppSecuritySettingsPage() {
 						userId={user.id}
 						userName={user.username}
 						userDisplayName={user.displayName}
+						initialPasskeys={passkeys}
 						initialDisableConfirm={pending.passkeyDisable}
 					/>
 				</section>
@@ -89,6 +90,7 @@ export default async function AppSecuritySettingsPage() {
 						userId={user.id}
 						userName={user.username}
 						userDisplayName={user.displayName}
+						initialSecurityKeys={securityKeys}
 						initialDisableConfirm={pending.securityKeyDisable}
 					/>
 				</section>

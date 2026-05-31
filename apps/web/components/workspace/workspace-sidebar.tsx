@@ -283,7 +283,7 @@ export function WorkspaceSidebar({
 													{link.label}
 												</Link>
 											</SidebarMenuButton>
-											{"badge" in link && link.badge && link.badge > 0 && (
+											{"badge" in link && link.badge > 0 && (
 												<SidebarMenuBadge>{link.badge}</SidebarMenuBadge>
 											)}
 										</SidebarMenuItem>

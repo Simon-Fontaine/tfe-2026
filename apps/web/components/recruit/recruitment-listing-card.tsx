@@ -140,16 +140,13 @@ export function RecruitmentListingCard({
 							) : (
 								<p className="truncate text-sm font-semibold">{listing.title}</p>
 							)}
-							<Badge variant="secondary" className="text-[10px]">
+							<Badge variant="outline" className="text-[10px]">
 								{RECRUITMENT_CATEGORY_LABELS[listing.category]}
 							</Badge>
 							<Badge variant="outline" className="text-[10px]">
 								{MEMBER_TYPE_LABELS[listing.memberType]}
 							</Badge>
-							<Badge
-								variant={listing.status === "open" ? "secondary" : "outline"}
-								className="text-[10px]"
-							>
+							<Badge variant="outline" className="text-[10px]">
 								{RECRUITMENT_STATUS_LABELS[listing.status]}
 							</Badge>
 						</div>
@@ -182,11 +179,11 @@ export function RecruitmentListingCard({
 							{listing.region}
 						</Badge>
 					)}
-					<Badge variant="secondary" className="text-[10px]">
+					<Badge variant="outline" className="text-[10px]">
 						{listing.applicationCount} application{listing.applicationCount === 1 ? "" : "s"}
 					</Badge>
 					{listing.hasApplied && !listing.canManage && (
-						<Badge variant="secondary" className="text-[10px]">
+						<Badge variant="outline" className="text-[10px]">
 							Application sent
 						</Badge>
 					)}

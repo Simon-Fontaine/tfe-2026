@@ -1,5 +1,14 @@
+import { access, readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { eq } from "drizzle-orm";
+
 import type { db as Db } from "..";
 import { mapTable } from "../schema";
+import { createS3Client, ensurePublicBucket, uploadFile } from "./lib/s3";
+
+const BUCKET = "maps";
+const IMAGES_DIR = join(import.meta.dir, "../../../images/maps");
 
 type MapRow = typeof mapTable.$inferInsert;
 
@@ -39,6 +48,7 @@ const MAPS: MapRow[] = [
 	{ id: "runasapi", displayName: "Runasapi", mapType: "push" },
 
 	// ─── Flashpoint ───────────────────────────────────────────────────────────
+	{ id: "aatlis", displayName: "Aatlis", mapType: "flashpoint" },
 	{ id: "new-junk-city", displayName: "New Junk City", mapType: "flashpoint" },
 	{ id: "suravasa", displayName: "Suravasa", mapType: "flashpoint" },
 
@@ -68,8 +78,52 @@ export async function seedMaps(db: typeof Db) {
 	console.log("Seeding maps…");
 
 	await db.insert(mapTable).values(MAPS).onConflictDoNothing();
-
 	console.log(
 		`  ✓ ${MAPS.length} maps seeded (${MAPS.filter((m) => m.isActive !== false).length} active)`
 	);
+
+	try {
+		await access(IMAGES_DIR);
+	} catch {
+		console.log("  ~ Map image directory not found; skipped map image upload");
+		return;
+	}
+
+	const dbMaps = await db.query.mapTable.findMany({ columns: { id: true } });
+	const mapIdSet = new Set(dbMaps.map((m) => m.id));
+	const s3 = createS3Client();
+	await ensurePublicBucket(s3, BUCKET);
+
+	const publicUrl = (process.env.S3_PUBLIC_URL ?? "http://localhost:9000").replace(/\/$/, "");
+	const files = (await readdir(IMAGES_DIR)).filter((f) => f.endsWith(".webp"));
+	const unknown: string[] = [];
+	let uploaded = 0;
+
+	for (const file of files) {
+		const mapId = file.slice(0, -5);
+
+		if (!mapIdSet.has(mapId)) {
+			unknown.push(file);
+			continue;
+		}
+
+		await uploadFile(s3, {
+			Bucket: BUCKET,
+			Key: file,
+			Body: await readFile(join(IMAGES_DIR, file)),
+			ContentType: "image/webp",
+		});
+
+		await db
+			.update(mapTable)
+			.set({ imageUrl: `${publicUrl}/${BUCKET}/${file}` })
+			.where(eq(mapTable.id, mapId));
+
+		uploaded++;
+	}
+
+	console.log(`  ✓ ${uploaded} map images uploaded`);
+	if (unknown.length > 0) {
+		console.log(`  ~ Skipped (no matching map in DB): ${unknown.join(", ")}`);
+	}
 }
