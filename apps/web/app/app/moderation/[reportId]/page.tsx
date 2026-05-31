@@ -1,25 +1,22 @@
 import type { ModerationCaseDetail, ReportStatus } from "@scrimflow/shared";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-
+import { PageHeader } from "@/components/layout/PageHeader";
 import { CaseActions } from "@/components/moderation/case-actions";
 import { EnforcementActions } from "@/components/moderation/enforcement-actions";
 import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
 import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
-const STATUS_BADGE_VARIANT: Record<
-	ReportStatus,
-	"default" | "secondary" | "outline" | "destructive"
-> = {
-	pending: "secondary",
-	under_review: "outline",
-	resolved: "default",
-	dismissed: "secondary",
+const STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
+	pending: "border-orange-500 text-orange-500",
+	under_review: "border-blue-500 text-blue-500",
+	resolved: "border-green-600 text-green-600",
+	dismissed: "",
 };
 
 const STATUS_LABELS: Record<ReportStatus, string> = {
@@ -72,26 +69,20 @@ export default async function ModerationCasePage({ params }: ModerationCasePageP
 	return (
 		<PageContainer>
 			<PageHeader
-				title={`Case: ${caseDetail.category.replace(/_/g, " ")}`}
-				detail={`${caseDetail.targetType.replace(/_/g, " ")} · ${appRoutes.moderation.root}`}
-				badge={
-					<Badge variant={STATUS_BADGE_VARIANT[caseDetail.status]}>
-						{STATUS_LABELS[caseDetail.status]}
-					</Badge>
+				breadcrumbs={
+					<>
+						<Link href={appRoutes.moderation.root} className="hover:underline">
+							Moderation
+						</Link>
+						{" / Reports / "}
+						{reportId}
+					</>
 				}
-				description={`Urgency: ${URGENCY_LABELS[caseDetail.urgencyLevel]} · Submitted ${new Date(caseDetail.createdAt).toLocaleString()}`}
-				actions={
-					<a
-						href={appRoutes.moderation.root}
-						className="text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-					>
-						← Back to queue
-					</a>
-				}
+				title={caseDetail.category.replace(/_/g, " ")}
 			/>
 
-			<div className="grid gap-6 lg:grid-cols-3">
-				<div className="space-y-6 lg:col-span-2">
+			<div className="grid grid-cols-3 gap-6">
+				<div className="col-span-2 space-y-6">
 					<PageSection title="Report Details">
 						<dl className="divide-y text-sm">
 							<div className="flex gap-4 py-2">
@@ -140,7 +131,7 @@ export default async function ModerationCasePage({ params }: ModerationCasePageP
 						<PageSection title="Supplements">
 							<ol className="space-y-3">
 								{caseDetail.supplements.map((s, i) => (
-									<li key={s.id} className="rounded-md border p-3 text-sm">
+									<li key={s.id} className="border p-3 text-sm">
 										<div className="mb-1 text-xs text-muted-foreground">
 											#{i + 1} · {new Date(s.createdAt).toLocaleString()}
 										</div>
@@ -164,9 +155,7 @@ export default async function ModerationCasePage({ params }: ModerationCasePageP
 									return (
 										<li
 											key={event.id}
-											className={
-												isViewed ? "text-xs text-muted-foreground" : "rounded-md border p-3 text-sm"
-											}
+											className={isViewed ? "text-xs text-muted-foreground" : "border p-3 text-sm"}
 										>
 											<div className={isViewed ? "" : "mb-1 text-xs text-muted-foreground"}>
 												{label} {event.moderatorName} · {new Date(event.createdAt).toLocaleString()}
@@ -184,7 +173,18 @@ export default async function ModerationCasePage({ params }: ModerationCasePageP
 					</PageSection>
 				</div>
 
-				<div className="space-y-4">
+				<div className="col-span-1 sticky top-6 self-start space-y-4">
+					<section className="border p-4 space-y-3">
+						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+							Status
+						</p>
+						<Badge variant="outline" className={STATUS_BADGE_CLASS[caseDetail.status]}>
+							{STATUS_LABELS[caseDetail.status]}
+						</Badge>
+						<p className="text-xs text-muted-foreground">
+							Urgency: {URGENCY_LABELS[caseDetail.urgencyLevel]}
+						</p>
+					</section>
 					<CaseActions
 						reportId={caseDetail.id}
 						currentStatus={caseDetail.status}

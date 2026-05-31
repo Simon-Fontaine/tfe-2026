@@ -79,11 +79,10 @@ export function QueueFilters({
 
 	const pillClass = (active: boolean) =>
 		active
-			? "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset bg-primary text-primary-foreground ring-primary"
-			: "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset text-foreground ring-border hover:bg-muted";
+			? "inline-flex items-center px-3 py-1 text-sm font-medium ring-1 ring-inset bg-primary text-primary-foreground ring-primary"
+			: "inline-flex items-center px-3 py-1 text-sm font-medium ring-1 ring-inset text-foreground ring-border hover:bg-muted";
 
-	const selectClass =
-		"rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground";
+	const selectClass = "border border-border bg-background px-2 py-1 text-sm text-foreground";
 
 	return (
 		<div className="space-y-3">

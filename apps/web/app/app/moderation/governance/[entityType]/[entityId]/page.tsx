@@ -1,13 +1,13 @@
 import type { GovernanceEntityState } from "@scrimflow/shared";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 import { OwnershipResolutionForm } from "./ownership-resolution-form";
@@ -57,100 +57,137 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 
 	return (
 		<PageContainer>
-			<PageHeader title={state.displayName}>
-				<div className="flex gap-2 flex-wrap">
-					<Badge variant="outline" className="text-xs">
-						{state.entityType}
-					</Badge>
-					{state.isSuspended && <Badge variant="destructive">Suspended</Badge>}
-					{state.isArchived && <Badge variant="secondary">Archived</Badge>}
-					{state.isDeletionPending && <Badge variant="destructive">Deletion Pending</Badge>}
-					{state.isAnonymized && <Badge variant="secondary">Anonymized</Badge>}
-					{openWorkflow && (
-						<Badge variant="destructive">
-							Ownership {openWorkflow.status === "blocked" ? "Blocked" : "Review Required"}
-						</Badge>
-					)}
-				</div>
-			</PageHeader>
+			<PageHeader
+				breadcrumbs={
+					<>
+						<Link href={appRoutes.moderation.root} className="hover:underline">
+							Moderation
+						</Link>
+						{" / "}
+						<Link href={appRoutes.moderation.governance.root} className="hover:underline">
+							Governance
+						</Link>
+						{" / "}
+						{state.entityType.charAt(0).toUpperCase() + state.entityType.slice(1)}
+						{" / "}
+						{state.displayName}
+					</>
+				}
+				title={state.displayName}
+			/>
 
-			{openWorkflow && (
-				<PageSection title="Ownership Recovery">
-					<div className="space-y-3 text-sm">
-						<div className="grid grid-cols-2 gap-2 text-muted-foreground">
-							<span>Status</span>
-							<span className="font-medium text-foreground">{openWorkflow.status}</span>
-							<span>Kind</span>
-							<span className="font-medium text-foreground">{openWorkflow.kind}</span>
-							{openWorkflow.requester && (
-								<>
-									<span>Requester</span>
-									<span className="font-medium text-foreground">
-										{openWorkflow.requester.displayName ?? openWorkflow.requester.userId}
-									</span>
-								</>
+			<div className="grid grid-cols-3 gap-6">
+				<div className="col-span-2 space-y-6">
+					<PageSection title="Recent Audit Events">
+						{state.recentAuditEvents.length === 0 ? (
+							<p className="text-sm text-muted-foreground">No recent audit events.</p>
+						) : (
+							<div className="divide-y">
+								{state.recentAuditEvents.map((event) => (
+									<div key={event.id} className="flex items-center justify-between py-2 text-sm">
+										<div className="flex items-center gap-2">
+											<Badge variant="outline">{event.actionType}</Badge>
+											{event.outcome && (
+												<span
+													className={
+														event.outcome === "success" ? "text-green-600" : "text-destructive"
+													}
+												>
+													{event.outcome}
+												</span>
+											)}
+										</div>
+										<span className="text-xs text-muted-foreground">
+											{new Date(event.createdAt).toLocaleDateString()}
+										</span>
+									</div>
+								))}
+							</div>
+						)}
+					</PageSection>
+
+					<PageSection title="Active Moderation Actions">
+						{state.activeActions.length === 0 ? (
+							<p className="text-sm text-muted-foreground">No active moderation actions.</p>
+						) : (
+							<div className="divide-y">
+								{state.activeActions.map((action) => (
+									<div key={action.id} className="flex items-center justify-between py-2 text-sm">
+										<div className="flex items-center gap-2">
+											<Badge variant="outline">{action.actionType}</Badge>
+											<span className="text-muted-foreground">{action.reason}</span>
+										</div>
+										<span className="text-xs text-muted-foreground">
+											{new Date(action.createdAt).toLocaleDateString()}
+										</span>
+									</div>
+								))}
+							</div>
+						)}
+					</PageSection>
+				</div>
+
+				<div className="col-span-1 sticky top-6 self-start space-y-4">
+					<section className="border p-4 space-y-3">
+						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+							Entity
+						</p>
+						<div className="flex flex-wrap gap-2">
+							<Badge variant="outline" className="text-xs">
+								{state.entityType}
+							</Badge>
+							{state.isSuspended && (
+								<Badge variant="outline" className="border-destructive text-destructive">
+									Suspended
+								</Badge>
 							)}
-							{openWorkflow.recoveryTarget && (
-								<>
-									<span>Recovery Target</span>
-									<span className="font-medium text-foreground">
-										{openWorkflow.recoveryTarget.displayName ?? openWorkflow.recoveryTarget.userId}
-									</span>
-								</>
+							{state.isArchived && <Badge variant="outline">Archived</Badge>}
+							{state.isDeletionPending && (
+								<Badge variant="outline" className="border-destructive text-destructive">
+									Deletion Pending
+								</Badge>
+							)}
+							{state.isAnonymized && <Badge variant="outline">Anonymized</Badge>}
+							{openWorkflow && (
+								<Badge variant="outline" className="border-destructive text-destructive">
+									Ownership {openWorkflow.status === "blocked" ? "Blocked" : "Review Required"}
+								</Badge>
 							)}
 						</div>
-						<OwnershipResolutionForm workflowId={openWorkflow.id} />
-					</div>
-				</PageSection>
-			)}
+					</section>
 
-			<PageSection title="Active Moderation Actions">
-				{state.activeActions.length === 0 ? (
-					<p className="text-sm text-muted-foreground">No active moderation actions.</p>
-				) : (
-					<div className="divide-y">
-						{state.activeActions.map((action) => (
-							<div key={action.id} className="flex items-center justify-between py-2 text-sm">
-								<div className="flex items-center gap-2">
-									<Badge variant="outline">{action.actionType}</Badge>
-									<span className="text-muted-foreground">{action.reason}</span>
-								</div>
-								<span className="text-xs text-muted-foreground">
-									{new Date(action.createdAt).toLocaleDateString()}
-								</span>
-							</div>
-						))}
-					</div>
-				)}
-			</PageSection>
-
-			<PageSection title="Recent Audit Events">
-				{state.recentAuditEvents.length === 0 ? (
-					<p className="text-sm text-muted-foreground">No recent audit events.</p>
-				) : (
-					<div className="divide-y">
-						{state.recentAuditEvents.map((event) => (
-							<div key={event.id} className="flex items-center justify-between py-2 text-sm">
-								<div className="flex items-center gap-2">
-									<Badge variant="outline">{event.actionType}</Badge>
-									{event.outcome && (
-										<span
-											className={
-												event.outcome === "success" ? "text-green-600" : "text-destructive"
-											}
-										>
-											{event.outcome}
-										</span>
+					{openWorkflow && (
+						<PageSection title="Ownership Recovery">
+							<div className="space-y-3 text-sm">
+								<div className="grid grid-cols-2 gap-2 text-muted-foreground">
+									<span>Status</span>
+									<span className="font-medium text-foreground">{openWorkflow.status}</span>
+									<span>Kind</span>
+									<span className="font-medium text-foreground">{openWorkflow.kind}</span>
+									{openWorkflow.requester && (
+										<>
+											<span>Requester</span>
+											<span className="font-medium text-foreground">
+												{openWorkflow.requester.displayName ?? openWorkflow.requester.userId}
+											</span>
+										</>
+									)}
+									{openWorkflow.recoveryTarget && (
+										<>
+											<span>Recovery Target</span>
+											<span className="font-medium text-foreground">
+												{openWorkflow.recoveryTarget.displayName ??
+													openWorkflow.recoveryTarget.userId}
+											</span>
+										</>
 									)}
 								</div>
-								<span className="text-xs text-muted-foreground">
-									{new Date(event.createdAt).toLocaleDateString()}
-								</span>
+								<OwnershipResolutionForm workflowId={openWorkflow.id} />
 							</div>
-						))}
-					</div>
-				)}
-			</PageSection>
+						</PageSection>
+					)}
+				</div>
+			</div>
 		</PageContainer>
 	);
 }

@@ -4,11 +4,10 @@ import type {
 	DomainAuditEventsResponse,
 } from "@scrimflow/shared";
 import Link from "next/link";
-
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
 import { apiRoutes, appRoutes } from "@/lib/routes";
@@ -140,8 +139,11 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
 		<PageContainer>
 			<PageHeader
 				title="Audit Log"
-				description="Trust-sensitive and administrative action history."
-				detail="moderator workspace"
+				breadcrumbs={
+					<Link href={appRoutes.moderation.root} className="hover:underline">
+						Moderation
+					</Link>
+				}
 			/>
 
 			<PageSection>
@@ -161,8 +163,8 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
 								href={href}
 								className={
 									isActive
-										? "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset bg-primary text-primary-foreground ring-primary"
-										: "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset text-foreground ring-border hover:bg-muted"
+										? "inline-flex items-center px-3 py-1 text-sm font-medium ring-1 ring-inset bg-primary text-primary-foreground ring-primary"
+										: "inline-flex items-center px-3 py-1 text-sm font-medium ring-1 ring-inset text-foreground ring-border hover:bg-muted"
 								}
 							>
 								{filter.label}
@@ -174,13 +176,9 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
 
 			<PageSection>
 				{apiError ? (
-					<p className="text-sm text-destructive">{apiError}</p>
-				) : !auditData || auditData.events.length === 0 ? (
-					<p className="text-sm text-muted-foreground">
-						{hasActiveFilters
-							? "No audit events match the current filters."
-							: "No audit events recorded yet."}
-					</p>
+					<div className="border-l-4 border-destructive bg-destructive/10 p-4 text-sm">
+						{apiError}
+					</div>
 				) : (
 					<div className="overflow-x-auto">
 						<table className="w-full text-sm">
@@ -195,74 +193,84 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
 								</tr>
 							</thead>
 							<tbody className="divide-y">
-								{auditData.events.map((event) => {
-									const createdAt = new Date(event.createdAt);
-									const timeLabel = createdAt.toLocaleString();
-									const actionLabel =
-										ACTION_TYPE_LABELS[event.actionType] ?? event.actionType.replace(/_/g, " ");
-									const metadataEntries = event.metadata
-										? Object.entries(event.metadata).slice(0, 3)
-										: [];
+								{!auditData || auditData.events.length === 0 ? (
+									<tr>
+										<td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+											{hasActiveFilters
+												? "No audit events match the current filters."
+												: "No audit events recorded yet."}
+										</td>
+									</tr>
+								) : (
+									auditData.events.map((event) => {
+										const createdAt = new Date(event.createdAt);
+										const timeLabel = createdAt.toLocaleString();
+										const actionLabel =
+											ACTION_TYPE_LABELS[event.actionType] ?? event.actionType.replace(/_/g, " ");
+										const metadataEntries = event.metadata
+											? Object.entries(event.metadata).slice(0, 3)
+											: [];
 
-									return (
-										<tr key={event.id} className="group align-top">
-											<td className="py-3 pr-4">
-												<div className="flex items-center gap-1.5">
-													{actorTypeBadge(event.actorType)}
-													{event.actorId ? (
-														<span className="font-mono text-xs text-muted-foreground">
-															{event.actorId.slice(0, 8)}…
+										return (
+											<tr key={event.id} className="group align-top">
+												<td className="py-3 pr-4">
+													<div className="flex items-center gap-1.5">
+														{actorTypeBadge(event.actorType)}
+														{event.actorId ? (
+															<span className="font-mono text-xs text-muted-foreground">
+																{event.actorId.slice(0, 8)}…
+															</span>
+														) : (
+															<span className="text-xs text-muted-foreground">—</span>
+														)}
+													</div>
+												</td>
+												<td className="py-3 pr-4 capitalize text-muted-foreground">
+													{event.domain.replace(/_/g, " ")}
+												</td>
+												<td className="py-3 pr-4">
+													<div>
+														<span>{actionLabel}</span>
+														{event.reason && (
+															<p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+																{event.reason}
+															</p>
+														)}
+														{metadataEntries.length > 0 && (
+															<p className="mt-0.5 text-xs text-muted-foreground">
+																{metadataEntries
+																	.map(([k, v]) => `${k}: ${String(v).slice(0, 20)}`)
+																	.join(" · ")}
+															</p>
+														)}
+													</div>
+												</td>
+												<td className="py-3 pr-4">
+													{event.targetType && event.targetId ? (
+														<span className="text-xs">
+															<span className="capitalize">{event.targetType}</span>{" "}
+															<span className="font-mono text-muted-foreground">
+																{event.targetId.slice(0, 8)}…
+															</span>
 														</span>
 													) : (
 														<span className="text-xs text-muted-foreground">—</span>
 													)}
-												</div>
-											</td>
-											<td className="py-3 pr-4 capitalize text-muted-foreground">
-												{event.domain.replace(/_/g, " ")}
-											</td>
-											<td className="py-3 pr-4">
-												<div>
-													<span>{actionLabel}</span>
-													{event.reason && (
-														<p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-															{event.reason}
-														</p>
+												</td>
+												<td className="py-3 pr-4">
+													{event.outcome ? (
+														<Badge variant={OUTCOME_VARIANT[event.outcome] ?? "outline"}>
+															{event.outcome}
+														</Badge>
+													) : (
+														<span className="text-xs text-muted-foreground">—</span>
 													)}
-													{metadataEntries.length > 0 && (
-														<p className="mt-0.5 text-xs text-muted-foreground">
-															{metadataEntries
-																.map(([k, v]) => `${k}: ${String(v).slice(0, 20)}`)
-																.join(" · ")}
-														</p>
-													)}
-												</div>
-											</td>
-											<td className="py-3 pr-4">
-												{event.targetType && event.targetId ? (
-													<span className="text-xs">
-														<span className="capitalize">{event.targetType}</span>{" "}
-														<span className="font-mono text-muted-foreground">
-															{event.targetId.slice(0, 8)}…
-														</span>
-													</span>
-												) : (
-													<span className="text-xs text-muted-foreground">—</span>
-												)}
-											</td>
-											<td className="py-3 pr-4">
-												{event.outcome ? (
-													<Badge variant={OUTCOME_VARIANT[event.outcome] ?? "outline"}>
-														{event.outcome}
-													</Badge>
-												) : (
-													<span className="text-xs text-muted-foreground">—</span>
-												)}
-											</td>
-											<td className="py-3 text-xs text-muted-foreground">{timeLabel}</td>
-										</tr>
-									);
-								})}
+												</td>
+												<td className="py-3 text-xs text-muted-foreground">{timeLabel}</td>
+											</tr>
+										);
+									})
+								)}
 							</tbody>
 						</table>
 					</div>

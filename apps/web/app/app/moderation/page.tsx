@@ -1,16 +1,16 @@
 import type { ModerationQueueResponse, ReportStatus } from "@scrimflow/shared";
 import Link from "next/link";
-
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
-import { PageHeader } from "@/components/workspace/page-header";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
 import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 import { QueueFilters } from "./queue-filters";
+import { QueueRowActionsDropdown } from "./queue-row-actions";
 
 const STATUS_FILTERS: { label: string; value: ReportStatus | "all" }[] = [
 	{ label: "All", value: "all" },
@@ -20,14 +20,11 @@ const STATUS_FILTERS: { label: string; value: ReportStatus | "all" }[] = [
 	{ label: "Dismissed", value: "dismissed" },
 ];
 
-const STATUS_BADGE_VARIANT: Record<
-	ReportStatus,
-	"default" | "secondary" | "outline" | "destructive"
-> = {
-	pending: "secondary",
-	under_review: "outline",
-	resolved: "default",
-	dismissed: "secondary",
+const STATUS_BADGE_CLASS: Record<ReportStatus, string> = {
+	pending: "border-orange-500 text-orange-500",
+	under_review: "border-blue-500 text-blue-500",
+	resolved: "border-green-600 text-green-600",
+	dismissed: "",
 };
 
 const STATUS_LABELS: Record<ReportStatus, string> = {
@@ -113,26 +110,12 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 		<PageContainer>
 			<PageHeader
 				title="Moderation Queue"
-				description="Review and investigate user-submitted reports."
-				detail="moderator workspace"
+				meta={
+					queueData
+						? `${queueData.items.length} pending item${queueData.items.length === 1 ? "" : "s"}`
+						: "–"
+				}
 			/>
-
-			<PageSection>
-				<div className="flex gap-4">
-					<Link
-						href={appRoutes.moderation.audit}
-						className="text-sm text-primary underline-offset-2 hover:underline"
-					>
-						View Audit Log →
-					</Link>
-					<Link
-						href={appRoutes.moderation.governance.root}
-						className="text-sm text-primary underline-offset-2 hover:underline"
-					>
-						Governance Recovery →
-					</Link>
-				</div>
-			</PageSection>
 
 			<PageSection>
 				{/* Status pills — Links preserve all other active filters */}
@@ -151,8 +134,8 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 								href={href}
 								className={
 									isActive
-										? "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset bg-primary text-primary-foreground ring-primary"
-										: "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset text-foreground ring-border hover:bg-muted"
+										? "inline-flex items-center px-3 py-1 text-sm font-medium ring-1 ring-inset bg-primary text-primary-foreground ring-primary"
+										: "inline-flex items-center px-3 py-1 text-sm font-medium ring-1 ring-inset text-foreground ring-border hover:bg-muted"
 								}
 							>
 								{filter.label}
@@ -174,11 +157,9 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 
 			<PageSection>
 				{apiError ? (
-					<p className="text-sm text-destructive">{apiError}</p>
-				) : !queueData || queueData.items.length === 0 ? (
-					<p className="text-sm text-muted-foreground">
-						{hasActiveFilters ? "No cases match the current filters." : "No cases in the queue."}
-					</p>
+					<div className="border-l-4 border-destructive bg-destructive/10 p-4 text-sm">
+						{apiError}
+					</div>
 				) : (
 					<div className="overflow-x-auto">
 						<table className="w-full text-sm">
@@ -190,55 +171,63 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 									<th className="pb-3 pr-4">Status</th>
 									<th className="pb-3 pr-4">Assigned To</th>
 									<th className="pb-3 pr-4">Age</th>
+									<th className="pb-3" />
 								</tr>
 							</thead>
 							<tbody className="divide-y">
-								{queueData.items.map((item) => {
-									const createdAt = new Date(item.createdAt);
-									const ageMs = Date.now() - createdAt.getTime();
-									const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
-									const ageHours = Math.floor(ageMs / (1000 * 60 * 60));
-									const ageLabel = ageDays > 0 ? `${ageDays}d ago` : `${ageHours}h ago`;
+								{!queueData || queueData.items.length === 0 ? (
+									<tr>
+										<td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+											{hasActiveFilters
+												? "No cases match the current filters."
+												: "No pending items."}
+										</td>
+									</tr>
+								) : (
+									queueData.items.map((item) => {
+										const createdAt = new Date(item.createdAt);
+										const ageMs = Date.now() - createdAt.getTime();
+										const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+										const ageHours = Math.floor(ageMs / (1000 * 60 * 60));
+										const ageLabel = ageDays > 0 ? `${ageDays}d ago` : `${ageHours}h ago`;
 
-									return (
-										<tr key={item.id} className="group">
-											<td className="py-3 pr-4">
-												<div className="flex items-center gap-1.5">
-													<span
-														className={
-															item.urgencyLevel === "overdue"
-																? "h-2 w-2 rounded-full bg-destructive"
-																: item.urgencyLevel === "urgent"
-																	? "h-2 w-2 rounded-full bg-orange-400"
-																	: "h-2 w-2 rounded-full bg-muted-foreground/30"
-														}
-														aria-hidden="true"
-													/>
-													<span className="text-xs">{URGENCY_LABELS[item.urgencyLevel]}</span>
-												</div>
-											</td>
-											<td className="py-3 pr-4 capitalize">{item.category.replace(/_/g, " ")}</td>
-											<td className="py-3 pr-4 capitalize">{item.targetType.replace(/_/g, " ")}</td>
-											<td className="py-3 pr-4">
-												<Badge variant={STATUS_BADGE_VARIANT[item.status]}>
-													{STATUS_LABELS[item.status]}
-												</Badge>
-											</td>
-											<td className="py-3 pr-4 text-muted-foreground">
-												{item.assignedModeratorName ?? "Unassigned"}
-											</td>
-											<td className="py-3 pr-4 text-muted-foreground">{ageLabel}</td>
-											<td className="py-3 text-right">
-												<Link
-													href={appRoutes.moderation.report(item.id)}
-													className="text-xs text-primary underline-offset-2 hover:underline"
-												>
-													View case
-												</Link>
-											</td>
-										</tr>
-									);
-								})}
+										return (
+											<tr key={item.id} className="group">
+												<td className="py-3 pr-4">
+													<div className="flex items-center gap-1.5">
+														<span
+															className={
+																item.urgencyLevel === "overdue"
+																	? "inline-block size-2 bg-destructive"
+																	: item.urgencyLevel === "urgent"
+																		? "inline-block size-2 bg-orange-400"
+																		: "inline-block size-2 bg-muted-foreground/30"
+															}
+															aria-hidden="true"
+														/>
+														<span className="text-xs">{URGENCY_LABELS[item.urgencyLevel]}</span>
+													</div>
+												</td>
+												<td className="py-3 pr-4 capitalize">{item.category.replace(/_/g, " ")}</td>
+												<td className="py-3 pr-4 capitalize">
+													{item.targetType.replace(/_/g, " ")}
+												</td>
+												<td className="py-3 pr-4">
+													<Badge variant="outline" className={STATUS_BADGE_CLASS[item.status]}>
+														{STATUS_LABELS[item.status]}
+													</Badge>
+												</td>
+												<td className="py-3 pr-4 text-muted-foreground">
+													{item.assignedModeratorName ?? "Unassigned"}
+												</td>
+												<td className="py-3 pr-4 text-muted-foreground">{ageLabel}</td>
+												<td className="py-3 text-right">
+													<QueueRowActionsDropdown reportId={item.id} userId={user.id} />
+												</td>
+											</tr>
+										);
+									})
+								)}
 							</tbody>
 						</table>
 					</div>
