@@ -1049,7 +1049,7 @@ export type AppRealtimeEvent =
 	  }
 	| { type: "notification:unread"; notificationId: string; unreadCount: number }
 	| { type: "notification:dismissed"; notificationId: string; unreadCount: number }
-	| { type: "notification:restored"; notificationId: string }
+	| { type: "notification:restored"; notificationId: string; unreadCount: number }
 	| {
 			type: "update:created";
 			teamId: string;
@@ -1284,6 +1284,7 @@ export type ScrimMapSummary = {
 	homeScore: number;
 	awayScore: number;
 	ocrJobId: string | null;
+	imageUrl: string | null;
 	players: ScrimPlayerStatSummary[];
 };
 

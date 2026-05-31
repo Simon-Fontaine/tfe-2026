@@ -18,7 +18,7 @@ import { verifyTeamManager } from "@/utils/team";
 import { canAccessScrim, canViewTeam, notifyTeamAdmins } from "./access";
 import { TEAM_VIEWABLE_STATUSES } from "./constants";
 import { mapScrimDetail, mapScrimSummary } from "./detail";
-import { findScrimWithRelations, toIsoDate } from "./shared";
+import { fetchMapImagesByName, findScrimWithRelations, toIsoDate } from "./shared";
 
 export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 	scrimRoutes.get("/", async (c) => {
@@ -195,7 +195,8 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 			return c.json({ error: "You do not have access to this scrim.", reason: "role" }, 403);
 		}
 
-		return c.json({ data: mapScrimDetail(scrim) });
+		const mapImagesByName = await fetchMapImagesByName(scrim.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(scrim, mapImagesByName) });
 	});
 
 	scrimRoutes.post("/", async (c) => {
@@ -321,6 +322,7 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 			});
 		}
 
-		return c.json({ data: mapScrimDetail(detail) }, 201);
+		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(detail, mapImagesByName) }, 201);
 	});
 }

@@ -9,6 +9,7 @@
 # Dependencies (Fresh install in container)
 # -----------------------------------------------------------------------------
 node_modules
+**/node_modules
 npm-debug.log
 yarn-error.log
 .pnp

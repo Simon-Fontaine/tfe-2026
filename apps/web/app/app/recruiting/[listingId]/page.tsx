@@ -73,7 +73,9 @@ export default async function AppRecruitingListingDetailPage({
 		? publicRoutes.teams.byId(listing.teamId)
 		: listing.organizationSlug
 			? publicRoutes.orgs.bySlug(listing.organizationSlug)
-			: publicRoutes.players.byUsername(listing.ownerUsername);
+			: listing.ownerUsername
+				? publicRoutes.players.byUsername(listing.ownerUsername)
+				: null;
 	const canApply = listing.canApply && !listing.canManage && listing.status === "open";
 	const isTerminal =
 		listing.status === "closed" || listing.status === "fulfilled" || listing.status === "expired";
@@ -104,7 +106,24 @@ export default async function AppRecruitingListingDetailPage({
 						<h2 className="mb-4 border-b pb-2 text-lg font-semibold">About</h2>
 						<div className="space-y-4">
 							<div className="flex items-center gap-3">
-								<Link href={ownerHref}>
+								{ownerHref ? (
+									<Link href={ownerHref}>
+										<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+											<AvatarImage
+												src={
+													listing.teamAvatarUrl ??
+													listing.organizationAvatarUrl ??
+													listing.ownerAvatarUrl ??
+													undefined
+												}
+												className="rounded-none"
+											/>
+											<AvatarFallback className="rounded-none text-[10px] font-bold">
+												{ownerLabel.slice(0, 2).toUpperCase()}
+											</AvatarFallback>
+										</Avatar>
+									</Link>
+								) : (
 									<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
 										<AvatarImage
 											src={
@@ -119,11 +138,15 @@ export default async function AppRecruitingListingDetailPage({
 											{ownerLabel.slice(0, 2).toUpperCase()}
 										</AvatarFallback>
 									</Avatar>
-								</Link>
+								)}
 								<div>
-									<Link href={ownerHref} className="text-sm font-semibold hover:underline">
-										{ownerLabel}
-									</Link>
+									{ownerHref ? (
+										<Link href={ownerHref} className="text-sm font-semibold hover:underline">
+											{ownerLabel}
+										</Link>
+									) : (
+										<span className="text-sm font-semibold">{ownerLabel}</span>
+									)}
 									<p className="text-xs text-muted-foreground">
 										{RECRUITMENT_CATEGORY_DESCRIPTIONS[listing.category]}
 									</p>

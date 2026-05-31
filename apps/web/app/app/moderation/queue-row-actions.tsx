@@ -27,7 +27,7 @@ export function QueueRowActionsDropdown({ reportId, userId }: QueueRowActionsDro
 
 	function handleAssignToMe() {
 		startTransition(async () => {
-			await moderationCaseAction(reportId, { action: "assigned", moderatorId: userId });
+			await moderationCaseAction(reportId, { action: "assign" });
 			router.refresh();
 		});
 	}

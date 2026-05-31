@@ -13,13 +13,12 @@ RUN npm install -g pnpm
 # Copy workspace configuration
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Copy workspace package.json files
+# Copy only the workspace package manifests needed by the API and worker image.
 COPY packages/api/package.json ./packages/api/
 COPY packages/shared/package.json ./packages/shared/
-COPY apps/web/package.json ./apps/web/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies without running local Git hook lifecycle scripts in the container build.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Runtime image with Bun
 FROM oven/bun:latest AS runner

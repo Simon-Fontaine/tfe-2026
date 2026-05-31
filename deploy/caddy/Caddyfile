@@ -1,0 +1,37 @@
+{
+    email {$ACME_EMAIL:}
+}
+
+{$DOMAIN} {
+    encode gzip zstd
+
+    request_body {
+        max_size 25MB
+    }
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    handle /assets/* {
+        uri strip_prefix /assets
+        reverse_proxy storage:9000
+    }
+
+    handle /api/* {
+        reverse_proxy api:3001
+    }
+
+    handle {
+        reverse_proxy app:3000
+    }
+
+    log {
+        output file /data/access.log
+        format json
+    }
+}

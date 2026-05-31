@@ -31,7 +31,7 @@ import {
 	hasPersistedScrimResult,
 	replaceScrimDetailedResult,
 } from "./results";
-import { findScrimWithRelations, ScrimWorkflowError } from "./shared";
+import { fetchMapImagesByName, findScrimWithRelations, ScrimWorkflowError } from "./shared";
 
 export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 	scrimRoutes.post("/:id/result", async (c) => {
@@ -310,7 +310,8 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 			}
 		}
 
-		return c.json({ data: mapScrimDetail(detail) });
+		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(detail, mapImagesByName) });
 	});
 
 	scrimRoutes.post("/:id/resolve-dispute", async (c) => {
@@ -425,7 +426,8 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 			metadata: { resolution, resolvedByUserId: user.id },
 			linkedScrimId: scrimId,
 		});
-		return c.json({ data: mapScrimDetail(detail) });
+		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(detail, mapImagesByName) });
 	});
 
 	scrimRoutes.post("/:id/dispute-respond", async (c) => {
@@ -490,6 +492,7 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after dispute response." }, 500);
 
-		return c.json({ data: mapScrimDetail(detail) });
+		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(detail, mapImagesByName) });
 	});
 }

@@ -345,6 +345,8 @@ chatRoutes.patch("/conversations/:id/messages/:messageId", async (c) => {
 	});
 
 	if (result.status === "not_found") return c.json({ error: "Message not found." }, 404);
+	if (result.status === "archived")
+		return c.json({ error: "This conversation is archived and read-only." }, 403);
 	if (result.status === "forbidden")
 		return c.json({ error: "You can only edit your own messages." }, 403);
 	if (result.status === "deleted") return c.json({ error: "Cannot edit a deleted message." }, 400);
@@ -370,6 +372,8 @@ chatRoutes.delete("/conversations/:id/messages/:messageId", async (c) => {
 	const result = await deleteMessageForUser({ conversationId, messageId, userId: user.id });
 
 	if (result.status === "not_found") return c.json({ error: "Message not found." }, 404);
+	if (result.status === "archived")
+		return c.json({ error: "This conversation is archived and read-only." }, 403);
 	if (result.status === "forbidden")
 		return c.json({ error: "You can only delete your own messages." }, 403);
 

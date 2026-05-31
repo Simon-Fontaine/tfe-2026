@@ -1,6 +1,6 @@
 import { InboxErrorBlock } from "@/components/notifications/inbox-page-client";
 import { InboxWorkspace } from "@/components/notifications/inbox-workspace";
-import { getNotificationsForUser } from "@/lib/data/notifications";
+import { getNotificationsForUser, getUnreadNotificationCount } from "@/lib/data/notifications";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 interface InboxPageProps {
@@ -12,14 +12,16 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 	const { cursor } = await searchParams;
 
 	try {
-		const { notifications, nextCursor } = await getNotificationsForUser(user.id, cursor);
-		const unreadCount = notifications.filter((notification) => !notification.isRead).length;
+		const [{ notifications, nextCursor }, unreadCount] = await Promise.all([
+			getNotificationsForUser(user.id, cursor),
+			getUnreadNotificationCount(user.id),
+		]);
 
 		return (
 			<InboxWorkspace
 				initialNotifications={notifications}
 				initialUnreadCount={unreadCount}
-				nextCursor={nextCursor}
+				initialNextCursor={nextCursor}
 			/>
 		);
 	} catch {

@@ -83,10 +83,7 @@ export function AddWindowDialog({
 				if (w.dayOfWeek === null || w.dayOfWeek !== watchedDay) return false;
 			} else {
 				if (!w.specificDate || !watchedDate) return false;
-				const wDate =
-					typeof w.specificDate === "string"
-						? w.specificDate.slice(0, 10)
-						: w.specificDate.toISOString().slice(0, 10);
+				const wDate = w.specificDate.slice(0, 10);
 				if (wDate !== watchedDate) return false;
 			}
 			return watchedStart < w.endTime && watchedEnd > w.startTime;

@@ -22,7 +22,7 @@ function mergeNotifications(
 						...notification,
 						...existing,
 						isRead: existing.isRead || notification.isRead,
-						isDismissed: notification.isDismissed,
+						isDismissed: existing.isDismissed || notification.isDismissed,
 					}
 				: notification
 		);
@@ -44,7 +44,7 @@ interface InboxActions {
 	markAllNotificationsRead(unreadCount: number): void;
 	markNotificationUnread(notificationId: string, unreadCount: number): void;
 	dismissNotification(notificationId: string, unreadCount: number): void;
-	restoreNotification(notificationId: string): void;
+	restoreNotification(notificationId: string, unreadCount: number): void;
 }
 
 export const useInboxStore = create<InboxState & InboxActions>((set) => ({
@@ -113,11 +113,12 @@ export const useInboxStore = create<InboxState & InboxActions>((set) => ({
 		}));
 	},
 
-	restoreNotification(notificationId) {
+	restoreNotification(notificationId, unreadCount) {
 		set((state) => ({
 			notifications: state.notifications.map((notification) =>
 				notification.id === notificationId ? { ...notification, isDismissed: false } : notification
 			),
+			unreadCount,
 		}));
 	},
 }));

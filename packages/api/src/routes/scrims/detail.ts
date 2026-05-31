@@ -91,7 +91,10 @@ export function publishOcrJobRealtimeUpdate(
 	});
 }
 
-function mapScrimMap(map: ScrimRow["maps"][number]): ScrimDetail["maps"][number] {
+function mapScrimMap(
+	map: ScrimRow["maps"][number],
+	imageUrl: string | null = null
+): ScrimDetail["maps"][number] {
 	return {
 		id: map.id,
 		mapOrder: map.mapOrder,
@@ -103,6 +106,7 @@ function mapScrimMap(map: ScrimRow["maps"][number]): ScrimDetail["maps"][number]
 		homeScore: map.homeScore,
 		awayScore: map.awayScore,
 		ocrJobId: map.ocrJobId ?? null,
+		imageUrl,
 		players: map.playerStats.map((player) => ({
 			id: player.id,
 			side: player.side as ScrimDetail["maps"][number]["players"][number]["side"],
@@ -144,7 +148,10 @@ function mapScrimResultRevision(
 	};
 }
 
-export function mapScrimDetail(scrim: ScrimRow): ScrimDetail {
+export function mapScrimDetail(
+	scrim: ScrimRow,
+	mapImagesByName: Map<string, string | null> = new Map()
+): ScrimDetail {
 	return {
 		...mapScrimSummary(scrim),
 		confirmations: scrim.confirmations.map((confirmation) => ({
@@ -173,7 +180,7 @@ export function mapScrimDetail(scrim: ScrimRow): ScrimDetail {
 			createdAt: event.createdAt.toISOString(),
 		})),
 		ocrJobs: scrim.ocrJobs.map(mapOcrJob),
-		maps: scrim.maps.map(mapScrimMap),
+		maps: scrim.maps.map((m) => mapScrimMap(m, mapImagesByName.get(m.mapName) ?? null)),
 		resultRevisions: scrim.resultRevisions.map(mapScrimResultRevision),
 		negotiationRevisions: scrim.negotiationRevisions.map((rev) => ({
 			id: rev.id,

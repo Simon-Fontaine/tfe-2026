@@ -1,7 +1,8 @@
 import type { ScrimSummary } from "@scrimflow/shared";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
+	mapTable,
 	ocrJobTable,
 	scrimMapTable,
 	scrimNegotiationRevisionTable,
@@ -337,4 +338,16 @@ export function mapBaseScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
 		).length,
 		disputeResolution: scrim.disputeResolution ?? null,
 	};
+}
+
+export async function fetchMapImagesByName(
+	mapNames: string[]
+): Promise<Map<string, string | null>> {
+	if (mapNames.length === 0) return new Map();
+	const unique = [...new Set(mapNames)];
+	const rows = await db.query.mapTable.findMany({
+		where: inArray(mapTable.displayName, unique),
+		columns: { displayName: true, imageUrl: true },
+	});
+	return new Map(rows.map((r) => [r.displayName, r.imageUrl ?? null]));
 }

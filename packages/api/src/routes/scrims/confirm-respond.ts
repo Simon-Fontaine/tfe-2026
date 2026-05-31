@@ -13,7 +13,7 @@ import { applyCompletedScrimRating } from "@/utils/rating";
 import { verifyTeamManager } from "@/utils/team";
 import { canManageAnyScrimTeam, notifyTeamAdmins, resolveScrimStatus } from "./access";
 import { mapScrimDetail, publishScrimStatusChanged } from "./detail";
-import { findScrimWithRelations, ScrimWorkflowError } from "./shared";
+import { fetchMapImagesByName, findScrimWithRelations, ScrimWorkflowError } from "./shared";
 
 const SCRIM_LOCK_TIMEOUT_MS = 5000;
 
@@ -188,7 +188,8 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			);
 		}
 
-		return c.json({ data: mapScrimDetail(detail) });
+		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(detail, mapImagesByName) });
 	});
 
 	scrimRoutes.post("/:id/respond", async (c) => {
@@ -758,6 +759,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			publishScrimStatusChanged(scrimId, detail.status);
 		}
 
-		return c.json({ data: mapScrimDetail(detail) });
+		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
+		return c.json({ data: mapScrimDetail(detail, mapImagesByName) });
 	});
 }

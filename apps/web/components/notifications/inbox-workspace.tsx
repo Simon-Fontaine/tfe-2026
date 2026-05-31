@@ -5,7 +5,7 @@ import type { NotificationSummary } from "@scrimflow/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { LoadMoreButton } from "@/components/workspace/load-more-button";
+import { Button } from "@/components/ui/button";
 import { apiRoutes } from "@/lib/routes";
 import { useInboxStore } from "@/stores/inbox";
 import { type InboxFilter, InboxFilterBar } from "./inbox-filter-bar";
@@ -53,13 +53,13 @@ async function readApiError(response: Response): Promise<string | null> {
 interface InboxWorkspaceProps {
 	initialNotifications: NotificationSummary[];
 	initialUnreadCount: number;
-	nextCursor: string | null;
+	initialNextCursor: string | null;
 }
 
 export function InboxWorkspace({
 	initialNotifications,
 	initialUnreadCount,
-	nextCursor,
+	initialNextCursor,
 }: InboxWorkspaceProps) {
 	const notifications = useInboxStore((state) => state.notifications);
 	const unreadCount = useInboxStore((state) => state.unreadCount);
@@ -72,6 +72,8 @@ export function InboxWorkspace({
 	const [isMarkAllPending, setIsMarkAllPending] = useState(false);
 	const [filter, setFilter] = useState<InboxFilter>({ unreadOnly: false, category: "all" });
 	const [selectedNotificationId, setSelectedNotificationId] = useState<string | null>(null);
+	const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
 
 	useEffect(() => {
 		hydrateNotifications(initialNotifications);
@@ -228,6 +230,26 @@ export function InboxWorkspace({
 		}
 	}
 
+	async function handleLoadMore() {
+		if (!nextCursor || isLoadingMore) return;
+		setIsLoadingMore(true);
+		try {
+			const url = `${apiRoutes.notifications.root}?cursor=${encodeURIComponent(nextCursor)}&limit=20`;
+			const res = await fetch(url, { credentials: "include" });
+			if (!res.ok) return;
+			const payload = (await res.json()) as {
+				data: NotificationSummary[];
+				nextCursor: string | null;
+			};
+			hydrateNotifications(payload.data);
+			setNextCursor(payload.nextCursor ?? null);
+		} catch {
+			// fail silently — existing notifications remain visible
+		} finally {
+			setIsLoadingMore(false);
+		}
+	}
+
 	return (
 		<div className="grid h-full grid-cols-[300px_minmax(0,1fr)]">
 			{/* Left panel: thread list */}
@@ -260,7 +282,18 @@ export function InboxWorkspace({
 									isPending={pendingNotificationIds.includes(notification.id)}
 								/>
 							))}
-							{nextCursor && <LoadMoreButton nextCursor={nextCursor} />}
+							{nextCursor && (
+								<div className="flex justify-center pt-4">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleLoadMore}
+										disabled={isLoadingMore}
+									>
+										{isLoadingMore ? "Loading…" : "Load more"}
+									</Button>
+								</div>
+							)}
 						</>
 					)}
 				</div>

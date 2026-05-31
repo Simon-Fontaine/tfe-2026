@@ -25,14 +25,8 @@ type ApiActionError = {
 	status: number;
 };
 
-type ApiActionSuccess<T extends Record<string, unknown> = Record<string, never>> = {
-	success: true;
-} & T;
-
-function isApiActionError<T extends Record<string, unknown>>(
-	result: ApiActionSuccess<T> | ApiActionError
-): result is ApiActionError {
-	return "error" in result;
+function isApiActionError(result: unknown): result is ApiActionError {
+	return typeof result === "object" && result !== null && "error" in result;
 }
 
 function toFormActionError(result: ApiActionError): FormActionResult {

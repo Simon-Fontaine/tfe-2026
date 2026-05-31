@@ -102,7 +102,7 @@ export function ReportDialog({
 						<input type="hidden" name="targetId" value={targetId} />
 
 						<Field>
-							<FieldLabel required>Category</FieldLabel>
+							<FieldLabel>Category</FieldLabel>
 							<select
 								name="category"
 								value={category}
@@ -122,7 +122,7 @@ export function ReportDialog({
 						</Field>
 
 						<Field>
-							<FieldLabel required>Describe the issue</FieldLabel>
+							<FieldLabel>Describe the issue</FieldLabel>
 							<Textarea
 								name="reason"
 								value={reason}

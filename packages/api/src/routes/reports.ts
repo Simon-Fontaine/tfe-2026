@@ -13,13 +13,13 @@ import {
 	chatMessageTable,
 	ocrJobTable,
 	organizationTable,
-	playerProfileTable,
 	recruitmentListingTable,
 	scrimTable,
 	teamTable,
 	updatePostTable,
 	userReportSupplementTable,
 	userReportTable,
+	userTable,
 } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
@@ -34,8 +34,8 @@ async function snapshotTarget(
 ): Promise<Record<string, unknown> | null> {
 	switch (targetType) {
 		case "user": {
-			const row = await db.query.playerProfileTable.findFirst({
-				where: eq(playerProfileTable.userId, targetId),
+			const row = await db.query.userTable.findFirst({
+				where: eq(userTable.id, targetId),
 				columns: { displayName: true, username: true, avatarUrl: true },
 			});
 			return row ?? null;

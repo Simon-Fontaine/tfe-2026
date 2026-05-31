@@ -155,6 +155,9 @@ export default async function TeamScrimDetailPage({
 		!!scrim.awayTeam &&
 		scrim.status !== "pending" &&
 		scrim.status !== "cancelled";
+	const activeGameHistoryJob =
+		scrim.ocrJobs.find((j) => j.screenshotType === "game_history" && j.status !== "superseded") ??
+		null;
 	const disputeResolution =
 		scrim.dispute.resolution ?? (scrim.status === "disputed" ? "pending" : null);
 
@@ -321,11 +324,30 @@ export default async function TeamScrimDetailPage({
 								</ResolveScrimDisputeDialog>
 							) : null}
 							{canUploadEvidence ? (
-								<UploadScrimEvidenceDialog scrimId={scrim.id} screenshotType="game_history">
-									<Button size="sm" variant="outline" className="w-full">
-										Upload game history
-									</Button>
-								</UploadScrimEvidenceDialog>
+								activeGameHistoryJob ? (
+									<div className="w-full border p-3">
+										<p className="text-xs font-medium">
+											{activeGameHistoryJob.status === "queued" ||
+											activeGameHistoryJob.status === "processing"
+												? "Game history processing…"
+												: activeGameHistoryJob.status === "completed"
+													? "Game history extracted"
+													: "Game history extraction failed"}
+										</p>
+										<p className="mt-1 text-xs text-muted-foreground">
+											{activeGameHistoryJob.status === "queued" ||
+											activeGameHistoryJob.status === "processing"
+												? "OCR extraction is running. Check the queue below."
+												: "Mark it superseded in the OCR queue below to upload a replacement."}
+										</p>
+									</div>
+								) : (
+									<UploadScrimEvidenceDialog scrimId={scrim.id} screenshotType="game_history">
+										<Button size="sm" variant="outline" className="w-full">
+											Upload game history
+										</Button>
+									</UploadScrimEvidenceDialog>
+								)
 							) : null}
 							{primaryChatConversation ? (
 								<Button asChild size="sm" variant="outline" className="w-full">

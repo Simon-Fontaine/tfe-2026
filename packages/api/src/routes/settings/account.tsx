@@ -16,6 +16,7 @@ import {
 	organizationTable,
 	teamRosterTable,
 	teamTable,
+	userTable,
 } from "@/db/schema";
 import { sendMail } from "@/email/mailer";
 import { VerificationEmail } from "@/email/templates/VerificationEmail";
@@ -48,6 +49,7 @@ async function getUserGovernanceHold(userId: string): Promise<GovernanceHold> {
 
 	const om1 = alias(organizationMemberTable, "om1");
 	const om2 = alias(organizationMemberTable, "om2");
+	const u2 = alias(userTable, "u2");
 
 	const soleOwnerOrgs = await db
 		.select({ orgId: om1.organizationId, orgName: organizationTable.name })
@@ -57,9 +59,10 @@ async function getUserGovernanceHold(userId: string): Promise<GovernanceHold> {
 			om2,
 			and(eq(om2.organizationId, om1.organizationId), eq(om2.role, "owner"), ne(om2.userId, userId))
 		)
+		.leftJoin(u2, and(eq(u2.id, om2.userId), eq(u2.isBanned, false)))
 		.where(and(eq(om1.userId, userId), eq(om1.role, "owner")))
 		.groupBy(om1.organizationId, organizationTable.name)
-		.having(eq(count(om2.userId), 0));
+		.having(eq(count(u2.id), 0));
 
 	const holdDetails: GovernanceHoldDetail[] = [
 		...soleAdminTeams.map(({ teamId, teamName }) => ({

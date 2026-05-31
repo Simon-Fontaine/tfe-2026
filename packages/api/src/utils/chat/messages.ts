@@ -71,7 +71,9 @@ export async function getMessageByIdForConversation(params: {
 		id: message.id,
 		conversationId: message.channelId,
 		senderId: message.sender?.id ?? null,
-		senderDisplayName: message.sender?.displayName ?? "[deleted user]",
+		senderDisplayName: message.isSystemMessage
+			? "System"
+			: (message.sender?.displayName ?? "[deleted user]"),
 		senderAvatarUrl: message.sender?.avatarUrl ?? null,
 		content: normalizeMessageContent(message.content, message.deletedAt ?? null),
 		replyToMessageId: message.replyToMessageId ?? null,
@@ -137,16 +139,18 @@ export async function editMessageForUser(params: {
 	messageId: string;
 	userId: string;
 	content: string;
-}): Promise<{ status: "ok" | "not_found" | "forbidden" | "deleted" }> {
+}): Promise<{ status: "ok" | "not_found" | "forbidden" | "deleted" | "archived" }> {
 	const message = await db.query.chatMessageTable.findFirst({
 		where: and(
 			eq(chatMessageTable.id, params.messageId),
 			eq(chatMessageTable.channelId, params.conversationId)
 		),
 		columns: { senderId: true, deletedAt: true },
+		with: { channel: { columns: { isArchived: true } } },
 	});
 
 	if (!message) return { status: "not_found" };
+	if (message.channel?.isArchived) return { status: "archived" };
 	if (message.senderId === null || message.senderId !== params.userId)
 		return { status: "forbidden" };
 	if (message.deletedAt) return { status: "deleted" };
@@ -164,16 +168,18 @@ export async function deleteMessageForUser(params: {
 	conversationId: string;
 	messageId: string;
 	userId: string;
-}): Promise<{ status: "ok" | "not_found" | "forbidden" }> {
+}): Promise<{ status: "ok" | "not_found" | "forbidden" | "archived" }> {
 	const message = await db.query.chatMessageTable.findFirst({
 		where: and(
 			eq(chatMessageTable.id, params.messageId),
 			eq(chatMessageTable.channelId, params.conversationId)
 		),
 		columns: { senderId: true, deletedAt: true },
+		with: { channel: { columns: { isArchived: true } } },
 	});
 
 	if (!message) return { status: "not_found" };
+	if (message.channel?.isArchived) return { status: "archived" };
 	if (message.senderId === null || message.senderId !== params.userId)
 		return { status: "forbidden" };
 

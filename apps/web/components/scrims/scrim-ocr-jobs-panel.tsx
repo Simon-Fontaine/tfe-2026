@@ -27,6 +27,17 @@ import { UploadScrimEvidenceDialog } from "./upload-scrim-evidence-dialog";
 
 const ACTIVE_JOB_STATUSES = new Set(["queued", "processing"]);
 
+const MAP_TYPE_CONFIG: Record<string, { border: string; label: string }> = {
+	assault: { border: "border-l-red-500", label: "Assault" },
+	control: { border: "border-l-sky-500", label: "Control" },
+	escort: { border: "border-l-emerald-500", label: "Escort" },
+	hybrid: { border: "border-l-violet-500", label: "Hybrid" },
+	push: { border: "border-l-indigo-400", label: "Push" },
+	flashpoint: { border: "border-l-amber-500", label: "Flashpoint" },
+	clash: { border: "border-l-rose-500", label: "Clash" },
+	unknown: { border: "border-l-border", label: "Unknown" },
+};
+
 function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 	if (!value) return emptyLabel;
 
@@ -288,6 +299,17 @@ export function ScrimOcrJobsPanel({
 		}
 	}
 
+	// Latest non-superseded scoreboard job per map
+	const scoreboardJobByMapId = new Map<string, OcrJobSummary>();
+	for (const job of liveJobs) {
+		if (job.screenshotType !== "scoreboard" || !job.scrimMapId || job.status === "superseded")
+			continue;
+		const existing = scoreboardJobByMapId.get(job.scrimMapId);
+		if (!existing || job.createdAt > existing.createdAt) {
+			scoreboardJobByMapId.set(job.scrimMapId, job);
+		}
+	}
+
 	const revisionsByOcrJobId = new Map<string, ScrimResultRevisionSummary[]>();
 	for (const revision of resultRevisions) {
 		if (revision.sourceOcrJobId) {
@@ -349,21 +371,82 @@ export function ScrimOcrJobsPanel({
 							<strong>Review result</strong> to add maps first.
 						</p>
 					) : (
-						<div className="mt-3 flex flex-wrap gap-2">
+						<div className="mt-3 grid gap-3 sm:grid-cols-2">
 							{maps.map((map) => {
-								const label = `Map ${map.mapOrder}: ${map.mapName}`;
+								const existingJob = scoreboardJobByMapId.get(map.id);
+								const typeConfig = MAP_TYPE_CONFIG[map.mapType] ?? MAP_TYPE_CONFIG.unknown;
+								const isActive = existingJob && ACTIVE_JOB_STATUSES.has(existingJob.status);
 								return (
-									<UploadScrimEvidenceDialog
+									<div
 										key={map.id}
-										scrimId={scrimId}
-										screenshotType="scoreboard"
-										targetMapId={map.id}
-										targetMapLabel={label}
+										className={`relative overflow-hidden border border-l-4 ${typeConfig.border} p-3`}
 									>
-										<Button type="button" size="sm" variant="outline">
-											Upload scoreboard — {label}
-										</Button>
-									</UploadScrimEvidenceDialog>
+										{map.imageUrl ? (
+											<>
+												<div
+													className="absolute inset-0 bg-cover bg-center"
+													style={{ backgroundImage: `url(${map.imageUrl})` }}
+												/>
+												<div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20" />
+											</>
+										) : null}
+
+										<div className="relative flex items-start justify-between gap-2">
+											<div className="min-w-0">
+												<p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+													Map {map.mapOrder}
+												</p>
+												<p className="truncate text-sm font-semibold">{map.mapName}</p>
+												<p className="text-xs text-muted-foreground">{typeConfig.label}</p>
+											</div>
+											{existingJob ? (
+												<Badge variant={getJobBadgeVariant(existingJob)} className="shrink-0">
+													{getStageLabel(existingJob)}
+												</Badge>
+											) : null}
+										</div>
+
+										<div className="relative mt-2.5">
+											{isActive ? (
+												<p className="text-xs text-muted-foreground">Processing…</p>
+											) : existingJob ? (
+												<div className="flex flex-wrap gap-1.5">
+													{existingJob.status === "failed" ||
+													existingJob.status === "requires_review" ? (
+														<Button
+															type="button"
+															size="sm"
+															variant="outline"
+															onClick={() => handleRetry(existingJob.id)}
+															disabled={retryingJobId === existingJob.id}
+														>
+															Retry
+														</Button>
+													) : null}
+													<Button
+														type="button"
+														size="sm"
+														variant="ghost"
+														onClick={() => handleSupersede(existingJob.id)}
+														disabled={!!supersedingJobId}
+													>
+														Replace
+													</Button>
+												</div>
+											) : (
+												<UploadScrimEvidenceDialog
+													scrimId={scrimId}
+													screenshotType="scoreboard"
+													targetMapId={map.id}
+													targetMapLabel={`Map ${map.mapOrder}: ${map.mapName}`}
+												>
+													<Button type="button" size="sm" variant="outline" className="w-full">
+														Upload scoreboard
+													</Button>
+												</UploadScrimEvidenceDialog>
+											)}
+										</div>
+									</div>
 								);
 							})}
 						</div>

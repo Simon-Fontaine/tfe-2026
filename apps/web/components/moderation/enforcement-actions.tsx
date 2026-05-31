@@ -99,19 +99,25 @@ export function EnforcementActions({
 		});
 	}
 
+	// IDs of compensating system-generated reversal actions — hidden from the list.
+	const compensatingIds = new Set(
+		activeActions.map((a) => a.reversedByModerationActionId).filter(Boolean)
+	);
+	const visibleActions = activeActions.filter((a) => !compensatingIds.has(a.id));
+
 	return (
 		<div className="space-y-4 rounded-lg border p-4">
 			<h3 className="text-sm font-semibold">Enforcement Actions</h3>
 
 			{error && <p className="text-sm text-destructive">{error}</p>}
 
-			{activeActions.length === 0 ? (
+			{visibleActions.length === 0 ? (
 				<p className="text-sm text-muted-foreground">
 					No enforcement actions have been taken against this target.
 				</p>
 			) : (
 				<ul className="space-y-2">
-					{activeActions.map((action) => (
+					{visibleActions.map((action) => (
 						<li key={action.id} className="rounded-md border p-3 text-sm">
 							<div className="flex items-start justify-between gap-2">
 								<div className="space-y-1">
@@ -119,14 +125,18 @@ export function EnforcementActions({
 										<span className="font-medium capitalize">
 											{ACTION_TYPE_LABELS[action.actionType]}
 										</span>
-										{!action.isReversible && (
+										{action.reversedAt ? (
+											<Badge variant="outline" className="text-xs text-muted-foreground">
+												Reversed
+											</Badge>
+										) : !action.isReversible ? (
 											<Badge
 												variant="outline"
 												className={cn("text-xs", STATUS_BADGE_CLASSES.irreversible)}
 											>
 												Irreversible
 											</Badge>
-										)}
+										) : null}
 									</div>
 									<p className="text-muted-foreground line-clamp-2">{action.reason}</p>
 									<p className="text-xs text-muted-foreground">

@@ -183,7 +183,7 @@ notificationRoutes.post("/:id/restore", async (c) => {
 	const notificationId = c.req.param("id");
 	const notification = await db.query.notificationTable.findFirst({
 		where: and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)),
-		columns: { id: true, isDismissed: true },
+		columns: { id: true, isDismissed: true, isRead: true },
 	});
 	if (!notification) {
 		return c.json({ error: "Notification not found." }, 404);
@@ -195,10 +195,12 @@ notificationRoutes.post("/:id/restore", async (c) => {
 			.set({ isDismissed: false })
 			.where(and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)));
 
+		const unreadCount = await getUnreadNotificationCount(user.id);
+
 		publishUserRealtimeEvent({
 			userId: user.id,
 			event: "notification:restored",
-			payload: { notificationId },
+			payload: { notificationId, unreadCount },
 		});
 	}
 

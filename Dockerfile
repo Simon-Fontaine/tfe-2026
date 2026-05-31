@@ -19,8 +19,8 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/api/package.json ./packages/api/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies without running local Git hook lifecycle scripts in the container build.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -29,11 +29,8 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy installed dependencies from all workspace locations
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
+# Preserve pnpm's symlinked dependency tree exactly as installed.
+COPY --from=deps /app ./
 COPY . .
 
 # Disable telemetry during build
@@ -63,9 +60,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 
 # Copy static assets
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-
-# Copy public assets
-COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Set the correct permission for prerender cache
 RUN mkdir -p apps/web/.next

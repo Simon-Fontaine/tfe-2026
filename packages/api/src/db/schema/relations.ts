@@ -124,7 +124,6 @@ export const organizationRelations = relations(organizationTable, ({ one, many }
 	recruitmentListings: many(recruitmentListingTable),
 	updatePosts: many(updatePostTable),
 	orgInvites: many(orgInviteTable),
-	lifecycleWorkflows: many(lifecycleWorkflowTable),
 }));
 
 export const organizationMemberRelations = relations(organizationMemberTable, ({ one }) => ({
@@ -155,7 +154,6 @@ export const teamRelations = relations(teamTable, ({ one, many }) => ({
 	chatChannels: many(chatChannelTable, { relationName: "teamChatChannels" }),
 	invites: many(teamInviteTable),
 	ratingEvents: many(teamRatingEventTable),
-	lifecycleWorkflows: many(lifecycleWorkflowTable),
 }));
 
 export const teamRosterRelations = relations(teamRosterTable, ({ one }) => ({

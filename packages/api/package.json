@@ -15,7 +15,8 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"db:check": "drizzle-kit check",
-		"db:seed": "bun src/db/seeds/index.ts"
+		"db:seed": "bun src/db/seeds/index.ts",
+		"db:seed:demo": "bun src/db/seeds/demo.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.1023.0",

@@ -241,13 +241,15 @@ moderationRoutes.get("/queue", async (c) => {
 	}));
 
 	return c.json({
-		items,
-		nextCursor,
-		filters: {
-			...(filters.status && { status: filters.status }),
-			...(filters.category && { category: filters.category }),
-			...(filters.targetType && { targetType: filters.targetType }),
-			...(filters.assignedTo && { assignedTo: filters.assignedTo }),
+		data: {
+			items,
+			nextCursor,
+			filters: {
+				...(filters.status && { status: filters.status }),
+				...(filters.category && { category: filters.category }),
+				...(filters.targetType && { targetType: filters.targetType }),
+				...(filters.assignedTo && { assignedTo: filters.assignedTo }),
+			},
 		},
 	});
 });
@@ -310,8 +312,7 @@ moderationRoutes.get("/reports/:id", async (c) => {
 	const actionRows = await db.query.moderationActionTable.findMany({
 		where: and(
 			eq(moderationActionTable.targetType, report.targetType),
-			eq(moderationActionTable.targetId, report.targetId),
-			isNull(moderationActionTable.reversedAt)
+			eq(moderationActionTable.targetId, report.targetId)
 		),
 		orderBy: [desc(moderationActionTable.createdAt)],
 	});
@@ -341,7 +342,7 @@ moderationRoutes.get("/reports/:id", async (c) => {
 		activeActions: actionRows.map(toModerationAction),
 	};
 
-	return c.json(detail);
+	return c.json({ data: detail });
 });
 
 moderationRoutes.patch("/reports/:id", async (c) => {
@@ -895,7 +896,7 @@ moderationRoutes.get("/audit", async (c) => {
 	const events = rows.slice(0, limit).map(toDomainAuditEvent);
 	const nextCursor = hasMore ? `${rows[limit].createdAt.toISOString()}_${rows[limit].id}` : null;
 
-	return c.json({ events, hasMore, nextCursor });
+	return c.json({ data: { events, hasMore, nextCursor } });
 });
 
 // ─── Governance: entity inspection ───────────────────────────────────────────
@@ -1023,7 +1024,7 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 		availableActions,
 	};
 
-	return c.json(state);
+	return c.json({ data: state });
 });
 
 // ─── Governance: moderator ownership resolution ───────────────────────────────
@@ -1271,7 +1272,7 @@ moderationRoutes.get("/governance/pending", async (c) => {
 			? encodeCursor({ id: getItemCursorId(lastItem), createdAt: lastItem.since })
 			: null;
 
-	return c.json({ items: sliced, nextCursor });
+	return c.json({ data: { items: sliced, nextCursor } });
 });
 
 export { moderationRoutes };

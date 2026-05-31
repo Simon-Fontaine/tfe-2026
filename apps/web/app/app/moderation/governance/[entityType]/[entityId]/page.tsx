@@ -38,9 +38,10 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 	if (!VALID_ENTITY_TYPES.includes(entityType as ValidEntityType)) {
 		notFound();
 	}
+	const validEntityType = entityType as ValidEntityType;
 
 	const res = await apiGet<GovernanceEntityState>(
-		apiRoutes.moderation.governance.entity(entityType, entityId)
+		apiRoutes.moderation.governance.entity(validEntityType, entityId)
 	);
 
 	if ("error" in res) {

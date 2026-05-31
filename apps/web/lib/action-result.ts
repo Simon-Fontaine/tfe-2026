@@ -13,10 +13,8 @@ export type ApiMutationSuccess<T extends Record<string, unknown> = Record<string
 	success: true;
 } & T;
 
-export function isApiActionError<T extends Record<string, unknown>>(
-	result: ApiMutationSuccess<T> | ApiMutationError
-): result is ApiMutationError {
-	return "error" in result;
+export function isApiActionError(result: unknown): result is ApiMutationError {
+	return typeof result === "object" && result !== null && "error" in result;
 }
 
 export function toFormActionError(result: ApiMutationError): BasicActionResult {

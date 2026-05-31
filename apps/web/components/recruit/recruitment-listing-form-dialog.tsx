@@ -419,7 +419,6 @@ export function RecruitmentListingFormDialog({
 						{
 							listingId: listing?.id ?? "",
 							category: effectiveCategory,
-							status,
 							title: title.trim(),
 							description: description.trim() || undefined,
 							memberType: effectiveMemberType,
