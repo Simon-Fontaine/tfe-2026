@@ -3,11 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RecruitingLoading() {
 	return (
-		<PublicPageLoading
-			titleWidthClassName="w-32"
-			descriptionWidthClassName="w-96"
-			actionWidthClassName="w-44"
-		>
+		<PublicPageLoading titleWidthClassName="w-32" actionWidthClassName="w-44">
 			<div className="flex flex-wrap gap-2">
 				<Skeleton className="h-7 w-20" />
 				<Skeleton className="h-7 w-16" />

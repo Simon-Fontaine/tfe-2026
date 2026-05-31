@@ -55,11 +55,7 @@ export default async function PlayerProfilePage({
 		player = result;
 	} catch {
 		return (
-			<PublicPageShell
-				title="Player"
-				description="Public player profile, role focus, and currently open listings."
-				maxWidth="4xl"
-			>
+			<PublicPageShell title="Player" maxWidth="4xl">
 				<EmptyStateBlock
 					icon={UserSearch01Icon}
 					title="Could not load this page"
@@ -76,7 +72,7 @@ export default async function PlayerProfilePage({
 	const entityOptions = user ? await getManageableRecruitEntities(user.id).catch(() => []) : [];
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+		<div className="mx-auto w-full max-w-4xl space-y-6 py-12 px-6">
 			{player.bannerUrl && (
 				<div className="relative h-36 w-full overflow-hidden border">
 					<Image src={player.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
@@ -288,29 +284,20 @@ export default async function PlayerProfilePage({
 				)}
 			</PublicPageSection>
 
-			<PublicPageSection
-				title="Related public routes"
-				description="Use these routes to keep browsing without losing the player-recruiting context."
-			>
+			<PublicPageSection title="Related public routes">
 				<PublicRelatedRouteCards
 					cards={[
 						{
 							label: "More players",
 							href: publicRoutes.players.root,
-							description:
-								"Return to the player directory to compare role coverage and visible rank context.",
 						},
 						{
 							label: "Browse teams",
 							href: publicRoutes.teams.root,
-							description:
-								"See which teams are actively publishing public profiles and recruiting posture.",
 						},
 						{
 							label: "Open recruiting",
 							href: publicRoutes.recruiting.root,
-							description:
-								"Jump straight into the broader recruiting market to evaluate other active opportunities.",
 						},
 					]}
 				/>

@@ -7,7 +7,7 @@ import { publicRoutes } from "@/lib/routes";
 
 export function LandingPrimaryCTASection() {
 	return (
-		<section aria-labelledby="cta-heading" className="px-4 py-14 md:py-20">
+		<section aria-labelledby="cta-heading" className="py-12 px-6">
 			<div className="mx-auto max-w-6xl">
 				<div className="grid items-center gap-6 border p-6 md:grid-cols-[1fr_auto] md:p-8">
 					<div>

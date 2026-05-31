@@ -41,6 +41,7 @@ import {
 	RECRUITMENT_STATUS_LABELS,
 } from "@/lib/recruitment";
 import { publicRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 
 interface RecruitmentListingCardProps {
 	listing: RecruitmentListingSummary;
@@ -51,6 +52,7 @@ interface RecruitmentListingCardProps {
 	organizationId?: string;
 	conversationHrefBase?: string;
 	detailHref?: string;
+	className?: string;
 }
 
 export function RecruitmentListingCard({
@@ -62,6 +64,7 @@ export function RecruitmentListingCard({
 	organizationId,
 	conversationHrefBase,
 	detailHref,
+	className,
 }: RecruitmentListingCardProps) {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const deleteForm = useFormAction(deleteRecruitmentListingAction, {
@@ -107,7 +110,7 @@ export function RecruitmentListingCard({
 
 	return (
 		<>
-			<div className="space-y-4 border p-4">
+			<div className={cn("space-y-4 border p-4", className)}>
 				<div className="flex items-start gap-3">
 					<Link href={ownerHref} tabIndex={-1}>
 						<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">

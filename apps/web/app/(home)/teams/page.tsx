@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 import { Suspense } from "react";
-import { PublicGridLoading } from "@/components/home/public-page-loading";
+import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { TeamDiscoveryCard } from "@/components/teams/discovery/team-discovery-card";
@@ -24,15 +24,10 @@ export default async function TeamsDirectoryPage({ searchParams }: TeamsDirector
 		recruiting === "true" ? true : recruiting === "false" ? false : undefined;
 
 	return (
-		<PublicPageShell
-			title="Teams"
-			description="Explore team profiles, roster size, and recruiting status."
-			maxWidth="6xl"
-			contentClassName="space-y-6"
-		>
+		<PublicPageShell title="Teams" maxWidth="6xl" contentClassName="space-y-6">
 			<TeamDiscoveryFilters recruitingFilter={recruitingFilter} />
 
-			<Suspense fallback={<PublicGridLoading />}>
+			<Suspense fallback={<PublicListLoading itemCount={6} itemHeightClassName="h-16" />}>
 				<TeamListSection recruitingFilter={recruitingFilter} />
 			</Suspense>
 		</PublicPageShell>
@@ -71,7 +66,7 @@ async function TeamListSection({ recruitingFilter }: { recruitingFilter: boolean
 	}
 
 	return (
-		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+		<div className="divide-y border">
 			{teams.map((team) => (
 				<TeamDiscoveryCard key={team.id} team={team} />
 			))}

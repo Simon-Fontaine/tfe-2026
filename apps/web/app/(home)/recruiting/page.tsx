@@ -36,7 +36,6 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 	return (
 		<PublicPageShell
 			title="Recruiting"
-			description="Public recruiting listings replace the old Discord channels and keep player, team, and staff discovery in one place."
 			maxWidth="6xl"
 			contentClassName="space-y-6"
 			actions={
@@ -155,7 +154,7 @@ async function RecruitingListSection({
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="divide-y border">
 			{listings.map((listing) => (
 				<RecruitmentListingCard
 					key={listing.id}
@@ -163,6 +162,7 @@ async function RecruitingListSection({
 					currentUserId={userId}
 					entityOptions={entityOptions}
 					detailHref={publicRoutes.recruiting.byId(listing.id)}
+					className="border-0 px-4 py-3"
 				/>
 			))}
 		</div>

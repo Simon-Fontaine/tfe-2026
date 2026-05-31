@@ -5,7 +5,7 @@ import { publicRoutes } from "@/lib/routes";
 
 export default function OrgNotFound() {
 	return (
-		<PublicPageShell title="Organization" description="Public organization profile." maxWidth="5xl">
+		<PublicPageShell title="Organization" maxWidth="5xl">
 			<EmptyStateBlock
 				icon={GameController01Icon}
 				title="Organization not found"

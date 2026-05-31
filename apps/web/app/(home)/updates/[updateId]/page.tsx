@@ -7,9 +7,15 @@ import { PublicPageShell } from "@/components/home/public-page-shell";
 import { PublicRelatedRouteCards } from "@/components/home/public-related-route-cards";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
-import { UpdatePostCard } from "@/components/updates/update-post-card";
 import { getPublicUpdateById } from "@/lib/data/updates";
 import { publicRoutes } from "@/lib/routes";
+
+function formatTimestamp(value: string) {
+	return new Intl.DateTimeFormat("en-GB", {
+		dateStyle: "medium",
+		timeStyle: "short",
+	}).format(new Date(value));
+}
 
 export async function generateMetadata({
 	params,
@@ -42,7 +48,7 @@ export default async function PublicUpdateDetailPage({
 		post = await getPublicUpdateById(updateId);
 	} catch {
 		return (
-			<PublicPageShell title="Update" description="Public update post." maxWidth="3xl">
+			<PublicPageShell title="Update" maxWidth="3xl">
 				<EmptyStateBlock
 					icon={Notification01Icon}
 					title="Could not load this page"
@@ -63,13 +69,26 @@ export default async function PublicUpdateDetailPage({
 			: null;
 
 	return (
-		<PublicPageShell
-			title="Update"
-			description="Public update post."
-			maxWidth="3xl"
-			contentClassName="space-y-6"
-		>
-			<UpdatePostCard post={post} />
+		<PublicPageShell title={post.title} maxWidth="3xl" contentClassName="space-y-6">
+			<div className="space-y-4">
+				<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+					<span>{formatTimestamp(post.createdAt)}</span>
+					<span>{post.authorDisplayName ?? "Unknown author"}</span>
+					{post.teamId && post.teamName ? (
+						<Link href={publicRoutes.teams.byId(post.teamId)} className="hover:underline">
+							[{post.teamTag}] {post.teamName}
+						</Link>
+					) : post.organizationSlug && post.organizationName ? (
+						<Link
+							href={publicRoutes.orgs.bySlug(post.organizationSlug)}
+							className="hover:underline"
+						>
+							{post.organizationName}
+						</Link>
+					) : null}
+				</div>
+				<div className="whitespace-pre-wrap text-sm leading-relaxed">{post.body}</div>
+			</div>
 
 			<div className="flex flex-wrap gap-2">
 				<Button asChild size="sm" variant="outline">
@@ -82,26 +101,20 @@ export default async function PublicUpdateDetailPage({
 				)}
 			</div>
 
-			<PublicPageSection
-				title="Related public routes"
-				description="Keep exploring public activity and competitive context."
-			>
+			<PublicPageSection title="Related public routes">
 				<PublicRelatedRouteCards
 					cards={[
 						{
 							label: "Updates",
 							href: publicRoutes.updates.root,
-							description: "Browse all public announcements from teams and organizations.",
 						},
 						{
 							label: "Teams",
 							href: publicRoutes.teams.root,
-							description: "Explore public team profiles and their competitive activity.",
 						},
 						{
 							label: "Scrims",
 							href: publicRoutes.scrims.root,
-							description: "See completed scrim results and the broader competitive landscape.",
 						},
 					]}
 				/>

@@ -16,7 +16,7 @@ const highlights = [
 export async function LandingHeroSection() {
 	const { user } = await getCurrentSession();
 	return (
-		<section className="border-b px-4 py-14 md:py-20" aria-labelledby="hero-heading">
+		<section className="border-b py-12 px-6" aria-labelledby="hero-heading">
 			<div className="mx-auto max-w-6xl">
 				<div className="grid gap-10 md:grid-cols-2 md:items-center">
 					<div>

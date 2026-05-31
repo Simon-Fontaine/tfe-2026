@@ -2,12 +2,7 @@ import { PublicListLoading, PublicPageLoading } from "@/components/home/public-p
 
 export default function UpdatesLoading() {
 	return (
-		<PublicPageLoading
-			maxWidth="5xl"
-			titleWidthClassName="w-28"
-			descriptionWidthClassName="w-80"
-			actionWidthClassName="w-48"
-		>
+		<PublicPageLoading maxWidth="5xl" titleWidthClassName="w-28" actionWidthClassName="w-48">
 			<PublicListLoading />
 		</PublicPageLoading>
 	);

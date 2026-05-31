@@ -16,7 +16,7 @@ export default function Page() {
 	return (
 		<>
 			<LandingHeroSection />
-			<section className="border-b px-4 py-8" aria-label="Platform statistics">
+			<section className="border-b py-12 px-6" aria-label="Platform statistics">
 				<div className="mx-auto max-w-6xl">
 					<p className="mb-3 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
 						Platform activity

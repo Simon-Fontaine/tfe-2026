@@ -1,5 +1,4 @@
-import { Calendar03Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { Calendar03Icon } from "@hugeicons/core-free-icons";
 import type { ScrimStatus } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -53,7 +52,6 @@ export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirect
 	return (
 		<PublicPageShell
 			title="Scrims"
-			description="Recent and upcoming scrims surface scheduling, scorelines, and confirmation state in one place."
 			maxWidth="6xl"
 			contentClassName="space-y-6"
 			actions={
@@ -118,53 +116,53 @@ async function ScrimsListSection({
 	const filteredScrims =
 		status === "all" ? scrims : scrims.filter((scrim) => scrim.status === status);
 
-	if (filteredScrims.length === 0) {
-		return (
-			<EmptyStateBlock
-				icon={Calendar03Icon}
-				title="No scrims match this filter"
-				description="Switch the filter or return to all public scrims to browse more activity."
-				variant="page"
-			/>
-		);
-	}
-
 	return (
-		<div className="space-y-3">
-			{filteredScrims.map((scrim) => (
-				<div key={scrim.id} className="border p-4">
-					<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-						<div className="space-y-2">
-							<div className="flex flex-wrap items-center gap-2">
-								<p className="text-sm font-semibold">
+		<table className="w-full text-sm">
+			<thead>
+				<tr className="border-b">
+					<th className="py-2 text-left text-xs font-medium text-muted-foreground">Teams</th>
+					<th className="py-2 text-left text-xs font-medium text-muted-foreground">Status</th>
+					<th className="py-2 text-left text-xs font-medium text-muted-foreground">Date</th>
+					<th className="py-2 text-left text-xs font-medium text-muted-foreground">Score</th>
+				</tr>
+			</thead>
+			<tbody>
+				{filteredScrims.length === 0 ? (
+					<tr>
+						<td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+							No scrims match this filter.
+						</td>
+					</tr>
+				) : (
+					filteredScrims.map((scrim) => (
+						<tr key={scrim.id} className="border-b last:border-0">
+							<td className="py-2">
+								<p className="font-medium text-sm">
 									[{scrim.homeTeam.tag}] {scrim.homeTeam.name}
 									{" vs "}
 									{scrim.awayTeam ? `[${scrim.awayTeam.tag}] ${scrim.awayTeam.name}` : "TBD"}
 								</p>
+								{scrim.message && <p className="text-xs text-muted-foreground">{scrim.message}</p>}
+							</td>
+							<td className="py-2">
 								<Badge variant={scrim.status === "disputed" ? "destructive" : "outline"}>
 									{SCRIM_STATUS_LABELS[scrim.status]}
 								</Badge>
-							</div>
-							<p className="text-xs text-muted-foreground">
-								{scrim.message ?? "No manager note added yet."}
-							</p>
-						</div>
-
-						<div className="grid gap-2 text-xs text-muted-foreground md:min-w-64">
-							<div className="flex items-center gap-2">
-								<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
-								<span>{formatScheduledAt(scrim.scheduledAt)}</span>
-							</div>
-							<div className="flex items-center gap-2">
-								<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={2} className="size-3.5" />
-								<span>
-									Series score {scrim.homeMapScore} - {scrim.awayMapScore}
+							</td>
+							<td className="py-2">
+								<span className="text-muted-foreground">
+									{formatScheduledAt(scrim.scheduledAt)}
 								</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			))}
-		</div>
+							</td>
+							<td className="py-2">
+								<span className="text-muted-foreground">
+									{scrim.homeMapScore} - {scrim.awayMapScore}
+								</span>
+							</td>
+						</tr>
+					))
+				)}
+			</tbody>
+		</table>
 	);
 }

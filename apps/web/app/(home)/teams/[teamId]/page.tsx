@@ -62,11 +62,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 		team = result;
 	} catch {
 		return (
-			<PublicPageShell
-				title="Team"
-				description="Public team profile, roster, and active recruiting listings."
-				maxWidth="4xl"
-			>
+			<PublicPageShell title="Team" maxWidth="4xl">
 				<EmptyStateBlock
 					icon={UserGroupIcon}
 					title="Could not load this page"
@@ -89,7 +85,7 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 	const teamUpdates = await getPublicUpdates({ teamId: team.id }).catch(() => []);
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+		<div className="mx-auto w-full max-w-4xl space-y-6 py-12 px-6">
 			{team.bannerUrl && (
 				<div className="relative h-36 w-full overflow-hidden border">
 					<Image src={team.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
@@ -138,10 +134,6 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 
 			<div className="border p-5">
 				<h2 className="text-sm font-semibold">Recruiting</h2>
-				<p className="mt-1 text-sm text-muted-foreground">
-					Use the team’s public recruiting listings below instead of request-to-join forms or
-					Discord channels.
-				</p>
 				<div className="mt-3 flex flex-wrap gap-2">
 					<Button asChild size="sm">
 						<Link href={publicRoutes.recruiting.root}>
@@ -400,28 +392,20 @@ export default async function TeamProfilePage({ params }: { params: Promise<{ te
 				)}
 			</PublicPageSection>
 
-			<PublicPageSection
-				title="Related public routes"
-				description="Keep browsing the same competitive context without jumping back to the home page."
-			>
+			<PublicPageSection title="Related public routes">
 				<PublicRelatedRouteCards
 					cards={[
 						{
 							label: "Organization profile",
 							href: publicRoutes.orgs.bySlug(team.organizationSlug),
-							description: "See the parent org, related teams, and broader recruiting posture.",
 						},
 						{
 							label: "Players directory",
 							href: publicRoutes.players.root,
-							description:
-								"Compare this roster with the broader player pool and public role coverage.",
 						},
 						{
 							label: "Recruiting directory",
 							href: publicRoutes.recruiting.root,
-							description:
-								"Return to the wider recruiting market to compare other active opportunities.",
 						},
 					]}
 				/>

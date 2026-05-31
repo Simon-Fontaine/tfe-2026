@@ -3,7 +3,6 @@ import Link from "next/link";
 type PublicRelatedRouteCard = {
 	label: string;
 	href: string;
-	description: string;
 };
 
 interface PublicRelatedRouteCardsProps {
@@ -12,15 +11,14 @@ interface PublicRelatedRouteCardsProps {
 
 export function PublicRelatedRouteCards({ cards }: PublicRelatedRouteCardsProps) {
 	return (
-		<div className="grid gap-3 md:grid-cols-3">
+		<div className="divide-y border">
 			{cards.map((card) => (
 				<Link
 					key={card.href}
 					href={card.href}
-					className="border p-4 transition-colors hover:bg-muted/50"
+					className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
 				>
-					<p className="text-sm font-semibold">{card.label}</p>
-					<p className="mt-2 text-sm text-muted-foreground">{card.description}</p>
+					<span className="text-sm font-medium">{card.label}</span>
 				</Link>
 			))}
 		</div>

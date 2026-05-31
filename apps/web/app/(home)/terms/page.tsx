@@ -9,12 +9,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
 	return (
-		<PublicPageShell
-			title="Terms of Service"
-			description="These terms describe the current operating rules for using Scrimflow public surfaces and authenticated workspaces."
-			maxWidth="6xl"
-			contentClassName="space-y-6"
-		>
+		<PublicPageShell title="Terms of Service" maxWidth="6xl" contentClassName="space-y-6">
 			<PublicPageSection title="Use the product truthfully">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
 					Use Scrimflow to represent real teams, organizations, players, and recruiting needs. Do
@@ -46,51 +41,42 @@ export default function TermsPage() {
 			</PublicPageSection>
 
 			<PublicPageSection title="Respect workspace boundaries">
-				<div className="grid gap-3 md:grid-cols-3">
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Permissions matter</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Only org and team members with the right role should manage settings, staff,
-							recruiting, and administrative actions.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Public content stays public</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							If you publish org, team, player, recruiting, scrim, or update content, assume it can
-							be viewed from the public route family.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Security flows are mandatory</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Account verification, recovery, and security steps are part of platform access, not
-							optional extras.
-						</p>
-					</div>
-				</div>
-			</PublicPageSection>
-
-			<PublicPageSection title="Questions about usage rules">
-				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					If a policy or account-state consequence is unclear, contact support with the affected
-					account and workspace context before taking irreversible action.
-				</p>
+				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Permissions matter</span>— Only
+						org and team members with the right role should manage settings, staff, recruiting, and
+						administrative actions.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">
+							Public content stays public
+						</span>
+						— If you publish org, team, player, recruiting, scrim, or update content, assume it can
+						be viewed from the public route family.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">
+							Security flows are mandatory
+						</span>
+						— Account verification, recovery, and security steps are part of platform access, not
+						optional extras.
+					</li>
+				</ul>
 			</PublicPageSection>
 
 			<PublicPageSection title="Account termination">
-				<div className="grid gap-3 md:grid-cols-2">
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Suspension</p>
-						<p className="mt-2 text-sm text-muted-foreground">
+				<dl className="max-w-[64ch] space-y-3">
+					<div>
+						<dt className="text-sm font-medium text-foreground">Suspension</dt>
+						<dd className="mt-0.5 text-sm text-muted-foreground">
 							Accounts that repeatedly violate usage rules may be suspended. Suspended accounts lose
 							access to workspace actions but public profile data remains readable while a review is
 							in progress.
-						</p>
+						</dd>
 					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Permanent removal</p>
-						<p className="mt-2 text-sm text-muted-foreground">
+					<div>
+						<dt className="text-sm font-medium text-foreground">Permanent removal</dt>
+						<dd className="mt-0.5 text-sm text-muted-foreground">
 							Accounts found to be impersonating users, manipulating match results, or coordinating
 							abuse will be permanently removed. Associated team and org memberships are also
 							terminated. Contact{" "}
@@ -101,9 +87,16 @@ export default function TermsPage() {
 								support@scrimflow.com
 							</a>{" "}
 							to appeal.
-						</p>
+						</dd>
 					</div>
-				</div>
+				</dl>
+			</PublicPageSection>
+
+			<PublicPageSection title="Questions about usage rules">
+				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
+					If a policy or account-state consequence is unclear, contact support with the affected
+					account and workspace context before taking irreversible action.
+				</p>
 			</PublicPageSection>
 		</PublicPageShell>
 	);

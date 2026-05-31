@@ -66,11 +66,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 		org = result;
 	} catch {
 		return (
-			<PublicPageShell
-				title="Organization"
-				description="Public teams and recruiting listings published by this organization."
-				maxWidth="5xl"
-			>
+			<PublicPageShell title="Organization" maxWidth="5xl">
 				<EmptyStateBlock
 					icon={GameController01Icon}
 					title="Could not load this page"
@@ -93,7 +89,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 	const orgUpdates = await getPublicUpdates({ organizationId: org.id }).catch(() => []);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+		<div className="mx-auto w-full max-w-5xl space-y-6 py-12 px-6">
 			{org.bannerUrl && (
 				<div className="relative h-36 w-full overflow-hidden border">
 					<Image src={org.bannerUrl} alt="" fill className="object-cover" sizes="100vw" />
@@ -252,10 +248,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				</div>
 			)}
 
-			<PublicPageSection
-				title="Open organization listings"
-				description="Public organization recruiting listings are surfaced here instead of join-request forms."
-			>
+			<PublicPageSection title="Open organization listings">
 				{org.openListings.length === 0 ? (
 					<EmptyStateBlock
 						icon={GameController01Icon}
@@ -279,7 +272,6 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 
 			<PublicPageSection
 				title="Teams"
-				description="Follow these public team routes to inspect roster depth, recruiting status, and player surfaces."
 				className="space-y-3"
 				actions={
 					<Button asChild size="sm" variant="outline">
@@ -295,12 +287,12 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 						variant="card"
 					/>
 				) : (
-					<div className="grid gap-3 sm:grid-cols-2">
+					<div className="divide-y border">
 						{org.teams.map((team) => (
 							<Link
 								key={team.id}
 								href={publicRoutes.teams.byId(team.id)}
-								className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
+								className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
 							>
 								<Avatar className="size-9 shrink-0 overflow-hidden rounded-none after:rounded-none">
 									<AvatarImage src={team.avatarUrl ?? undefined} className="rounded-none" />
@@ -326,10 +318,7 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				)}
 			</PublicPageSection>
 
-			<PublicPageSection
-				title="Organization updates"
-				description="Public announcements from this organization."
-			>
+			<PublicPageSection title="Organization updates">
 				{orgUpdates.slice(0, 3).length === 0 ? (
 					<EmptyStateBlock
 						icon={Notification01Icon}
@@ -350,29 +339,20 @@ export default async function OrgProfilePage({ params }: { params: Promise<{ org
 				)}
 			</PublicPageSection>
 
-			<PublicPageSection
-				title="Next public routes"
-				description="Keep moving through the public funnel without losing context."
-			>
+			<PublicPageSection title="Next public routes">
 				<PublicRelatedRouteCards
 					cards={[
 						{
 							label: "Updates",
 							href: publicRoutes.updates.root,
-							description:
-								"Check recent public announcements from orgs and teams across the platform.",
 						},
 						{
 							label: "Scrims",
 							href: publicRoutes.scrims.root,
-							description:
-								"See whether the broader competitive ecosystem is active and publishing recent results.",
 						},
 						{
 							label: "Recruiting",
 							href: publicRoutes.recruiting.root,
-							description:
-								"Return to the full directory if you want to compare this org with other active listings.",
 						},
 					]}
 				/>

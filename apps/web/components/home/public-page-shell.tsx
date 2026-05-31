@@ -9,7 +9,7 @@ const maxWidthClasses = {
 
 interface PublicPageShellProps {
 	title: string;
-	description: string;
+	description?: string;
 	actions?: ReactNode;
 	children?: ReactNode;
 	maxWidth?: keyof typeof maxWidthClasses;
@@ -27,19 +27,18 @@ export function PublicPageShell({
 	contentClassName,
 }: PublicPageShellProps) {
 	return (
-		<section
-			className={cn("border-b px-4 py-14 md:py-20", className)}
-			aria-labelledby="public-page-title"
-		>
+		<section className={cn("border-b py-12 px-6", className)} aria-labelledby="public-page-title">
 			<div className={cn("mx-auto", maxWidthClasses[maxWidth])}>
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div className="flex min-w-0 flex-1 flex-col gap-3">
 						<h1 id="public-page-title" className="text-lg font-bold leading-tight md:text-2xl">
 							{title}
 						</h1>
-						<p className="max-w-[64ch] text-xs leading-relaxed text-muted-foreground">
-							{description}
-						</p>
+						{description ? (
+							<p className="max-w-[64ch] text-xs leading-relaxed text-muted-foreground">
+								{description}
+							</p>
+						) : null}
 					</div>
 					{actions ? (
 						<div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>

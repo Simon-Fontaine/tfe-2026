@@ -15,7 +15,6 @@ export default function AboutPage() {
 	return (
 		<PublicPageShell
 			title="About Scrimflow"
-			description="Scrimflow helps Overwatch 2 teams run day-to-day operations: roster management, recruiting, and schedule coordination from a shared workspace."
 			contentClassName="space-y-8"
 			actions={
 				<Button asChild size="sm">
@@ -33,26 +32,20 @@ export default function AboutPage() {
 			</PublicPageSection>
 
 			<PublicPageSection title="What happens after sign-in">
-				<div className="grid gap-3 md:grid-cols-3">
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Personal workspace</p>
-						<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-							Manage inbox, calendar, profile, settings, and security from `/app`.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Team operations</p>
-						<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-							Run recruiting, scrims, chat, updates, and team administration inside one shell.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Organization control</p>
-						<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-							Manage staff, teams, brand, invites, and settings across org-backed programs.
-						</p>
-					</div>
-				</div>
+				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Personal workspace</span>— Manage
+						inbox, calendar, profile, settings, and security from <code>/app</code>.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Team operations</span>— Run
+						recruiting, scrims, chat, updates, and team administration inside one shell.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Organization control</span>—
+						Manage staff, teams, brand, invites, and settings across org-backed programs.
+					</li>
+				</ul>
 			</PublicPageSection>
 
 			<PublicPageSection
@@ -70,7 +63,7 @@ export default function AboutPage() {
 			>
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
 					If you are evaluating the product, start with the public directories. If you already know
-					you need the workspace, create an account and move directly into `/app`.
+					you need the workspace, create an account and move directly into <code>/app</code>.
 				</p>
 			</PublicPageSection>
 		</PublicPageShell>

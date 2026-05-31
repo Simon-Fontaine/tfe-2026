@@ -14,7 +14,6 @@ export default function ContactPage() {
 	return (
 		<PublicPageShell
 			title="Contact Scrimflow"
-			description="Use this channel for support, product feedback, and project coordination."
 			maxWidth="6xl"
 			contentClassName="space-y-6"
 			actions={
@@ -32,27 +31,21 @@ export default function ContactPage() {
 			</PublicPageSection>
 
 			<PublicPageSection title="What to include in a support request">
-				<div className="grid gap-3 md:grid-cols-3">
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Account context</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Your Scrimflow username and whether the issue happened on a public page or inside
-							`/app`.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Surface affected</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							The team, org, recruiting listing, scrim, or settings page involved.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Expected result</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							What you expected to happen and what actually happened instead.
-						</p>
-					</div>
-				</div>
+				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Account context</span>— Your
+						Scrimflow username and whether the issue happened on a public page or inside{" "}
+						<code>/app</code>.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Surface affected</span>— The
+						team, org, recruiting listing, scrim, or settings page involved.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Expected result</span>— What you
+						expected to happen and what actually happened instead.
+					</li>
+				</ul>
 			</PublicPageSection>
 
 			<PublicPageSection title="Support contact">
@@ -66,27 +59,21 @@ export default function ContactPage() {
 					</a>{" "}
 					with your account username, the surface affected, and a brief description of the issue. We
 					aim to respond within 2 business days. For account-state or workspace-level issues,
-					signing in first will speed up the response significantly.
-				</p>
-			</PublicPageSection>
-
-			<PublicPageSection
-				title="Need product context before contacting us?"
-				actions={
-					<div className="flex flex-wrap gap-2">
-						<Button asChild size="sm" variant="outline">
-							<Link href={publicRoutes.teams.root}>Browse teams</Link>
-						</Button>
-						<Button asChild size="sm" variant="outline">
-							<Link href={publicRoutes.about}>Read about the platform</Link>
-						</Button>
-					</div>
-				}
-			>
-				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					If you only need to inspect the product surface, start with public teams, orgs, players,
-					recruiting, scrims, and updates. If you need operational help, sign in and gather the
-					account context first.
+					signing in first will speed up the response significantly. See also:{" "}
+					<Link
+						href={publicRoutes.teams.root}
+						className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+					>
+						browse teams
+					</Link>{" "}
+					or{" "}
+					<Link
+						href={publicRoutes.about}
+						className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+					>
+						read about the platform
+					</Link>
+					.
 				</p>
 			</PublicPageSection>
 		</PublicPageShell>

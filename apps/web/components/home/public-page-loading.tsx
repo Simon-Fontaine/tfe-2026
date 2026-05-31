@@ -24,7 +24,7 @@ export function PublicPageLoading({
 	actionWidthClassName,
 }: PublicPageLoadingProps) {
 	return (
-		<section className="border-b px-4 py-14 md:py-20" aria-hidden="true">
+		<section className="border-b py-12 px-6" aria-hidden="true">
 			<div className={cn("mx-auto flex flex-col gap-6", maxWidthClasses[maxWidth])}>
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div className="flex min-w-0 flex-1 flex-col gap-3">

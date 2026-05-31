@@ -7,7 +7,6 @@ import {
 	UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const features = [
 	{
@@ -50,8 +49,8 @@ const features = [
 
 export function LandingFeatureGrid() {
 	return (
-		<section id="features" className="border-b py-14 md:py-20" aria-labelledby="features-heading">
-			<div className="mx-auto max-w-6xl px-4">
+		<section id="features" className="border-b py-12 px-6" aria-labelledby="features-heading">
+			<div className="mx-auto max-w-6xl">
 				<div className="mb-8">
 					<h2 id="features-heading" className="text-sm font-bold uppercase tracking-widest">
 						Features
@@ -63,17 +62,13 @@ export function LandingFeatureGrid() {
 
 				<div className="grid sm:grid-cols-2 lg:grid-cols-3">
 					{features.map((f) => (
-						<Card key={f.title} className="-mb-px -mr-px border ring-0">
-							<CardHeader>
-								<div className="mb-2 flex size-10 items-center justify-center border bg-primary/10">
-									<HugeiconsIcon icon={f.icon} strokeWidth={2} className="size-5 text-primary" />
-								</div>
-								<CardTitle className="text-sm">{f.title}</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<p className="text-sm leading-relaxed text-muted-foreground">{f.description}</p>
-							</CardContent>
-						</Card>
+						<div key={f.title} className="-mb-px -mr-px border p-4">
+							<div className="mb-2 flex size-10 items-center justify-center border bg-primary/10">
+								<HugeiconsIcon icon={f.icon} strokeWidth={2} className="size-5 text-primary" />
+							</div>
+							<p className="text-sm font-bold">{f.title}</p>
+							<p className="mt-1 text-sm leading-relaxed text-muted-foreground">{f.description}</p>
+						</div>
 					))}
 				</div>
 			</div>

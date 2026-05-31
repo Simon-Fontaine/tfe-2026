@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Suspense } from "react";
-import { PublicGridLoading } from "@/components/home/public-page-loading";
+import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,7 +33,6 @@ export default async function OrgsDirectoryPage({ searchParams }: OrgsDirectoryP
 	return (
 		<PublicPageShell
 			title="Organizations"
-			description="Discover organizations and the teams they operate."
 			maxWidth="6xl"
 			contentClassName="space-y-6"
 			actions={
@@ -55,7 +54,7 @@ export default async function OrgsDirectoryPage({ searchParams }: OrgsDirectoryP
 					</Link>
 				))}
 			</div>
-			<Suspense fallback={<PublicGridLoading />}>
+			<Suspense fallback={<PublicListLoading itemCount={6} itemHeightClassName="h-16" />}>
 				<OrgListSection sort={sort} />
 			</Suspense>
 		</PublicPageShell>
@@ -100,12 +99,12 @@ async function OrgListSection({ sort }: { sort: OrgSort }) {
 	});
 
 	return (
-		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+		<div className="divide-y border">
 			{sortedOrgs.map((org) => (
 				<Link
 					key={org.id}
 					href={publicRoutes.orgs.bySlug(org.slug)}
-					className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
+					className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
 				>
 					<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
 						<AvatarImage src={org.avatarUrl ?? undefined} className="rounded-none" />

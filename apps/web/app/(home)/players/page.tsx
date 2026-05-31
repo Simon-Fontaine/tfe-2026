@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 import { Suspense } from "react";
-import { PublicGridLoading } from "@/components/home/public-page-loading";
+import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,7 +35,6 @@ export default async function PlayersDirectoryPage({ searchParams }: PlayersDire
 	return (
 		<PublicPageShell
 			title="Players"
-			description="Browse registered players by role and rank."
 			maxWidth="6xl"
 			contentClassName="space-y-6"
 			actions={
@@ -65,7 +64,7 @@ export default async function PlayersDirectoryPage({ searchParams }: PlayersDire
 					</Link>
 				))}
 			</div>
-			<Suspense fallback={<PublicGridLoading />}>
+			<Suspense fallback={<PublicListLoading itemCount={8} itemHeightClassName="h-14" />}>
 				<PlayerListSection role={role} />
 			</Suspense>
 		</PublicPageShell>
@@ -120,49 +119,41 @@ async function PlayerListSection({ role }: { role: PlayerRoleFilter }) {
 	}
 
 	return (
-		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+		<div className="divide-y border">
 			{filteredPlayers.map((player) => (
 				<Link
 					key={player.id}
 					href={publicRoutes.players.byUsername(player.username)}
-					className="flex flex-col gap-3 border p-4 transition-colors hover:bg-muted/50"
+					className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
 				>
-					<div className="flex items-center gap-3">
-						<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
-							<AvatarImage src={player.avatarUrl ?? undefined} className="rounded-none" />
-							<AvatarFallback className="rounded-none text-xs font-bold">
-								{player.displayName.slice(0, 2).toUpperCase()}
-							</AvatarFallback>
-						</Avatar>
-						<div className="min-w-0 flex-1">
-							<p className="truncate text-sm font-semibold">{player.displayName}</p>
-							<p className="text-xs text-muted-foreground">@{player.username}</p>
+					<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
+						<AvatarImage src={player.avatarUrl ?? undefined} className="rounded-none" />
+						<AvatarFallback className="rounded-none text-xs font-bold">
+							{player.displayName.slice(0, 2).toUpperCase()}
+						</AvatarFallback>
+					</Avatar>
+					<div className="min-w-0 flex-1">
+						<p className="truncate text-sm font-semibold">{player.displayName}</p>
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="text-xs text-muted-foreground">@{player.username}</span>
+							{player.primaryRole && (
+								<Badge variant="outline" className="text-[10px]">
+									{ROLE_LABELS[player.primaryRole]}
+								</Badge>
+							)}
+							{player.rank && (
+								<Badge variant="secondary" className="text-[10px]">
+									{player.rank}
+								</Badge>
+							)}
 						</div>
 					</div>
-					<div className="flex flex-wrap gap-2">
-						{player.primaryRole && (
-							<Badge variant="outline" className="text-[10px]">
-								{ROLE_LABELS[player.primaryRole]}
-							</Badge>
-						)}
-						{player.rank && (
-							<Badge variant="secondary" className="text-[10px]">
-								{player.rank}
-							</Badge>
-						)}
-						<Badge
-							variant={player.recruitingStatus === "looking" ? "default" : "outline"}
-							className="text-[10px]"
-						>
-							{player.recruitingStatus === "looking" ? "Looking for team" : "Unavailable"}
-						</Badge>
-					</div>
-					<p className="text-[11px] text-muted-foreground">
-						Availability: {player.availabilityIntent?.replace("_", " ") ?? "Not shared"}
-					</p>
-					{player.bio ? (
-						<p className="line-clamp-3 text-xs text-muted-foreground">{player.bio}</p>
-					) : null}
+					<Badge
+						variant={player.recruitingStatus === "looking" ? "default" : "outline"}
+						className="shrink-0 text-[10px]"
+					>
+						{player.recruitingStatus === "looking" ? "Looking for team" : "Unavailable"}
+					</Badge>
 				</Link>
 			))}
 		</div>

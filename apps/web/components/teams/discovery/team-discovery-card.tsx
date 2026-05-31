@@ -14,7 +14,7 @@ export function TeamDiscoveryCard({ team }: TeamDiscoveryCardProps) {
 	return (
 		<Link
 			href={publicRoutes.teams.byId(team.id)}
-			className="flex items-center gap-3 border p-4 transition-colors hover:bg-muted/50"
+			className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
 		>
 			<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
 				<AvatarImage src={team.avatarUrl ?? undefined} className="rounded-none" />

@@ -32,7 +32,6 @@ export default async function UpdatesPage({ searchParams }: UpdatesPageProps) {
 	return (
 		<PublicPageShell
 			title="Updates"
-			description="Team and organization announcements now have a dedicated feed separate from recruiting."
 			maxWidth="5xl"
 			contentClassName="space-y-6"
 			actions={
@@ -105,13 +104,14 @@ async function UpdatesListSection({ scope }: { scope: "all" | "team" | "organiza
 	}
 
 	return (
-		<div className="space-y-3">
+		<div className="divide-y border">
 			{filteredUpdates.map((post) => (
 				<UpdatePostCard
 					key={post.id}
 					post={post}
 					showScopeLink
 					detailHref={publicRoutes.updates.byId(post.id)}
+					className="border-0 px-4 py-3"
 				/>
 			))}
 		</div>

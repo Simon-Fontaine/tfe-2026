@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { publicRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 
 function formatTimestamp(value: string) {
 	return new Intl.DateTimeFormat("en-GB", {
@@ -24,6 +25,7 @@ interface UpdatePostCardProps {
 	actions?: React.ReactNode;
 	showScopeLink?: boolean;
 	detailHref?: string;
+	className?: string;
 }
 
 export function UpdatePostCard({
@@ -31,11 +33,12 @@ export function UpdatePostCard({
 	actions,
 	showScopeLink = false,
 	detailHref,
+	className,
 }: UpdatePostCardProps) {
 	const scopeHref = showScopeLink ? getScopeHref(post) : null;
 
 	return (
-		<article className="border p-4">
+		<article className={cn("border p-4", className)}>
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div className="space-y-2">
 					<div className="flex flex-wrap items-center gap-2">

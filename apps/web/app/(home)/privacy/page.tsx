@@ -9,12 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
 	return (
-		<PublicPageShell
-			title="Privacy Policy"
-			description="This page explains the current product-level data expectations for Scrimflow accounts, public profiles, and workspace activity."
-			maxWidth="6xl"
-			contentClassName="space-y-6"
-		>
+		<PublicPageShell title="Privacy Policy" maxWidth="6xl" contentClassName="space-y-6">
 			<PublicPageSection title="What data the product needs">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
 					Scrimflow stores account details, public profile information, workspace membership,
@@ -25,7 +20,7 @@ export default function PrivacyPage() {
 			</PublicPageSection>
 
 			<PublicPageSection title="What we store">
-				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				<dl className="max-w-[64ch] space-y-3">
 					{[
 						{
 							label: "Account",
@@ -58,35 +53,29 @@ export default function PrivacyPage() {
 								"Team chat messages, notifications, and public update posts. Private messages are workspace-scoped.",
 						},
 					].map(({ label, detail }) => (
-						<div key={label} className="border p-4">
-							<p className="text-sm font-semibold">{label}</p>
-							<p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+						<div key={label}>
+							<dt className="text-sm font-medium text-foreground">{label}</dt>
+							<dd className="mt-0.5 text-sm text-muted-foreground">{detail}</dd>
 						</div>
 					))}
-				</div>
+				</dl>
 			</PublicPageSection>
 
 			<PublicPageSection title="How that data is used">
-				<div className="grid gap-3 md:grid-cols-3">
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Account access</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Authentication, session security, and account recovery workflows.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Team operations</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Recruiting, scrim scheduling, chat, updates, notifications, and admin workflows.
-						</p>
-					</div>
-					<div className="border p-4">
-						<p className="text-sm font-semibold">Public discovery</p>
-						<p className="mt-2 text-sm text-muted-foreground">
-							Public org, team, player, recruiting, scrim, and updates pages.
-						</p>
-					</div>
-				</div>
+				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Account access</span>—
+						Authentication, session security, and account recovery workflows.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Team operations</span>—
+						Recruiting, scrim scheduling, chat, updates, notifications, and admin workflows.
+					</li>
+					<li className="flex gap-2">
+						<span className="shrink-0 font-medium text-foreground">Public discovery</span>— Public
+						org, team, player, recruiting, scrim, and updates pages.
+					</li>
+				</ul>
 			</PublicPageSection>
 
 			<PublicPageSection title="Data you control">
