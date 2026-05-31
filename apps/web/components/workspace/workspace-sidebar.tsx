@@ -7,6 +7,7 @@ import {
 	Notification01Icon,
 	Settings01Icon,
 	Sword03Icon,
+	UserAdd01Icon,
 	UserCircle02Icon,
 	UserGroupIcon,
 	UserSearch01Icon,
@@ -79,6 +80,7 @@ export function WorkspaceSidebar({
 	const activeOrg = activeOrgId ? contextOrgs.find((o) => o.id === activeOrgId) : null;
 	const activeTeam = activeTeamId ? contextTeams.find((t) => t.id === activeTeamId) : null;
 	const canManageOrg = activeOrg?.canManage ?? false;
+	const canLeaveOrg = activeOrg?.canLeave ?? false;
 	const canOpenTeamSettings =
 		(activeTeam?.canManageSettings ?? false) || (activeTeam?.canLeave ?? false);
 
@@ -203,6 +205,10 @@ export function WorkspaceSidebar({
 											href: appRoutes.orgs.recruiting(activeOrgId),
 											icon: UserSearch01Icon,
 										},
+									]
+								: []),
+							...(canManageOrg || canLeaveOrg
+								? [
 										{
 											label: "Settings",
 											href: appRoutes.orgs.settings(activeOrgId),
@@ -230,6 +236,11 @@ export function WorkspaceSidebar({
 								label: "Inbox",
 								href: appRoutes.inbox,
 								icon: Mail01Icon,
+							},
+							{
+								label: "Invites",
+								href: appRoutes.invites,
+								icon: UserAdd01Icon,
 							},
 							{
 								label: "Personal schedule",

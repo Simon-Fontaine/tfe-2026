@@ -24,7 +24,7 @@ recruitmentConversationsRoutes.get("/", async (c) => {
 		cursor,
 		limit: CONVERSATIONS_PAGE_SIZE,
 	});
-	return c.json(result);
+	return c.json({ data: result.items, nextCursor: result.nextCursor });
 });
 
 export { recruitmentConversationsRoutes };

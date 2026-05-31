@@ -4,7 +4,7 @@ import type { Hono } from "hono";
 import { DatabaseError } from "pg";
 import * as v from "valibot";
 import { db } from "@/db";
-import { ocrJobTable, scrimTable } from "@/db/schema";
+import { ocrJobTable, scrimMapTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { optionalAuth } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
@@ -52,7 +52,24 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 			);
 		}
 
-		const { screenshotType, imageUrl } = parsed.output;
+		const { screenshotType, imageUrl, scrimMapId } = parsed.output;
+
+		if (screenshotType === "scoreboard") {
+			if (!scrimMapId) {
+				return c.json(
+					{ error: "Scoreboard OCR jobs require a target map identifier (scrimMapId)." },
+					400
+				);
+			}
+			const map = await db.query.scrimMapTable.findFirst({
+				where: and(eq(scrimMapTable.id, scrimMapId), eq(scrimMapTable.scrimId, scrimId)),
+				columns: { id: true },
+			});
+			if (!map) {
+				return c.json({ error: "Target map not found or does not belong to this scrim." }, 404);
+			}
+		}
+
 		const [existingJob] = await db
 			.select({ id: ocrJobTable.id })
 			.from(ocrJobTable)
@@ -82,6 +99,7 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 				submittedByUserId: user.id,
 				screenshotType,
 				imageUrl,
+				scrimMapId: screenshotType === "scoreboard" ? (scrimMapId ?? null) : null,
 				status: "queued",
 				progressStage: "queued",
 				runAfter: new Date(),

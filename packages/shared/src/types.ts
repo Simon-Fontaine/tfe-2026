@@ -617,6 +617,7 @@ export type UserOrg = {
 	teamCount: number;
 	openListingCount: number;
 	canManage: boolean;
+	canLeave: boolean;
 	teams: UserOrgTeamSummary[];
 };
 
@@ -1383,6 +1384,7 @@ export type OcrJobSummary = {
 	id: string;
 	scrimId: string;
 	screenshotType: string;
+	scrimMapId: string | null;
 	imageUrl: string;
 	status: OcrJobStatus;
 	progressStage: OcrJobProgressStage;

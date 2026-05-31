@@ -51,6 +51,7 @@ export async function getWorkspaceShellData(userId: string) {
 		id: org.id,
 		name: org.name,
 		canManage: org.canManage,
+		canLeave: org.canLeave,
 	}));
 
 	const contextTeams = orgs

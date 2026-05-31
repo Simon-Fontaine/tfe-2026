@@ -221,6 +221,7 @@ export async function findScrimWithRelations(scrimId: string) {
 					id: true,
 					scrimId: true,
 					screenshotType: true,
+					scrimMapId: true,
 					imageUrl: true,
 					status: true,
 					progressStage: true,

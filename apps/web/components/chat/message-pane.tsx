@@ -9,6 +9,8 @@ import { useChatStore } from "@/stores/chat";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./message-list";
 
+const EMPTY_MESSAGES: ChatMessage[] = [];
+
 interface MessagePaneProps {
 	conversationId: string;
 	currentUserId: string;
@@ -23,7 +25,7 @@ export function MessagePane({
 	isArchived,
 }: MessagePaneProps) {
 	const { setMessages, appendMessage, clearUnread } = useChatStore();
-	const messages = useChatStore((s) => s.messages[conversationId] ?? []);
+	const messages = useChatStore((s) => s.messages[conversationId] ?? EMPTY_MESSAGES);
 	const isLoading = useChatStore(
 		(s) => s.messages[conversationId] === undefined && s.loadingOlder[conversationId] !== false
 	);

@@ -47,8 +47,7 @@ export function isPlayerRecruitingDiscoverable(row: {
 	if (row.ownerType !== "player") return true;
 	return (
 		(row.user?.profile?.profileVisibility ?? "public") === "public" &&
-		row.user?.profile?.recruitingDiscoverability !== false &&
-		row.user?.profile?.participationIntent === "find_team"
+		row.user?.profile?.recruitingDiscoverability !== false
 	);
 }
 

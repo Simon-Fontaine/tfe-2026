@@ -42,6 +42,7 @@ type PlayerDraft = {
 };
 
 type MapDraft = {
+	mapId: string | null;
 	mapName: string;
 	mapType: (typeof OCR_MAP_TYPE_VALUES)[number];
 	scoreboardOcrJobId: string | null;
@@ -93,6 +94,7 @@ function createEmptyPlayerDraft(): PlayerDraft {
 
 function createEmptyMapDraft(): MapDraft {
 	return {
+		mapId: null,
 		mapName: "",
 		mapType: "unknown",
 		scoreboardOcrJobId: null,
@@ -141,6 +143,7 @@ function durationTextToSecondsField(value: string | null) {
 
 function mapOcrMatchToDraft(match: OcrGameHistoryMatch): MapDraft {
 	return {
+		mapId: null,
 		mapName: match.mapName,
 		mapType: match.mapType ?? "unknown",
 		scoreboardOcrJobId: null,
@@ -153,6 +156,7 @@ function mapOcrMatchToDraft(match: OcrGameHistoryMatch): MapDraft {
 
 function mapSavedMapToDraft(map: ScrimDetail["maps"][number]): MapDraft {
 	return {
+		mapId: map.id,
 		mapName: map.mapName,
 		mapType: map.mapType,
 		scoreboardOcrJobId: null,
@@ -252,6 +256,8 @@ export function ReportScrimResultDialog({
 	const scoreboardJobs = scrim.ocrJobs.filter(
 		(job) => job.validatedOutput?.screenshotType === "scoreboard"
 	);
+	const associatedScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId !== null);
+	const legacyScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId === null);
 	const initialState = getInitialState(scrim);
 	const [open, setOpen] = useState(false);
 	const [manualHomeMapScore, setManualHomeMapScore] = useState(initialState.manualHomeMapScore);
@@ -261,7 +267,7 @@ export function ReportScrimResultDialog({
 	const [sourceOcrJobId, setSourceOcrJobId] = useState<string | null>(initialState.sourceOcrJobId);
 	const [selectedOcrJobId, setSelectedOcrJobId] = useState(reviewableJobs[0]?.id ?? "");
 	const [selectedScoreboardJobId, setSelectedScoreboardJobId] = useState(
-		scoreboardJobs[0]?.id ?? ""
+		legacyScoreboardJobs[0]?.id ?? ""
 	);
 	const [selectedScoreboardMapIndex, setSelectedScoreboardMapIndex] = useState("0");
 	const [maps, setMaps] = useState<MapDraft[]>(initialState.maps);
@@ -277,7 +283,7 @@ export function ReportScrimResultDialog({
 		setLocalEndedAt(nextState.endedAt);
 		setSourceOcrJobId(nextState.sourceOcrJobId);
 		setSelectedOcrJobId(reviewableJobs[0]?.id ?? "");
-		setSelectedScoreboardJobId(scoreboardJobs[0]?.id ?? "");
+		setSelectedScoreboardJobId(legacyScoreboardJobs[0]?.id ?? "");
 		setSelectedScoreboardMapIndex("0");
 		setMaps(nextState.maps);
 		setFormError(undefined);
@@ -322,8 +328,42 @@ export function ReportScrimResultDialog({
 		setFormError(undefined);
 	}
 
+	function importScoreboardJobIntoMapIndex(job: ScrimDetail["ocrJobs"][number], mapIndex: number) {
+		if (!job.validatedOutput || job.validatedOutput.screenshotType !== "scoreboard") return;
+		const allySide: PlayerDraft["side"] = reportingTeamId === scrim.homeTeam.id ? "home" : "away";
+		const enemySide: PlayerDraft["side"] = allySide === "home" ? "away" : "home";
+		const importedPlayers = [
+			...job.validatedOutput.allyTeam.map((player) => mapScoreboardPlayerToDraft(player, allySide)),
+			...job.validatedOutput.enemyTeam.map((player) =>
+				mapScoreboardPlayerToDraft(player, enemySide)
+			),
+		];
+		updateMap(mapIndex, (current) => ({
+			...current,
+			scoreboardOcrJobId: job.id,
+			players: importedPlayers,
+		}));
+		setFormError(undefined);
+	}
+
+	function handleImportAssociatedScoreboardDraft(jobId: string) {
+		const job = associatedScoreboardJobs.find((j) => j.id === jobId);
+		if (!job?.validatedOutput || job.validatedOutput.screenshotType !== "scoreboard") {
+			setFormError("OCR job not ready for import.");
+			return;
+		}
+		const mapIndex = maps.findIndex((m) => m.mapId === job.scrimMapId);
+		if (mapIndex === -1) {
+			setFormError(
+				"The target map for this scoreboard job is not in the current reviewed maps. Load the saved maps first."
+			);
+			return;
+		}
+		importScoreboardJobIntoMapIndex(job, mapIndex);
+	}
+
 	function handleImportScoreboardDraft() {
-		const selectedJob = scoreboardJobs.find((job) => job.id === selectedScoreboardJobId);
+		const selectedJob = legacyScoreboardJobs.find((job) => job.id === selectedScoreboardJobId);
 		if (
 			!selectedJob?.validatedOutput ||
 			selectedJob.validatedOutput.screenshotType !== "scoreboard"
@@ -338,23 +378,7 @@ export function ReportScrimResultDialog({
 			return;
 		}
 
-		const allySide: PlayerDraft["side"] = reportingTeamId === scrim.homeTeam.id ? "home" : "away";
-		const enemySide: PlayerDraft["side"] = allySide === "home" ? "away" : "home";
-		const importedPlayers = [
-			...selectedJob.validatedOutput.allyTeam.map((player) =>
-				mapScoreboardPlayerToDraft(player, allySide)
-			),
-			...selectedJob.validatedOutput.enemyTeam.map((player) =>
-				mapScoreboardPlayerToDraft(player, enemySide)
-			),
-		];
-
-		updateMap(mapIndex, (current) => ({
-			...current,
-			scoreboardOcrJobId: selectedJob.id,
-			players: importedPlayers,
-		}));
-		setFormError(undefined);
+		importScoreboardJobIntoMapIndex(selectedJob, mapIndex);
 	}
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -462,7 +486,7 @@ export function ReportScrimResultDialog({
 		? reviewableJobs.find((job) => job.id === sourceOcrJobId)
 		: null;
 	const selectedScoreboardJob = selectedScoreboardJobId
-		? scoreboardJobs.find((job) => job.id === selectedScoreboardJobId)
+		? legacyScoreboardJobs.find((job) => job.id === selectedScoreboardJobId)
 		: null;
 
 	return (
@@ -631,9 +655,8 @@ export function ReportScrimResultDialog({
 							<div className="border p-3">
 								<p className="text-sm font-semibold">Scoreboard player-stat import</p>
 								<p className="mt-1 text-xs text-muted-foreground">
-									Import a completed scoreboard OCR draft into one reviewed map. This replaces the
-									current player rows for that map and keeps the OCR job attached as supporting
-									evidence.
+									Import completed scoreboard OCR drafts into reviewed maps. Associated jobs target
+									their map automatically; unassociated legacy jobs require manual map selection.
 								</p>
 								{scoreboardJobs.length === 0 ? (
 									<p className="mt-3 text-xs text-muted-foreground">
@@ -644,52 +667,98 @@ export function ReportScrimResultDialog({
 										Add or load at least one reviewed map before importing scoreboard player stats.
 									</p>
 								) : (
-									<>
-										<select
-											value={selectedScoreboardJobId}
-											onChange={(event) => setSelectedScoreboardJobId(event.target.value)}
-											className="mt-3 h-9 w-full border bg-background px-3 text-sm"
-											disabled={submitting}
-										>
-											{scoreboardJobs.map((job) => (
-												<option key={job.id} value={job.id}>
-													{formatJobLabel(job)}
-												</option>
-											))}
-										</select>
-										<select
-											value={selectedScoreboardMapIndex}
-											onChange={(event) => setSelectedScoreboardMapIndex(event.target.value)}
-											className="mt-3 h-9 w-full border bg-background px-3 text-sm"
-											disabled={submitting}
-										>
-											{maps.map((map, index) => (
-												<option
-													key={`scoreboard-target-${map.mapName}-${map.homeScore}-${map.awayScore}-${map.players.length}`}
-													value={String(index)}
+									<div className="mt-3 space-y-3">
+										{associatedScoreboardJobs.length > 0 ? (
+											<div>
+												<p className="text-xs font-medium text-muted-foreground">
+													Map-associated jobs
+												</p>
+												<div className="mt-2 space-y-2">
+													{associatedScoreboardJobs.map((job) => {
+														const targetMapIndex = maps.findIndex(
+															(m) => m.mapId === job.scrimMapId
+														);
+														const targetMap = targetMapIndex !== -1 ? maps[targetMapIndex] : null;
+														return (
+															<div
+																key={job.id}
+																className="flex items-center justify-between gap-2 text-xs"
+															>
+																<span className="text-muted-foreground">
+																	{formatJobLabel(job)}
+																	{targetMap
+																		? ` → Map ${targetMapIndex + 1}: ${targetMap.mapName || "Unnamed map"}`
+																		: " → target map not loaded"}
+																</span>
+																<Button
+																	type="button"
+																	size="sm"
+																	variant="outline"
+																	onClick={() => handleImportAssociatedScoreboardDraft(job.id)}
+																	disabled={submitting || targetMapIndex === -1}
+																>
+																	Import
+																</Button>
+															</div>
+														);
+													})}
+												</div>
+											</div>
+										) : null}
+
+										{legacyScoreboardJobs.length > 0 ? (
+											<div>
+												<p className="text-xs font-medium text-muted-foreground">
+													Unassociated (legacy) — select target map manually
+												</p>
+												<select
+													value={selectedScoreboardJobId}
+													onChange={(event) => setSelectedScoreboardJobId(event.target.value)}
+													className="mt-2 h-9 w-full border bg-background px-3 text-sm"
+													disabled={submitting}
 												>
-													Map {index + 1}: {map.mapName || "Unnamed map"}
-												</option>
-											))}
-										</select>
-										<div className="mt-3 flex flex-wrap gap-2">
-											<Button
-												type="button"
-												size="sm"
-												variant="outline"
-												onClick={handleImportScoreboardDraft}
-												disabled={submitting}
-											>
-												Import scoreboard stats
-											</Button>
-										</div>
-									</>
+													{legacyScoreboardJobs.map((job) => (
+														<option key={job.id} value={job.id}>
+															{formatJobLabel(job)}
+														</option>
+													))}
+												</select>
+												<select
+													value={selectedScoreboardMapIndex}
+													onChange={(event) => setSelectedScoreboardMapIndex(event.target.value)}
+													className="mt-2 h-9 w-full border bg-background px-3 text-sm"
+													disabled={submitting}
+												>
+													{maps.map((map, index) => (
+														<option
+															key={`scoreboard-target-${map.mapName}-${map.homeScore}-${map.awayScore}-${map.players.length}`}
+															value={String(index)}
+														>
+															Map {index + 1}: {map.mapName || "Unnamed map"}
+														</option>
+													))}
+												</select>
+												<div className="mt-2 flex flex-wrap gap-2">
+													<Button
+														type="button"
+														size="sm"
+														variant="outline"
+														onClick={handleImportScoreboardDraft}
+														disabled={submitting}
+													>
+														Import scoreboard stats
+													</Button>
+												</div>
+												{selectedScoreboardJob?.validatedOutput?.warnings.length ? (
+													<p className="mt-2 text-xs text-muted-foreground">
+														Loaded warnings:{" "}
+														{selectedScoreboardJob.validatedOutput.warnings.join(" | ")}
+													</p>
+												) : null}
+											</div>
+										) : null}
+									</div>
 								)}
-								{selectedScoreboardJob?.validatedOutput?.warnings.length ? (
-									<p className="mt-3 text-xs text-muted-foreground">
-										Loaded warnings: {selectedScoreboardJob.validatedOutput.warnings.join(" | ")}
-									</p>
-								) : null}
 							</div>
 						</div>
 

@@ -77,8 +77,8 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 				title={state.displayName}
 			/>
 
-			<div className="grid grid-cols-3 gap-6">
-				<div className="col-span-2 space-y-6">
+			<div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+				<div className="sm:col-span-2 space-y-6">
 					<PageSection title="Recent Audit Events">
 						{state.recentAuditEvents.length === 0 ? (
 							<p className="text-sm text-muted-foreground">No recent audit events.</p>
@@ -128,7 +128,7 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 					</PageSection>
 				</div>
 
-				<div className="col-span-1 sticky top-6 self-start space-y-4">
+				<div className="sm:col-span-1 sm:sticky sm:top-6 self-start space-y-4">
 					<section className="border p-4 space-y-3">
 						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 							Entity

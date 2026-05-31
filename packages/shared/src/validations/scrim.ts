@@ -132,6 +132,7 @@ export type RespondToScrimDisputeInput = v.InferOutput<typeof RespondToScrimDisp
 export const CreateScrimOcrJobSchema = v.object({
 	screenshotType: v.picklist(OCR_SCREENSHOT_TYPE_VALUES, "Invalid screenshot type"),
 	imageUrl: v.pipe(v.string(), v.trim(), v.url("Invalid image URL")),
+	scrimMapId: v.optional(v.pipe(v.string(), v.uuid("Invalid scrim map ID"))),
 });
 
 export type CreateScrimOcrJobInput = v.InferOutput<typeof CreateScrimOcrJobSchema>;

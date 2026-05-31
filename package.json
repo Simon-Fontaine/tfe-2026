@@ -2,7 +2,7 @@
 	"scripts": {
 		"dev": "dotenv -e .env -- pnpm --parallel --filter next-app --filter @scrimflow/api run dev",
 		"dev:web": "dotenv -e .env -- pnpm --filter next-app run dev",
-		"dev:api": "dotenv -e .env -- pnpm --filter @scrimflow/api run dev",
+		"dev:api": "dotenv -e .env -- pnpm --filter @scrimflow/api run dev:server",
 		"dev:worker": "dotenv -e .env -- pnpm --filter @scrimflow/api run dev:worker",
 		"start": "dotenv -e .env -- pnpm --parallel --filter next-app --filter @scrimflow/api run start",
 		"start:worker": "dotenv -e .env -- pnpm --filter @scrimflow/api run start:worker",
@@ -19,6 +19,7 @@
 		"db:studio": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:studio",
 		"db:seed": "dotenv -e .env -- pnpm --filter @scrimflow/api run db:seed",
 		"db:seed:playwright": "dotenv -e .env -- bun packages/api/src/db/seeds/playwright-auth.ts",
+		"ocr:validate": "dotenv -e .env -- bun packages/api/src/worker/validate.ts",
 		"prepare": "lefthook install"
 	},
 	"devDependencies": {

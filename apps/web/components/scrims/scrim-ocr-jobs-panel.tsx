@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { readApiPayload } from "./form-errors";
+import { UploadScrimEvidenceDialog } from "./upload-scrim-evidence-dialog";
 
 const ACTIVE_JOB_STATUSES = new Set(["queued", "processing"]);
 
@@ -111,6 +112,7 @@ interface ScrimOcrJobsPanelProps {
 	scrimId: string;
 	jobs: OcrJobSummary[];
 	canManage: boolean;
+	canUploadEvidence?: boolean;
 	resultRevisions?: ScrimResultRevisionSummary[];
 	maps?: ScrimMapSummary[];
 }
@@ -119,6 +121,7 @@ export function ScrimOcrJobsPanel({
 	scrimId,
 	jobs,
 	canManage,
+	canUploadEvidence = false,
 	resultRevisions = [],
 	maps = [],
 }: ScrimOcrJobsPanelProps) {
@@ -303,6 +306,11 @@ export function ScrimOcrJobsPanel({
 		}
 	}
 
+	const mapsById = new Map<string, ScrimMapSummary>();
+	for (const map of maps) {
+		mapsById.set(map.id, map);
+	}
+
 	const latestRevision =
 		resultRevisions.length > 0
 			? resultRevisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a))
@@ -329,6 +337,39 @@ export function ScrimOcrJobsPanel({
 					</p>
 				</div>
 			</div>
+
+			{canUploadEvidence ? (
+				<div className="mt-4 border p-3">
+					<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						Scoreboard uploads
+					</p>
+					{maps.length === 0 ? (
+						<p className="mt-2 text-xs text-muted-foreground">
+							Scoreboard evidence is per-map and becomes available once reviewed maps exist. Use{" "}
+							<strong>Review result</strong> to add maps first.
+						</p>
+					) : (
+						<div className="mt-3 flex flex-wrap gap-2">
+							{maps.map((map) => {
+								const label = `Map ${map.mapOrder}: ${map.mapName}`;
+								return (
+									<UploadScrimEvidenceDialog
+										key={map.id}
+										scrimId={scrimId}
+										screenshotType="scoreboard"
+										targetMapId={map.id}
+										targetMapLabel={label}
+									>
+										<Button type="button" size="sm" variant="outline">
+											Upload scoreboard — {label}
+										</Button>
+									</UploadScrimEvidenceDialog>
+								);
+							})}
+						</div>
+					)}
+				</div>
+			) : null}
 
 			<div className="mt-4">
 				{liveJobs.length === 0 ? (
@@ -543,9 +584,18 @@ export function ScrimOcrJobsPanel({
 								{(() => {
 									const linkedRevisions = revisionsByOcrJobId.get(job.id);
 									const linkedMaps = mapsByOcrJobId.get(job.id);
-									if (!linkedRevisions?.length && !linkedMaps?.length) return null;
+									const targetMap =
+										job.screenshotType === "scoreboard" && job.scrimMapId
+											? mapsById.get(job.scrimMapId)
+											: undefined;
+									if (!linkedRevisions?.length && !linkedMaps?.length && !targetMap) return null;
 									return (
 										<div className="mt-3 space-y-1 text-xs text-muted-foreground">
+											{targetMap && !linkedMaps?.length ? (
+												<p>
+													Target map: {targetMap.mapOrder} — {targetMap.mapName}
+												</p>
+											) : null}
 											{linkedRevisions?.map((revision) => (
 												<p key={revision.id}>Used in revision #{revision.revisionNumber}</p>
 											))}

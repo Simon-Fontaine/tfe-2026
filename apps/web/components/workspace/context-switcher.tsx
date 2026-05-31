@@ -39,6 +39,7 @@ export interface SwitcherOrg {
 	id: string;
 	name: string;
 	canManage: boolean;
+	canLeave: boolean;
 }
 
 export interface SwitcherTeam {

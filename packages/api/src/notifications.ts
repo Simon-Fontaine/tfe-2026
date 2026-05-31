@@ -99,11 +99,11 @@ async function resolveParticipantTeamId(
 
 async function resolveNotificationDestinationHref(row: NotificationRow, userId: string) {
 	if (row.referenceType === "team_invite") {
-		return row.referenceId ? appRoutes.teams.roster(row.referenceId) : appRoutes.inbox;
+		return appRoutes.invites;
 	}
 
 	if (row.referenceType === "org_invite") {
-		return row.referenceId ? appRoutes.orgs.byId(row.referenceId) : appRoutes.inbox;
+		return appRoutes.invites;
 	}
 
 	if (row.referenceType === "recruitment_listing") {

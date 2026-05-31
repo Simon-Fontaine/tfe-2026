@@ -464,28 +464,51 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 				: scrim.scheduledAt;
 			const proposedConfig = parsed.output.config ?? scrim.config;
 			const proposedMessage = parsed.output.message ?? scrim.message;
-			await db.transaction(async (tx) => {
-				await tx
-					.update(scrimTable)
-					.set({
-						scheduledAt: proposedScheduledAt,
-						config: proposedConfig,
-						message: proposedMessage ?? null,
-					})
-					.where(eq(scrimTable.id, scrimId));
-				await tx.insert(scrimNegotiationRevisionTable).values({
-					scrimId,
-					actorUserId: user.id,
-					actorTeamId: scrim.awayTeamId,
-					action: "propose_changes",
-					priorScheduledAt: scrim.scheduledAt,
-					proposedScheduledAt: parsed.output.scheduledAt ? proposedScheduledAt : null,
-					priorConfig: scrim.config,
-					proposedConfig: parsed.output.config ?? null,
-					priorMessage: scrim.message,
-					proposedMessage: parsed.output.message ?? null,
+			try {
+				await db.transaction(async (tx) => {
+					await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
+					await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+					const lockedScrim = await tx.query.scrimTable.findFirst({
+						where: eq(scrimTable.id, scrimId),
+						columns: { id: true, status: true },
+					});
+					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status !== "pending") {
+						throw new ScrimWorkflowError(
+							409,
+							"This scrim request has already been updated. Refresh to see the current state."
+						);
+					}
+					await tx
+						.update(scrimTable)
+						.set({
+							scheduledAt: proposedScheduledAt,
+							config: proposedConfig,
+							message: proposedMessage ?? null,
+						})
+						.where(eq(scrimTable.id, scrimId));
+					await tx.insert(scrimNegotiationRevisionTable).values({
+						scrimId,
+						actorUserId: user.id,
+						actorTeamId: scrim.awayTeamId,
+						action: "propose_changes",
+						priorScheduledAt: scrim.scheduledAt,
+						proposedScheduledAt: parsed.output.scheduledAt ? proposedScheduledAt : null,
+						priorConfig: scrim.config,
+						proposedConfig: parsed.output.config ?? null,
+						priorMessage: scrim.message,
+						proposedMessage: parsed.output.message ?? null,
+					});
 				});
-			});
+			} catch (error) {
+				if (error instanceof ScrimWorkflowError) {
+					return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+				}
+				if (error instanceof DatabaseError && error.code === "55P03") {
+					return c.json({ error: "Temporarily unavailable, please try again." }, 503);
+				}
+				throw error;
+			}
 		} else if (action === "start") {
 			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
 				return c.json({ error: "Only a team manager can mark this scrim as in progress." }, 403);
@@ -547,6 +570,12 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			if (!(await canManageAnyScrimTeam(user.id, scrim))) {
 				return c.json({ error: "Only a team manager can cancel this scrim." }, 403);
 			}
+			if (scrim.status === "in_progress") {
+				return c.json(
+					{ error: "In-progress scrims cannot be cancelled. Report results when the scrim ends." },
+					409
+				);
+			}
 			if (scrim.status === "awaiting_confirmation" || scrim.status === "disputed") {
 				return c.json(
 					{
@@ -586,6 +615,12 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 					});
 
 					if (!lockedScrim) throw new ScrimWorkflowError(404, "Scrim not found.");
+					if (lockedScrim.status === "in_progress") {
+						throw new ScrimWorkflowError(
+							409,
+							"In-progress scrims cannot be cancelled. Report results when the scrim ends."
+						);
+					}
 					if (lockedScrim.status === "awaiting_confirmation" || lockedScrim.status === "disputed") {
 						throw new ScrimWorkflowError(
 							400,
@@ -714,11 +749,13 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		if (action === "accept") {
 			publishScrimStatusChanged(scrimId, detail.status);
 		} else if (action === "decline" || action === "cancel") {
-			publishScrimStatusChanged(scrimId, "cancelled");
+			publishScrimStatusChanged(scrimId, detail.status);
 		} else if (action === "reschedule") {
-			publishScrimStatusChanged(scrimId, "scheduled");
+			publishScrimStatusChanged(scrimId, detail.status);
 		} else if (action === "start") {
-			publishScrimStatusChanged(scrimId, "in_progress");
+			publishScrimStatusChanged(scrimId, detail.status);
+		} else if (action === "propose_changes") {
+			publishScrimStatusChanged(scrimId, detail.status);
 		}
 
 		return c.json({ data: mapScrimDetail(detail) });

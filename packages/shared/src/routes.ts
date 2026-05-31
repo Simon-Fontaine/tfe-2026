@@ -325,6 +325,7 @@ export const appRoutes = {
 	root: "/app",
 	me: "/app",
 	inbox: "/app/inbox",
+	invites: "/app/invites",
 	calendar: "/app/calendar",
 	profile: "/app/profile",
 	deletionPending: "/deletion-pending",

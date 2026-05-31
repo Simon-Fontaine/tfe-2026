@@ -2,7 +2,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InboxLoading() {
 	return (
-		<div className="grid h-full grid-cols-[300px_minmax(0,1fr)]">
+		<div className="grid h-full grid-cols-[300px_minmax(0,1fr)]" role="status" aria-busy="true">
+			<span className="sr-only">Loading</span>
 			{/* Left panel skeleton */}
 			<div className="flex flex-col border-r">
 				<div className="flex items-center justify-between border-b p-4">

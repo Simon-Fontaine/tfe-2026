@@ -4,7 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function OnboardingLoading() {
 	return (
 		<OnboardingShellLayout>
-			<div className="space-y-4" aria-hidden="true">
+			<div className="space-y-4" role="status" aria-busy="true">
+				<span className="sr-only">Loading</span>
 				<div className="space-y-2">
 					<Skeleton className="h-3 w-24" />
 					<Skeleton className="h-7 w-40" />

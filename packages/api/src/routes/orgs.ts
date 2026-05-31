@@ -736,6 +736,7 @@ orgRoutes.get("/", async (c) => {
 				teamCount: teams.length,
 				openListingCount: membership.organization.recruitmentListings.length,
 				canManage: orgCanManage,
+				canLeave: membership.role !== "owner",
 				teams,
 			};
 		}),

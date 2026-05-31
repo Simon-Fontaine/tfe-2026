@@ -2,7 +2,7 @@
 
 import type { DirectUploadIntent, FinalizedUpload, OcrJobSummary } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
-import { startTransition, useMemo, useRef, useState } from "react";
+import { startTransition, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,6 @@ import {
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
-import { cn } from "@/lib/utils";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -25,32 +24,28 @@ const MAX_BYTES = 8 * 1024 * 1024;
 interface UploadScrimEvidenceDialogProps {
 	children: React.ReactNode;
 	scrimId: string;
+	screenshotType: "game_history" | "scoreboard";
+	targetMapId?: string;
+	targetMapLabel?: string;
 }
 
-export function UploadScrimEvidenceDialog({ children, scrimId }: UploadScrimEvidenceDialogProps) {
+export function UploadScrimEvidenceDialog({
+	children,
+	scrimId,
+	screenshotType,
+	targetMapId,
+	targetMapLabel,
+}: UploadScrimEvidenceDialogProps) {
 	const router = useRouter();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [open, setOpen] = useState(false);
 	const [file, setFile] = useState<File | null>(null);
-	const [screenshotType, setScreenshotType] = useState<"game_history" | "scoreboard">(
-		"game_history"
-	);
 	const [formError, setFormError] = useState<string | undefined>(undefined);
 	const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
 	const [submitting, setSubmitting] = useState(false);
 
-	const buttonClassName = useMemo(
-		() =>
-			cn(
-				"border px-3 py-3 text-left text-xs font-medium transition-colors hover:bg-muted",
-				"data-[selected=true]:border-primary data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary"
-			),
-		[]
-	);
-
 	function resetState() {
 		setFile(null);
-		setScreenshotType("game_history");
 		setFormError(undefined);
 		setFieldErrors({});
 		if (inputRef.current) inputRef.current.value = "";
@@ -93,6 +88,7 @@ export function UploadScrimEvidenceDialog({ children, scrimId }: UploadScrimEvid
 				body: JSON.stringify({
 					scrimId,
 					screenshotType,
+					scrimMapId: screenshotType === "scoreboard" ? targetMapId : undefined,
 					fileName: selectedFile.name,
 					contentType: selectedFile.type,
 					sizeBytes: selectedFile.size,
@@ -131,6 +127,7 @@ export function UploadScrimEvidenceDialog({ children, scrimId }: UploadScrimEvid
 				body: JSON.stringify({
 					scrimId,
 					screenshotType,
+					scrimMapId: screenshotType === "scoreboard" ? targetMapId : undefined,
 					objectKey: uploadIntentPayload.data.objectKey,
 				}),
 			});
@@ -152,6 +149,7 @@ export function UploadScrimEvidenceDialog({ children, scrimId }: UploadScrimEvid
 				credentials: "include",
 				body: JSON.stringify({
 					screenshotType,
+					scrimMapId: screenshotType === "scoreboard" ? targetMapId : undefined,
 					imageUrl: finalizePayload.data.url,
 				}),
 			});
@@ -178,6 +176,13 @@ export function UploadScrimEvidenceDialog({ children, scrimId }: UploadScrimEvid
 		}
 	}
 
+	const title =
+		screenshotType === "scoreboard"
+			? targetMapLabel
+				? `Upload scoreboard — ${targetMapLabel}`
+				: "Upload scoreboard"
+			: "Upload game history";
+
 	return (
 		<Dialog
 			open={open}
@@ -189,49 +194,15 @@ export function UploadScrimEvidenceDialog({ children, scrimId }: UploadScrimEvid
 			<DialogTrigger asChild>{children}</DialogTrigger>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle>Upload scrim evidence</DialogTitle>
+					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>
-						The screenshot uploads directly to object storage, then the API finalizes it and queues
-						async extraction. If the OCR worker is running, processing begins automatically after
-						finalize succeeds.
+						{screenshotType === "scoreboard"
+							? "The screenshot uploads directly to object storage, then the API queues scoreboard player-stat extraction for this map."
+							: "The screenshot uploads directly to object storage, then the API queues game-history match extraction for this scrim."}
 					</DialogDescription>
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
-					<Field>
-						<FieldLabel>Screenshot type</FieldLabel>
-						<div className="grid gap-2 sm:grid-cols-2">
-							<button
-								type="button"
-								data-selected={screenshotType === "game_history"}
-								onClick={() => {
-									setScreenshotType("game_history");
-									setFormError(undefined);
-								}}
-								className={buttonClassName}
-								disabled={submitting}
-							>
-								Game history
-							</button>
-							<button
-								type="button"
-								data-selected={screenshotType === "scoreboard"}
-								onClick={() => {
-									setScreenshotType("scoreboard");
-									setFormError(undefined);
-								}}
-								className={buttonClassName}
-								disabled={submitting}
-							>
-								Scoreboard
-							</button>
-						</div>
-						<FieldDescription>
-							Each screenshot becomes its own OCR job so match history and scoreboard parsing can
-							evolve independently.
-						</FieldDescription>
-					</Field>
-
 					<Field>
 						<FieldLabel>Screenshot file</FieldLabel>
 						<input

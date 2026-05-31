@@ -11,6 +11,7 @@ export function mapOcrJob(job: ScrimRow["ocrJobs"][number]): ScrimDetail["ocrJob
 		id: job.id,
 		scrimId: job.scrimId,
 		screenshotType: job.screenshotType,
+		scrimMapId: job.scrimMapId ?? null,
 		imageUrl: job.imageUrl,
 		status: job.status,
 		progressStage: job.progressStage as ScrimDetail["ocrJobs"][number]["progressStage"],

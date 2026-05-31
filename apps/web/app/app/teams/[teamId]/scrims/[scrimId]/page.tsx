@@ -201,8 +201,8 @@ export default async function TeamScrimDetailPage({
 				}
 			/>
 
-			<div className="grid grid-cols-3 gap-6">
-				<div className="col-span-2 space-y-4">
+			<div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+				<div className="sm:col-span-2 space-y-4">
 					<ScrimSeriesOverview
 						config={scrim.config}
 						homeMapScore={scrim.homeMapScore}
@@ -255,12 +255,13 @@ export default async function TeamScrimDetailPage({
 						scrimId={scrim.id}
 						jobs={scrim.ocrJobs}
 						canManage={team.currentUser.canManage}
+						canUploadEvidence={canUploadEvidence}
 						resultRevisions={scrim.resultRevisions}
 						maps={scrim.maps}
 					/>
 				</div>
 
-				<div className="col-span-1 sticky top-6 self-start space-y-4">
+				<div className="sm:col-span-1 sm:sticky sm:top-6 self-start space-y-4">
 					<section className="border p-4">
 						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
 							Status
@@ -320,9 +321,9 @@ export default async function TeamScrimDetailPage({
 								</ResolveScrimDisputeDialog>
 							) : null}
 							{canUploadEvidence ? (
-								<UploadScrimEvidenceDialog scrimId={scrim.id}>
+								<UploadScrimEvidenceDialog scrimId={scrim.id} screenshotType="game_history">
 									<Button size="sm" variant="outline" className="w-full">
-										Upload evidence
+										Upload game history
 									</Button>
 								</UploadScrimEvidenceDialog>
 							) : null}

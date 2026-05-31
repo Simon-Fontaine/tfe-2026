@@ -52,10 +52,10 @@ function getOpponentDisplay(
 	return { label: `[${opponent.tag}] ${opponent.name}`, isArchived: opponent.isArchived };
 }
 
-function isNeedsAction(scrim: ScrimSummary, teamId: string, canResolveDispute: boolean): boolean {
+function isNeedsAction(scrim: ScrimSummary, teamId: string): boolean {
 	if (scrim.status === "awaiting_confirmation") return true;
 	if (scrim.status === "pending" && scrim.awayTeam?.id === teamId) return true;
-	if (scrim.status === "disputed" && canResolveDispute) return true;
+	if (scrim.status === "disputed") return true;
 	return false;
 }
 
@@ -143,19 +143,14 @@ export default async function TeamScrimsPage({
 
 	const teamData = team.data;
 	const { scrims, nextCursor } = scrimsState.data;
-	const canResolveDispute =
-		teamData.currentUser.orgRole === "owner" || teamData.currentUser.orgRole === "admin";
 
-	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, teamData.id, canResolveDispute));
+	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, teamData.id));
 	const upcomingScrims = scrims.filter(
 		(s) =>
-			!isNeedsAction(s, teamData.id, canResolveDispute) &&
-			["accepted", "scheduled", "in_progress"].includes(s.status)
+			!isNeedsAction(s, teamData.id) && ["accepted", "scheduled", "in_progress"].includes(s.status)
 	);
 	const pastScrims = scrims.filter(
-		(s) =>
-			!isNeedsAction(s, teamData.id, canResolveDispute) &&
-			["completed", "cancelled", "disputed"].includes(s.status)
+		(s) => !isNeedsAction(s, teamData.id) && ["completed", "cancelled"].includes(s.status)
 	);
 	const needsActionCount = needsActionScrims.length;
 

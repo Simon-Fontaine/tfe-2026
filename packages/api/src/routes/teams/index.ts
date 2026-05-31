@@ -1815,10 +1815,7 @@ teamRoutes.delete("/:id/leave", async (c) => {
 		return c.json({ error: "Assign another active team admin before leaving this team." }, 409);
 	}
 
-	await db
-		.update(teamRosterTable)
-		.set({ status: "inactive", leftAt: new Date() })
-		.where(eq(teamRosterTable.id, roster.id));
+	await db.delete(teamRosterTable).where(eq(teamRosterTable.id, roster.id));
 
 	return c.json({ success: true });
 });

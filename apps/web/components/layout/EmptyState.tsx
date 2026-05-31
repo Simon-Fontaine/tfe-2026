@@ -10,7 +10,12 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, action }: EmptyStateProps) {
 	return (
 		<div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-			<HugeiconsIcon icon={icon} strokeWidth={1.5} className="size-8 text-muted-foreground" />
+			<HugeiconsIcon
+				icon={icon}
+				strokeWidth={1.5}
+				className="size-8 text-muted-foreground"
+				aria-hidden="true"
+			/>
 			<p className="text-sm text-muted-foreground">{title}</p>
 			{action}
 		</div>

@@ -8,6 +8,9 @@ import { useChatStore } from "@/stores/chat";
 import { MessageBubble } from "./message-bubble";
 import { TypingIndicator } from "./typing-indicator";
 
+const EMPTY_MESSAGES: ChatMessage[] = [];
+const EMPTY_TYPERS: string[] = [];
+
 interface MessageListProps {
 	conversationId: string;
 	currentUserId: string;
@@ -15,10 +18,10 @@ interface MessageListProps {
 }
 
 export function MessageList({ conversationId, currentUserId, participantNames }: MessageListProps) {
-	const messages = useChatStore((s) => s.messages[conversationId] ?? []);
+	const messages = useChatStore((s) => s.messages[conversationId] ?? EMPTY_MESSAGES);
 	const nextCursor = useChatStore((s) => s.nextCursors[conversationId]);
 	const isLoadingOlder = useChatStore((s) => s.loadingOlder[conversationId] ?? false);
-	const typingUserIds = useChatStore((s) => s.typing[conversationId] ?? []);
+	const typingUserIds = useChatStore((s) => s.typing[conversationId] ?? EMPTY_TYPERS);
 	const { prependMessages, setLoadingOlder, updateMessage, deleteMessage } = useChatStore();
 
 	const bottomRef = useRef<HTMLDivElement>(null);

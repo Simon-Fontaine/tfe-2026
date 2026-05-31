@@ -110,6 +110,7 @@ export function ScrimRespondActions({
 		canManage && (scrimStatus === "accepted" || scrimStatus === "scheduled") && !!awayTeamId;
 	const canCancel =
 		canManage &&
+		scrimStatus !== "in_progress" &&
 		scrimStatus !== "cancelled" &&
 		scrimStatus !== "completed" &&
 		scrimStatus !== "awaiting_confirmation" &&

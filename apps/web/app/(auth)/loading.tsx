@@ -4,7 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function AuthLoading() {
 	return (
 		<AuthShellLayout>
-			<div className="space-y-4" aria-hidden="true">
+			<div className="space-y-4" role="status" aria-busy="true">
+				<span className="sr-only">Loading</span>
 				{/* Row 1: icon square + title/subtitle stubs */}
 				<div className="flex items-center gap-3">
 					<Skeleton className="h-8 w-8" />

@@ -2,6 +2,7 @@ import { Calendar03Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ScrimDetail } from "@scrimflow/shared";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 
 function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 	return value
@@ -12,16 +13,16 @@ function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 		: emptyLabel;
 }
 
-function getConfirmationVariant(status: "pending" | "confirmed" | "disputed") {
-	if (status === "disputed") return "destructive" as const;
-	if (status === "confirmed") return "secondary" as const;
-	return "outline" as const;
+function getConfirmationBadgeClass(status: "pending" | "confirmed" | "disputed") {
+	if (status === "disputed") return STATUS_BADGE_CLASSES.disputed;
+	if (status === "confirmed") return STATUS_BADGE_CLASSES.completed;
+	return "";
 }
 
-function getDisputeResolutionVariant(resolution: string | null) {
-	if (resolution === "voided") return "destructive" as const;
-	if (resolution === "admin_resolved") return "secondary" as const;
-	return "outline" as const;
+function getDisputeResolutionBadgeClass(resolution: string | null) {
+	if (resolution === "voided") return STATUS_BADGE_CLASSES.voided;
+	if (resolution === "admin_resolved") return STATUS_BADGE_CLASSES.resolved;
+	return "";
 }
 
 function getDisputeResolutionLabel(resolution: string | null) {
@@ -69,7 +70,7 @@ export function ScrimConfirmationSection({
 											: "No manager confirmation submitted yet."}
 									</p>
 								</div>
-								<Badge variant={getConfirmationVariant(confirmation.status)}>
+								<Badge variant="outline" className={getConfirmationBadgeClass(confirmation.status)}>
 									{confirmation.status}
 								</Badge>
 							</div>
@@ -113,7 +114,10 @@ export function ScrimConfirmationSection({
 											: "This scrim still needs org-level dispute review."}
 									</p>
 								</div>
-								<Badge variant={getDisputeResolutionVariant(disputeResolution)}>
+								<Badge
+									variant="outline"
+									className={getDisputeResolutionBadgeClass(disputeResolution)}
+								>
 									{getDisputeResolutionLabel(disputeResolution)}
 								</Badge>
 							</div>

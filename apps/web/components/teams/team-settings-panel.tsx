@@ -296,7 +296,7 @@ export function TeamSettingsPanel({ team, currentUserId }: TeamSettingsPanelProp
 					<Separator />
 					<section>
 						<p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-							Continuity
+							Ownership
 						</p>
 						<div className="space-y-3">
 							{team.ownershipWorkflow ? (
@@ -463,43 +463,45 @@ export function TeamSettingsPanel({ team, currentUserId }: TeamSettingsPanelProp
 								)}
 							</div>
 						) : null}
-						{/* P32: explain to non-managers why lifecycle actions are unavailable */}
-						{!canManageLifecycle && (
+						{canManageLifecycle ? (
+							<>
+								<textarea
+									value={lifecycleReason}
+									onChange={(event) => setLifecycleReason(event.target.value)}
+									maxLength={800}
+									rows={2}
+									className="min-h-16 w-full border bg-background px-3 py-2 text-xs"
+									placeholder="Reason for archive, restore, or deletion"
+								/>
+								<input
+									value={deleteConfirmName}
+									onChange={(event) => setDeleteConfirmName(event.target.value)}
+									className="h-9 w-full border bg-background px-3 text-xs"
+									placeholder={`Type ${team.name} before deletion-pending`}
+								/>
+								<div className="flex flex-wrap gap-2">
+									<input
+										value={deleteVerificationCode}
+										onChange={(event) => setDeleteVerificationCode(event.target.value)}
+										className="h-9 min-w-52 flex-1 border bg-background px-3 text-xs"
+										placeholder="Verification code"
+									/>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={requestDeletionCode}
+										disabled={deletionCodeForm.isPending}
+									>
+										{deletionCodeForm.isPending && <Spinner className="mr-1.5" />}
+										Send code
+									</Button>
+								</div>
+							</>
+						) : (
 							<p className="text-[11px] text-muted-foreground">
 								Archive and deletion actions are restricted to organization owners and admins.
 							</p>
 						)}
-						<textarea
-							value={lifecycleReason}
-							onChange={(event) => setLifecycleReason(event.target.value)}
-							maxLength={800}
-							rows={2}
-							className="min-h-16 w-full border bg-background px-3 py-2 text-xs"
-							placeholder="Reason for archive, restore, or deletion"
-						/>
-						<input
-							value={deleteConfirmName}
-							onChange={(event) => setDeleteConfirmName(event.target.value)}
-							className="h-9 w-full border bg-background px-3 text-xs"
-							placeholder={`Type ${team.name} before deletion-pending`}
-						/>
-						<div className="flex flex-wrap gap-2">
-							<input
-								value={deleteVerificationCode}
-								onChange={(event) => setDeleteVerificationCode(event.target.value)}
-								className="h-9 min-w-52 flex-1 border bg-background px-3 text-xs"
-								placeholder="Verification code"
-							/>
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={requestDeletionCode}
-								disabled={deletionCodeForm.isPending}
-							>
-								{deletionCodeForm.isPending && <Spinner className="mr-1.5" />}
-								Send code
-							</Button>
-						</div>
 					</div>
 					{team.currentUser.canLeave && (
 						<Button

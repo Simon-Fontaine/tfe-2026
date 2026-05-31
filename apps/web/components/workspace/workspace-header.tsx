@@ -153,7 +153,7 @@ export function WorkspaceHeader({ orgs, teams, unreadCount }: WorkspaceHeaderPro
 								<Fragment key={`${crumb.label}-${crumb.href ?? i}`}>
 									{i > 0 ? <BreadcrumbSeparator /> : null}
 									<BreadcrumbItem>
-										{crumb.href ? (
+										{crumb.href && i < crumbs.length - 1 ? (
 											<BreadcrumbLink asChild>
 												<Link href={crumb.href} className="truncate">
 													{crumb.label}

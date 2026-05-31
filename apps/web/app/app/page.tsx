@@ -47,8 +47,8 @@ function teamInviteItems(invites: TeamInviteSummary[]): AttentionQueueItem[] {
 			timestamp: invite.expiresAt,
 			priority: 10,
 			sortDirection: "asc",
-			actionLabel: "Open inbox",
-			href: appRoutes.inbox,
+			actionLabel: "View invites",
+			href: appRoutes.invites,
 		}));
 }
 
@@ -64,8 +64,8 @@ function orgInviteItems(invites: OrgInviteSummary[]): AttentionQueueItem[] {
 			timestamp: invite.expiresAt,
 			priority: 11,
 			sortDirection: "asc",
-			actionLabel: "Open inbox",
-			href: appRoutes.inbox,
+			actionLabel: "View invites",
+			href: appRoutes.invites,
 		}));
 }
 

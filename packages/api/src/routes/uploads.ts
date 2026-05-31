@@ -2,12 +2,12 @@ import {
 	CreateScrimEvidenceUploadIntentSchema,
 	FinalizeScrimEvidenceUploadSchema,
 } from "@scrimflow/shared";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
 import { db } from "@/db";
-import { scrimTable, userTable } from "@/db/schema";
+import { scrimMapTable, scrimTable, userTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import {
@@ -114,6 +114,26 @@ uploadRoutes.post("/scrim-evidence/intents", async (c) => {
 			{ error: "Evidence upload is not permitted for a scrim in this lifecycle state." },
 			409
 		);
+	}
+
+	const { screenshotType, scrimMapId } = parsed.output;
+	if (screenshotType === "scoreboard") {
+		if (!scrimMapId) {
+			return c.json(
+				{ error: "Scoreboard uploads require a target map identifier (scrimMapId)." },
+				400
+			);
+		}
+		const map = await db.query.scrimMapTable.findFirst({
+			where: and(
+				eq(scrimMapTable.id, scrimMapId),
+				eq(scrimMapTable.scrimId, parsed.output.scrimId)
+			),
+			columns: { id: true },
+		});
+		if (!map) {
+			return c.json({ error: "Target map not found or does not belong to this scrim." }, 404);
+		}
 	}
 
 	const extension =

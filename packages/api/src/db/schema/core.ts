@@ -1288,6 +1288,9 @@ export const ocrJobTable = pgTable(
 		/** Image URL in object storage. */
 		imageUrl: text("image_url").notNull(),
 
+		/** Target map for scoreboard OCR jobs. Null for game_history jobs and legacy unassociated scoreboard jobs. */
+		scrimMapId: uuid("scrim_map_id").references(() => scrimMapTable.id, { onDelete: "set null" }),
+
 		status: ocrJobStatusEnum("status").notNull().default("queued"),
 		progressStage: text("progress_stage").notNull().default("queued"),
 		runAfter: timestamp("run_after", { mode: "date" }).notNull().defaultNow(),
@@ -1324,6 +1327,7 @@ export const ocrJobTable = pgTable(
 		index("ocr_job_status_idx").on(table.status),
 		index("ocr_job_queue_idx").on(table.status, table.runAfter, table.leaseExpiresAt),
 		index("ocr_job_user_idx").on(table.submittedByUserId),
+		index("ocr_job_map_idx").on(table.scrimMapId),
 	]
 );
 

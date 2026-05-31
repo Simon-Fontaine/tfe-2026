@@ -11,6 +11,8 @@ type GeminiResponse = {
 	}>;
 };
 
+import { geminiRateLimiter } from "@/ocr/gemini-rate-limiter";
+
 export class GeminiApiError extends Error {
 	status: number;
 	code: string | null;
@@ -39,6 +41,10 @@ export async function requestGeminiStructuredOutput(params: {
 	if (!apiKey) {
 		throw new Error("GEMINI_API_KEY is not configured.");
 	}
+
+	// Honour RPM / RPD limits before consuming a quota slot.
+	await geminiRateLimiter.waitForSlot();
+	geminiRateLimiter.record();
 
 	const model = getGeminiModel();
 	const response = await fetch(
