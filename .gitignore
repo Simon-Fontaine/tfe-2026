@@ -115,3 +115,18 @@ temp/
 *.key
 *.cert
 .tfe_workspace
+
+# -----------------------------------------------------------------------------
+# Local tooling, AI assistants & internal docs (kept locally, not tracked)
+# -----------------------------------------------------------------------------
+.claude/
+.agents/
+.codex/
+.antigravitycli/
+.planning/
+_bmad/
+docs/
+.mcp.json
+skills-lock.json
+AGENTS.md
+CLAUDE.md
