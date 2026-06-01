@@ -10,8 +10,18 @@ import {
 	type ScrimDetail,
 } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { startTransition, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -42,6 +52,7 @@ type PlayerDraft = {
 };
 
 type MapDraft = {
+	draftKey: string;
 	mapId: string | null;
 	mapName: string;
 	mapType: (typeof OCR_MAP_TYPE_VALUES)[number];
@@ -56,6 +67,35 @@ type ReportScrimResultDialogProps = {
 	children: React.ReactNode;
 	scrim: ScrimDetail;
 	reportingTeamId: string;
+};
+
+type ResultSubmissionPayload = {
+	reportingTeamId: string;
+	homeMapScore: number;
+	awayMapScore: number;
+	startedAt?: string;
+	endedAt?: string;
+	sourceOcrJobId?: string;
+	maps?: Array<{
+		mapName: string;
+		mapType: MapDraft["mapType"];
+		homeScore: number;
+		awayScore: number;
+		durationSeconds: number | null;
+		scoreboardOcrJobId?: string;
+		players: Array<{
+			playerName: string;
+			side: PlayerDraft["side"];
+			hero: string | null;
+			role: OW2Role | null;
+			eliminations: number | null;
+			assists: number | null;
+			deaths: number | null;
+			damage: number | null;
+			healing: number | null;
+			mitigation: number | null;
+		}>;
+	}>;
 };
 
 function toDateTimeLocal(value: string | null) {
@@ -94,6 +134,7 @@ function createEmptyPlayerDraft(): PlayerDraft {
 
 function createEmptyMapDraft(): MapDraft {
 	return {
+		draftKey: `manual-${crypto.randomUUID()}`,
 		mapId: null,
 		mapName: "",
 		mapType: "unknown",
@@ -143,6 +184,7 @@ function durationTextToSecondsField(value: string | null) {
 
 function mapOcrMatchToDraft(match: OcrGameHistoryMatch): MapDraft {
 	return {
+		draftKey: `ocr-${match.matchOrder}-${match.mapName}-${match.allyScore}-${match.enemyScore}`,
 		mapId: null,
 		mapName: match.mapName,
 		mapType: match.mapType ?? "unknown",
@@ -156,6 +198,7 @@ function mapOcrMatchToDraft(match: OcrGameHistoryMatch): MapDraft {
 
 function mapSavedMapToDraft(map: ScrimDetail["maps"][number]): MapDraft {
 	return {
+		draftKey: `saved-${map.id}`,
 		mapId: map.id,
 		mapName: map.mapName,
 		mapType: map.mapType,
@@ -251,10 +294,10 @@ export function ReportScrimResultDialog({
 }: ReportScrimResultDialogProps) {
 	const router = useRouter();
 	const reviewableJobs = scrim.ocrJobs.filter(
-		(job) => job.validatedOutput?.screenshotType === "game_history"
+		(job) => job.status === "completed" && job.validatedOutput?.screenshotType === "game_history"
 	);
 	const scoreboardJobs = scrim.ocrJobs.filter(
-		(job) => job.validatedOutput?.screenshotType === "scoreboard"
+		(job) => job.status === "completed" && job.validatedOutput?.screenshotType === "scoreboard"
 	);
 	const associatedScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId !== null);
 	const legacyScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId === null);
@@ -270,10 +313,17 @@ export function ReportScrimResultDialog({
 		legacyScoreboardJobs[0]?.id ?? ""
 	);
 	const [selectedScoreboardMapIndex, setSelectedScoreboardMapIndex] = useState("0");
+	const [scoreboardPreview, setScoreboardPreview] = useState<{
+		jobId: string;
+		mapKey: string;
+	} | null>(null);
 	const [maps, setMaps] = useState<MapDraft[]>(initialState.maps);
 	const [formError, setFormError] = useState<string | undefined>(undefined);
 	const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
 	const [submitting, setSubmitting] = useState(false);
+	const submittingRef = useRef(false);
+	const [pendingSubmission, setPendingSubmission] = useState<ResultSubmissionPayload | null>(null);
+	const [pendingSubmissionMapCount, setPendingSubmissionMapCount] = useState(0);
 
 	function resetState() {
 		const nextState = getInitialState(scrim);
@@ -285,9 +335,12 @@ export function ReportScrimResultDialog({
 		setSelectedOcrJobId(reviewableJobs[0]?.id ?? "");
 		setSelectedScoreboardJobId(legacyScoreboardJobs[0]?.id ?? "");
 		setSelectedScoreboardMapIndex("0");
+		setScoreboardPreview(null);
 		setMaps(nextState.maps);
 		setFormError(undefined);
 		setFieldErrors({});
+		setPendingSubmission(null);
+		setPendingSubmissionMapCount(0);
 	}
 
 	function updateMap(mapIndex: number, updater: (current: MapDraft) => MapDraft) {
@@ -359,7 +412,8 @@ export function ReportScrimResultDialog({
 			);
 			return;
 		}
-		importScoreboardJobIntoMapIndex(job, mapIndex);
+		setScoreboardPreview({ jobId: job.id, mapKey: maps[mapIndex].draftKey });
+		setFormError(undefined);
 	}
 
 	function handleImportScoreboardDraft() {
@@ -378,13 +432,85 @@ export function ReportScrimResultDialog({
 			return;
 		}
 
+		setScoreboardPreview({ jobId: selectedJob.id, mapKey: maps[mapIndex].draftKey });
+		setFormError(undefined);
+	}
+
+	function handleApplyScoreboardPreview() {
+		if (!scoreboardPreview) return;
+		const selectedJob = scoreboardJobs.find((job) => job.id === scoreboardPreview.jobId);
+		if (
+			!selectedJob?.validatedOutput ||
+			selectedJob.validatedOutput.screenshotType !== "scoreboard"
+		) {
+			setFormError("OCR job not ready for import.");
+			return;
+		}
+		const mapIndex = maps.findIndex((map) => map.draftKey === scoreboardPreview.mapKey);
+		if (mapIndex === -1) {
+			setFormError("The target map changed. Review the scoreboard again before applying stats.");
+			setScoreboardPreview(null);
+			return;
+		}
+		if (selectedJob.scrimMapId) {
+			const targetMap = maps[mapIndex];
+			if (targetMap.mapId !== selectedJob.scrimMapId) {
+				setFormError(
+					"This scoreboard belongs to another map. Review the correct map before applying stats."
+				);
+				setScoreboardPreview(null);
+				return;
+			}
+		}
 		importScoreboardJobIntoMapIndex(selectedJob, mapIndex);
+		setScoreboardPreview(null);
+	}
+
+	function shouldWarnAboutEvidence(parsedMaps: ResultSubmissionPayload["maps"]) {
+		if (!parsedMaps || parsedMaps.length === 0) return true;
+		return parsedMaps.some((map) => !map.scoreboardOcrJobId || map.players.length === 0);
+	}
+
+	async function submitResultPackage(payload: ResultSubmissionPayload, mapCount: number) {
+		if (submittingRef.current) return;
+		submittingRef.current = true;
+		setSubmitting(true);
+		setFormError(undefined);
+		setFieldErrors({});
+
+		try {
+			const response = await fetch(apiRoutes.scrims.result(scrim.id), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify(payload),
+			});
+			const responsePayload = await readApiPayload<ScrimDetail>(response);
+			if (!response.ok || !responsePayload.data) {
+				setFieldErrors(responsePayload.fieldErrors ?? {});
+				setFormError(responsePayload.error ?? "Unable to submit scrim results.");
+				return;
+			}
+
+			toast.success(
+				mapCount > 0 ? "Result package submitted for confirmation." : "Series score submitted."
+			);
+			resetState();
+			setOpen(false);
+			startTransition(() => router.refresh());
+		} catch {
+			setFormError("Unable to reach the API server.");
+		} finally {
+			submittingRef.current = false;
+			setSubmitting(false);
+			setPendingSubmission(null);
+			setPendingSubmissionMapCount(0);
+		}
 	}
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		if (submitting) return;
-		setSubmitting(true);
+		if (submittingRef.current) return;
 		setFormError(undefined);
 		setFieldErrors({});
 
@@ -447,37 +573,25 @@ export function ReportScrimResultDialog({
 							awayMapScore: parseRequiredScore(manualAwayMapScore, "Away map score"),
 						};
 
-			const response = await fetch(apiRoutes.scrims.result(scrim.id), {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({
-					reportingTeamId,
-					homeMapScore: resolvedSeriesScore.homeMapScore,
-					awayMapScore: resolvedSeriesScore.awayMapScore,
-					startedAt: toIsoTimestamp(localStartedAt),
-					endedAt: toIsoTimestamp(localEndedAt),
-					sourceOcrJobId: parsedMaps.length > 0 ? (sourceOcrJobId ?? undefined) : undefined,
-					maps: parsedMaps.length > 0 ? parsedMaps : undefined,
-				}),
-			});
-			const payload = await readApiPayload<ScrimDetail>(response);
-			if (!response.ok || !payload.data) {
-				setFieldErrors(payload.fieldErrors ?? {});
-				setFormError(payload.error ?? "Unable to submit scrim results.");
+			const payload: ResultSubmissionPayload = {
+				reportingTeamId,
+				homeMapScore: resolvedSeriesScore.homeMapScore,
+				awayMapScore: resolvedSeriesScore.awayMapScore,
+				startedAt: toIsoTimestamp(localStartedAt),
+				endedAt: toIsoTimestamp(localEndedAt),
+				sourceOcrJobId: parsedMaps.length > 0 ? (sourceOcrJobId ?? undefined) : undefined,
+				maps: parsedMaps.length > 0 ? parsedMaps : undefined,
+			};
+
+			if (shouldWarnAboutEvidence(payload.maps)) {
+				setPendingSubmission(payload);
+				setPendingSubmissionMapCount(parsedMaps.length);
 				return;
 			}
 
-			toast.success(
-				parsedMaps.length > 0 ? "Reviewed scrim result submitted." : "Scrim result submitted."
-			);
-			resetState();
-			setOpen(false);
-			startTransition(() => router.refresh());
+			await submitResultPackage(payload, parsedMaps.length);
 		} catch (error) {
 			setFormError(error instanceof Error ? error.message : "Unable to validate the scrim result.");
-		} finally {
-			setSubmitting(false);
 		}
 	}
 
@@ -488,6 +602,15 @@ export function ReportScrimResultDialog({
 	const selectedScoreboardJob = selectedScoreboardJobId
 		? legacyScoreboardJobs.find((job) => job.id === selectedScoreboardJobId)
 		: null;
+	const previewScoreboardJob = scoreboardPreview
+		? scoreboardJobs.find((job) => job.id === scoreboardPreview.jobId)
+		: null;
+	const previewMapIndex = scoreboardPreview
+		? maps.findIndex((map) => map.draftKey === scoreboardPreview.mapKey)
+		: -1;
+	const previewMap = previewMapIndex === -1 ? null : maps[previewMapIndex];
+	const mapsWithScoreboards = maps.filter((map) => !!map.scoreboardOcrJobId).length;
+	const mapsWithPlayers = maps.filter((map) => map.players.length > 0).length;
 
 	return (
 		<Dialog
@@ -500,10 +623,10 @@ export function ReportScrimResultDialog({
 			<DialogTrigger asChild>{children}</DialogTrigger>
 			<DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-6xl">
 				<DialogHeader>
-					<DialogTitle>Review scrim result</DialogTitle>
+					<DialogTitle>Result Workbench</DialogTitle>
 					<DialogDescription>
-						Submit a final result package for both teams to confirm. Use OCR drafts when possible,
-						but this editor also supports fully manual review.
+						Build a draft match result package map by map. OCR only changes this draft until you
+						submit it for both teams to confirm.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -523,6 +646,35 @@ export function ReportScrimResultDialog({
 				) : null}
 
 				<form onSubmit={handleSubmit} className="space-y-6">
+					<div className="grid gap-3 sm:grid-cols-3">
+						<div className="border p-3">
+							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+								Map drafts
+							</p>
+							<p className="mt-1 text-lg font-semibold">{maps.length}</p>
+							<p className="text-xs text-muted-foreground">Saved only after final submit.</p>
+						</div>
+						<div className="border p-3">
+							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+								Verified stats
+							</p>
+							<p className="mt-1 text-lg font-semibold">
+								{mapsWithScoreboards}/{maps.length || 0}
+							</p>
+							<p className="text-xs text-muted-foreground">Optional scoreboard-backed maps.</p>
+						</div>
+						<div className="border p-3">
+							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+								Player rows
+							</p>
+							<p className="mt-1 text-lg font-semibold">
+								{mapsWithPlayers}/{maps.length || 0}
+							</p>
+							<p className="text-xs text-muted-foreground">
+								Stats can stay empty for score-only reports.
+							</p>
+						</div>
+					</div>
 					<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
 						<div className="space-y-4 border p-4">
 							<div>
@@ -595,10 +747,10 @@ export function ReportScrimResultDialog({
 							</div>
 
 							<div className="border p-3">
-								<p className="text-sm font-semibold">OCR draft import</p>
+								<p className="text-sm font-semibold">Series scan draft</p>
 								<p className="mt-1 text-xs text-muted-foreground">
-									Load a completed game-history OCR job to prefill reviewed map rows. Scoreboard OCR
-									remains separate evidence for player-stat review.
+									Use a completed game-history scan to hydrate local map drafts. Review them before
+									submitting; nothing is saved yet.
 								</p>
 								{reviewableJobs.length === 0 ? (
 									<p className="mt-3 text-xs text-muted-foreground">
@@ -626,7 +778,7 @@ export function ReportScrimResultDialog({
 												onClick={handleLoadOcrDraft}
 												disabled={submitting}
 											>
-												Load OCR draft
+												Use scan as draft
 											</Button>
 											{maps.length > 0 ? (
 												<Button
@@ -639,7 +791,7 @@ export function ReportScrimResultDialog({
 													}}
 													disabled={submitting}
 												>
-													Clear detailed maps
+													Clear map drafts
 												</Button>
 											) : null}
 										</div>
@@ -653,10 +805,10 @@ export function ReportScrimResultDialog({
 							</div>
 
 							<div className="border p-3">
-								<p className="text-sm font-semibold">Scoreboard player-stat import</p>
+								<p className="text-sm font-semibold">Scoreboard stat review</p>
 								<p className="mt-1 text-xs text-muted-foreground">
-									Import completed scoreboard OCR drafts into reviewed maps. Associated jobs target
-									their map automatically; unassociated legacy jobs require manual map selection.
+									Preview completed scoreboard scans before applying player rows to a map draft.
+									Scoreboards are optional evidence, not a submission requirement.
 								</p>
 								{scoreboardJobs.length === 0 ? (
 									<p className="mt-3 text-xs text-muted-foreground">
@@ -697,7 +849,7 @@ export function ReportScrimResultDialog({
 																	onClick={() => handleImportAssociatedScoreboardDraft(job.id)}
 																	disabled={submitting || targetMapIndex === -1}
 																>
-																	Import
+																	Review stats
 																</Button>
 															</div>
 														);
@@ -730,10 +882,7 @@ export function ReportScrimResultDialog({
 													disabled={submitting}
 												>
 													{maps.map((map, index) => (
-														<option
-															key={`scoreboard-target-${map.mapName}-${map.homeScore}-${map.awayScore}-${map.players.length}`}
-															value={String(index)}
-														>
+														<option key={`scoreboard-target-${map.draftKey}`} value={String(index)}>
 															Map {index + 1}: {map.mapName || "Unnamed map"}
 														</option>
 													))}
@@ -746,13 +895,76 @@ export function ReportScrimResultDialog({
 														onClick={handleImportScoreboardDraft}
 														disabled={submitting}
 													>
-														Import scoreboard stats
+														Review stats
 													</Button>
 												</div>
 												{selectedScoreboardJob?.validatedOutput?.warnings.length ? (
 													<p className="mt-2 text-xs text-muted-foreground">
 														Loaded warnings:{" "}
 														{selectedScoreboardJob.validatedOutput.warnings.join(" | ")}
+													</p>
+												) : null}
+											</div>
+										) : null}
+
+										{previewScoreboardJob?.validatedOutput?.screenshotType === "scoreboard" &&
+										previewMap ? (
+											<div className="border p-3">
+												<div className="flex flex-wrap items-start justify-between gap-2">
+													<div>
+														<p className="text-sm font-semibold">
+															Preview stats for Map{" "}
+															{previewMapIndex === -1 ? "" : previewMapIndex + 1}:{" "}
+															{previewMap.mapName || "Unnamed map"}
+														</p>
+														<p className="mt-1 text-xs text-muted-foreground">
+															Review the extracted rows before applying them to the local draft.
+														</p>
+													</div>
+													<Button
+														type="button"
+														size="sm"
+														onClick={handleApplyScoreboardPreview}
+														disabled={submitting}
+													>
+														Apply to draft
+													</Button>
+												</div>
+												<div className="mt-3 grid gap-3 lg:grid-cols-2">
+													{(
+														[
+															["Ally team", previewScoreboardJob.validatedOutput.allyTeam],
+															["Enemy team", previewScoreboardJob.validatedOutput.enemyTeam],
+														] as const
+													).map(([label, players]) => (
+														<div key={label} className="border p-2">
+															<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+																{label}
+															</p>
+															<div className="mt-2 space-y-1 text-xs">
+																{players.length > 0 ? (
+																	players.map((player, index) => (
+																		<p key={`${previewScoreboardJob.id}-${label}-${index}`}>
+																			<span className="font-medium">
+																				{player.playerName || "Unknown player"}
+																			</span>{" "}
+																			<span className="text-muted-foreground">
+																				E {player.eliminations} · A {player.assists} · D{" "}
+																				{player.deaths} · DMG {player.damage} · HEAL{" "}
+																				{player.healing} · MIT {player.mitigation}
+																			</span>
+																		</p>
+																	))
+																) : (
+																	<p className="text-muted-foreground">No visible rows.</p>
+																)}
+															</div>
+														</div>
+													))}
+												</div>
+												{previewScoreboardJob.validatedOutput.warnings.length > 0 ? (
+													<p className="mt-3 text-xs text-muted-foreground">
+														Warnings: {previewScoreboardJob.validatedOutput.warnings.join(" | ")}
 													</p>
 												) : null}
 											</div>
@@ -791,7 +1003,7 @@ export function ReportScrimResultDialog({
 							) : (
 								<div className="space-y-4">
 									{maps.map((map, mapIndex) => (
-										<div key={`map-${mapIndex + 1}`} className="border p-4">
+										<div key={map.draftKey} className="border p-4">
 											<div className="flex items-center justify-between gap-2">
 												<div>
 													<p className="text-sm font-semibold">Map {mapIndex + 1}</p>
@@ -907,7 +1119,8 @@ export function ReportScrimResultDialog({
 
 											{map.scoreboardOcrJobId ? (
 												<p className="mt-3 text-xs text-muted-foreground">
-													Player stats imported from scoreboard OCR job {map.scoreboardOcrJobId}.
+													Verified stats applied from scoreboard evidence. They remain draft-only
+													until submission.
 												</p>
 											) : null}
 
@@ -1091,7 +1304,7 @@ export function ReportScrimResultDialog({
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={submitting}>
 							{submitting && <Spinner className="mr-1.5" />}
-							Submit reviewed result
+							Submit Result Package
 						</Button>
 						<Button
 							type="button"
@@ -1107,6 +1320,41 @@ export function ReportScrimResultDialog({
 						</Button>
 					</div>
 				</form>
+				<AlertDialog
+					open={!!pendingSubmission}
+					onOpenChange={(nextOpen) => {
+						if (!nextOpen && !submitting) {
+							setPendingSubmission(null);
+							setPendingSubmissionMapCount(0);
+						}
+					}}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Submit with partial evidence?</AlertDialogTitle>
+							<AlertDialogDescription>
+								{pendingSubmissionMapCount === 0
+									? "This package is a score-only result without map or screenshot evidence. That is allowed for casual scrims; the opponent can still confirm or dispute the result."
+									: "This package is logically valid, but some maps have no scoreboard-backed player stats. That is allowed for casual scrims; the opponent can still confirm or dispute the result."}
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={submitting}>Keep editing</AlertDialogCancel>
+							<AlertDialogAction
+								disabled={submitting || !pendingSubmission}
+								onClick={(event) => {
+									event.preventDefault();
+									if (pendingSubmission) {
+										void submitResultPackage(pendingSubmission, pendingSubmissionMapCount);
+									}
+								}}
+							>
+								{submitting && <Spinner className="mr-1.5" />}
+								Submit anyway
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</DialogContent>
 		</Dialog>
 	);

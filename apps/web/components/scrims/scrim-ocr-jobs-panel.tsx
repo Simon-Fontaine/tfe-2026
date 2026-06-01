@@ -20,7 +20,9 @@ import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { apiRoutes } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { readApiPayload } from "./form-errors";
 import { UploadScrimEvidenceDialog } from "./upload-scrim-evidence-dialog";
@@ -47,11 +49,12 @@ function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 	}).format(new Date(value));
 }
 
-function getJobBadgeVariant(job: OcrJobSummary) {
-	if (job.status === "failed") return "destructive" as const;
-	if (job.status === "completed") return "secondary" as const;
-	if (job.status === "superseded") return "outline" as const;
-	return "outline" as const;
+function getJobBadgeClass(job: OcrJobSummary) {
+	if (job.status === "failed") return STATUS_BADGE_CLASSES.blocked;
+	if (job.status === "completed") return STATUS_BADGE_CLASSES.completed;
+	if (job.status === "requires_review") return STATUS_BADGE_CLASSES.pending;
+	if (job.status === "superseded") return STATUS_BADGE_CLASSES.inactive;
+	return STATUS_BADGE_CLASSES.underReview;
 }
 
 function getStageLabel(job: OcrJobSummary) {
@@ -124,6 +127,7 @@ interface ScrimOcrJobsPanelProps {
 	jobs: OcrJobSummary[];
 	canManage: boolean;
 	canUploadEvidence?: boolean;
+	uploadDisabledReason?: string | null;
 	resultRevisions?: ScrimResultRevisionSummary[];
 	maps?: ScrimMapSummary[];
 }
@@ -133,6 +137,7 @@ export function ScrimOcrJobsPanel({
 	jobs,
 	canManage,
 	canUploadEvidence = false,
+	uploadDisabledReason = null,
 	resultRevisions = [],
 	maps = [],
 }: ScrimOcrJobsPanelProps) {
@@ -345,41 +350,134 @@ export function ScrimOcrJobsPanel({
 			}
 		}
 	}
+	const activeGameHistoryJob =
+		liveJobs.find((job) => job.screenshotType === "game_history" && job.status !== "superseded") ??
+		null;
+	const mapsWithAppliedScoreboard = new Set<string>();
+	for (const job of liveJobs) {
+		if (job.scrimMapId && importedScoreboardJobIds.has(job.id)) {
+			mapsWithAppliedScoreboard.add(job.scrimMapId);
+		}
+	}
+	const latestRevisionScoreboardCount =
+		latestRevision?.snapshot.maps.filter((map) => !!map.scoreboardOcrJobId).length ?? 0;
+	const scoreboardCoverageLabel =
+		maps.length > 0
+			? `${latestRevisionScoreboardCount}/${maps.length} map(s) with verified stats`
+			: "Scoreboard slots appear after maps exist";
 
 	return (
 		<section className="border p-4">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 				<div>
 					<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-						OCR queue
+						Match result package
 					</p>
 					<p className="mt-1 text-xs text-muted-foreground">
-						Each screenshot is processed asynchronously. Active jobs auto-refresh here while the
-						worker is running.
+						Use scans as draft assistance. Maps, stats, and evidence become official only when the
+						result package is submitted.
 					</p>
 				</div>
+				<Badge variant="outline" className={STATUS_BADGE_CLASSES.active}>
+					{scoreboardCoverageLabel}
+				</Badge>
 			</div>
 
-			{canUploadEvidence ? (
-				<div className="mt-4 border p-3">
+			<div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
+				<div className="border p-3">
+					<div className="flex items-start justify-between gap-3">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+								Series scan
+							</p>
+							<p className="mt-1 text-sm font-semibold">
+								{activeGameHistoryJob
+									? getStageLabel(activeGameHistoryJob)
+									: "No game history attached"}
+							</p>
+						</div>
+						{activeGameHistoryJob ? (
+							<Badge variant="outline" className={getJobBadgeClass(activeGameHistoryJob)}>
+								{activeGameHistoryJob.status === "completed"
+									? "Draft source"
+									: getStageLabel(activeGameHistoryJob)}
+							</Badge>
+						) : null}
+					</div>
+					<p className="mt-2 text-xs text-muted-foreground">
+						Game-history screenshots can draft the map list and scores, but they do not save
+						anything until you submit the package.
+					</p>
+					{activeGameHistoryJob ? (
+						<div className="mt-3 space-y-2">
+							<Progress value={getStageProgress(activeGameHistoryJob.progressStage)} />
+							{activeGameHistoryJob.validatedOutput?.screenshotType === "game_history" ? (
+								<p className="text-xs text-muted-foreground">
+									Found {activeGameHistoryJob.validatedOutput.matches.length} visible map row(s).
+									Open the Result Workbench to use this scan as a draft.
+								</p>
+							) : activeGameHistoryJob.status === "failed" ? (
+								<p className="text-xs text-destructive">
+									{activeGameHistoryJob.errorMessage ??
+										"The scan failed before maps could be read."}
+								</p>
+							) : (
+								<p className="text-xs text-muted-foreground">Reading screenshot for map rows.</p>
+							)}
+						</div>
+					) : canUploadEvidence ? (
+						<UploadScrimEvidenceDialog scrimId={scrimId} screenshotType="game_history">
+							<Button type="button" size="sm" className="mt-3 w-full">
+								Upload game history
+							</Button>
+						</UploadScrimEvidenceDialog>
+					) : (
+						<p className="mt-3 border p-2 text-xs text-muted-foreground">
+							{uploadDisabledReason ?? "Evidence uploads are not available for this scrim."}
+						</p>
+					)}
+				</div>
+
+				<div className="border p-3">
 					<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-						Scoreboard uploads
+						Map scoreboard evidence
+					</p>
+					<p className="mt-1 text-xs text-muted-foreground">
+						Scoreboards are optional trust boosters. Attach them when player stats matter.
 					</p>
 					{maps.length === 0 ? (
-						<p className="mt-2 text-xs text-muted-foreground">
-							Scoreboard evidence is per-map and becomes available once reviewed maps exist. Use{" "}
-							<strong>Review result</strong> to add maps first.
+						<p className="mt-3 border p-3 text-xs text-muted-foreground">
+							No reviewed maps yet. Add maps manually or use a series scan as a draft before
+							attaching per-map scoreboards.
 						</p>
 					) : (
-						<div className="mt-3 grid gap-3 sm:grid-cols-2">
+						<div className="mt-3 grid gap-3 xl:grid-cols-2">
 							{maps.map((map) => {
 								const existingJob = scoreboardJobByMapId.get(map.id);
 								const typeConfig = MAP_TYPE_CONFIG[map.mapType] ?? MAP_TYPE_CONFIG.unknown;
 								const isActive = existingJob && ACTIVE_JOB_STATUSES.has(existingJob.status);
+								const isImported = existingJob
+									? importedScoreboardJobIds.has(existingJob.id)
+									: false;
+								const statusLabel = !existingJob
+									? "No scoreboard attached"
+									: isImported
+										? "Verified stats"
+										: existingJob.status === "completed"
+											? "Ready to review"
+											: getStageLabel(existingJob);
+								const statusClass = !existingJob
+									? STATUS_BADGE_CLASSES.inactive
+									: isImported
+										? STATUS_BADGE_CLASSES.completed
+										: getJobBadgeClass(existingJob);
 								return (
 									<div
 										key={map.id}
-										className={`relative overflow-hidden border border-l-4 ${typeConfig.border} p-3`}
+										className={cn(
+											"relative overflow-hidden border border-l-4 p-3",
+											typeConfig.border
+										)}
 									>
 										{map.imageUrl ? (
 											<>
@@ -397,43 +495,59 @@ export function ScrimOcrJobsPanel({
 													Map {map.mapOrder}
 												</p>
 												<p className="truncate text-sm font-semibold">{map.mapName}</p>
-												<p className="text-xs text-muted-foreground">{typeConfig.label}</p>
+												<p className="text-xs text-muted-foreground">
+													{typeConfig.label} · {map.homeScore}-{map.awayScore}
+												</p>
 											</div>
-											{existingJob ? (
-												<Badge variant={getJobBadgeVariant(existingJob)} className="shrink-0">
-													{getStageLabel(existingJob)}
-												</Badge>
-											) : null}
+											<Badge variant="outline" className={cn("shrink-0", statusClass)}>
+												{statusLabel}
+											</Badge>
 										</div>
 
 										<div className="relative mt-2.5">
-											{isActive ? (
-												<p className="text-xs text-muted-foreground">Processing…</p>
-											) : existingJob ? (
-												<div className="flex flex-wrap gap-1.5">
-													{existingJob.status === "failed" ||
-													existingJob.status === "requires_review" ? (
-														<Button
-															type="button"
-															size="sm"
-															variant="outline"
-															onClick={() => handleRetry(existingJob.id)}
-															disabled={retryingJobId === existingJob.id}
-														>
-															Retry
-														</Button>
-													) : null}
-													<Button
-														type="button"
-														size="sm"
-														variant="ghost"
-														onClick={() => handleSupersede(existingJob.id)}
-														disabled={!!supersedingJobId}
-													>
-														Replace
-													</Button>
+											{isActive && existingJob ? (
+												<div className="space-y-2">
+													<Progress value={getStageProgress(existingJob.progressStage)} />
+													<p className="text-xs text-muted-foreground">Reading player stats…</p>
 												</div>
-											) : (
+											) : existingJob ? (
+												<div className="space-y-2">
+													<p className="text-xs text-muted-foreground">
+														{isImported
+															? "This scoreboard is applied in the latest submitted package."
+															: existingJob.status === "completed"
+																? "Open the Result Workbench to preview rows before applying them to the draft."
+																: existingJob.status === "failed"
+																	? (existingJob.errorMessage ?? "This scoreboard scan failed.")
+																	: "Review or replace this scoreboard evidence."}
+													</p>
+													{canManage && canUploadEvidence ? (
+														<div className="flex flex-wrap gap-1.5">
+															{existingJob.status === "failed" ||
+															existingJob.status === "requires_review" ? (
+																<Button
+																	type="button"
+																	size="sm"
+																	variant="outline"
+																	onClick={() => handleRetry(existingJob.id)}
+																	disabled={retryingJobId === existingJob.id}
+																>
+																	Retry scan
+																</Button>
+															) : null}
+															<Button
+																type="button"
+																size="sm"
+																variant="ghost"
+																onClick={() => handleSupersede(existingJob.id)}
+																disabled={!!supersedingJobId}
+															>
+																Replace
+															</Button>
+														</div>
+													) : null}
+												</div>
+											) : canUploadEvidence ? (
 												<UploadScrimEvidenceDialog
 													scrimId={scrimId}
 													screenshotType="scoreboard"
@@ -441,9 +555,13 @@ export function ScrimOcrJobsPanel({
 													targetMapLabel={`Map ${map.mapOrder}: ${map.mapName}`}
 												>
 													<Button type="button" size="sm" variant="outline" className="w-full">
-														Upload scoreboard
+														Add scoreboard
 													</Button>
 												</UploadScrimEvidenceDialog>
+											) : (
+												<p className="text-xs text-muted-foreground">
+													{uploadDisabledReason ?? "Scoreboard uploads are not available."}
+												</p>
 											)}
 										</div>
 									</div>
@@ -452,7 +570,7 @@ export function ScrimOcrJobsPanel({
 						</div>
 					)}
 				</div>
-			) : null}
+			</div>
 
 			<div className="mt-4">
 				{liveJobs.length === 0 ? (
@@ -479,8 +597,12 @@ export function ScrimOcrJobsPanel({
 										</p>
 									</div>
 									<div className="flex flex-wrap items-center gap-2">
-										<Badge variant={getJobBadgeVariant(job)}>{getStageLabel(job)}</Badge>
-										{canManage && (job.status === "failed" || job.status === "requires_review") ? (
+										<Badge variant="outline" className={getJobBadgeClass(job)}>
+											{getStageLabel(job)}
+										</Badge>
+										{canManage &&
+										canUploadEvidence &&
+										(job.status === "failed" || job.status === "requires_review") ? (
 											<Button
 												type="button"
 												size="sm"
@@ -497,6 +619,7 @@ export function ScrimOcrJobsPanel({
 											</Button>
 										) : null}
 										{canManage &&
+										canUploadEvidence &&
 										(job.status === "completed" ||
 											job.status === "failed" ||
 											job.status === "requires_review") ? (

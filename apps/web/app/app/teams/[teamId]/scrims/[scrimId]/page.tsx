@@ -18,7 +18,7 @@ import { ScrimRespondActions } from "@/components/scrims/scrim-respond-actions";
 import { ScrimResultRevisions } from "@/components/scrims/scrim-result-revisions";
 import { ScrimSeriesOverview } from "@/components/scrims/scrim-series-overview";
 import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
-import { UploadScrimEvidenceDialog } from "@/components/scrims/upload-scrim-evidence-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
@@ -35,6 +35,23 @@ function formatTimestamp(value: string | null, emptyLabel = "Not set") {
 				timeStyle: "short",
 			}).format(new Date(value))
 		: emptyLabel;
+}
+
+function getUploadDisabledReason({
+	canManage,
+	hasOpponent,
+	status,
+}: {
+	canManage: boolean;
+	hasOpponent: boolean;
+	status: string;
+}) {
+	if (!canManage) return "Only team managers can upload match evidence.";
+	if (!hasOpponent) return "Add an opponent before uploading result evidence.";
+	if (status === "pending") return "Evidence opens after the scrim is accepted or started.";
+	if (status === "cancelled") return "Cancelled scrims cannot accept new evidence.";
+	if (status === "completed") return "This result package is locked after both teams confirm.";
+	return null;
 }
 
 export default async function TeamScrimDetailPage({
@@ -141,7 +158,11 @@ export default async function TeamScrimDetailPage({
 	const canResolveDispute =
 		scrim.status === "disputed" &&
 		(team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin");
-	const reportingTeamFromLastRevision = scrim.resultRevisions[0]?.reportingTeamId ?? null;
+	const latestRevision =
+		scrim.resultRevisions.length > 0
+			? scrim.resultRevisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a))
+			: null;
+	const reportingTeamFromLastRevision = latestRevision?.reportingTeamId ?? null;
 	const canRespondToDispute =
 		team.currentUser.canManage &&
 		scrim.status === "disputed" &&
@@ -154,12 +175,45 @@ export default async function TeamScrimDetailPage({
 		team.currentUser.canManage &&
 		!!scrim.awayTeam &&
 		scrim.status !== "pending" &&
-		scrim.status !== "cancelled";
-	const activeGameHistoryJob =
-		scrim.ocrJobs.find((j) => j.screenshotType === "game_history" && j.status !== "superseded") ??
-		null;
+		scrim.status !== "cancelled" &&
+		scrim.status !== "completed";
+	const uploadDisabledReason = getUploadDisabledReason({
+		canManage: team.currentUser.canManage,
+		hasOpponent: !!scrim.awayTeam,
+		status: scrim.status,
+	});
 	const disputeResolution =
 		scrim.dispute.resolution ?? (scrim.status === "disputed" ? "pending" : null);
+	const latestRevisionScoreboardCount =
+		latestRevision?.snapshot.maps.filter((map) => !!map.scoreboardOcrJobId).length ?? 0;
+	const activeOcrJobCount = scrim.ocrJobs.filter(
+		(job) => job.status === "queued" || job.status === "processing"
+	).length;
+	const reviewedMapCount = scrim.maps.length;
+	const mapsWithStatsCount = scrim.maps.filter((map) => map.players.length > 0).length;
+	const packageState =
+		scrim.status === "completed"
+			? "Locked"
+			: scrim.status === "awaiting_confirmation"
+				? "Awaiting confirmation"
+				: scrim.status === "disputed"
+					? "Disputed"
+					: reviewedMapCount > 0
+						? "Draft ready"
+						: "Draft not started";
+	const nextStepLabel = canResolveDispute
+		? "Resolve the dispute"
+		: canRespondToDispute
+			? "Respond to the dispute"
+			: canReviewConfirmation
+				? "Review opponent result"
+				: canReportResult
+					? reviewedMapCount > 0
+						? "Review and submit package"
+						: "Build the result package"
+					: scrim.status === "completed"
+						? "Review final record"
+						: "Follow scrim progress";
 
 	const homeDisplayTag = scrim.homeTeamSnapshot?.tag ?? scrim.homeTeam.tag;
 	const homeDisplayName = scrim.homeTeamSnapshot?.name ?? scrim.homeTeam.name;
@@ -204,6 +258,112 @@ export default async function TeamScrimDetailPage({
 				}
 			/>
 
+			<section className="border p-4">
+				<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+					<div className="min-w-0">
+						<div className="flex flex-wrap items-center gap-2">
+							<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+								Result Workbench
+							</p>
+							<ScrimStatusBadge status={scrim.status} disputeResolution={disputeResolution} />
+							<Badge variant="outline">{packageState}</Badge>
+						</div>
+						<p className="mt-2 text-2xl font-semibold tracking-tight">
+							{scrim.homeTeam.name} {scrim.homeMapScore} - {scrim.awayMapScore}{" "}
+							{scrim.awayTeam?.name ?? "Opponent"}
+						</p>
+						<p className="mt-1 text-sm text-muted-foreground">
+							Assemble one match result package. Maps are the work units; screenshots and OCR stay
+							as draft evidence until you submit.
+						</p>
+					</div>
+					<div className="flex w-full flex-col gap-2 lg:w-64">
+						<p className="text-xs font-medium text-muted-foreground">{nextStepLabel}</p>
+						{canReportResult ? (
+							<ReportScrimResultDialog scrim={scrim} reportingTeamId={team.id}>
+								<Button size="sm" className="w-full">
+									Open Result Workbench
+								</Button>
+							</ReportScrimResultDialog>
+						) : null}
+						{canReviewConfirmation ? (
+							<ConfirmScrimDialog
+								scrimId={scrim.id}
+								teamId={team.id}
+								currentStatus={currentConfirmation?.status ?? "pending"}
+							>
+								<Button size="sm" className="w-full">
+									Review confirmation
+								</Button>
+							</ConfirmScrimDialog>
+						) : null}
+						{canRespondToDispute ? (
+							<ScrimDisputeResponseDialog scrimId={scrim.id} reportingTeamId={team.id}>
+								<Button size="sm" className="w-full">
+									Respond to dispute
+								</Button>
+							</ScrimDisputeResponseDialog>
+						) : null}
+						{canResolveDispute ? (
+							<ResolveScrimDisputeDialog scrimId={scrim.id}>
+								<Button size="sm" className="w-full">
+									Resolve dispute
+								</Button>
+							</ResolveScrimDisputeDialog>
+						) : null}
+						{primaryChatConversation ? (
+							<Button asChild size="sm" variant="outline" className="w-full">
+								<Link
+									href={`${appRoutes.teams.chat(team.id)}?conversation=${primaryChatConversation.id}`}
+								>
+									Open scrim chat
+								</Link>
+							</Button>
+						) : null}
+					</div>
+				</div>
+				<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+					<div className="border p-3">
+						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+							Maps reviewed
+						</p>
+						<p className="mt-1 text-lg font-semibold">{reviewedMapCount}</p>
+						<p className="text-xs text-muted-foreground">
+							{reviewedMapCount > 0
+								? "Saved in the latest package."
+								: "Add manually or from a scan."}
+						</p>
+					</div>
+					<div className="border p-3">
+						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+							Scoreboards
+						</p>
+						<p className="mt-1 text-lg font-semibold">
+							{latestRevisionScoreboardCount}/{reviewedMapCount || 0}
+						</p>
+						<p className="text-xs text-muted-foreground">Optional evidence for verified stats.</p>
+					</div>
+					<div className="border p-3">
+						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+							Player stats
+						</p>
+						<p className="mt-1 text-lg font-semibold">
+							{mapsWithStatsCount}/{reviewedMapCount || 0}
+						</p>
+						<p className="text-xs text-muted-foreground">Maps with saved player rows.</p>
+					</div>
+					<div className="border p-3">
+						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+							OCR activity
+						</p>
+						<p className="mt-1 text-lg font-semibold">{activeOcrJobCount}</p>
+						<p className="text-xs text-muted-foreground">
+							{activeOcrJobCount > 0 ? "Reading screenshots now." : "No scans running."}
+						</p>
+					</div>
+				</div>
+			</section>
+
 			<div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
 				<div className="sm:col-span-2 space-y-4">
 					<ScrimSeriesOverview
@@ -241,7 +401,7 @@ export default async function TeamScrimDetailPage({
 						scrimStatus={scrim.status}
 						canResolveDispute={canResolveDispute}
 					/>
-					<ScrimMapsSection maps={scrim.maps} />
+					<ScrimMapsSection maps={scrim.maps} resultRevisions={scrim.resultRevisions} />
 					<ScrimResultRevisions
 						resultRevisions={scrim.resultRevisions}
 						scrimStatus={scrim.status}
@@ -259,6 +419,7 @@ export default async function TeamScrimDetailPage({
 						jobs={scrim.ocrJobs}
 						canManage={team.currentUser.canManage}
 						canUploadEvidence={canUploadEvidence}
+						uploadDisabledReason={uploadDisabledReason}
 						resultRevisions={scrim.resultRevisions}
 						maps={scrim.maps}
 					/>
@@ -277,7 +438,7 @@ export default async function TeamScrimDetailPage({
 
 					<section className="border p-4">
 						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-							Actions
+							Scrim controls
 						</p>
 						<div className="flex flex-col gap-2">
 							<Button asChild size="sm" variant="outline">
@@ -291,73 +452,10 @@ export default async function TeamScrimDetailPage({
 								scheduledAt={scrim.scheduledAt}
 								canManage={team.currentUser.canManage}
 							/>
-							{canReportResult ? (
-								<ReportScrimResultDialog scrim={scrim} reportingTeamId={team.id}>
-									<Button size="sm" className="w-full">
-										Review result
-									</Button>
-								</ReportScrimResultDialog>
-							) : null}
-							{canReviewConfirmation ? (
-								<ConfirmScrimDialog
-									scrimId={scrim.id}
-									teamId={team.id}
-									currentStatus={currentConfirmation?.status ?? "pending"}
-								>
-									<Button size="sm" variant="outline" className="w-full">
-										Review confirmation
-									</Button>
-								</ConfirmScrimDialog>
-							) : null}
-							{canRespondToDispute ? (
-								<ScrimDisputeResponseDialog scrimId={scrim.id} reportingTeamId={team.id}>
-									<Button size="sm" variant="outline" className="w-full">
-										Respond to dispute
-									</Button>
-								</ScrimDisputeResponseDialog>
-							) : null}
-							{canResolveDispute ? (
-								<ResolveScrimDisputeDialog scrimId={scrim.id}>
-									<Button size="sm" variant="outline" className="w-full">
-										Resolve dispute
-									</Button>
-								</ResolveScrimDisputeDialog>
-							) : null}
-							{canUploadEvidence ? (
-								activeGameHistoryJob ? (
-									<div className="w-full border p-3">
-										<p className="text-xs font-medium">
-											{activeGameHistoryJob.status === "queued" ||
-											activeGameHistoryJob.status === "processing"
-												? "Game history processing…"
-												: activeGameHistoryJob.status === "completed"
-													? "Game history extracted"
-													: "Game history extraction failed"}
-										</p>
-										<p className="mt-1 text-xs text-muted-foreground">
-											{activeGameHistoryJob.status === "queued" ||
-											activeGameHistoryJob.status === "processing"
-												? "OCR extraction is running. Check the queue below."
-												: "Mark it superseded in the OCR queue below to upload a replacement."}
-										</p>
-									</div>
-								) : (
-									<UploadScrimEvidenceDialog scrimId={scrim.id} screenshotType="game_history">
-										<Button size="sm" variant="outline" className="w-full">
-											Upload game history
-										</Button>
-									</UploadScrimEvidenceDialog>
-								)
-							) : null}
-							{primaryChatConversation ? (
-								<Button asChild size="sm" variant="outline" className="w-full">
-									<Link
-										href={`${appRoutes.teams.chat(team.id)}?conversation=${primaryChatConversation.id}`}
-									>
-										Open scrim chat
-									</Link>
-								</Button>
-							) : null}
+							<p className="border p-3 text-xs text-muted-foreground">
+								Result review, evidence uploads, confirmations, and dispute actions now live in the
+								Result Workbench above.
+							</p>
 						</div>
 					</section>
 

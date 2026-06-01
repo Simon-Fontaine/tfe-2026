@@ -182,6 +182,9 @@ export function UploadScrimEvidenceDialog({
 				? `Upload scoreboard — ${targetMapLabel}`
 				: "Upload scoreboard"
 			: "Upload game history";
+	const selectedFileLabel = file
+		? `${file.name} · ${Math.round((file.size / 1024 / 1024) * 10) / 10} MB`
+		: "No file selected";
 
 	return (
 		<Dialog
@@ -197,8 +200,8 @@ export function UploadScrimEvidenceDialog({
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>
 						{screenshotType === "scoreboard"
-							? "The screenshot uploads directly to object storage, then the API queues scoreboard player-stat extraction for this map."
-							: "The screenshot uploads directly to object storage, then the API queues game-history match extraction for this scrim."}
+							? "Upload the scoreboard for this map. OCR will draft player stats for review before anything is saved."
+							: "Upload game history to draft the map list and scores for this scrim package."}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -217,7 +220,7 @@ export function UploadScrimEvidenceDialog({
 							disabled={submitting}
 							className="block w-full text-xs file:mr-3 file:border file:bg-background file:px-3 file:py-2 file:text-xs file:font-medium"
 						/>
-						<FieldDescription>JPEG, PNG, or WebP up to 8 MB.</FieldDescription>
+						<FieldDescription>{selectedFileLabel}. JPEG, PNG, or WebP up to 8 MB.</FieldDescription>
 						<FieldError>{getFieldErrorText(fieldErrors, "file")}</FieldError>
 					</Field>
 
@@ -226,7 +229,7 @@ export function UploadScrimEvidenceDialog({
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={submitting}>
 							{submitting && <Spinner className="mr-1.5" />}
-							Queue upload
+							{submitting ? "Queueing scan" : "Upload and scan"}
 						</Button>
 						<Button
 							type="button"
