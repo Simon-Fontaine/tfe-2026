@@ -13,8 +13,9 @@ class RealtimeSocketService {
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private intentionalClose = false;
-	private scrimSubscriptions = new Set<string>();
-	private teamSubscriptions = new Set<string>();
+	private scrimSubscriptions = new Map<string, number>();
+	private teamSubscriptions = new Map<string, number>();
+	private orgSubscriptions = new Map<string, number>();
 	private listeners = new Set<RealtimeListener>();
 	private connected = false;
 	private connectionListeners = new Set<(connected: boolean) => void>();
@@ -41,11 +42,14 @@ class RealtimeSocketService {
 
 		this.ws.onopen = () => {
 			this.reconnectAttempts = 0;
-			for (const scrimId of this.scrimSubscriptions) {
+			for (const scrimId of this.scrimSubscriptions.keys()) {
 				this.sendCommand({ type: "subscribe:scrim", scrimId });
 			}
-			for (const teamId of this.teamSubscriptions) {
+			for (const teamId of this.teamSubscriptions.keys()) {
 				this.sendCommand({ type: "subscribe:team", teamId });
+			}
+			for (const organizationId of this.orgSubscriptions.keys()) {
+				this.sendCommand({ type: "subscribe:org", organizationId });
 			}
 			this.connected = true;
 			for (const fn of this.connectionListeners) fn(true);
@@ -83,25 +87,60 @@ class RealtimeSocketService {
 	}
 
 	subscribeScrim(scrimId: string): void {
-		this.scrimSubscriptions.add(scrimId);
+		const count = this.scrimSubscriptions.get(scrimId) ?? 0;
+		this.scrimSubscriptions.set(scrimId, count + 1);
 		this.connect();
-		this.sendCommand({ type: "subscribe:scrim", scrimId });
+		if (count === 0) {
+			this.sendCommand({ type: "subscribe:scrim", scrimId });
+		}
 	}
 
 	unsubscribeScrim(scrimId: string): void {
-		this.scrimSubscriptions.delete(scrimId);
-		this.sendCommand({ type: "unsubscribe:scrim", scrimId });
+		const count = this.scrimSubscriptions.get(scrimId) ?? 0;
+		if (count <= 1) {
+			this.scrimSubscriptions.delete(scrimId);
+			this.sendCommand({ type: "unsubscribe:scrim", scrimId });
+			return;
+		}
+		this.scrimSubscriptions.set(scrimId, count - 1);
 	}
 
 	subscribeTeam(teamId: string): void {
-		this.teamSubscriptions.add(teamId);
+		const count = this.teamSubscriptions.get(teamId) ?? 0;
+		this.teamSubscriptions.set(teamId, count + 1);
 		this.connect();
-		this.sendCommand({ type: "subscribe:team", teamId });
+		if (count === 0) {
+			this.sendCommand({ type: "subscribe:team", teamId });
+		}
 	}
 
 	unsubscribeTeam(teamId: string): void {
-		this.teamSubscriptions.delete(teamId);
-		this.sendCommand({ type: "unsubscribe:team", teamId });
+		const count = this.teamSubscriptions.get(teamId) ?? 0;
+		if (count <= 1) {
+			this.teamSubscriptions.delete(teamId);
+			this.sendCommand({ type: "unsubscribe:team", teamId });
+			return;
+		}
+		this.teamSubscriptions.set(teamId, count - 1);
+	}
+
+	subscribeOrg(organizationId: string): void {
+		const count = this.orgSubscriptions.get(organizationId) ?? 0;
+		this.orgSubscriptions.set(organizationId, count + 1);
+		this.connect();
+		if (count === 0) {
+			this.sendCommand({ type: "subscribe:org", organizationId });
+		}
+	}
+
+	unsubscribeOrg(organizationId: string): void {
+		const count = this.orgSubscriptions.get(organizationId) ?? 0;
+		if (count <= 1) {
+			this.orgSubscriptions.delete(organizationId);
+			this.sendCommand({ type: "unsubscribe:org", organizationId });
+			return;
+		}
+		this.orgSubscriptions.set(organizationId, count - 1);
 	}
 
 	addListener(listener: RealtimeListener): () => void {
@@ -156,6 +195,17 @@ class RealtimeSocketService {
 				window.location.reload();
 			}
 			return;
+		}
+
+		if (event.type === "realtime:access-revoked") {
+			if (event.scope === "team") {
+				this.teamSubscriptions.delete(event.teamId);
+				for (const scrimId of event.scrimIds ?? []) {
+					this.scrimSubscriptions.delete(scrimId);
+				}
+			} else {
+				this.orgSubscriptions.delete(event.organizationId);
+			}
 		}
 
 		for (const listener of this.listeners) {

@@ -7,6 +7,7 @@ import {
 	type notificationTypeEnum,
 	ocrJobTable,
 	scrimTable,
+	updatePostTable,
 	userTable,
 } from "@/db/schema";
 import { publishUserRealtimeEvent } from "@/realtime/scrim-hub";
@@ -115,6 +116,17 @@ async function resolveNotificationDestinationHref(row: NotificationRow, userId: 
 	}
 
 	if (!row.referenceId) return null;
+
+	if (row.referenceType === "update_post") {
+		const update = await db.query.updatePostTable.findFirst({
+			where: eq(updatePostTable.id, row.referenceId),
+			columns: { id: true, teamId: true, organizationId: true },
+		});
+		if (!update) return appRoutes.inbox;
+		if (update.teamId) return appRoutes.teams.updates(update.teamId);
+		if (update.organizationId) return appRoutes.orgs.updates(update.organizationId);
+		return appRoutes.inbox;
+	}
 
 	if (row.referenceType === "scrim") {
 		const scrim = await db.query.scrimTable.findFirst({

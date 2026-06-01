@@ -12,13 +12,19 @@ type SocketMeta = {
 	userId: string;
 	scrimSubscriptions: Set<string>;
 	teamSubscriptions: Set<string>;
+	orgSubscriptions: Set<string>;
 };
+
+type RealtimeAccessRevocationPayload =
+	| { scope: "team"; teamId: string; scrimIds?: string[] }
+	| { scope: "org"; organizationId: string };
 
 const socketMeta = new Map<RealtimeSocket, SocketMeta>();
 const sessionSockets = new Map<string, Set<RealtimeSocket>>();
 const userSockets = new Map<string, Set<RealtimeSocket>>();
 const scrimSockets = new Map<string, Set<RealtimeSocket>>();
 const teamSockets = new Map<string, Set<RealtimeSocket>>();
+const orgSockets = new Map<string, Set<RealtimeSocket>>();
 
 function createRedisSubscriber(): Redis | null {
 	const url = process.env.REDIS_URL;
@@ -71,6 +77,14 @@ function localFanOutTeam(teamId: string, event: string, payload: Record<string, 
 	}
 }
 
+function localFanOutOrg(organizationId: string, event: string, payload: Record<string, unknown>) {
+	const sockets = orgSockets.get(organizationId);
+	if (!sockets) return;
+	for (const ws of sockets) {
+		send(ws, { type: event, organizationId, ...payload });
+	}
+}
+
 function localFanOutUser(userId: string, event: string, payload: Record<string, unknown>) {
 	const sockets = userSockets.get(userId);
 	if (!sockets) return;
@@ -96,6 +110,20 @@ async function redisPublishTeam(teamId: string, event: string, payload: Record<s
 		await publisher.publish(`realtime:team:${teamId}`, JSON.stringify({ event, payload }));
 	} catch (err) {
 		logger.warn({ err }, "scrim-hub: failed to publish team event to Redis");
+	}
+}
+
+async function redisPublishOrg(
+	organizationId: string,
+	event: string,
+	payload: Record<string, unknown>
+) {
+	const publisher = getRedisPublisher();
+	if (!publisher) return;
+	try {
+		await publisher.publish(`realtime:org:${organizationId}`, JSON.stringify({ event, payload }));
+	} catch (err) {
+		logger.warn({ err }, "scrim-hub: failed to publish org event to Redis");
 	}
 }
 
@@ -129,8 +157,18 @@ if (redisSubscriber) {
 				return;
 			}
 
+			if (channel.startsWith("realtime:org:")) {
+				const organizationId = channel.slice("realtime:org:".length);
+				localFanOutOrg(organizationId, parsed.event, parsed.payload);
+				return;
+			}
+
 			if (channel.startsWith("realtime:user:")) {
 				const userId = channel.slice("realtime:user:".length);
+				if (parsed.event === "internal:access-revoked") {
+					applyRealtimeAccessRevocation(userId, parsed.payload as RealtimeAccessRevocationPayload);
+					return;
+				}
 				localFanOutUser(userId, parsed.event, parsed.payload);
 			}
 		} catch {
@@ -154,6 +192,7 @@ export function registerRealtimeSocket(ws: RealtimeSocket, userId: string, sessi
 		userId,
 		scrimSubscriptions: new Set(),
 		teamSubscriptions: new Set(),
+		orgSubscriptions: new Set(),
 	});
 	getOrCreateSet(sessionSockets, sessionId).add(ws);
 	getOrCreateSet(userSockets, userId).add(ws);
@@ -187,6 +226,23 @@ export function unregisterRealtimeSocket(ws: RealtimeSocket) {
 			if (redisSubscriber) {
 				void redisSubscriber.unsubscribe(`realtime:team:${teamId}`).catch((err: Error) => {
 					logger.warn({ err, teamId }, "scrim-hub: failed to unsubscribe from team Redis channel");
+				});
+			}
+		}
+	}
+
+	for (const organizationId of meta.orgSubscriptions) {
+		const sockets = orgSockets.get(organizationId);
+		if (!sockets) continue;
+		sockets.delete(ws);
+		if (sockets.size === 0) {
+			orgSockets.delete(organizationId);
+			if (redisSubscriber) {
+				void redisSubscriber.unsubscribe(`realtime:org:${organizationId}`).catch((err: Error) => {
+					logger.warn(
+						{ err, organizationId },
+						"scrim-hub: failed to unsubscribe from org Redis channel"
+					);
 				});
 			}
 		}
@@ -237,6 +293,44 @@ export function disconnectRealtimeUserSessions(
 	}
 }
 
+function applyRealtimeAccessRevocation(userId: string, payload: RealtimeAccessRevocationPayload) {
+	const sockets = userSockets.get(userId);
+	if (!sockets || sockets.size === 0) return;
+
+	for (const ws of [...sockets]) {
+		const meta = socketMeta.get(ws);
+		if (!meta) continue;
+
+		let revoked = false;
+		if (payload.scope === "team") {
+			if (meta.teamSubscriptions.has(payload.teamId)) {
+				unsubscribeSocketFromTeam(ws, payload.teamId);
+				revoked = true;
+			}
+			for (const scrimId of payload.scrimIds ?? []) {
+				if (!meta.scrimSubscriptions.has(scrimId)) continue;
+				unsubscribeSocketFromScrim(ws, scrimId);
+				revoked = true;
+			}
+		} else if (meta.orgSubscriptions.has(payload.organizationId)) {
+			unsubscribeSocketFromOrg(ws, payload.organizationId);
+			revoked = true;
+		}
+
+		if (revoked) {
+			send(ws, { type: "realtime:access-revoked", ...payload });
+		}
+	}
+}
+
+export function revokeRealtimeUserAccess(params: {
+	userId: string;
+	payload: RealtimeAccessRevocationPayload;
+}) {
+	applyRealtimeAccessRevocation(params.userId, params.payload);
+	void redisPublishUser(params.userId, "internal:access-revoked", params.payload);
+}
+
 export function subscribeSocketToScrim(ws: RealtimeSocket, scrimId: string) {
 	const meta = socketMeta.get(ws);
 	if (!meta) return;
@@ -267,6 +361,22 @@ export function subscribeSocketToTeam(ws: RealtimeSocket, teamId: string) {
 	}
 
 	send(ws, { type: "team:subscribed", teamId });
+}
+
+export function subscribeSocketToOrg(ws: RealtimeSocket, organizationId: string) {
+	const meta = socketMeta.get(ws);
+	if (!meta) return;
+
+	meta.orgSubscriptions.add(organizationId);
+	getOrCreateSet(orgSockets, organizationId).add(ws);
+
+	if (redisSubscriber) {
+		void redisSubscriber.subscribe(`realtime:org:${organizationId}`).catch((err: Error) => {
+			logger.warn({ err, organizationId }, "scrim-hub: failed to subscribe to org Redis channel");
+		});
+	}
+
+	send(ws, { type: "org:subscribed", organizationId });
 }
 
 export function unsubscribeSocketFromScrim(ws: RealtimeSocket, scrimId: string) {
@@ -313,6 +423,31 @@ export function unsubscribeSocketFromTeam(ws: RealtimeSocket, teamId: string) {
 	send(ws, { type: "team:unsubscribed", teamId });
 }
 
+export function unsubscribeSocketFromOrg(ws: RealtimeSocket, organizationId: string) {
+	const meta = socketMeta.get(ws);
+	if (!meta) return;
+
+	meta.orgSubscriptions.delete(organizationId);
+
+	const sockets = orgSockets.get(organizationId);
+	if (sockets) {
+		sockets.delete(ws);
+		if (sockets.size === 0) {
+			orgSockets.delete(organizationId);
+			if (redisSubscriber) {
+				void redisSubscriber.unsubscribe(`realtime:org:${organizationId}`).catch((err: Error) => {
+					logger.warn(
+						{ err, organizationId },
+						"scrim-hub: failed to unsubscribe from org Redis channel"
+					);
+				});
+			}
+		}
+	}
+
+	send(ws, { type: "org:unsubscribed", organizationId });
+}
+
 export function publishScrimEvent(params: {
 	scrimId: string;
 	event: string;
@@ -329,6 +464,15 @@ export function publishTeamEvent(params: {
 }) {
 	localFanOutTeam(params.teamId, params.event, params.payload);
 	void redisPublishTeam(params.teamId, params.event, params.payload);
+}
+
+export function publishOrgEvent(params: {
+	organizationId: string;
+	event: string;
+	payload: Record<string, unknown>;
+}) {
+	localFanOutOrg(params.organizationId, params.event, params.payload);
+	void redisPublishOrg(params.organizationId, params.event, params.payload);
 }
 
 export function publishUserRealtimeEvent(params: {

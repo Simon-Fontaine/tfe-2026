@@ -52,6 +52,7 @@ import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import { revokeRealtimeUserAccess } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
 import {
 	getCurrentLifecycleWorkflow,
@@ -102,6 +103,15 @@ async function getOrgLifecycleBlock(orgId: string) {
 		columns: { lifecycleStatus: true },
 	});
 	return getLifecycleMutationBlockReason("Organization", org?.lifecycleStatus);
+}
+
+async function listScrimIdsForTeams(teamIds: string[]): Promise<string[]> {
+	if (teamIds.length === 0) return [];
+	const rows = await db.query.scrimTable.findMany({
+		where: or(inArray(scrimTable.homeTeamId, teamIds), inArray(scrimTable.awayTeamId, teamIds)),
+		columns: { id: true },
+	});
+	return rows.map((row) => row.id);
 }
 
 function toOrgTeamSummary(
@@ -1993,6 +2003,17 @@ orgRoutes.delete("/:id/members/:memberId", async (c) => {
 
 		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, member.id));
 	});
+	const affectedScrimIds = await listScrimIdsForTeams(affectedTeamIds);
+	revokeRealtimeUserAccess({
+		userId: member.userId,
+		payload: { scope: "org", organizationId: orgId },
+	});
+	for (const teamId of affectedTeamIds) {
+		revokeRealtimeUserAccess({
+			userId: member.userId,
+			payload: { scope: "team", teamId, scrimIds: affectedScrimIds },
+		});
+	}
 
 	return c.json({ success: true, affectedTeamIds });
 });
@@ -2016,8 +2037,13 @@ orgRoutes.delete("/:id/leave", async (c) => {
 	const rosterEntries = await db.query.teamRosterTable.findMany({
 		where: eq(teamRosterTable.userId, user.id),
 		with: { team: { columns: { organizationId: true } } },
-		columns: { id: true },
+		columns: { id: true, teamId: true },
 	});
+	const affectedTeamIds = [
+		...new Set(
+			rosterEntries.filter((row) => row.team.organizationId === orgId).map((row) => row.teamId)
+		),
+	];
 
 	await db.transaction(async (tx) => {
 		for (const rosterEntry of rosterEntries.filter((row) => row.team.organizationId === orgId)) {
@@ -2029,6 +2055,17 @@ orgRoutes.delete("/:id/leave", async (c) => {
 
 		await tx.delete(organizationMemberTable).where(eq(organizationMemberTable.id, membership.id));
 	});
+	const affectedScrimIds = await listScrimIdsForTeams(affectedTeamIds);
+	revokeRealtimeUserAccess({
+		userId: user.id,
+		payload: { scope: "org", organizationId: orgId },
+	});
+	for (const teamId of affectedTeamIds) {
+		revokeRealtimeUserAccess({
+			userId: user.id,
+			payload: { scope: "team", teamId, scrimIds: affectedScrimIds },
+		});
+	}
 
 	return c.json({ success: true });
 });

@@ -1,3 +1,4 @@
+import type { RealtimeSessionInvalidationReason } from "@scrimflow/shared";
 import { validateSessionById } from "@/auth/session";
 
 export type WsRouteSocket = {
@@ -14,7 +15,7 @@ export type WsErrorCode =
 
 export function createWsSessionGuard(
 	sessionId: string,
-	disconnectFn: (sessionId: string, reason: string) => void
+	disconnectFn: (sessionId: string, reason: RealtimeSessionInvalidationReason) => void
 ) {
 	return async function ensureActiveSession(): Promise<boolean> {
 		const validation = await validateSessionById(sessionId);

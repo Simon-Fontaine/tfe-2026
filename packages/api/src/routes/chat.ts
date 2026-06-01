@@ -51,6 +51,69 @@ import { upgradeWebSocket } from "@/websocket";
 
 const chatRoutes = new Hono<AuthEnv>();
 
+async function publishConversationMutationToMembers(params: {
+	conversationId: string;
+	members: Awaited<ReturnType<typeof listConversationMembers>>;
+	actorUserId: string;
+	event: "conversation:message-updated";
+	message: NonNullable<Awaited<ReturnType<typeof getMessageByIdForConversation>>>;
+}): Promise<void>;
+async function publishConversationMutationToMembers(params: {
+	conversationId: string;
+	members: Awaited<ReturnType<typeof listConversationMembers>>;
+	actorUserId: string;
+	event: "conversation:message-deleted";
+	messageId: string;
+	deletedAt: string;
+}): Promise<void>;
+async function publishConversationMutationToMembers(params: {
+	conversationId: string;
+	members: Awaited<ReturnType<typeof listConversationMembers>>;
+	actorUserId: string;
+	event: "conversation:message-updated" | "conversation:message-deleted";
+	message?: NonNullable<Awaited<ReturnType<typeof getMessageByIdForConversation>>>;
+	messageId?: string;
+	deletedAt?: string;
+}) {
+	await Promise.all(
+		params.members.map(async (member) => {
+			const conversation = await getConversationSummaryForUser(
+				params.conversationId,
+				member.userId
+			);
+			if (!conversation) return;
+
+			if (params.event === "conversation:message-updated" && params.message) {
+				publishUserEvent({
+					userId: member.userId,
+					event: params.event,
+					payload: {
+						conversationId: params.conversationId,
+						message: params.message,
+						actorUserId: params.actorUserId,
+						conversation,
+					},
+				});
+				return;
+			}
+
+			if (params.event === "conversation:message-deleted" && params.messageId && params.deletedAt) {
+				publishUserEvent({
+					userId: member.userId,
+					event: params.event,
+					payload: {
+						conversationId: params.conversationId,
+						messageId: params.messageId,
+						deletedAt: params.deletedAt,
+						actorUserId: params.actorUserId,
+						conversation,
+					},
+				});
+			}
+		})
+	);
+}
+
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
 function sendChatError(
@@ -282,32 +345,46 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 		conversationId,
 		messageId: result.messageId,
 	});
+	const realtimeMessage =
+		message && parsed.output.clientNonce
+			? { ...message, clientNonce: parsed.output.clientNonce }
+			: message;
 	const members = await listConversationMembers(conversationId);
 
-	if (message) {
+	if (realtimeMessage) {
 		publishConversationEvent({
 			conversationId,
 			event: "message:new",
-			payload: { message },
+			payload: { message: realtimeMessage },
 		});
 	}
 
 	for (const member of members) {
-		if (member.userId === user.id) continue;
-		if (member.isMuted) continue;
-
-		await createNotification({
-			userId: member.userId,
-			type: "new_message",
-			title: "New message",
-			body: parsed.output.content.slice(0, 180),
-			referenceType: "chat_channel",
-			referenceId: conversationId,
-		});
-
-		if (message) {
+		if (realtimeMessage) {
 			const conversation = await getConversationSummaryForUser(conversationId, member.userId);
 			if (!conversation) continue;
+
+			publishUserEvent({
+				userId: member.userId,
+				event: "conversation:message-created",
+				payload: {
+					conversationId,
+					message: realtimeMessage,
+					senderId: user.id,
+					conversation,
+				},
+			});
+
+			if (member.userId === user.id || member.isMuted) continue;
+
+			await createNotification({
+				userId: member.userId,
+				type: "new_message",
+				title: "New message",
+				body: parsed.output.content.slice(0, 180),
+				referenceType: "chat_channel",
+				referenceId: conversationId,
+			});
 
 			publishUserEvent({
 				userId: member.userId,
@@ -315,7 +392,7 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 				payload: {
 					notificationType: "new_message",
 					conversationId,
-					message,
+					message: realtimeMessage,
 					senderId: user.id,
 					conversation,
 				},
@@ -358,6 +435,15 @@ chatRoutes.patch("/conversations/:id/messages/:messageId", async (c) => {
 			event: "message:updated",
 			payload: { message },
 		});
+
+		const members = await listConversationMembers(conversationId);
+		await publishConversationMutationToMembers({
+			conversationId,
+			members,
+			actorUserId: user.id,
+			event: "conversation:message-updated",
+			message,
+		});
 	}
 
 	return c.json({ success: true });
@@ -377,10 +463,23 @@ chatRoutes.delete("/conversations/:id/messages/:messageId", async (c) => {
 	if (result.status === "forbidden")
 		return c.json({ error: "You can only delete your own messages." }, 403);
 
+	const deletedMessage = await getMessageByIdForConversation({ conversationId, messageId });
+	const deletedAt = deletedMessage?.deletedAt ?? new Date().toISOString();
+
 	publishConversationEvent({
 		conversationId,
 		event: "message:deleted",
-		payload: { messageId, deletedAt: new Date().toISOString() },
+		payload: { messageId, deletedAt },
+	});
+
+	const members = await listConversationMembers(conversationId);
+	await publishConversationMutationToMembers({
+		conversationId,
+		members,
+		actorUserId: user.id,
+		event: "conversation:message-deleted",
+		messageId,
+		deletedAt,
 	});
 
 	return c.json({ success: true });

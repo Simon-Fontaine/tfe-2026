@@ -12,10 +12,10 @@ import { db } from "@/db";
 import { organizationTable, teamTable, updatePostTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { createNotification } from "@/notifications";
-import { publishTeamEvent } from "@/realtime/scrim-hub";
+import { publishOrgEvent, publishTeamEvent } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
 import { getLifecycleMutationBlockReason } from "@/utils/lifecycle";
-import { getOrgPermissions } from "@/utils/org";
+import { getOrgPermissions, listOrgWorkspaceUserIds } from "@/utils/org";
 import { getTeamAccessContext, listTeamWorkspaceUserIds } from "@/utils/team";
 import { mapUpdatePost } from "@/utils/updates";
 
@@ -265,6 +265,30 @@ updatesRoutes.post("/", async (c) => {
 				update: mapped,
 			},
 		});
+	} else if (organizationId) {
+		const audienceUserIds = await listOrgWorkspaceUserIds(organizationId);
+		await Promise.all(
+			audienceUserIds
+				.filter((userId) => userId !== user.id)
+				.map((userId) =>
+					createNotification({
+						userId,
+						type: "generic",
+						title: "New organization update",
+						body: mapped.title,
+						referenceType: "update_post",
+						referenceId: mapped.id,
+					})
+				)
+		);
+
+		void publishOrgEvent({
+			organizationId,
+			event: "update:created",
+			payload: {
+				update: mapped,
+			},
+		});
 	}
 
 	return c.json({ data: mapped }, 201);
@@ -323,6 +347,14 @@ updatesRoutes.patch("/:id", async (c) => {
 				update: mapped,
 			},
 		});
+	} else if (updated.organizationId) {
+		void publishOrgEvent({
+			organizationId: updated.organizationId,
+			event: "update:updated",
+			payload: {
+				update: mapped,
+			},
+		});
 	}
 
 	return c.json({ data: mapped });
@@ -360,6 +392,14 @@ updatesRoutes.delete("/:id", async (c) => {
 	if (existing.teamId) {
 		void publishTeamEvent({
 			teamId: existing.teamId,
+			event: "update:deleted",
+			payload: {
+				updateId,
+			},
+		});
+	} else if (existing.organizationId) {
+		void publishOrgEvent({
+			organizationId: existing.organizationId,
 			event: "update:deleted",
 			payload: {
 				updateId,

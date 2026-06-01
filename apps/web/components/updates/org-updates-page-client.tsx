@@ -2,9 +2,10 @@
 
 import { MoreHorizontalIcon, NewsIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { UpdatePostSummary } from "@scrimflow/shared";
+import type { AppRealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -17,6 +18,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiRoutes, appRoutes } from "@/lib/routes";
+import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { CreateUpdatePostDialog } from "./create-update-post-dialog";
 import { EditUpdatePostDialog } from "./edit-update-post-dialog";
 
@@ -24,6 +26,10 @@ function sortUpdates(updates: UpdatePostSummary[]) {
 	return [...updates].sort((left, right) => {
 		return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
 	});
+}
+
+function upsertUpdate(updates: UpdatePostSummary[], update: UpdatePostSummary) {
+	return sortUpdates([update, ...updates.filter((current) => current.id !== update.id)]);
 }
 
 function formatTimestamp(value: string) {
@@ -48,6 +54,8 @@ export function OrgUpdatesPageClient({
 	canManage,
 	initialUpdates,
 }: OrgUpdatesPageClientProps) {
+	const router = useRouter();
+	const wasDisconnectedRef = useRef(false);
 	const [updates, setUpdates] = useState(initialUpdates);
 	const [deletingUpdateId, setDeletingUpdateId] = useState<string | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -56,6 +64,50 @@ export function OrgUpdatesPageClient({
 	useEffect(() => {
 		setUpdates(initialUpdates);
 	}, [initialUpdates]);
+
+	useEffect(() => {
+		function handleEvent(event: AppRealtimeEvent) {
+			if (!("organizationId" in event) || event.organizationId !== organizationId) return;
+
+			switch (event.type) {
+				case "update:created":
+					setUpdates((current) => upsertUpdate(current, event.update));
+					break;
+				case "update:updated":
+					setUpdates((current) =>
+						sortUpdates(
+							current.map((update) => (update.id === event.update.id ? event.update : update))
+						)
+					);
+					break;
+				case "update:deleted":
+					setUpdates((current) => current.filter((update) => update.id !== event.updateId));
+					break;
+				default:
+					break;
+			}
+		}
+
+		realtimeSocket.subscribeOrg(organizationId);
+		const removeListener = realtimeSocket.addListener(handleEvent);
+		const removeConnectionListener = realtimeSocket.addConnectionListener((connected) => {
+			if (!connected) {
+				wasDisconnectedRef.current = true;
+				return;
+			}
+			if (!wasDisconnectedRef.current) return;
+			wasDisconnectedRef.current = false;
+			startTransition(() => {
+				router.refresh();
+			});
+		});
+
+		return () => {
+			removeListener();
+			removeConnectionListener();
+			realtimeSocket.unsubscribeOrg(organizationId);
+		};
+	}, [organizationId, router]);
 
 	async function handleDelete(updateId: string) {
 		if (!canManage || deletingUpdateId) return;
@@ -95,7 +147,7 @@ export function OrgUpdatesPageClient({
 		<CreateUpdatePostDialog
 			organizationId={organizationId}
 			onCreated={(update) => {
-				setUpdates((current) => sortUpdates([update, ...current]));
+				setUpdates((current) => upsertUpdate(current, update));
 			}}
 		>
 			<Button size="sm">Post update</Button>

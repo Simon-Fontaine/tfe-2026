@@ -17,7 +17,12 @@ import logger from "@/utils/logger";
 import { verifyTeamManager } from "@/utils/team";
 import { canAccessScrim, canViewTeam, notifyTeamAdmins } from "./access";
 import { TEAM_VIEWABLE_STATUSES } from "./constants";
-import { mapScrimDetail, mapScrimSummary } from "./detail";
+import {
+	getScrimParticipantTeamIds,
+	mapScrimDetail,
+	mapScrimSummary,
+	publishScrimStatusChanged,
+} from "./detail";
 import { fetchMapImagesByName, findScrimWithRelations, toIsoDate } from "./shared";
 
 export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
@@ -323,6 +328,11 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 		}
 
 		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));
-		return c.json({ data: mapScrimDetail(detail, mapImagesByName) }, 201);
+		const mappedDetail = mapScrimDetail(detail, mapImagesByName);
+		publishScrimStatusChanged(scrim.id, detail.status, {
+			teamIds: getScrimParticipantTeamIds(mappedDetail),
+			changeType: "created",
+		});
+		return c.json({ data: mappedDetail }, 201);
 	});
 }

@@ -1,5 +1,5 @@
 import type { ScrimDetail, ScrimOcrJobRealtimePayload, ScrimSummary } from "@scrimflow/shared";
-import { publishScrimEvent } from "@/realtime/scrim-hub";
+import { publishScrimEvent, publishTeamEvent } from "@/realtime/scrim-hub";
 import { mapBaseScrimSummary, type ScrimRow, type ScrimSummaryRow, toIsoDate } from "./shared";
 
 export function mapScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
@@ -61,12 +61,49 @@ function mapOcrJobRealtimePayload(
 	};
 }
 
-export function publishScrimStatusChanged(scrimId: string, status: ScrimDetail["status"]) {
+export function getScrimParticipantTeamIds(scrim: {
+	homeTeam: { id: string };
+	awayTeam: { id: string } | null;
+}) {
+	return [scrim.homeTeam.id, scrim.awayTeam?.id ?? null].filter(
+		(teamId): teamId is string => !!teamId
+	);
+}
+
+export function getScrimParticipantTeamIdsFromIds(scrim: {
+	homeTeamId: string;
+	awayTeamId: string | null;
+}) {
+	return [scrim.homeTeamId, scrim.awayTeamId].filter((teamId): teamId is string => !!teamId);
+}
+
+export function publishScrimStatusChanged(
+	scrimId: string,
+	status: ScrimDetail["status"],
+	options: {
+		teamIds?: string[];
+		changeType?: "created" | "status" | "result" | "ocr" | "conversation" | "dispute";
+	} = {}
+) {
+	const occurredAt = new Date().toISOString();
 	publishScrimEvent({
 		scrimId,
 		event: "scrim:status-changed",
-		payload: { status, occurredAt: new Date().toISOString() },
+		payload: { status, occurredAt },
 	});
+
+	for (const teamId of options.teamIds ?? []) {
+		publishTeamEvent({
+			teamId,
+			event: "scrim:changed",
+			payload: {
+				scrimId,
+				status,
+				changeType: options.changeType ?? "status",
+				occurredAt,
+			},
+		});
+	}
 }
 
 export function publishOcrJobRealtimeUpdate(

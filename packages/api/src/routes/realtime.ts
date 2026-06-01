@@ -7,12 +7,15 @@ import type { AuthEnv } from "@/middleware/auth";
 import {
 	disconnectRealtimeSession,
 	registerRealtimeSocket,
+	subscribeSocketToOrg,
 	subscribeSocketToScrim,
 	subscribeSocketToTeam,
 	unregisterRealtimeSocket,
+	unsubscribeSocketFromOrg,
 	unsubscribeSocketFromScrim,
 	unsubscribeSocketFromTeam,
 } from "@/realtime/scrim-hub";
+import { getOrgPermissions } from "@/utils/org";
 import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
 import {
 	createWsSessionGuard,
@@ -32,6 +35,7 @@ function sendRealtimeError(
 		retryable: boolean;
 		scrimId?: string;
 		teamId?: string;
+		organizationId?: string;
 	}
 ) {
 	ws.send(JSON.stringify({ type: "realtime:error", ...params }));
@@ -60,6 +64,11 @@ async function canAccessTeam(userId: string, teamId: string) {
 		access.teamStatus === "benched" ||
 		access.teamStatus === "trial"
 	);
+}
+
+async function canAccessOrg(userId: string, organizationId: string) {
+	const permissions = await getOrgPermissions(organizationId, userId);
+	return !!permissions.role;
 }
 
 realtimeRoutes.get(
@@ -143,6 +152,39 @@ realtimeRoutes.get(
 
 			if (parsed.type === "unsubscribe:team") {
 				unsubscribeSocketFromTeam(ws, parsed.teamId);
+				return;
+			}
+
+			if (parsed.type === "subscribe:org") {
+				if (!(await ensureActiveSession())) return;
+
+				const organizationId = parsed.organizationId;
+				if (!organizationId) {
+					sendRealtimeError(ws, {
+						error: "organizationId is required.",
+						code: "missing_field",
+						retryable: false,
+					});
+					return;
+				}
+
+				const hasAccess = await canAccessOrg(user.id, organizationId);
+				if (!hasAccess) {
+					sendRealtimeError(ws, {
+						error: "You do not have access to this organization.",
+						code: "access_denied",
+						retryable: false,
+						organizationId,
+					});
+					return;
+				}
+
+				subscribeSocketToOrg(ws, organizationId);
+				return;
+			}
+
+			if (parsed.type === "unsubscribe:org") {
+				unsubscribeSocketFromOrg(ws, parsed.organizationId);
 				return;
 			}
 		}

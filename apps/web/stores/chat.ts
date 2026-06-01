@@ -43,10 +43,19 @@ interface ChatActions {
 	appendMessage(conversationId: string, message: ChatMessage): void;
 
 	/** Replace a message by id (edit or optimistic confirm). */
-	updateMessage(conversationId: string, message: ChatMessage): void;
+	updateMessage(
+		conversationId: string,
+		message: ChatMessage,
+		conversation?: ChatConversationSummary
+	): void;
 
 	/** Mark a message as deleted by id. */
-	deleteMessage(conversationId: string, messageId: string, deletedAt: string): void;
+	deleteMessage(
+		conversationId: string,
+		messageId: string,
+		deletedAt: string,
+		conversation?: ChatConversationSummary
+	): void;
 
 	/** Update conversation summary (unread count, last preview, etc.). */
 	upsertConversation(conversation: ChatConversationSummary): void;
@@ -73,10 +82,22 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 	},
 
 	setMessages(conversationId, messages, nextCursor) {
-		set((s) => ({
-			messages: { ...s.messages, [conversationId]: messages },
-			nextCursors: { ...s.nextCursors, [conversationId]: nextCursor },
-		}));
+		set((s) => {
+			const merged = new Map<string, ChatMessage>();
+			for (const message of messages) merged.set(message.id, message);
+			for (const message of s.messages[conversationId] ?? []) merged.set(message.id, message);
+
+			return {
+				messages: {
+					...s.messages,
+					[conversationId]: [...merged.values()].sort(
+						(left, right) =>
+							new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+					),
+				},
+				nextCursors: { ...s.nextCursors, [conversationId]: nextCursor },
+			};
+		});
 	},
 
 	prependMessages(conversationId, older, nextCursor) {
@@ -98,7 +119,19 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 			const existing = s.messages[conversationId] ?? [];
 			// Avoid duplicate (optimistic + server echo)
 			if (existing.some((m) => m.id === message.id)) return {};
-			// Replace optimistic placeholder if it shares the same tempId stored in content
+			const matchingTempIndex = existing.findLastIndex(
+				(m) =>
+					m.id.startsWith("temp-") &&
+					m.senderId === message.senderId &&
+					!!message.clientNonce &&
+					m.clientNonce === message.clientNonce &&
+					!m.deletedAt
+			);
+			if (matchingTempIndex !== -1) {
+				const next = [...existing];
+				next[matchingTempIndex] = message;
+				return { messages: { ...s.messages, [conversationId]: next } };
+			}
 			return { messages: { ...s.messages, [conversationId]: [...existing, message] } };
 		});
 		// Bump conversation unread count and last preview for non-active conversations
@@ -116,26 +149,65 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 		}));
 	},
 
-	updateMessage(conversationId, message) {
-		set((s) => ({
-			messages: {
-				...s.messages,
-				[conversationId]: (s.messages[conversationId] ?? []).map((m) =>
-					m.id === message.id ? message : m
-				),
-			},
-		}));
+	updateMessage(conversationId, message, conversation) {
+		set((s) => {
+			const existing = s.messages[conversationId];
+			const updates: Partial<ChatState> = {};
+
+			if (existing) {
+				updates.messages = {
+					...s.messages,
+					[conversationId]: existing.map((m) => (m.id === message.id ? message : m)),
+				};
+			}
+
+			updates.conversations = sortConversations(
+				s.conversations.map((conv) => {
+					if (conv.id !== conversationId) return conv;
+					if (conversation) return { ...conv, ...conversation };
+					if (conv.lastMessageAt === message.createdAt) {
+						return {
+							...conv,
+							lastMessagePreview: message.deletedAt ? "[deleted]" : message.content.slice(0, 100),
+							lastMessageAt: message.createdAt,
+						};
+					}
+					return conv;
+				})
+			);
+
+			return updates;
+		});
 	},
 
-	deleteMessage(conversationId, messageId, deletedAt) {
-		set((s) => ({
-			messages: {
-				...s.messages,
-				[conversationId]: (s.messages[conversationId] ?? []).map((m) =>
-					m.id === messageId ? { ...m, deletedAt, content: "[deleted]" } : m
-				),
-			},
-		}));
+	deleteMessage(conversationId, messageId, deletedAt, conversation) {
+		set((s) => {
+			const existing = s.messages[conversationId];
+			const deletedMessage = existing?.find((m) => m.id === messageId);
+			const updates: Partial<ChatState> = {};
+
+			if (existing) {
+				updates.messages = {
+					...s.messages,
+					[conversationId]: existing.map((m) =>
+						m.id === messageId ? { ...m, deletedAt, content: "[deleted]" } : m
+					),
+				};
+			}
+
+			updates.conversations = sortConversations(
+				s.conversations.map((conv) => {
+					if (conv.id !== conversationId) return conv;
+					if (conversation) return { ...conv, ...conversation };
+					if (deletedMessage && conv.lastMessageAt === deletedMessage.createdAt) {
+						return { ...conv, lastMessagePreview: "[deleted]" };
+					}
+					return conv;
+				})
+			);
+
+			return updates;
+		});
 	},
 
 	upsertConversation(conversation) {

@@ -39,6 +39,7 @@ import {
 	ownershipWorkflowTable,
 	recruitmentApplicationTable,
 	recruitmentListingTable,
+	scrimTable,
 	teamInviteTable,
 	teamRatingEventTable,
 	teamRosterTable,
@@ -50,6 +51,7 @@ import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import { revokeRealtimeUserAccess } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
 import {
 	getCurrentLifecycleWorkflow,
@@ -165,6 +167,14 @@ async function getTeamLifecycleBlock(teamId: string) {
 		columns: { lifecycleStatus: true },
 	});
 	return getLifecycleMutationBlockReason("Team", team?.lifecycleStatus);
+}
+
+async function listScrimIdsForTeam(teamId: string): Promise<string[]> {
+	const rows = await db.query.scrimTable.findMany({
+		where: or(eq(scrimTable.homeTeamId, teamId), eq(scrimTable.awayTeamId, teamId)),
+		columns: { id: true },
+	});
+	return rows.map((row) => row.id);
 }
 
 async function findActiveTeamIdentityConflict(input: {
@@ -1806,7 +1816,7 @@ teamRoutes.delete("/:id/leave", async (c) => {
 	const teamId = c.req.param("id");
 	const roster = await db.query.teamRosterTable.findFirst({
 		where: and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.userId, user.id)),
-		columns: { id: true, teamId: true, permissionRole: true, status: true },
+		columns: { id: true, teamId: true, userId: true, permissionRole: true, status: true },
 	});
 	if (!roster) return c.json({ error: "You are not on this roster." }, 404);
 	if (roster.status === "inactive")
@@ -1816,6 +1826,10 @@ teamRoutes.delete("/:id/leave", async (c) => {
 	}
 
 	await db.delete(teamRosterTable).where(eq(teamRosterTable.id, roster.id));
+	revokeRealtimeUserAccess({
+		userId: roster.userId,
+		payload: { scope: "team", teamId, scrimIds: await listScrimIdsForTeam(teamId) },
+	});
 
 	return c.json({ success: true });
 });
@@ -1856,7 +1870,7 @@ teamRoutes.patch("/:id/roster/:memberId", async (c) => {
 
 	const member = await db.query.teamRosterTable.findFirst({
 		where: eq(teamRosterTable.id, memberId),
-		columns: { id: true, teamId: true, permissionRole: true, status: true },
+		columns: { id: true, teamId: true, userId: true, permissionRole: true, status: true },
 	});
 	if (!member || member.teamId !== teamId)
 		return c.json({ error: "Roster member not found." }, 404);
@@ -1900,6 +1914,12 @@ teamRoutes.patch("/:id/roster/:memberId", async (c) => {
 			permissionRole: parsed.output.permissionRole ?? undefined,
 		})
 		.where(eq(teamRosterTable.id, memberId));
+	if (parsed.output.status === "inactive") {
+		revokeRealtimeUserAccess({
+			userId: member.userId,
+			payload: { scope: "team", teamId, scrimIds: await listScrimIdsForTeam(teamId) },
+		});
+	}
 
 	return c.json({ success: true });
 });
@@ -1916,7 +1936,7 @@ teamRoutes.delete("/:id/roster/:memberId", async (c) => {
 
 	const member = await db.query.teamRosterTable.findFirst({
 		where: eq(teamRosterTable.id, memberId),
-		columns: { id: true, teamId: true, permissionRole: true, status: true },
+		columns: { id: true, teamId: true, userId: true, permissionRole: true, status: true },
 	});
 	if (!member || member.teamId !== teamId)
 		return c.json({ error: "Roster member not found." }, 404);
@@ -1928,6 +1948,10 @@ teamRoutes.delete("/:id/roster/:memberId", async (c) => {
 		.update(teamRosterTable)
 		.set({ status: "inactive", leftAt: new Date() })
 		.where(eq(teamRosterTable.id, memberId));
+	revokeRealtimeUserAccess({
+		userId: member.userId,
+		payload: { scope: "team", teamId, scrimIds: await listScrimIdsForTeam(teamId) },
+	});
 
 	return c.json({ success: true });
 });

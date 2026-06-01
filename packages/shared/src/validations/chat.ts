@@ -9,6 +9,7 @@ export const SendChatMessageSchema = v.object({
 		v.maxLength(2000, "Message cannot exceed 2000 characters")
 	),
 	replyToMessageId: v.optional(v.pipe(v.string(), v.uuid("Invalid reply message ID"))),
+	clientNonce: v.optional(v.pipe(v.string(), v.uuid("Invalid client nonce"))),
 });
 
 export type SendChatMessageInput = v.InferOutput<typeof SendChatMessageSchema>;

@@ -19,7 +19,7 @@ class ChatSocketService {
 	private reconnectAttempts = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-	private subscriptions = new Set<string>();
+	private subscriptions = new Map<string, number>();
 	private intentionalClose = false;
 	private connected = false;
 	private connectionListeners = new Set<(connected: boolean) => void>();
@@ -49,7 +49,7 @@ class ChatSocketService {
 		this.ws.onopen = () => {
 			this.reconnectAttempts = 0;
 			// Re-subscribe to all active conversations
-			for (const conversationId of this.subscriptions) {
+			for (const conversationId of this.subscriptions.keys()) {
 				this.sendCommand({ type: "subscribe", conversationId });
 			}
 			this.connected = true;
@@ -94,14 +94,22 @@ class ChatSocketService {
 	// ─── Subscriptions ───────────────────────────────────────────────────────
 
 	subscribe(conversationId: string): void {
-		this.subscriptions.add(conversationId);
+		const count = this.subscriptions.get(conversationId) ?? 0;
+		this.subscriptions.set(conversationId, count + 1);
 		this.connect();
-		this.sendCommand({ type: "subscribe", conversationId });
+		if (count === 0) {
+			this.sendCommand({ type: "subscribe", conversationId });
+		}
 	}
 
 	unsubscribe(conversationId: string): void {
-		this.subscriptions.delete(conversationId);
-		this.sendCommand({ type: "unsubscribe", conversationId });
+		const count = this.subscriptions.get(conversationId) ?? 0;
+		if (count <= 1) {
+			this.subscriptions.delete(conversationId);
+			this.sendCommand({ type: "unsubscribe", conversationId });
+			return;
+		}
+		this.subscriptions.set(conversationId, count - 1);
 	}
 
 	addConnectionListener(fn: (connected: boolean) => void): () => void {
@@ -177,6 +185,19 @@ class ChatSocketService {
 				store.deleteMessage(event.conversationId, event.messageId, event.deletedAt);
 				break;
 
+			case "conversation:message-updated":
+				store.updateMessage(event.conversationId, event.message, event.conversation);
+				break;
+
+			case "conversation:message-deleted":
+				store.deleteMessage(
+					event.conversationId,
+					event.messageId,
+					event.deletedAt,
+					event.conversation
+				);
+				break;
+
 			case "message:read":
 				// Another participant read messages — update their unread state if needed
 				break;
@@ -195,6 +216,16 @@ class ChatSocketService {
 
 			case "notification:new":
 				store.upsertConversation(event.conversation);
+				if (store.messages[event.conversationId]) {
+					store.appendMessage(event.conversationId, event.message);
+				}
+				break;
+
+			case "conversation:message-created":
+				store.upsertConversation(event.conversation);
+				if (store.messages[event.conversationId]) {
+					store.appendMessage(event.conversationId, event.message);
+				}
 				break;
 
 			default:

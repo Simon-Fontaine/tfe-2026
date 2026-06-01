@@ -21,7 +21,11 @@ import { ensureScrimConversationLifecycle } from "@/utils/chat";
 import { applyCompletedScrimRating } from "@/utils/rating";
 import { verifyTeamManager } from "@/utils/team";
 import { canResolveScrimDispute, notifyTeamAdmins } from "./access";
-import { mapScrimDetail, publishScrimStatusChanged } from "./detail";
+import {
+	getScrimParticipantTeamIdsFromIds,
+	mapScrimDetail,
+	publishScrimStatusChanged,
+} from "./detail";
 import {
 	buildOcrResultSnapshot,
 	buildPersistedScrimResultSnapshot,
@@ -285,7 +289,10 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after result submission." }, 500);
 
-		publishScrimStatusChanged(scrimId, detail.status);
+		publishScrimStatusChanged(scrimId, detail.status, {
+			teamIds: getScrimParticipantTeamIdsFromIds(detail),
+			changeType: "result",
+		});
 		await ensureScrimConversationLifecycle(scrimId);
 
 		const opposingTeamId =
@@ -392,7 +399,10 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after dispute resolution." }, 500);
 
-		publishScrimStatusChanged(scrimId, detail.status);
+		publishScrimStatusChanged(scrimId, detail.status, {
+			teamIds: getScrimParticipantTeamIdsFromIds(detail),
+			changeType: "dispute",
+		});
 		await ensureScrimConversationLifecycle(scrimId);
 
 		await Promise.all(

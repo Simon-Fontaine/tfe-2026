@@ -54,6 +54,15 @@ export async function verifyOrgManager(orgId: string, userId: string): Promise<b
 	return canManageOrg(role);
 }
 
+export async function listOrgWorkspaceUserIds(orgId: string): Promise<string[]> {
+	const rows = await db.query.organizationMemberTable.findMany({
+		where: eq(organizationMemberTable.organizationId, orgId),
+		columns: { userId: true },
+	});
+
+	return [...new Set(rows.map((row) => row.userId))];
+}
+
 export async function getOrgPermissions(orgId: string, userId: string) {
 	const membership = await getOrgMembership(orgId, userId);
 	const role = membership?.role ?? null;

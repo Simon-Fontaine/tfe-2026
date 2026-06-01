@@ -8,12 +8,23 @@ import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat";
 
 interface ConversationSidebarProps {
+	contextKey?: string;
 	initialConversations: ChatConversationSummary[];
 	selectedConversationId: string | null;
 	onSelect: (id: string) => void;
 }
 
+function getScopedConversations(
+	conversations: ChatConversationSummary[],
+	contextKey: string | undefined
+) {
+	if (!contextKey?.startsWith("team:")) return conversations;
+	const teamId = contextKey.slice("team:".length);
+	return conversations.filter((conversation) => conversation.teamId === teamId);
+}
+
 export function ConversationSidebar({
+	contextKey,
 	initialConversations,
 	selectedConversationId,
 	onSelect,
@@ -42,7 +53,8 @@ export function ConversationSidebar({
 		router.replace(query ? `${pathname}?${query}` : pathname);
 	}, [pathname, router, searchParams, selectedConversationId]);
 
-	const list = conversations.length > 0 ? conversations : initialConversations;
+	const scopedConversations = getScopedConversations(conversations, contextKey);
+	const list = scopedConversations.length > 0 ? scopedConversations : initialConversations;
 
 	return (
 		<div className="flex flex-col overflow-y-auto">

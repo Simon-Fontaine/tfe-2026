@@ -926,6 +926,7 @@ export type ChatMessage = {
 	editedAt: IsoDateString | null;
 	deletedAt: IsoDateString | null;
 	createdAt: IsoDateString;
+	clientNonce?: string;
 };
 
 export type ChatMessagePage = {
@@ -997,6 +998,28 @@ export type ChatRealtimeEvent =
 			message: ChatMessage;
 			senderId: string;
 			conversation: ChatConversationSummary;
+	  }
+	| {
+			type: "conversation:message-created";
+			conversationId: string;
+			message: ChatMessage;
+			senderId: string;
+			conversation: ChatConversationSummary;
+	  }
+	| {
+			type: "conversation:message-updated";
+			conversationId: string;
+			message: ChatMessage;
+			actorUserId: string;
+			conversation: ChatConversationSummary;
+	  }
+	| {
+			type: "conversation:message-deleted";
+			conversationId: string;
+			messageId: string;
+			deletedAt: IsoDateString;
+			actorUserId: string;
+			conversation: ChatConversationSummary;
 	  };
 
 export type ScrimOcrJobRealtimePayload = {
@@ -1015,6 +1038,8 @@ export type AppRealtimeClientCommand =
 	| { type: "unsubscribe:scrim"; scrimId: string }
 	| { type: "subscribe:team"; teamId: string }
 	| { type: "unsubscribe:team"; teamId: string }
+	| { type: "subscribe:org"; organizationId: string }
+	| { type: "unsubscribe:org"; organizationId: string }
 	| { type: "ping" };
 
 export type AppRealtimeEvent =
@@ -1027,12 +1052,17 @@ export type AppRealtimeEvent =
 			retryable: boolean;
 			scrimId?: string;
 			teamId?: string;
+			organizationId?: string;
 	  }
 	| { type: "realtime:session-invalidated"; reason: RealtimeSessionInvalidationReason }
 	| { type: "scrim:subscribed"; scrimId: string }
 	| { type: "scrim:unsubscribed"; scrimId: string }
 	| { type: "team:subscribed"; teamId: string }
 	| { type: "team:unsubscribed"; teamId: string }
+	| { type: "org:subscribed"; organizationId: string }
+	| { type: "org:unsubscribed"; organizationId: string }
+	| { type: "realtime:access-revoked"; scope: "team"; teamId: string; scrimIds?: string[] }
+	| { type: "realtime:access-revoked"; scope: "org"; organizationId: string }
 	| {
 			type: "notification:created";
 			notification: NotificationSummary;
@@ -1066,6 +1096,21 @@ export type AppRealtimeEvent =
 			updateId: string;
 	  }
 	| {
+			type: "update:created";
+			organizationId: string;
+			update: UpdatePostSummary;
+	  }
+	| {
+			type: "update:updated";
+			organizationId: string;
+			update: UpdatePostSummary;
+	  }
+	| {
+			type: "update:deleted";
+			organizationId: string;
+			updateId: string;
+	  }
+	| {
 			type: "scrim:ocr-job-updated";
 			scrimId: string;
 			job: ScrimOcrJobRealtimePayload;
@@ -1074,6 +1119,14 @@ export type AppRealtimeEvent =
 			type: "scrim:status-changed";
 			scrimId: string;
 			status: ScrimStatus;
+			occurredAt: IsoDateString;
+	  }
+	| {
+			type: "scrim:changed";
+			teamId: string;
+			scrimId: string;
+			status: ScrimStatus;
+			changeType: "created" | "status" | "result" | "ocr" | "conversation" | "dispute";
 			occurredAt: IsoDateString;
 	  }
 	| {

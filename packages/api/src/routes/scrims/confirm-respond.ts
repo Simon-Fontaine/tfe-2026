@@ -12,7 +12,11 @@ import { ensureScrimConversationLifecycle } from "@/utils/chat";
 import { applyCompletedScrimRating } from "@/utils/rating";
 import { verifyTeamManager } from "@/utils/team";
 import { canManageAnyScrimTeam, notifyTeamAdmins, resolveScrimStatus } from "./access";
-import { mapScrimDetail, publishScrimStatusChanged } from "./detail";
+import {
+	getScrimParticipantTeamIdsFromIds,
+	mapScrimDetail,
+	publishScrimStatusChanged,
+} from "./detail";
 import { fetchMapImagesByName, findScrimWithRelations, ScrimWorkflowError } from "./shared";
 
 const SCRIM_LOCK_TIMEOUT_MS = 5000;
@@ -157,7 +161,10 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after status update." }, 500);
 
-		publishScrimStatusChanged(scrimId, detail.status);
+		publishScrimStatusChanged(scrimId, detail.status, {
+			teamIds: getScrimParticipantTeamIdsFromIds(detail),
+			changeType: detail.status === "disputed" ? "dispute" : "result",
+		});
 		await ensureScrimConversationLifecycle(scrimId);
 
 		if (parsed.output.status === "disputed") {
@@ -261,7 +268,10 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 						);
 					}
 					await ensureScrimConversationLifecycle(scrimId);
-					publishScrimStatusChanged(scrimId, "cancelled");
+					publishScrimStatusChanged(scrimId, "cancelled", {
+						teamIds: expiredDetail ? getScrimParticipantTeamIdsFromIds(expiredDetail) : undefined,
+						changeType: "status",
+					});
 					return c.json({ error: "This scrim request has expired and has been cancelled." }, 409);
 				} catch (error) {
 					if (error instanceof ScrimWorkflowError) {
@@ -748,15 +758,30 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 		}
 
 		if (action === "accept") {
-			publishScrimStatusChanged(scrimId, detail.status);
+			publishScrimStatusChanged(scrimId, detail.status, {
+				teamIds: getScrimParticipantTeamIdsFromIds(detail),
+				changeType: "status",
+			});
 		} else if (action === "decline" || action === "cancel") {
-			publishScrimStatusChanged(scrimId, detail.status);
+			publishScrimStatusChanged(scrimId, detail.status, {
+				teamIds: getScrimParticipantTeamIdsFromIds(detail),
+				changeType: "status",
+			});
 		} else if (action === "reschedule") {
-			publishScrimStatusChanged(scrimId, detail.status);
+			publishScrimStatusChanged(scrimId, detail.status, {
+				teamIds: getScrimParticipantTeamIdsFromIds(detail),
+				changeType: "status",
+			});
 		} else if (action === "start") {
-			publishScrimStatusChanged(scrimId, detail.status);
+			publishScrimStatusChanged(scrimId, detail.status, {
+				teamIds: getScrimParticipantTeamIdsFromIds(detail),
+				changeType: "status",
+			});
 		} else if (action === "propose_changes") {
-			publishScrimStatusChanged(scrimId, detail.status);
+			publishScrimStatusChanged(scrimId, detail.status, {
+				teamIds: getScrimParticipantTeamIdsFromIds(detail),
+				changeType: "status",
+			});
 		}
 
 		const mapImagesByName = await fetchMapImagesByName(detail.maps.map((m) => m.mapName));

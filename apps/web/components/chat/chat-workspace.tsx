@@ -18,6 +18,15 @@ interface ChatWorkspaceProps {
 	initialConversationId?: string | null;
 }
 
+function getScopedConversations(
+	conversations: ChatConversationSummary[],
+	contextKey: string | undefined
+) {
+	if (!contextKey?.startsWith("team:")) return conversations;
+	const teamId = contextKey.slice("team:".length);
+	return conversations.filter((conversation) => conversation.teamId === teamId);
+}
+
 export function ChatWorkspace({
 	contextKey,
 	currentUserId,
@@ -36,25 +45,26 @@ export function ChatWorkspace({
 	useChatSocket();
 
 	const storeConversations = useChatStore((s) => s.conversations);
-	const list = storeConversations.length > 0 ? storeConversations : conversations;
+	const scopedStoreConversations = getScopedConversations(storeConversations, contextKey);
+	const list = scopedStoreConversations.length > 0 ? scopedStoreConversations : conversations;
 	const selectedConversation = list.find((c) => c.id === selectedConversationId);
 
 	useEffect(() => {
 		const nextSelectedConversationId =
 			initialConversationId &&
-			conversations.some((conversation) => conversation.id === initialConversationId)
+			list.some((conversation) => conversation.id === initialConversationId)
 				? initialConversationId
-				: (conversations[0]?.id ?? null);
+				: (list[0]?.id ?? null);
 
 		if (
 			!selectedConversationId ||
-			!conversations.some((conversation) => conversation.id === selectedConversationId)
+			!list.some((conversation) => conversation.id === selectedConversationId)
 		) {
 			setSelectedConversationId(nextSelectedConversationId);
 		}
-	}, [conversations, initialConversationId, selectedConversationId]);
+	}, [list, initialConversationId, selectedConversationId]);
 
-	if (conversations.length === 0) {
+	if (list.length === 0) {
 		return (
 			<EmptyStateBlock
 				icon={MessageNotification02Icon}
@@ -69,6 +79,7 @@ export function ChatWorkspace({
 		<div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
 			<ConversationSidebar
 				key={contextKey ?? "default"}
+				contextKey={contextKey}
 				initialConversations={conversations}
 				selectedConversationId={selectedConversationId}
 				onSelect={setSelectedConversationId}

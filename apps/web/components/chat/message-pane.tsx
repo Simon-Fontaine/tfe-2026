@@ -92,7 +92,8 @@ export function MessagePane({
 
 	async function handleSend(content: string) {
 		// Optimistic: add a temp message immediately
-		const tempId = `temp-${Date.now()}`;
+		const clientNonce = crypto.randomUUID();
+		const tempId = `temp-${clientNonce}`;
 		const optimisticMessage: ChatMessage = {
 			id: tempId,
 			conversationId,
@@ -105,6 +106,7 @@ export function MessagePane({
 			editedAt: null,
 			deletedAt: null,
 			createdAt: new Date().toISOString(),
+			clientNonce,
 		};
 		appendMessage(conversationId, optimisticMessage);
 
@@ -113,7 +115,7 @@ export function MessagePane({
 				method: "POST",
 				credentials: "include",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ content }),
+				body: JSON.stringify({ content, clientNonce }),
 			});
 			if (!res.ok) {
 				// Remove the optimistic message on failure
