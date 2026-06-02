@@ -124,7 +124,7 @@ Fill every `change_me_*` value. See [`production-env.md`](production-env.md) for
 | `DB_PASSWORD` | `openssl rand -hex 24` |
 | `REDIS_PASSWORD` | `openssl rand -hex 24` |
 | `MINIO_PASSWORD` | `openssl rand -hex 24` |
-| `ENCRYPTION_KEY` | `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | `openssl rand -base64 16` |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | `openssl rand -base64 32` |
 
 ---

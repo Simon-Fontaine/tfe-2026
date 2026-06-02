@@ -26,11 +26,11 @@ Container-internal addresses use Docker service names (`http://api:3001`, `db:54
 | `LOG_LEVEL` | api, app, worker | optional | no | Log verbosity (`info`) |
 | `SMTP_HOST` | api | yes | no | SMTP server hostname |
 | `SMTP_PORT` | api | yes | no | SMTP port (`587`) |
-| `SMTP_SECURE` | api | yes | no | Use TLS immediately (`true`) |
+| `SMTP_SECURE` | api | yes | no | Use implicit TLS immediately. Set `false` for port 587 STARTTLS, `true` for port 465 SMTPS |
 | `SMTP_USER` | api | optional | yes | SMTP username |
 | `SMTP_PASS` | api | optional | yes | SMTP password or token |
 | `SMTP_FROM` | api | yes | no | From address (`noreply@scrimflow.com`) |
-| `ENCRYPTION_KEY` | api | yes | yes | 32-byte hex key for TOTP and recovery code encryption |
+| `ENCRYPTION_KEY` | api | yes | yes | 16-byte key encoded as base64 for TOTP and recovery code encryption |
 | `WEBAUTHN_RP_ID` | api | yes | no | WebAuthn relying party ID (`scrimflow.com`) |
 | `WEBAUTHN_ORIGIN` | api | yes | no | WebAuthn origin (`https://scrimflow.com`) |
 | `S3_ENDPOINT` | api, app, worker | yes | no | Internal MinIO endpoint (`http://storage:9000`) |
