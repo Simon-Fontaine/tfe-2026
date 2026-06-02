@@ -353,6 +353,7 @@ CREATE TABLE "ocr_job" (
 	"submitted_by_user_id" uuid,
 	"screenshot_type" text NOT NULL,
 	"image_url" text NOT NULL,
+	"scrim_map_id" uuid,
 	"status" "ocr_job_status" DEFAULT 'queued' NOT NULL,
 	"progress_stage" text DEFAULT 'queued' NOT NULL,
 	"run_after" timestamp DEFAULT now() NOT NULL,
@@ -768,6 +769,7 @@ ALTER TABLE "moderation_case_event" ADD CONSTRAINT "moderation_case_event_report
 ALTER TABLE "notification" ADD CONSTRAINT "notification_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ocr_job" ADD CONSTRAINT "ocr_job_scrim_id_scrim_id_fk" FOREIGN KEY ("scrim_id") REFERENCES "public"."scrim"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ocr_job" ADD CONSTRAINT "ocr_job_submitted_by_user_id_user_id_fk" FOREIGN KEY ("submitted_by_user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ocr_job" ADD CONSTRAINT "ocr_job_scrim_map_id_scrim_map_id_fk" FOREIGN KEY ("scrim_map_id") REFERENCES "public"."scrim_map"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "onboarding_draft" ADD CONSTRAINT "onboarding_draft_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "org_invite" ADD CONSTRAINT "org_invite_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "org_invite" ADD CONSTRAINT "org_invite_invitee_user_id_user_id_fk" FOREIGN KEY ("invitee_user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -899,6 +901,7 @@ CREATE INDEX "ocr_job_scrim_idx" ON "ocr_job" USING btree ("scrim_id");--> state
 CREATE INDEX "ocr_job_status_idx" ON "ocr_job" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "ocr_job_queue_idx" ON "ocr_job" USING btree ("status","run_after","lease_expires_at");--> statement-breakpoint
 CREATE INDEX "ocr_job_user_idx" ON "ocr_job" USING btree ("submitted_by_user_id");--> statement-breakpoint
+CREATE INDEX "ocr_job_map_idx" ON "ocr_job" USING btree ("scrim_map_id");--> statement-breakpoint
 CREATE INDEX "onboarding_draft_updated_idx" ON "onboarding_draft" USING btree ("updated_at");--> statement-breakpoint
 CREATE INDEX "org_invite_org_idx" ON "org_invite" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "org_invite_invitee_idx" ON "org_invite" USING btree ("invitee_user_id");--> statement-breakpoint

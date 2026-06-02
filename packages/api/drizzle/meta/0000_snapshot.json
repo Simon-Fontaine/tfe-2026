@@ -1,5 +1,5 @@
 {
-  "id": "da10b16a-dd59-4b2e-a6e6-ac582daf676a",
+  "id": "f5f04346-c6fc-465b-b18c-44f77f683cef",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3502,6 +3502,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "scrim_map_id": {
+          "name": "scrim_map_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "ocr_job_status",
@@ -3691,6 +3697,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "ocr_job_map_idx": {
+          "name": "ocr_job_map_idx",
+          "columns": [
+            {
+              "expression": "scrim_map_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3713,6 +3734,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "submitted_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "ocr_job_scrim_map_id_scrim_map_id_fk": {
+          "name": "ocr_job_scrim_map_id_scrim_map_id_fk",
+          "tableFrom": "ocr_job",
+          "tableTo": "scrim_map",
+          "columnsFrom": [
+            "scrim_map_id"
           ],
           "columnsTo": [
             "id"
