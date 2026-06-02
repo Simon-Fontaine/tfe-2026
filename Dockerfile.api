@@ -1,9 +1,8 @@
 # Production Dockerfile for Hono API (Bun runtime)
-# Build context must be the repository root
-# Uses pnpm for dependency installation (matching the monorepo), Bun for runtime
-FROM node:20-alpine AS deps
-
-RUN apk add --no-cache libc6-compat
+# Build context must be the repository root.
+# Use a glibc-based dependency image to match the default oven/bun runtime.
+# Native packages such as @node-rs/argon2 install OS-specific bindings.
+FROM node:20-bookworm-slim AS deps
 
 WORKDIR /app
 

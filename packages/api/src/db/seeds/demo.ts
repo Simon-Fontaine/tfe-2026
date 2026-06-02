@@ -1024,16 +1024,6 @@ async function upsertUpdate(
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
-	const dbUrl = process.env.DATABASE_URL ?? "";
-	if (
-		!dbUrl.includes("localhost") &&
-		!dbUrl.includes("127.0.0.1") &&
-		!dbUrl.includes("host.docker.internal")
-	) {
-		console.error("❌ DATABASE_URL does not appear to point to a local database. Aborting.");
-		process.exit(1);
-	}
-
 	console.log("🌱  Demo seed starting…\n");
 
 	// ── 1. Hash the shared demo password ──────────────────────────────────────
