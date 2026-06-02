@@ -40,7 +40,15 @@ import {
 	hasPersistedScrimResult,
 	replaceScrimDetailedResult,
 } from "./results";
-import { fetchMapImagesByName, findScrimWithRelations, ScrimWorkflowError } from "./shared";
+import {
+	fetchMapImagesByName,
+	findScrimWithRelations,
+	isLockTimeoutError,
+	ScrimWorkflowError,
+	setScrimLockTimeout,
+} from "./shared";
+
+const LOCK_TIMEOUT_RETRY_MESSAGE = "Temporarily unavailable, please try again.";
 
 export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 	scrimRoutes.post("/:id/result", async (c) => {
@@ -212,6 +220,15 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 			resolvedHomeMapScore = derivedSeriesScore.homeMapScore;
 			resolvedAwayMapScore = derivedSeriesScore.awayMapScore;
+		} else if (resolvedHomeMapScore === 0 && resolvedAwayMapScore === 0) {
+			// Series-only reports are allowed, but a 0-0 with no maps is not a result.
+			return c.json(
+				{
+					error:
+						"Enter the maps played or a final series score. A 0-0 result with no maps can't be reported.",
+				},
+				400
+			);
 		}
 
 		const resultStartedAtDate = parsed.output.startedAt
@@ -249,94 +266,102 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 			})),
 		});
 
-		await db.transaction(async (tx) => {
-			await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
+		try {
+			await db.transaction(async (tx) => {
+				await setScrimLockTimeout(tx);
+				await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
 
-			const latestRevision = await tx.query.scrimResultRevisionTable.findFirst({
-				where: eq(scrimResultRevisionTable.scrimId, scrimId),
-				columns: {
-					revisionNumber: true,
-					snapshot: true,
-				},
-				orderBy: [desc(scrimResultRevisionTable.revisionNumber)],
-			});
+				const latestRevision = await tx.query.scrimResultRevisionTable.findFirst({
+					where: eq(scrimResultRevisionTable.scrimId, scrimId),
+					columns: {
+						revisionNumber: true,
+						snapshot: true,
+					},
+					orderBy: [desc(scrimResultRevisionTable.revisionNumber)],
+				});
 
-			const diffBasis: ScrimResultDiffBasis =
-				sourceJobValidatedOutput?.screenshotType === "game_history"
-					? "ocr_job"
-					: latestRevision
-						? "previous_revision"
-						: hasPersistedScrimResult(scrim)
-							? "existing_result"
-							: "manual_baseline";
-			const comparisonSnapshot =
-				sourceJobValidatedOutput?.screenshotType === "game_history"
-					? buildOcrResultSnapshot(sourceJobValidatedOutput as OcrGameHistoryExtractedResult)
-					: latestRevision
-						? (latestRevision.snapshot as ScrimResultRevisionSnapshot)
-						: hasPersistedScrimResult(scrim)
-							? buildPersistedScrimResultSnapshot(scrim)
-							: buildScrimResultSnapshot({
-									homeMapScore: 0,
-									awayMapScore: 0,
-									startedAt: null,
-									endedAt: null,
-									maps: [],
-								});
-			const changeSummary = createScrimResultChangeSummary(
-				diffBasis,
-				comparisonSnapshot,
-				reviewedSnapshot
-			);
+				const diffBasis: ScrimResultDiffBasis =
+					sourceJobValidatedOutput?.screenshotType === "game_history"
+						? "ocr_job"
+						: latestRevision
+							? "previous_revision"
+							: hasPersistedScrimResult(scrim)
+								? "existing_result"
+								: "manual_baseline";
+				const comparisonSnapshot =
+					sourceJobValidatedOutput?.screenshotType === "game_history"
+						? buildOcrResultSnapshot(sourceJobValidatedOutput as OcrGameHistoryExtractedResult)
+						: latestRevision
+							? (latestRevision.snapshot as ScrimResultRevisionSnapshot)
+							: hasPersistedScrimResult(scrim)
+								? buildPersistedScrimResultSnapshot(scrim)
+								: buildScrimResultSnapshot({
+										homeMapScore: 0,
+										awayMapScore: 0,
+										startedAt: null,
+										endedAt: null,
+										maps: [],
+									});
+				const changeSummary = createScrimResultChangeSummary(
+					diffBasis,
+					comparisonSnapshot,
+					reviewedSnapshot
+				);
 
-			await tx
-				.update(scrimTable)
-				.set({
-					homeMapScore: resolvedHomeMapScore,
-					awayMapScore: resolvedAwayMapScore,
+				await tx
+					.update(scrimTable)
+					.set({
+						homeMapScore: resolvedHomeMapScore,
+						awayMapScore: resolvedAwayMapScore,
+						startedAt: resultStartedAtDate,
+						endedAt: resultEndedAtDate,
+						status: "awaiting_confirmation",
+						disputeResolution: null,
+						disputeResolvedByUserId: null,
+						disputeResolvedAt: null,
+						disputeNotes: null,
+					})
+					.where(eq(scrimTable.id, scrimId));
+
+				await replaceScrimDetailedResult(tx, {
+					scrimId,
+					homeTeamId: scrim.homeTeamId,
+					awayTeamId: scrim.awayTeamId,
+					sourceOcrJobId: parsed.output.sourceOcrJobId ?? null,
+					maps: parsed.output.maps ?? [],
+				});
+
+				await tx
+					.update(scrimConfirmationTable)
+					.set({
+						status: "pending",
+						disputeReason: null,
+						confirmedByUserId: null,
+						confirmedAt: null,
+						updatedAt: new Date(),
+					})
+					.where(eq(scrimConfirmationTable.scrimId, scrimId));
+
+				await tx.insert(scrimResultRevisionTable).values({
+					scrimId,
+					revisionNumber: (latestRevision?.revisionNumber ?? 0) + 1,
+					reportingTeamId: parsed.output.reportingTeamId,
+					submittedByUserId: user.id,
+					sourceOcrJobId: parsed.output.sourceOcrJobId ?? null,
+					homeMapScore: reviewedSnapshot.homeMapScore,
+					awayMapScore: reviewedSnapshot.awayMapScore,
 					startedAt: resultStartedAtDate,
 					endedAt: resultEndedAtDate,
-					status: "awaiting_confirmation",
-					disputeResolution: null,
-					disputeResolvedByUserId: null,
-					disputeResolvedAt: null,
-					disputeNotes: null,
-				})
-				.where(eq(scrimTable.id, scrimId));
-
-			await replaceScrimDetailedResult(tx, {
-				scrimId,
-				homeTeamId: scrim.homeTeamId,
-				awayTeamId: scrim.awayTeamId,
-				sourceOcrJobId: parsed.output.sourceOcrJobId ?? null,
-				maps: parsed.output.maps ?? [],
+					snapshot: reviewedSnapshot,
+					changeSummary,
+				});
 			});
-
-			await tx
-				.update(scrimConfirmationTable)
-				.set({
-					status: "pending",
-					disputeReason: null,
-					confirmedByUserId: null,
-					confirmedAt: null,
-					updatedAt: new Date(),
-				})
-				.where(eq(scrimConfirmationTable.scrimId, scrimId));
-
-			await tx.insert(scrimResultRevisionTable).values({
-				scrimId,
-				revisionNumber: (latestRevision?.revisionNumber ?? 0) + 1,
-				reportingTeamId: parsed.output.reportingTeamId,
-				submittedByUserId: user.id,
-				sourceOcrJobId: parsed.output.sourceOcrJobId ?? null,
-				homeMapScore: reviewedSnapshot.homeMapScore,
-				awayMapScore: reviewedSnapshot.awayMapScore,
-				startedAt: resultStartedAtDate,
-				endedAt: resultEndedAtDate,
-				snapshot: reviewedSnapshot,
-				changeSummary,
-			});
-		});
+		} catch (error) {
+			if (isLockTimeoutError(error)) {
+				return c.json({ error: LOCK_TIMEOUT_RETRY_MESSAGE }, 503);
+			}
+			throw error;
+		}
 
 		const detail = await findScrimWithRelations(scrimId);
 		if (!detail) return c.json({ error: "Scrim not found after result submission." }, 500);
@@ -395,6 +420,7 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 			await db.transaction(async (tx) => {
 				const now = new Date();
 
+				await setScrimLockTimeout(tx);
 				await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
 
 				const lockedScrim = await tx.query.scrimTable.findFirst({
@@ -444,7 +470,9 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 			if (error instanceof ScrimWorkflowError) {
 				return c.json({ error: error.message }, { status: error.status as 400 | 404 });
 			}
-
+			if (isLockTimeoutError(error)) {
+				return c.json({ error: LOCK_TIMEOUT_RETRY_MESSAGE }, 503);
+			}
 			throw error;
 		}
 
@@ -520,6 +548,7 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 		try {
 			await db.transaction(async (tx) => {
+				await setScrimLockTimeout(tx);
 				await tx.execute(sql`select id from scrim where id = ${scrimId} for update`);
 
 				const lockedScrim = await tx.query.scrimTable.findFirst({
@@ -547,6 +576,9 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 		} catch (error) {
 			if (error instanceof ScrimWorkflowError) {
 				return c.json({ error: error.message }, { status: error.status as 400 | 404 | 409 });
+			}
+			if (isLockTimeoutError(error)) {
+				return c.json({ error: LOCK_TIMEOUT_RETRY_MESSAGE }, 503);
 			}
 			throw error;
 		}

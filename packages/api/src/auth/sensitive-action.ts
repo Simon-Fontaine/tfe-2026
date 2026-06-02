@@ -3,8 +3,6 @@ import { generateNumericCode, timingSafeCompare } from "@/crypto/utils";
 import { db } from "@/db";
 import { sensitiveActionVerificationTable } from "@/db/schema";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export type VerificationAction = (typeof sensitiveActionVerificationTable.$inferInsert)["action"];
 
 export interface VerificationResult {
@@ -17,8 +15,6 @@ export interface VerificationFailure {
 }
 
 const EXPIRY_MS = 1_000 * 60 * 15; // 15 minutes
-
-// ─── Create ──────────────────────────────────────────────────────────────────
 
 /**
  * Creates (or replaces) a sensitive action verification record.
@@ -56,8 +52,6 @@ export async function createSensitiveActionVerification(
 	return code;
 }
 
-// ─── Validate & consume ───────────────────────────────────────────────────────
-
 /**
  * Verifies the code against the active pending record.
  * On success, marks the record as verified and returns its metadata.
@@ -94,8 +88,6 @@ export async function validateAndConsumeSensitiveAction(
 
 	return { success: true, metadata: record.metadata ?? null };
 }
-
-// ─── Cleanup ─────────────────────────────────────────────────────────────────
 
 /** Deletes all verification records for a user+action. */
 export async function deleteSensitiveActionVerification(

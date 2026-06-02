@@ -20,8 +20,6 @@ const PARTICIPATION_INTENT_VALUES = [
 ] as const;
 const AVAILABILITY_INTENT_VALUES = ["weekdays", "weekends", "flexible", "not_sure"] as const;
 
-// ─── Step 1: BattleTag ────────────────────────────────────────────────────────
-
 export const BattletagSchema = v.object({
 	battletag: v.pipe(
 		v.string(),
@@ -33,8 +31,6 @@ export const BattletagSchema = v.object({
 });
 
 export type BattletagInput = v.InferOutput<typeof BattletagSchema>;
-
-// ─── Step 2: Roles & Rank ─────────────────────────────────────────────────────
 
 export const RolesAndRankSchema = v.pipe(
 	v.object({
@@ -70,15 +66,11 @@ export const RolesAndRankSchema = v.pipe(
 
 export type RolesAndRankInput = v.InferOutput<typeof RolesAndRankSchema>;
 
-// ─── Step 3: Hero Pool ────────────────────────────────────────────────────────
-
 export const HeroPoolSchema = v.object({
 	heroPool: v.pipe(v.array(v.string()), v.minLength(1, "Please select at least one hero")),
 });
 
 export type HeroPoolInput = v.InferOutput<typeof HeroPoolSchema>;
-
-// ─── Step 4: Intent ───────────────────────────────────────────────────────────
 
 export const IntentSchema = v.object({
 	participationIntent: v.picklist(PARTICIPATION_INTENT_VALUES, "Please select what you want to do"),
@@ -86,8 +78,6 @@ export const IntentSchema = v.object({
 });
 
 export type IntentInput = v.InferOutput<typeof IntentSchema>;
-
-// ─── Draft progress ──────────────────────────────────────────────────────────
 
 const DraftBattletagSchema = v.optional(BattletagSchema.entries.battletag);
 const DraftRoleSchema = v.optional(v.nullable(v.picklist(OW2_ROLE_VALUES)));
@@ -149,8 +139,6 @@ export const OnboardingDraftSchema = v.pipe(
 );
 
 export type OnboardingDraftInput = v.InferOutput<typeof OnboardingDraftSchema>;
-
-// ─── Combined (server-side) ───────────────────────────────────────────────────
 
 export const CreatePlayerProfileSchema = v.pipe(
 	v.object({

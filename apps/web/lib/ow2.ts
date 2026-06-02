@@ -1,5 +1,3 @@
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export type OW2Role = "tank" | "damage" | "support";
 
 export type OW2Rank =
@@ -11,8 +9,6 @@ export type OW2Rank =
 	| "master"
 	| "grandmaster"
 	| "champion";
-
-// ─── Roles ────────────────────────────────────────────────────────────────────
 
 export interface RoleMeta {
 	id: OW2Role;
@@ -60,8 +56,6 @@ export const ROLE_META = Object.fromEntries(ROLES.map((r) => [r.id, r])) as Reco
 	OW2Role,
 	RoleMeta
 >;
-
-// ─── Ranks ────────────────────────────────────────────────────────────────────
 
 export interface RankMeta {
 	id: OW2Rank;

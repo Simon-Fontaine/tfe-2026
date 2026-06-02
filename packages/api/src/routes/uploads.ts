@@ -223,8 +223,6 @@ uploadRoutes.post("/scrim-evidence/finalize", async (c) => {
 	});
 });
 
-// ─── Avatar ──────────────────────────────────────────────────────────────────
-
 // POST /avatar — Upload avatar
 uploadRoutes.post("/avatar", async (c) => {
 	const user = c.get("user");
@@ -276,8 +274,6 @@ uploadRoutes.delete("/avatar", async (c) => {
 
 	return c.json({ success: true });
 });
-
-// ─── Banner ──────────────────────────────────────────────────────────────────
 
 // POST /banner — Upload banner
 uploadRoutes.post("/banner", async (c) => {

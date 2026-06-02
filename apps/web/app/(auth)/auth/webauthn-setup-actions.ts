@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { apiAuthPost, apiGet } from "@/lib/api-client";
 import { apiRoutes, appRoutes } from "@/lib/routes";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
 interface SetupResult {
 	error?: string;
 	success?: boolean;
@@ -17,15 +15,11 @@ export interface CredentialInfo {
 	createdAt?: string;
 }
 
-// ─── Registration challenge ─────────────────────────────────────────────────
-
 export async function createRegistrationChallengeAction(): Promise<string> {
 	const res = await apiAuthPost<{ challenge: string }>(apiRoutes.auth.credentials.challenge);
 	if ("error" in res) throw new Error(res.error);
 	return res.challenge;
 }
-
-// ─── Passkey registration ──────────────────────────────────────────────────────
 
 export async function registerPasskeyAction(
 	encodedData: string,
@@ -41,8 +35,6 @@ export async function registerPasskeyAction(
 	return { success: true, ...(res.recoveryCode ? { recoveryCode: res.recoveryCode } : {}) };
 }
 
-// ─── Security key registration ─────────────────────────────────────────────────
-
 export async function registerSecurityKeyAction(
 	encodedData: string,
 	name: string
@@ -56,8 +48,6 @@ export async function registerSecurityKeyAction(
 	revalidatePath(appRoutes.settings.security);
 	return { success: true, ...(res.recoveryCode ? { recoveryCode: res.recoveryCode } : {}) };
 }
-
-// ─── List credentials ──────────────────────────────────────────────────────────
 
 export async function listPasskeysAction(): Promise<CredentialInfo[]> {
 	const res = await apiGet<CredentialInfo[]>(apiRoutes.auth.credentials.passkeys);

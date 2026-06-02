@@ -68,11 +68,9 @@ interface CreateNotificationInput {
 	referenceType?: string;
 	referenceId?: string;
 	/**
-	 * Controls conflict handling on the dedup index.
-	 * - undefined / omitted: `onConflictDoNothing` — duplicate silently discarded
-	 * - 'refresh': `onConflictDoUpdate` bumping `createdAt` — use for resend flows
-	 * - 'always-insert': no conflict clause — use when the same referenceId spans
-	 *   multiple semantically distinct events (e.g. ownership workflow transitions)
+	 * Dedup-index conflict handling: omitted = discard duplicate; 'refresh' = bump
+	 * `createdAt` (resend flows); 'always-insert' = no conflict clause, for when one
+	 * referenceId spans distinct events (e.g. ownership workflow transitions).
 	 */
 	conflictBehavior?: "refresh" | "always-insert";
 }

@@ -1,7 +1,5 @@
 import { create } from "zustand";
 
-// ─── Step definitions ──────────────────────────────────────────────────────────
-
 export type AuthStep =
 	| "login"
 	| "register"
@@ -13,8 +11,6 @@ export type AuthStep =
 	| "recovery-code"
 	| "reset-password";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export interface TwoFactorMethods {
 	totp: boolean;
 	passkey: boolean;
@@ -23,8 +19,6 @@ export interface TwoFactorMethods {
 	passkeyCredentialIds?: string[];
 	securityKeyCredentialIds?: string[];
 }
-
-// ─── State ───────────────────────────────────────────────────────────────────
 
 interface TransitionOpts {
 	email?: string;
@@ -48,8 +42,6 @@ interface AuthFlowState {
 	goToRegister: () => void;
 	goToForgotPassword: () => void;
 }
-
-// ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useAuthFlow = create<AuthFlowState>((set) => ({
 	step: "login",

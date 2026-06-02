@@ -7,7 +7,6 @@ import {
 	domainAuditActorTypeEnum,
 	domainAuditDomainEnum,
 } from "./enums";
-// ============================================================================
 // AUDIT LOG — Immutable security event trail
 
 /**
@@ -54,7 +53,6 @@ export const auditLogTable = pgTable(
 	]
 );
 
-// ============================================================================
 // DOMAIN AUDIT EVENT — Cross-domain governance trail (append-only)
 
 export const domainAuditEventTable = pgTable(

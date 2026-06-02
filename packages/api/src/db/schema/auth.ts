@@ -13,7 +13,6 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { sessionRevocationReasonEnum, verificationActionEnum } from "./enums";
-// ============================================================================
 // AUTH — Identity, sessions, credentials, devices, audit
 
 /**
@@ -272,7 +271,6 @@ export const securityKeyCredentialTable = pgTable(
 	(table) => [index("security_key_user_idx").on(table.userId)]
 );
 
-// ============================================================================
 // USER DEVICES — Known device registry for security alerts
 
 /**
@@ -334,7 +332,6 @@ export const userDeviceTable = pgTable(
 	]
 );
 
-// ============================================================================
 // VERIFICATION TABLES — Email change, account deletion, sensitive actions
 
 /**

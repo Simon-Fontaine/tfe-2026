@@ -5,8 +5,6 @@ import { apiRoutes } from "@/lib/routes";
 
 export type { DiscoveryFilters, DiscoveryTeam };
 
-// ─── Queries ───────────────────────────────────────────────────────────────────
-
 export const getTeamsForDiscovery = cache(
 	async (filters: DiscoveryFilters = {}): Promise<DiscoveryTeam[]> => {
 		const params = new URLSearchParams();

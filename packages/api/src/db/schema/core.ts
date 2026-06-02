@@ -47,9 +47,7 @@ import {
 	updateScopeEnum,
 	updateVisibilityEnum,
 } from "./enums";
-// ============================================================================
 // PLAYER PROFILE — Extends auth user with Overwatch 2-specific data
-// ============================================================================
 
 /**
  * OW2-specific profile data, one-to-one with `userTable`. Separated from auth
@@ -111,9 +109,7 @@ export const playerProfileTable = pgTable(
 	]
 );
 
-// ============================================================================
 // ONBOARDING DRAFT — Server-backed progress before profile completion
-// ============================================================================
 
 type OnboardingDraftData = {
 	battletag?: string;
@@ -157,9 +153,7 @@ export const onboardingDraftTable = pgTable(
 	(table) => [index("onboarding_draft_updated_idx").on(table.updatedAt)]
 );
 
-// ============================================================================
 // HERO REGISTRY — Overwatch 2 hero catalogue
-// ============================================================================
 
 /**
  * Authoritative list of OW2 heroes. The `id` is a stable kebab-case slug
@@ -188,9 +182,7 @@ export const heroTable = pgTable(
 	(table) => [index("hero_role_idx").on(table.role), index("hero_active_idx").on(table.isActive)]
 );
 
-// ============================================================================
 // MAP REGISTRY — Overwatch 2 map catalogue
-// ============================================================================
 
 /**
  * Authoritative list of OW2 maps. `id` is a stable kebab-case slug stored in
@@ -216,9 +208,7 @@ export const mapTable = pgTable(
 	(table) => [index("map_type_idx").on(table.mapType), index("map_active_idx").on(table.isActive)]
 );
 
-// ============================================================================
 // PLAYER HERO POOL — Junction between players and their preferred heroes
-// ============================================================================
 
 /**
  * Relational hero pool: one row per hero a player has selected.
@@ -242,9 +232,7 @@ export const playerHeroTable = pgTable(
 	]
 );
 
-// ============================================================================
 // PLAYER MAP POOL — Junction between players and their preferred maps
-// ============================================================================
 
 /**
  * Relational map pool: one row per map a player has selected as preferred.
@@ -267,9 +255,7 @@ export const playerMapTable = pgTable(
 	]
 );
 
-// ============================================================================
 // ORGANIZATIONS — Multi-tenant root entity
-// ============================================================================
 
 /**
  * Multi-tenant root entity that owns one or more teams. `slug` is the
@@ -321,9 +307,7 @@ export const organizationTable = pgTable(
 	]
 );
 
-// ============================================================================
 // ORGANIZATION MEMBERS — RBAC bridge between users and organizations
-// ============================================================================
 
 /**
  * RBAC bridge between users and organizations. A user may belong to multiple
@@ -356,9 +340,7 @@ export const organizationMemberTable = pgTable(
 	]
 );
 
-// ============================================================================
 // TEAMS — A roster within an organization
-// ============================================================================
 
 /**
  * A competitive roster owned by an organization. `rating` is a composite rating
@@ -422,9 +404,7 @@ export const teamTable = pgTable(
 	]
 );
 
-// ============================================================================
 // TEAM ROSTER — Many-to-many between teams and players
-// ============================================================================
 
 /**
  * Many-to-many between teams and players. A player may be on multiple teams
@@ -594,9 +574,7 @@ export const ownershipWorkflowEventTable = pgTable(
 	]
 );
 
-// ============================================================================
 // RECRUITMENT LISTINGS
-// ============================================================================
 
 /**
  * Recruitment listings. Team-owned listings set `teamId`; player-owned listings
@@ -728,9 +706,7 @@ export const recruitmentApplicationTable = pgTable(
 	]
 );
 
-// ============================================================================
 // UPDATES — Team and organization announcements
-// ============================================================================
 
 /**
  * Team and organization announcements published into workspace and public feeds.
@@ -774,9 +750,7 @@ export const updatePostTable = pgTable(
 	]
 );
 
-// ============================================================================
 // AVAILABILITY — Player scheduling windows for auto-suggesting scrim times
-// ============================================================================
 
 /**
  * Recurring or one-off availability windows for scheduling scrims.
@@ -829,9 +803,7 @@ export const availabilityTable = pgTable(
 	]
 );
 
-// ============================================================================
 // SCRIMS — The match entity between two teams
-// ============================================================================
 
 /**
  * A scrim between two teams. `homeTeamId` is the requester; `awayTeamId` is
@@ -933,9 +905,7 @@ export const scrimTable = pgTable(
 	]
 );
 
-// ============================================================================
 // SCRIM CONFIRMATIONS — Both teams must confirm before ratings are updated
-// ============================================================================
 
 /**
  * Post-scrim result confirmation. One row per team per scrim. Both teams must
@@ -975,9 +945,7 @@ export const scrimConfirmationTable = pgTable(
 	]
 );
 
-// ============================================================================
 // SCRIM RESULT REVISIONS — Immutable reviewed result history
-// ============================================================================
 
 type ScrimResultRevisionJsonValue =
 	| string
@@ -1077,9 +1045,7 @@ export const scrimResultRevisionTable = pgTable(
 	]
 );
 
-// ============================================================================
 // SCRIM NEGOTIATION REVISIONS — Append-only log of negotiation actions
-// ============================================================================
 
 export const scrimNegotiationRevisionTable = pgTable(
 	"scrim_negotiation_revision",
@@ -1115,9 +1081,7 @@ export const scrimNegotiationRevisionTable = pgTable(
 	]
 );
 
-// ============================================================================
 // SCRIM MAPS — Per-map results within a scrim (matches the OCR "matches" output)
-// ============================================================================
 
 /**
  * One row per map played within a scrim. `result` is from the home team's
@@ -1173,9 +1137,7 @@ export const scrimMapTable = pgTable(
 	]
 );
 
-// ============================================================================
 // SCRIM PLAYER STATS — Per-player per-map stats (matches OCR "teams.players" output)
-// ============================================================================
 
 /**
  * Full stat line per player per map, sourced from OCR output. `userId` is
@@ -1231,9 +1193,7 @@ export const scrimPlayerStatTable = pgTable(
 	]
 );
 
-// ============================================================================
 // TEAM RATING EVENTS — Audit trail for team rating changes
-// ============================================================================
 
 /**
  * Immutable team rating change log keyed to scrims. One row per team per rated
@@ -1265,9 +1225,7 @@ export const teamRatingEventTable = pgTable(
 	]
 );
 
-// ============================================================================
 // OCR JOBS — Async processing pipeline tracking
-// ============================================================================
 
 /**
  * Lifecycle tracker for each screenshot submitted for AI/OCR processing.
@@ -1337,9 +1295,7 @@ export const ocrJobTable = pgTable(
 	]
 );
 
-// ============================================================================
 // NOTIFICATIONS — Async notification queue
-// ============================================================================
 
 export const notificationTable = pgTable(
 	"notification",
@@ -1374,9 +1330,7 @@ export const notificationTable = pgTable(
 	]
 );
 
-// ============================================================================
 // MESSAGING — Channel-based chat system
-// ============================================================================
 
 /**
  * Conversation container with typed context. Five channel types drive different
@@ -1469,9 +1423,7 @@ export const chatChannelMemberTable = pgTable(
 	]
 );
 
-// ============================================================================
 // TEAM INVITES — Direct invitations from managers to players
-// ============================================================================
 
 /**
  * A direct invitation from a team manager to a user. Distinct from recruitment
@@ -1518,9 +1470,7 @@ export const teamInviteTable = pgTable(
 	]
 );
 
-// ============================================================================
 // ORG INVITES — Direct invitations from org managers to users
-// ============================================================================
 
 /**
  * A direct invitation from an org owner/manager to a user.
@@ -1566,9 +1516,7 @@ export const orgInviteTable = pgTable(
 	]
 );
 
-// ============================================================================
 // MESSAGING — Channel-based chat system
-// ============================================================================
 
 /**
  * Append-only chat messages. Edits update `content` and set `editedAt`.
@@ -1589,6 +1537,9 @@ export const chatMessageTable = pgTable(
 
 		/** Quote-reply parent message. */
 		replyToMessageId: uuid("reply_to_message_id"),
+
+		/** Client-supplied idempotency token; dedupes retried sends from the same sender. */
+		clientNonce: text("client_nonce"),
 
 		/** Single attachment URL. */
 		attachmentUrl: text("attachment_url"),
@@ -1615,6 +1566,10 @@ export const chatMessageTable = pgTable(
 		index("chat_message_sender_idx").on(table.senderId),
 		// Thread view: "all replies to this message"
 		index("chat_message_reply_idx").on(table.replyToMessageId),
+		// Idempotency: a (sender, nonce) pair maps to at most one message per channel.
+		uniqueIndex("chat_message_client_nonce_unique_idx")
+			.on(table.channelId, table.senderId, table.clientNonce)
+			.where(sql`${table.clientNonce} is not null`),
 	]
 );
 
@@ -1643,9 +1598,7 @@ export const chatMessageReadTable = pgTable(
 	]
 );
 
-// ============================================================================
 // USER REPORTS — User-submitted trust and safety reports
-// ============================================================================
 
 export const userReportTable = pgTable(
 	"user_report",
@@ -1693,9 +1646,7 @@ export const userReportSupplementTable = pgTable(
 	(table) => [index("user_report_supplement_report_idx").on(table.reportId)]
 );
 
-// ============================================================================
 // MODERATION CASE EVENTS — Append-only audit trail for moderator case activity
-// ============================================================================
 
 export const moderationCaseEventTable = pgTable(
 	"moderation_case_event",
@@ -1718,9 +1669,7 @@ export const moderationCaseEventTable = pgTable(
 	]
 );
 
-// ============================================================================
 // MODERATION ACTIONS — Enforcement records for moderator decisions
-// ============================================================================
 
 export const moderationActionTable = pgTable(
 	"moderation_action",

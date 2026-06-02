@@ -143,20 +143,18 @@ export async function resolveAndCreateSession(
 ): Promise<ActionResult> {
 	const client = c.get("client");
 
-	const [geo, { deviceId }] = await Promise.all([
-		fetchGeoData(client.ip),
-		resolveDevice(
-			userId,
-			client.fingerprint,
-			client.deviceName,
-			client.browserName,
-			client.osName,
-			client.deviceType,
-			client.ip,
-			null,
-			null
-		),
-	]);
+	const geo = await fetchGeoData(client.ip);
+	const { deviceId } = await resolveDevice(
+		userId,
+		client.fingerprint,
+		client.deviceName,
+		client.browserName,
+		client.osName,
+		client.deviceType,
+		client.ip,
+		geo.country,
+		geo.city
+	);
 
 	const twoFactor = await getUserTwoFactorStatus(userId);
 

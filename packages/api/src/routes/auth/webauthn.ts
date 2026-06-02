@@ -6,9 +6,11 @@ import {
 	parseClientDataJSON,
 } from "@oslojs/webauthn";
 import { rateLimits } from "@scrimflow/shared";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { writeAuditLog } from "@/auth/audit";
-import { resolveDevice } from "@/auth/device";
+import { isKnownLocation, resolveDevice } from "@/auth/device";
+import { sendNewLoginAlert } from "@/auth/email-security";
 import { createSession, generateSessionToken, setSessionAs2FAVerified } from "@/auth/session";
 import {
 	createWebAuthnChallenge,
@@ -21,14 +23,14 @@ import {
 	verifyWebAuthnSignature,
 	type WebAuthnUserCredential,
 } from "@/auth/webauthn";
+import { db } from "@/db";
+import { userTable } from "@/db/schema";
 import { type AuthEnv, requireAuth } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { fetchGeoData } from "@/utils/geo";
 
 import { safeRedirectUrl, setSessionCookie } from "./utils";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AssertionData {
 	credentialId: string;
@@ -45,12 +47,8 @@ interface VerifyResult {
 	error?: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const RP_ID = process.env.WEBAUTHN_RP_ID ?? "localhost";
 const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:3000";
-
-// ─── Shared verification ──────────────────────────────────────────────────────
 
 async function verifyAssertion(
 	credential: WebAuthnUserCredential | null,
@@ -96,8 +94,6 @@ async function verifyAssertion(
 	return { _signCount: newSignCount };
 }
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
-
 const webauthnRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
 // POST /challenge — Generate WebAuthn assertion challenge
@@ -140,9 +136,18 @@ webauthnRoutes.post("/passkey/verify", requireAuth, async (c) => {
 	}
 
 	const client = c.get("client");
-	writeAuditLog(session.userId, "login_success", client.ip, client.userAgent, null, null, {
-		method: "passkey",
-	});
+	const geo = await fetchGeoData(client.ip);
+	writeAuditLog(
+		session.userId,
+		"login_success",
+		client.ip,
+		client.userAgent,
+		geo.country,
+		geo.city,
+		{
+			method: "passkey",
+		}
+	);
 
 	return c.json({ redirect: safeRedirectUrl(body.next) });
 });
@@ -181,9 +186,16 @@ webauthnRoutes.post("/security-key/verify", requireAuth, async (c) => {
 	}
 
 	const client = c.get("client");
-	writeAuditLog(session.userId, "login_success", client.ip, client.userAgent, null, null, {
-		method: "security_key",
-	});
+	const geo = await fetchGeoData(client.ip);
+	writeAuditLog(
+		session.userId,
+		"login_success",
+		client.ip,
+		client.userAgent,
+		geo.country,
+		geo.city,
+		{ method: "security_key" }
+	);
 
 	return c.json({ redirect: safeRedirectUrl(body.next) });
 });
@@ -265,10 +277,19 @@ webauthnRoutes.post("/passkey/login", async (c) => {
 	);
 	if (!signatureValid) return c.json({ error: "Signature verification failed." }, 400);
 
+	const user = await db.query.userTable.findFirst({
+		where: eq(userTable.id, credential.userId),
+		columns: { id: true, email: true, isBanned: true, banReason: true },
+	});
+	if (!user) return c.json({ error: "User not found." }, 404);
+	if (user.isBanned) {
+		return c.json({ error: user.banReason ?? "Your account has been suspended." }, 403);
+	}
+
 	await updatePasskeySignCount(credential.userId, credentialId, newSignCount);
 
-	const [geo, { deviceId }] = await Promise.all([
-		fetchGeoData(client.ip),
+	const geo = await fetchGeoData(client.ip);
+	const [{ deviceId, isNew: isNewDevice }, locationKnown] = await Promise.all([
 		resolveDevice(
 			credential.userId,
 			client.fingerprint,
@@ -277,10 +298,16 @@ webauthnRoutes.post("/passkey/login", async (c) => {
 			client.osName,
 			client.deviceType,
 			client.ip,
-			null,
-			null
+			geo.country,
+			geo.city
 		),
+		isKnownLocation(credential.userId, geo.country),
 	]);
+	const isNewLocation = !locationKnown;
+
+	if (isNewDevice || isNewLocation) {
+		sendNewLoginAlert({ user, client, geo, isNewDevice });
+	}
 
 	const token = generateSessionToken();
 	const session = await createSession(

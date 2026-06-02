@@ -1,6 +1,5 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-// ============================================================================
 // ENUMS
 
 /** Overwatch 2 in-game roles. */

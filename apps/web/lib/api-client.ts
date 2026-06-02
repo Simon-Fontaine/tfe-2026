@@ -5,8 +5,6 @@ import { cookies, headers } from "next/headers";
 
 const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
 type ApiSuccess<T> = { data: T };
 type ApiMutationSuccess = { success: true };
 type ApiError = {
@@ -26,8 +24,6 @@ const API_UNAVAILABLE_ERROR = "Unable to reach the API server.";
 const API_TIMEOUT_ERROR = "The request to the API timed out.";
 const API_ABORTED_ERROR = "The request was canceled.";
 
-// ─── Cookie forwarding ─────────────────────────────────────────────────────
-
 async function authHeaders(): Promise<Record<string, string>> {
 	const cookieStore = await cookies();
 	const incomingHeaders = await headers();
@@ -35,9 +31,9 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 	for (const name of [
 		"user-agent",
+		"cf-connecting-ip",
 		"x-forwarded-for",
 		"x-real-ip",
-		"cf-connecting-ip",
 		"x-forwarded-proto",
 		"x-forwarded-host",
 	] as const) {
@@ -134,8 +130,6 @@ async function fetchApi(path: string, init?: FetchApiInit): Promise<Response | A
 	}
 }
 
-// ─── GET ────────────────────────────────────────────────────────────────────
-
 export async function apiGet<T>(
 	path: string,
 	options?: { cache?: RequestCache; revalidate?: number }
@@ -159,8 +153,6 @@ export async function apiGet<T>(
 
 	return res.json();
 }
-
-// ─── POST / PATCH / DELETE with JSON body ───────────────────────────────────
 
 export async function apiPost<T = unknown>(
 	path: string,
@@ -205,8 +197,6 @@ async function apiMutate<T = unknown>(
 
 	return json as ApiMutationSuccess & T;
 }
-
-// ─── Auth mutations (forwards Set-Cookie from API to browser) ───────────────
 
 async function forwardSetCookieHeaders(res: Response): Promise<void> {
 	const setCookieHeaders = res.headers.getSetCookie();
@@ -289,8 +279,6 @@ export async function apiAuthDelete<T = unknown>(
 
 	return json as ApiMutationSuccess & T;
 }
-
-// ─── FormData proxy (for file uploads) ──────────────────────────────────────
 
 export async function apiPostFormData<T = unknown>(
 	path: string,

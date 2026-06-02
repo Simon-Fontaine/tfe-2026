@@ -5,8 +5,6 @@ import redis from "@/db/redis";
 import { passkeyCredentialTable, securityKeyCredentialTable } from "@/db/schema";
 import logger from "@/utils/logger";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export interface WebAuthnUserCredential {
 	id: Uint8Array;
 	userId: string;
@@ -35,8 +33,6 @@ function rowToCredential(row: CredentialRow): WebAuthnUserCredential {
 		signCount: row.signCount,
 	};
 }
-
-// ─── Challenge management ──────────────────────────────────────────────────────
 
 const CHALLENGE_TTL_SECONDS = 5 * 60; // 5 minutes
 const CHALLENGE_TTL_MS = CHALLENGE_TTL_SECONDS * 1000;
@@ -89,8 +85,6 @@ export async function createWebAuthnChallenge(): Promise<Uint8Array> {
 export async function verifyWebAuthnChallenge(challenge: Uint8Array): Promise<boolean> {
 	return consumeChallenge(encodeHexLowerCase(challenge));
 }
-
-// ─── Passkey credential operations ─────────────────────────────────────────────
 
 export async function getUserPasskeyCredentials(userId: string): Promise<WebAuthnUserCredential[]> {
 	const rows = await db
@@ -174,8 +168,6 @@ export async function updatePasskeySignCount(
 		);
 }
 
-// ─── Security key credential operations ────────────────────────────────────────
-
 export async function getUserSecurityKeyCredentials(
 	userId: string
 ): Promise<WebAuthnUserCredential[]> {
@@ -248,8 +240,6 @@ export async function updateSecurityKeySignCount(
 			)
 		);
 }
-
-// ─── Signature verification ────────────────────────────────────────────────────
 
 const COSE_ALG_ES256 = -7;
 const COSE_ALG_RS256 = -257;
@@ -400,8 +390,6 @@ async function verifyRS256(
 function uint8ToBase64Url(bytes: Uint8Array): string {
 	return Buffer.from(bytes).toString("base64url");
 }
-
-// ─── Minimal CBOR decoder for COSE key maps ──────────────────────────────────
 
 /**
  * Decodes a COSE key map from raw CBOR bytes.

@@ -95,18 +95,38 @@ registerRoutes.post("/", async (c) => {
 		return c.json({ error: "Registration failed. Please try again." } satisfies ActionResult, 500);
 
 	const code = await createEmailVerificationRequest(newUser.id, newUser.email, client.ip);
-	await sendMail({
-		to: newUser.email,
-		subject: "Verify your Scrimflow account",
-		template: (
-			<VerificationEmail
-				code={code}
-				title="Verify your email address"
-				message="Welcome to Scrimflow! Please verify your email address to complete your registration."
-				actionText="enter the following code"
-			/>
-		),
-	}).catch((err: unknown) => logger.error({ err }, "registration email send failed"));
+	try {
+		await sendMail({
+			to: newUser.email,
+			subject: "Verify your Scrimflow account",
+			template: (
+				<VerificationEmail
+					code={code}
+					title="Verify your email address"
+					message="Welcome to Scrimflow! Please verify your email address to complete your registration."
+					actionText="enter the following code"
+				/>
+			),
+		});
+	} catch (err) {
+		logger.error({ err }, "registration email send failed");
+		await db
+			.delete(userTable)
+			.where(eq(userTable.id, newUser.id))
+			.catch((deleteErr: unknown) =>
+				logger.error(
+					{ err: deleteErr, userId: newUser.id },
+					"failed to roll back user after registration email failure"
+				)
+			);
+		return c.json(
+			{
+				error:
+					"We couldn't send the verification email. Please try again in a moment or contact support.",
+			} satisfies ActionResult,
+			502
+		);
+	}
 
 	writeAuditLog(newUser.id, "signup", client.ip, client.userAgent, null, null);
 	setPendingCookie(c, newUser.id);

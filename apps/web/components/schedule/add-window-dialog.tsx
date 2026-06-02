@@ -18,8 +18,6 @@ import { useFormAction } from "@/hooks/use-form-action";
 import { COMMON_TIMEZONES, DAYS, formatWindowTitle } from "@/lib/schedule/constants";
 import { cn } from "@/lib/utils";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function buildDefaults(
 	type: "recurring" | "one_off",
 	day: number | null,
@@ -36,8 +34,6 @@ function buildDefaults(
 		label: "",
 	};
 }
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 interface AddWindowDialogProps {
 	open: boolean;

@@ -18,8 +18,6 @@ import type { PlayerProfileFull } from "@/lib/data/player";
 import { RANKS, ROLES } from "@/lib/ow2";
 import { cn } from "@/lib/utils";
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 const VISIBILITY_OPTIONS = [
 	{ value: "public", label: "Public", description: "Visible on public player pages" },
 	{ value: "teams_only", label: "Teams only", description: "Hidden from public discovery" },

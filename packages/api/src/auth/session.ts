@@ -6,13 +6,9 @@ import { db } from "@/db";
 import { type sessionRevocationReasonEnum, sessionTable, userTable } from "@/db/schema";
 import { getUserTwoFactorStatus } from "./2fa";
 
-// ─── Constants ─────────────────────────────────────────────────────────────────
-
 const SESSION_DURATION_MS = 1_000 * 60 * 60 * 24 * 30; // 30 days
 const SESSION_RENEWAL_THRESHOLD_MS = 1_000 * 60 * 60 * 24 * 15;
 const LAST_ACTIVE_THROTTLE_MS = 1_000 * 60 * 5;
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type RevocationReason = (typeof sessionRevocationReasonEnum.enumValues)[number];
 
@@ -63,14 +59,10 @@ export type SessionSocketValidationResult =
 	| { valid: true }
 	| { valid: false; reason: RealtimeSessionInvalidationReason };
 
-// ─── Internal helpers ────────────────────────────────────────────────────────
-
 /** Hash token to session ID. */
 export function tokenToSessionId(token: string): string {
 	return encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 }
-
-// ─── Token + session creation ────────────────────────────────────────────────
 
 export function generateSessionToken(): string {
 	const bytes = new Uint8Array(20);
@@ -107,8 +99,6 @@ export async function createSession(
 
 	return session;
 }
-
-// ─── Session validation ──────────────────────────────────────────────────────
 
 /** Validates session and handles rolling renewal. */
 export async function validateSessionToken(token: string): Promise<SessionValidationResult> {
@@ -191,8 +181,6 @@ export async function validateSessionById(
 
 	return { valid: true };
 }
-
-// ─── Session revocation ──────────────────────────────────────────────────────
 
 /** Soft-revokes a session. */
 export async function invalidateSession(

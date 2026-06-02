@@ -13,8 +13,6 @@ import {
 } from "@/db/schema";
 import { checkRateLimit, type RateLimitResult, resetRateLimit } from "@/rate-limit";
 
-// ─── Rate limiters ─────────────────────────────────────────────────────────────
-
 /** Validates recovery code attempt rate limit. */
 export function checkRecoveryCodeRateLimit(userId: string): Promise<RateLimitResult> {
 	return checkRateLimit(
@@ -27,8 +25,6 @@ export function checkRecoveryCodeRateLimit(userId: string): Promise<RateLimitRes
 export function resetRecoveryCodeRateLimit(userId: string): Promise<void> {
 	return resetRateLimit(`recovery:${userId}`);
 }
-
-// ─── Recovery code helpers ─────────────────────────────────────────────────────
 
 /** Generates cryptographically random base32 recovery code. */
 export function generateRecoveryCode(): string {
@@ -44,8 +40,6 @@ export async function clearRecoveryCodeIfNo2FA(userId: string): Promise<void> {
 		await db.update(userTable).set({ recoveryCode: null }).where(eq(userTable.id, userId));
 	}
 }
-
-// ─── 2FA reset ─────────────────────────────────────────────────────────────────
 
 /** Validates recovery code, resets 2FA credentials, and rotates code. */
 export async function resetUser2faWithRecoveryCode(
@@ -91,8 +85,6 @@ export async function resetUser2faWithRecoveryCode(
 		return true;
 	});
 }
-
-// ─── 2FA detection ─────────────────────────────────────────────────────────────
 
 export interface TwoFactorStatus {
 	registeredTOTP: boolean;

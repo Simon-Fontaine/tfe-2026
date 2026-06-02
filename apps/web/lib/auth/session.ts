@@ -12,8 +12,6 @@ export type {
 	SessionValidationResult,
 } from "@scrimflow/shared";
 
-// ─── Session query ──────────────────────────────────────────────────────────
-
 /** Request-memoized current session via API. */
 export const getCurrentSession = cache(async (): Promise<SessionValidationResult> => {
 	const res = await apiGet<{ session: Session | null; user: SessionUser | null }>(
@@ -24,8 +22,6 @@ export const getCurrentSession = cache(async (): Promise<SessionValidationResult
 	}
 	return { session: null, user: null };
 });
-
-// ─── Cookie helpers ─────────────────────────────────────────────────────────
 
 export async function deleteSessionTokenCookie(): Promise<void> {
 	const cookieStore = await cookies();

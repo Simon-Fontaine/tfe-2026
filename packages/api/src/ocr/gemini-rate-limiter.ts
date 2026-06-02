@@ -1,22 +1,10 @@
 import logger from "@/utils/logger";
 
 /**
- * In-process rate limiter for the Gemini API.
- *
- * Controlled by two env vars (0 = unlimited):
- *   GEMINI_RPM  — max requests per minute   (free tier: 5)
- *   GEMINI_RPD  — max requests per day      (free tier: 20)
- *
- * RPM uses a sliding window: timestamps of the last <limit> calls are kept;
- * when the window is full the worker sleeps until the oldest slot expires.
- *
- * RPD uses a rolling 24-hour window anchored to the first request of each
- * cycle; when the daily limit is reached the worker sleeps until the window
- * resets.
- *
- * Call waitForSlot() before every Gemini request, then record() immediately
- * after (whether the request succeeds or fails — the quota is consumed either
- * way).
+ * In-process Gemini rate limiter. `GEMINI_RPM`/`GEMINI_RPD` env vars cap requests
+ * per minute (sliding window) and per day (rolling 24h window); 0 = unlimited.
+ * Call `waitForSlot()` before each request, then `record()` after — success or
+ * failure, since the quota is consumed either way.
  */
 
 const RPM_LIMIT = Number(process.env.GEMINI_RPM ?? 0);
@@ -34,21 +22,13 @@ class GeminiRateLimiter {
 	/** Start of the current 24-hour window (ms). 0 until first request. */
 	private dayWindowStart = 0;
 
-	/**
-	 * Waits as long as necessary so that the next Gemini call will not exceed
-	 * either the per-minute or per-day limit.  Returns immediately when no
-	 * limits are configured.
-	 */
+	/** Waits until the next call stays within both limits (returns at once if none configured). */
 	async waitForSlot(): Promise<void> {
 		await this.enforceRpd();
 		await this.enforceRpm();
 	}
 
-	/**
-	 * Records one consumed Gemini request.  Call this immediately after
-	 * waitForSlot(), before the actual fetch, so the window is updated even
-	 * when the request fails.
-	 */
+	/** Records one consumed request; call right after `waitForSlot()`, even if the fetch fails. */
 	record(): void {
 		const now = Date.now();
 
@@ -63,8 +43,6 @@ class GeminiRateLimiter {
 			this.dayCount++;
 		}
 	}
-
-	// ─── private helpers ───────────────────────────────────────────────────────
 
 	private pruneMinuteWindow(now: number): void {
 		while (this.minuteWindow.length > 0 && now - (this.minuteWindow[0] as number) >= MINUTE_MS) {

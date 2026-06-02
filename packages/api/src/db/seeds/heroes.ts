@@ -15,7 +15,6 @@ type HeroRole = "tank" | "damage" | "support";
 // Bootstrap list for the initial DB insert. IDs are stable kebab-case slugs —
 // never rename them as they are FK'd by playerHeroTable.
 const HEROES: { id: string; displayName: string; role: HeroRole }[] = [
-	// ─── Tank ────────────────────────────────────────────────────────────────
 	{ id: "domina", displayName: "Domina", role: "tank" },
 	{ id: "dva", displayName: "D.Va", role: "tank" },
 	{ id: "doomfist", displayName: "Doomfist", role: "tank" },
@@ -31,7 +30,6 @@ const HEROES: { id: string; displayName: string; role: HeroRole }[] = [
 	{ id: "wrecking-ball", displayName: "Wrecking Ball", role: "tank" },
 	{ id: "zarya", displayName: "Zarya", role: "tank" },
 
-	// ─── Damage ──────────────────────────────────────────────────────────────
 	{ id: "anran", displayName: "Anran", role: "damage" },
 	{ id: "emre", displayName: "Emre", role: "damage" },
 	{ id: "vendetta", displayName: "Vendetta", role: "damage" },
@@ -55,7 +53,6 @@ const HEROES: { id: string; displayName: string; role: HeroRole }[] = [
 	{ id: "venture", displayName: "Venture", role: "damage" },
 	{ id: "widowmaker", displayName: "Widowmaker", role: "damage" },
 
-	// ─── Support ─────────────────────────────────────────────────────────────
 	{ id: "jetpack-cat", displayName: "Jetpack Cat", role: "support" },
 	{ id: "mizuki", displayName: "Mizuki", role: "support" },
 	{ id: "wuyang", displayName: "Wuyang", role: "support" },

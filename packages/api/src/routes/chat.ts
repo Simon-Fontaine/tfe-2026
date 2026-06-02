@@ -100,8 +100,6 @@ async function publishConversationMutationToMembers(params: {
 	);
 }
 
-// ─── Conversations ────────────────────────────────────────────────────────────
-
 chatRoutes.get("/conversations", async (c) => {
 	const user = c.get("user");
 	return c.json({ data: await listConversationsForUser(user.id) });
@@ -171,8 +169,6 @@ chatRoutes.post("/conversations/direct", async (c) => {
 	return c.json({ data: result });
 });
 
-// ─── Messages ─────────────────────────────────────────────────────────────────
-
 chatRoutes.get("/conversations/:id/messages", async (c) => {
 	const user = c.get("user");
 	const limitQuery = c.req.query("limit");
@@ -206,6 +202,7 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 		userId: user.id,
 		content: parsed.output.content,
 		replyToMessageId: parsed.output.replyToMessageId,
+		clientNonce: parsed.output.clientNonce,
 	});
 	if (result.status === "forbidden")
 		return c.json({ error: "You cannot message this conversation." }, 403);
@@ -213,6 +210,7 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 		return c.json({ error: "This conversation is archived and read-only." }, 403);
 	if (result.status === "invalid_reply")
 		return c.json({ error: "The reply target message was not found in this conversation." }, 400);
+	if (result.status === "error") return c.json({ error: "Failed to send message." }, 500);
 
 	const message = await getMessageByIdForConversation({
 		conversationId,
@@ -365,8 +363,6 @@ chatRoutes.delete("/conversations/:id/messages/:messageId", async (c) => {
 	return c.json({ success: true });
 });
 
-// ─── Read state ───────────────────────────────────────────────────────────────
-
 chatRoutes.post("/conversations/:id/read", async (c) => {
 	const user = c.get("user");
 	const conversationId = c.req.param("id");
@@ -409,8 +405,6 @@ chatRoutes.post("/conversations/:id/read", async (c) => {
 
 	return c.json({ success: true });
 });
-
-// ─── Presence ─────────────────────────────────────────────────────────────────
 
 chatRoutes.get("/presence/:userId", async (c) => {
 	const presence = await getUserPresence(c.req.param("userId"));

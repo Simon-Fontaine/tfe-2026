@@ -262,6 +262,7 @@ CREATE TABLE "chat_message" (
 	"sender_id" uuid,
 	"content" text NOT NULL,
 	"reply_to_message_id" uuid,
+	"client_nonce" text,
 	"attachment_url" text,
 	"is_system_message" boolean DEFAULT false NOT NULL,
 	"moderation_hidden" boolean DEFAULT false NOT NULL,
@@ -879,6 +880,7 @@ CREATE INDEX "chat_message_read_msg_idx" ON "chat_message_read" USING btree ("me
 CREATE INDEX "chat_message_channel_idx" ON "chat_message" USING btree ("channel_id","created_at");--> statement-breakpoint
 CREATE INDEX "chat_message_sender_idx" ON "chat_message" USING btree ("sender_id");--> statement-breakpoint
 CREATE INDEX "chat_message_reply_idx" ON "chat_message" USING btree ("reply_to_message_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "chat_message_client_nonce_unique_idx" ON "chat_message" USING btree ("channel_id","sender_id","client_nonce") WHERE "chat_message"."client_nonce" is not null;--> statement-breakpoint
 CREATE INDEX "hero_role_idx" ON "hero" USING btree ("role");--> statement-breakpoint
 CREATE INDEX "hero_active_idx" ON "hero" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "lifecycle_workflow_target_idx" ON "lifecycle_workflow" USING btree ("entity_type","entity_id");--> statement-breakpoint

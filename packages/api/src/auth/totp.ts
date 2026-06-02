@@ -5,8 +5,6 @@ import { db } from "@/db";
 import { totpCredentialTable } from "@/db/schema";
 import { checkRateLimit, type RateLimitResult, resetRateLimit } from "@/rate-limit";
 
-// ─── Rate limiters ─────────────────────────────────────────────────────────────
-
 /** Validates TOTP attempt rate limit. */
 export function checkTotpRateLimit(userId: string): Promise<RateLimitResult> {
 	return checkRateLimit(
@@ -28,8 +26,6 @@ export function checkTotpUpdateRateLimit(userId: string): Promise<RateLimitResul
 		rateLimits.totpUpdate.windowMs
 	);
 }
-
-// ─── TOTP credential operations ────────────────────────────────────────────────
 
 /** Returns user's decrypted TOTP secret key. */
 export async function getUserTotpKey(userId: string): Promise<Uint8Array | null> {

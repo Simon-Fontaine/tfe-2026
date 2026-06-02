@@ -1,5 +1,3 @@
-// ─── Auth step types ────────────────────────────────────────────────────────
-
 export type AuthStep =
 	| "login"
 	| "register"
@@ -11,8 +9,6 @@ export type AuthStep =
 	| "recovery-code"
 	| "reset-password";
 
-// ─── Two-factor ─────────────────────────────────────────────────────────────
-
 export type TwoFactorMethods = {
 	totp: boolean;
 	passkey: boolean;
@@ -20,8 +16,6 @@ export type TwoFactorMethods = {
 	passkeyCredentialIds?: string[];
 	securityKeyCredentialIds?: string[];
 };
-
-// ─── Action result ──────────────────────────────────────────────────────────
 
 export type ActionResult = {
 	error?: string;
@@ -33,8 +27,6 @@ export type ActionResult = {
 	newRecoveryCode?: string;
 	redirect?: string;
 };
-
-// ─── Session ────────────────────────────────────────────────────────────────
 
 export interface SessionFlags {
 	twoFactorVerified: boolean;
@@ -76,8 +68,6 @@ export type SessionValidationResult =
 	| { session: Session; user: SessionUser }
 	| { session: null; user: null };
 
-// ─── Client context ─────────────────────────────────────────────────────────
-
 export interface ClientContext {
 	ip: string | null;
 	userAgent: string | null;
@@ -88,8 +78,6 @@ export interface ClientContext {
 	deviceType: "mobile" | "tablet" | "desktop" | null;
 }
 
-// ─── Rate limiting ──────────────────────────────────────────────────────────
-
 export interface RateLimitResult {
 	allowed: boolean;
 	retryAfterMs: number;
@@ -99,8 +87,6 @@ export interface RateLimitRule {
 	limit: number;
 	windowMs: number;
 }
-
-// ─── API response types ─────────────────────────────────────────────────────
 
 export type ApiSuccessResponse<T = unknown> = {
 	data: T;
@@ -127,22 +113,16 @@ export type FinalizedUpload = {
 	sizeBytes: number | null;
 };
 
-// ─── Temporal conventions ───────────────────────────────────────────────────
-
 /**
  * ISO-8601 timestamp string serialized for transport across API/service boundaries.
  * Convention: DTOs use `IsoDateString`; convert to `Date` only after explicit parsing in domain/UI layers.
  */
 export type IsoDateString = string;
 
-// ─── Headers interface ──────────────────────────────────────────────────────
-
 /** Minimal header getter used by extractClientContext and other framework-agnostic code. */
 export interface HeadersGetter {
 	get(name: string): string | null;
 }
-
-// ─── Common domain types ───────────────────────────────────────────────────
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
@@ -291,8 +271,6 @@ export type UserSearchResult = {
 	primaryRole: OW2Role | null;
 	rank: string | null;
 };
-
-// ─── Team types ────────────────────────────────────────────────────────────
 
 export type TeamPermissions = {
 	orgRole: OrgPermissionRole | null;
@@ -530,8 +508,6 @@ export type TeamPublicPreview = {
 	ratingHistory: PublicTeamRatingEntry[];
 };
 
-// ─── Organization types ────────────────────────────────────────────────────
-
 export type OrgPermissions = {
 	role: OrgPermissionRole | null;
 	canManage: boolean;
@@ -727,8 +703,6 @@ export type PublicOrgDetail = {
 	twitter: string | null;
 };
 
-// ─── Discovery types ───────────────────────────────────────────────────────
-
 export type DiscoveryTeam = {
 	id: string;
 	organizationId: string;
@@ -745,8 +719,6 @@ export type DiscoveryTeam = {
 export type DiscoveryFilters = {
 	recruiting?: boolean;
 };
-
-// ─── Recruitment types ─────────────────────────────────────────────────────
 
 export type RecruitmentListingSummary = {
 	id: string;
@@ -1157,8 +1129,6 @@ export type AppRealtimeEvent =
 export type RealtimeEvent = AppRealtimeEvent | ChatRealtimeEvent;
 export type RealtimeClientCommand = AppRealtimeClientCommand | ChatClientCommand;
 
-// ─── Scrim types ────────────────────────────────────────────────────────────
-
 export type ScrimStatus =
 	| "pending"
 	| "accepted"
@@ -1510,8 +1480,6 @@ export type ScrimDetail = ScrimSummary & {
 	negotiationRevisions: ScrimNegotiationRevisionSummary[];
 };
 
-// ─── Notification types ────────────────────────────────────────────────────
-
 export type NotificationSummary = {
 	id: string;
 	type: string;
@@ -1524,8 +1492,6 @@ export type NotificationSummary = {
 	isDismissed: boolean;
 	createdAt: IsoDateString;
 };
-
-// ─── Player types ──────────────────────────────────────────────────────────
 
 export type PlayerProfileFull = {
 	battletag: string | null;
@@ -1593,8 +1559,6 @@ export type TeamSchedule = {
 	availability: AvailabilityRow[];
 };
 
-// ─── Public player types ───────────────────────────────────────────────────
-
 export type PublicHeroPoolEntry = {
 	heroId: string;
 	displayName: string;
@@ -1639,8 +1603,6 @@ export type PublicPlayerDetail = PublicPlayerSummary & {
 	scrimStats: { scrimsPlayed: number; wins: number; losses: number; draws: number } | null;
 };
 
-// ─── Permission types ──────────────────────────────────────────────────────
-
 export type PermissionDenialReason =
 	| "role"
 	| "lifecycle"
@@ -1649,8 +1611,6 @@ export type PermissionDenialReason =
 	| "privacy"
 	| "settlement-lock"
 	| "moderation";
-
-// ─── Report types ─────────────────────────────────────────────────────────
 
 export type ReportCategory =
 	| "harassment"
@@ -1682,8 +1642,6 @@ export type MyReportSummary = {
 	status: ReportStatus;
 	createdAt: string; // ISO string
 };
-
-// ─── Moderation types ─────────────────────────────────────────────────────────
 
 export type ModerationUrgencyLevel = "normal" | "urgent" | "overdue";
 
@@ -1756,8 +1714,6 @@ export type ModerationQueueResponse = {
 	};
 };
 
-// ─── Moderation action types ──────────────────────────────────────────────
-
 export type ModerationActionType =
 	| "warn"
 	| "suspend"
@@ -1789,8 +1745,6 @@ export type ModerationAction = {
 export type ModerationActionsResponse = {
 	actions: ModerationAction[];
 };
-
-// ─── Domain audit log types ──────────────────────────────────────────────
 
 export type DomainAuditDomain =
 	| "ownership"
@@ -1853,8 +1807,6 @@ export type DomainAuditEventsResponse = {
 	nextCursor: string | null;
 };
 
-// ─── Hero types ────────────────────────────────────────────────────────────
-
 export type HeroRow = {
 	id: string;
 	displayName: string;
@@ -1862,8 +1814,6 @@ export type HeroRow = {
 	imageUrl: string | null;
 	description: string | null;
 };
-
-// ─── Governance types ─────────────────────────────────────────────────────
 
 export type GovernanceAvailableAction =
 	| "suspend"

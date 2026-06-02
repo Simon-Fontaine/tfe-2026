@@ -45,9 +45,11 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		if (!(await canAccessScrim(user.id, scrim))) {
 			return c.json({ error: "You do not have access to this scrim." }, 403);
 		}
+		// Evidence is still useful while a scrim is disputed, so only the terminal
+		// completed/cancelled states are blocked here.
 		if (scrim.status === "completed" || scrim.status === "cancelled") {
 			return c.json(
-				{ error: "OCR processing cannot be started for a scrim in this lifecycle state." },
+				{ error: "OCR processing can't be started once a scrim is completed or cancelled." },
 				409
 			);
 		}

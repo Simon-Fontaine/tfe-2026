@@ -45,8 +45,6 @@ import {
 	userTable,
 } from "./index";
 
-// ============================================================================
-
 export const userRelations = relations(userTable, ({ one, many }) => ({
 	profile: one(playerProfileTable, {
 		fields: [userTable.id],

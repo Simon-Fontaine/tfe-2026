@@ -13,8 +13,6 @@ import { refreshPresence, setUserOffline, setUserOnline } from "./presence";
  * - Falls back to in-memory-only when Redis is unavailable.
  */
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 type ChatSocket = {
 	send: (payload: string) => unknown;
 	close?: (code?: number, reason?: string) => unknown;
@@ -26,14 +24,10 @@ type SocketMeta = {
 	subscriptions: Set<string>;
 };
 
-// ─── In-memory state ─────────────────────────────────────────────────────────
-
 const socketMeta = new Map<ChatSocket, SocketMeta>();
 const sessionSockets = new Map<string, Set<ChatSocket>>();
 const userSockets = new Map<string, Set<ChatSocket>>();
 const conversationSockets = new Map<string, Set<ChatSocket>>();
-
-// ─── Redis pub/sub ────────────────────────────────────────────────────────────
 
 function createRedisSubscriber(): Redis | null {
 	const url = process.env.REDIS_URL;
@@ -80,10 +74,14 @@ if (redisSubscriber) {
 	});
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function send(ws: ChatSocket, payload: unknown) {
-	ws.send(JSON.stringify(payload));
+	// A throw from a half-closed socket must not abort a fan-out loop mid-broadcast,
+	// which would silently drop the event for every later recipient.
+	try {
+		ws.send(JSON.stringify(payload));
+	} catch (err) {
+		logger.warn({ err }, "chat-hub: failed to send to socket");
+	}
 }
 
 function getOrCreateSet<K, V>(map: Map<K, Set<V>>, key: K): Set<V> {
@@ -145,8 +143,6 @@ async function redisPublishUser(userId: string, event: string, payload: Record<s
 		logger.warn({ err }, "chat-hub: failed to publish user event to Redis");
 	}
 }
-
-// ─── Public API ───────────────────────────────────────────────────────────────
 
 function notifySessionInvalidation(ws: ChatSocket, reason: RealtimeSessionInvalidationReason) {
 	send(ws, { type: "chat:session-invalidated", reason });

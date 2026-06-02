@@ -20,8 +20,6 @@ const PARTICIPATION_INTENT_VALUES = [
 ] as const;
 const AVAILABILITY_INTENT_VALUES = ["weekdays", "weekends", "flexible", "not_sure"] as const;
 
-// ─── Update basic user info ───────────────────────────────────────────────────
-
 export const UpdateBasicInfoSchema = v.object({
 	displayName: v.pipe(
 		v.string(),
@@ -41,8 +39,6 @@ export const UpdateBasicInfoSchema = v.object({
 });
 
 export type UpdateBasicInfoInput = v.InferOutput<typeof UpdateBasicInfoSchema>;
-
-// ─── Update game profile ──────────────────────────────────────────────────────
 
 export const UpdateGameProfileSchema = v.pipe(
 	v.object({
@@ -92,8 +88,6 @@ export const UpdateGameProfileSchema = v.pipe(
 );
 
 export type UpdateGameProfileInput = v.InferOutput<typeof UpdateGameProfileSchema>;
-
-// ─── Availability ─────────────────────────────────────────────────────────────
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 

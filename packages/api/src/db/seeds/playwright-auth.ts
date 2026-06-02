@@ -94,8 +94,6 @@ async function main() {
 			set: { primaryRole: "support" },
 		});
 
-	// ── Fixture seeding ────────────────────────────────────────────────────────
-
 	console.log("Seeding E2E fixtures...");
 
 	// E2E Home Org
@@ -308,8 +306,6 @@ async function main() {
 	mkdirSync(join(REPO_ROOT, ".playwright"), { recursive: true });
 	writeFileSync(FIXTURES_JSON_PATH, JSON.stringify({ homeTeamId, targetListingId }, null, 2));
 	console.log(`✅ E2E fixtures written to ${FIXTURES_JSON_PATH}`);
-
-	// ── Auth state ─────────────────────────────────────────────────────────────
 
 	await invalidateUserSessions(user.id);
 

@@ -35,8 +35,6 @@ function isPrivateIp(ip: string): boolean {
 	);
 }
 
-// ─── Cache layer ───────────────────────────────────────────────────────────────
-
 function cacheKey(ip: string): string {
 	return `geo:${ip}`;
 }
@@ -62,10 +60,10 @@ async function setCache(ip: string, geo: GeoData): Promise<void> {
 	}
 }
 
-// ─── Public API ────────────────────────────────────────────────────────────────
-
 export async function fetchGeoData(ip: string | null): Promise<GeoData> {
-	if (!ip || isPrivateIp(ip)) return LOCAL_GEO;
+	if (!ip || isPrivateIp(ip)) {
+		return process.env.NODE_ENV === "production" ? EMPTY_GEO : LOCAL_GEO;
+	}
 
 	const cached = await getCached(ip);
 	if (cached) return cached;

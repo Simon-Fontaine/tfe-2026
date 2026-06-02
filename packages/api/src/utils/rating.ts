@@ -5,6 +5,8 @@ import { scrimTable, teamRatingEventTable, teamTable } from "@/db/schema";
 
 const GLICKO_Q = Math.log(10) / 400;
 const MIN_RATING = 100;
+/** Sane ceiling well within the int32 `team.rating` column; ratings never realistically approach this. */
+const MAX_RATING = 4000;
 const MIN_RATING_DEVIATION = 60;
 const MAX_RATING_DEVIATION = 350;
 
@@ -74,7 +76,7 @@ function calculateMatchUpdate(
 		clamp(
 			team.rating + (GLICKO_Q / precision) * gOpponent * (score - expected),
 			MIN_RATING,
-			Number.MAX_SAFE_INTEGER
+			MAX_RATING
 		)
 	);
 	const ratingDeviationAfter = Math.round(

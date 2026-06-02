@@ -114,7 +114,6 @@ realtimeRoutes.get(
 			const parsed = parseWsCommand<RealtimeClientCommand>(raw, ws, sendRealtimeError);
 			if (!parsed) return;
 
-			// ── Shared control commands ──────────────────────────────────────────
 			if (parsed.type === "ping") {
 				if (!(await ensureActiveSession())) return;
 				ws.send(JSON.stringify({ type: "realtime:pong" }));
@@ -127,7 +126,6 @@ realtimeRoutes.get(
 				return;
 			}
 
-			// ── App-domain subscriptions ─────────────────────────────────────────
 			if (parsed.type === "subscribe:scrim") {
 				if (!(await ensureActiveSession())) return;
 
@@ -227,7 +225,6 @@ realtimeRoutes.get(
 				return;
 			}
 
-			// ── Chat-domain commands ─────────────────────────────────────────────
 			if (
 				parsed.type === "subscribe" ||
 				parsed.type === "unsubscribe" ||

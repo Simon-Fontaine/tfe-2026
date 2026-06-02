@@ -5,8 +5,6 @@ import { apiRoutes } from "@/lib/routes";
 
 export type { NotificationSummary };
 
-// ─── Queries ───────────────────────────────────────────────────────────────────
-
 export const getNotificationsForUser = cache(
 	async (
 		_userId: string,

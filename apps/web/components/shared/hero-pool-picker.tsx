@@ -8,8 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { HeroRow } from "@/lib/data/heroes";
 import { cn } from "@/lib/utils";
 
-// ─── Role styling maps ─────────────────────────────────────────────────────────
-
 const ROLE_ACCENT: Record<HeroRow["role"], string> = {
 	tank: "bg-blue-500",
 	damage: "bg-orange-500",
@@ -21,8 +19,6 @@ const ROLE_FALLBACK_BG: Record<HeroRow["role"], string> = {
 	damage: "bg-orange-950",
 	support: "bg-emerald-950",
 };
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface HeroPoolPickerProps {
 	/** Full list of available heroes */
@@ -44,8 +40,6 @@ export interface HeroPoolPickerProps {
 	 */
 	gridCols?: string;
 }
-
-// ─── Component ─────────────────────────────────────────────────────────────────
 
 export function HeroPoolPicker({
 	heroes,

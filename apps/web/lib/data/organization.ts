@@ -31,14 +31,10 @@ export type {
 	UserOrg,
 };
 
-// ─── Derived helpers ────────────────────────────────────────────────────────────
-
 export async function getUserOrgRole(orgId: string, userId: string): Promise<OrgRole | null> {
 	const org = await getOrgWithTeams(orgId, userId);
 	return org?.currentUser.role ?? null;
 }
-
-// ─── Queries ───────────────────────────────────────────────────────────────────
 
 export const getOrgsForUser = cache(async (_userId: string): Promise<UserOrg[]> => {
 	const res = await apiGet<UserOrg[]>(apiRoutes.orgs.root);

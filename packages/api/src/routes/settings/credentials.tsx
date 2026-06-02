@@ -24,8 +24,6 @@ import { fetchGeoData } from "@/utils/geo";
 
 const credentialRoutes = new Hono<RequestContextEnv & AuthEnv>();
 
-// ─── Passkey disable ────────────────────────────────────────────────────────
-
 credentialRoutes.post("/passkey/disable/request", async (c) => {
 	const session = c.get("session");
 	const user = c.get("user");
@@ -145,8 +143,6 @@ credentialRoutes.delete("/passkey/disable/request", async (c) => {
 	await deleteSensitiveActionVerification(session.userId, "passkey_disable");
 	return c.json({ success: true });
 });
-
-// ─── Security key disable ───────────────────────────────────────────────────
 
 credentialRoutes.post("/security-key/disable/request", async (c) => {
 	const session = c.get("session");

@@ -9,8 +9,6 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// ─── Singleton S3 client ──────────────────────────────────────────────────────
-
 let _s3Client: S3Client | null = null;
 
 function getS3Client(): S3Client {
@@ -73,8 +71,6 @@ export function buildObjectUrl(bucket: string, key: string) {
 	const publicUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
 	return `${publicUrl}/${bucket}/${key}`;
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
  * Uploads a file buffer to S3/MinIO.

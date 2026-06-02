@@ -19,8 +19,6 @@ export type {
 	UserTeam,
 };
 
-// ─── Queries ───────────────────────────────────────────────────────────────────
-
 export const getPlayerProfileFull = cache(
 	async (_userId: string): Promise<PlayerProfileFull | null> => {
 		const res = await apiGet<PlayerProfileFull | null>(apiRoutes.profile.root);

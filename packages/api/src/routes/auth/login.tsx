@@ -4,18 +4,17 @@ import { Hono } from "hono";
 import * as v from "valibot";
 import { getUserTwoFactorStatus } from "@/auth/2fa";
 import { writeAuditLog } from "@/auth/audit";
-import { type ClientContext, isKnownLocation, resolveDevice } from "@/auth/device";
+import { isKnownLocation, resolveDevice } from "@/auth/device";
+import { sendNewLoginAlert } from "@/auth/email-security";
 import { createEmailVerificationRequest } from "@/auth/email-verification";
 import { verifyPasswordHash } from "@/auth/password";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
 import { sendMail } from "@/email/mailer";
-import { SecurityAlertEmail } from "@/email/templates/SecurityAlertEmail";
 import { VerificationEmail } from "@/email/templates/VerificationEmail";
 import type { RequestContextEnv } from "@/middleware/request-context";
-import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter, resetRateLimit } from "@/rate-limit";
-import { fetchGeoData, formatLocation, type GeoData } from "@/utils/geo";
+import { fetchGeoData } from "@/utils/geo";
 import logger from "@/utils/logger";
 
 import {
@@ -28,44 +27,6 @@ import {
 	safeRedirectUrl,
 	setPendingCookie,
 } from "./utils";
-
-function sendNewLoginAlert(
-	user: { id: string; email: string },
-	client: ClientContext,
-	geo: GeoData,
-	isNewDevice: boolean
-): void {
-	sendMail({
-		to: user.email,
-		subject: "New sign-in detected on Scrimflow",
-		template: (
-			<SecurityAlertEmail
-				ip={client.ip ?? "Unknown"}
-				device={client.deviceName}
-				location={formatLocation(geo)}
-				date={new Date().toUTCString()}
-				alertType={isNewDevice ? "new_device" : "new_location"}
-			/>
-		),
-	}).catch((err: unknown) => logger.error({ err }, "new login alert email failed"));
-
-	writeAuditLog(
-		user.id,
-		isNewDevice ? "new_device_detected" : "new_location_detected",
-		client.ip,
-		client.userAgent,
-		geo.country,
-		geo.city,
-		{ device: client.deviceName, location: formatLocation(geo) }
-	);
-
-	createNotification({
-		userId: user.id,
-		type: isNewDevice ? "new_device_login" : "new_location_login",
-		title: isNewDevice ? "New device sign-in" : "New location sign-in",
-		body: `Device: ${client.deviceName ?? "Unknown"}, Location: ${formatLocation(geo)}`,
-	}).catch((err: unknown) => logger.error({ err }, "security notification failed"));
-}
 
 const loginRoutes = new Hono<RequestContextEnv>();
 
@@ -122,41 +83,50 @@ loginRoutes.post("/", async (c) => {
 
 	if (!user.emailVerified) {
 		const code = await createEmailVerificationRequest(user.id, user.email, client.ip);
-		await sendMail({
-			to: user.email,
-			subject: "Verify your Scrimflow email",
-			template: (
-				<VerificationEmail
-					code={code}
-					title="Verify your email address"
-					message="Please verify your email address to continue signing in to Scrimflow."
-					actionText="enter the following code"
-				/>
-			),
-		}).catch((err: unknown) => logger.error({ err }, "verification email send failed"));
+		try {
+			await sendMail({
+				to: user.email,
+				subject: "Verify your Scrimflow email",
+				template: (
+					<VerificationEmail
+						code={code}
+						title="Verify your email address"
+						message="Please verify your email address to continue signing in to Scrimflow."
+						actionText="enter the following code"
+					/>
+				),
+			});
+		} catch (err) {
+			logger.error({ err }, "verification email send failed");
+			return c.json(
+				{
+					error:
+						"We couldn't send the verification email. Please try again in a moment or contact support.",
+				} satisfies ActionResult,
+				502
+			);
+		}
 		setPendingCookie(c, user.id);
 		return c.json({ nextStep: "verify-email", email: user.email } satisfies ActionResult);
 	}
 
-	const [geo, { deviceId, isNew: isNewDevice }] = await Promise.all([
-		fetchGeoData(client.ip),
-		resolveDevice(
-			user.id,
-			client.fingerprint,
-			client.deviceName,
-			client.browserName,
-			client.osName,
-			client.deviceType,
-			client.ip,
-			null,
-			null
-		),
-	]);
+	const geo = await fetchGeoData(client.ip);
+	const { deviceId, isNew: isNewDevice } = await resolveDevice(
+		user.id,
+		client.fingerprint,
+		client.deviceName,
+		client.browserName,
+		client.osName,
+		client.deviceType,
+		client.ip,
+		geo.country,
+		geo.city
+	);
 
 	const isNewLocation = !(await isKnownLocation(user.id, geo.country));
 
 	if (isNewDevice || isNewLocation) {
-		sendNewLoginAlert(user, client, geo, isNewDevice);
+		sendNewLoginAlert({ user, client, geo, isNewDevice });
 	}
 
 	const needsExtraVerification = isNewDevice || isNewLocation;

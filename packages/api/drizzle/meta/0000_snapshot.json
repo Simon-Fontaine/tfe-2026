@@ -1,5 +1,5 @@
 {
-  "id": "f5f04346-c6fc-465b-b18c-44f77f683cef",
+  "id": "cd7e2b6b-e6c0-4333-a262-eb9d7275c6a2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2505,6 +2505,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "client_nonce": {
+          "name": "client_nonce",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "attachment_url": {
           "name": "attachment_url",
           "type": "text",
@@ -2593,6 +2599,34 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "chat_message_client_nonce_unique_idx": {
+          "name": "chat_message_client_nonce_unique_idx",
+          "columns": [
+            {
+              "expression": "channel_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sender_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "client_nonce",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"chat_message\".\"client_nonce\" is not null",
           "concurrently": false,
           "method": "btree",
           "with": {}

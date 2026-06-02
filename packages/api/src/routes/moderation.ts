@@ -901,8 +901,6 @@ moderationRoutes.get("/audit", async (c) => {
 	return c.json({ data: { events, hasMore, nextCursor } });
 });
 
-// ─── Governance: entity inspection ───────────────────────────────────────────
-
 moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => {
 	const user = c.var.user;
 	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
@@ -1031,8 +1029,6 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 	return c.json({ data: state });
 });
 
-// ─── Governance: moderator ownership resolution ───────────────────────────────
-
 moderationRoutes.post("/governance/ownership/:workflowId/resolve", async (c) => {
 	const user = c.var.user;
 	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
@@ -1148,8 +1144,6 @@ moderationRoutes.post("/governance/ownership/:workflowId/resolve", async (c) => 
 
 	return c.json(mapOwnershipWorkflow(updatedWorkflow, "authorized"));
 });
-
-// ─── Governance: pending cases ────────────────────────────────────────────────
 
 moderationRoutes.get("/governance/pending", async (c) => {
 	const user = c.var.user;

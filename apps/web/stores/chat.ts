@@ -41,8 +41,6 @@ export function selectLiveConversationsByType(
 	return sortConversations(matches);
 }
 
-// ─── State shape ──────────────────────────────────────────────────────────────
-
 interface ChatState {
 	/**
 	 * All known conversations keyed by id. Normalized so multiple contexts (team
@@ -61,8 +59,6 @@ interface ChatState {
 	/** Active typers keyed by conversationId → userId[]. */
 	typing: Record<string, string[]>;
 }
-
-// ─── Actions ──────────────────────────────────────────────────────────────────
 
 interface ChatActions {
 	/** Upsert many conversations (server hydration / reconnect resync). Never drops others. */
@@ -120,8 +116,6 @@ function mergeConversationInto(
 		[conversation.id]: existing ? { ...existing, ...conversation } : conversation,
 	};
 }
-
-// ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useChatStore = create<ChatState & ChatActions>((set) => ({
 	conversationsById: {},

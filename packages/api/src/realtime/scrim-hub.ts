@@ -50,7 +50,13 @@ function getRedisPublisher(): Redis | null {
 const redisSubscriber = createRedisSubscriber();
 
 function send(ws: RealtimeSocket, payload: unknown) {
-	ws.send(JSON.stringify(payload));
+	// A throw from a half-closed socket must not abort a fan-out loop mid-broadcast,
+	// which would silently drop the event for every later recipient.
+	try {
+		ws.send(JSON.stringify(payload));
+	} catch (err) {
+		logger.warn({ err }, "scrim-hub: failed to send to socket");
+	}
 }
 
 function getOrCreateSet<K, V>(map: Map<K, Set<V>>, key: K): Set<V> {

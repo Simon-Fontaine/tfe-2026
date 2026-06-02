@@ -44,8 +44,6 @@ import {
 } from "@/db/schema";
 import { createS3Client, ensurePublicBucket, uploadFile } from "./lib/s3";
 
-// ─── Constants ──────────────────────────────────────────────────────────────
-
 const DEMO_PASSWORD = "Scrimflow1!";
 const EMAIL_DOMAIN = "scrimflow.com";
 
@@ -132,8 +130,6 @@ async function uploadEntityImages(params: {
 	return { uploaded, skipped };
 }
 
-// ─── User definitions ───────────────────────────────────────────────────────
-
 type PlayerData = {
 	username: string;
 	displayName: string;
@@ -149,8 +145,6 @@ type PlayerData = {
 };
 
 const PLAYERS: Record<string, PlayerData> = {
-	// ── SF Shock Main ──────────────────────────────────────────────────────────
-
 	smurf: {
 		username: "smurf",
 		displayName: "Smurf",
@@ -232,8 +226,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		heroes: ["kiriko", "zenyatta", "baptiste", "brigitte", "ana"],
 	},
 
-	// ── SF Shock Academy ──────────────────────────────────────────────────────
-
 	aznrite: {
 		username: "aznrite",
 		displayName: "AznRite",
@@ -300,8 +292,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		participationIntent: "schedule_scrims",
 		heroes: ["dva", "zarya", "junker-queen", "roadhog", "sigma"],
 	},
-
-	// ── Dallas Fuel Main ──────────────────────────────────────────────────────
 
 	hanbin: {
 		username: "hanbin",
@@ -383,8 +373,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		heroes: ["zarya", "ramattra", "dva", "junker-queen", "sigma"],
 	},
 
-	// ── Dallas Fuel Challengers ────────────────────────────────────────────────
-
 	coluge: {
 		username: "coluge",
 		displayName: "Coluge",
@@ -451,8 +439,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		heroes: ["tracer", "sombra", "genji", "echo", "venture"],
 	},
 
-	// ── Free agents ───────────────────────────────────────────────────────────
-
 	birdring: {
 		username: "birdring",
 		displayName: "Birdring",
@@ -493,8 +479,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		heroes: ["ana", "mercy", "lucio", "kiriko", "zenyatta"],
 	},
 
-	// ── Coaches ───────────────────────────────────────────────────────────────
-
 	"shock-coach": {
 		username: "shock-coach",
 		displayName: "Jayne",
@@ -521,8 +505,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		heroes: ["dva", "sigma", "reinhardt"],
 	},
 
-	// ── Demo admin ────────────────────────────────────────────────────────────
-
 	demo: {
 		username: "demo",
 		displayName: "Demo Admin",
@@ -536,8 +518,6 @@ const PLAYERS: Record<string, PlayerData> = {
 		heroes: ["tracer", "genji", "sojourn"],
 	},
 };
-
-// ─── Org / team structure ────────────────────────────────────────────────────
 
 const ORGS = {
 	sfShock: {
@@ -895,8 +875,6 @@ const FREE_AGENT_LISTINGS = [
 	},
 ];
 
-// ─── Availability template ───────────────────────────────────────────────────
-
 function weekdaySlots(userId: string, teamId: string) {
 	// Mon-Thu evenings 18:00-22:00 UTC
 	return [1, 2, 3, 4].map((day) => ({
@@ -922,8 +900,6 @@ function weekendSlots(userId: string, teamId: string) {
 		label: "Weekend",
 	}));
 }
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function findOrCreateTeam(
 	orgId: string,
@@ -1021,16 +997,12 @@ async function upsertUpdate(
 	});
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
-
 async function main() {
 	console.log("🌱  Demo seed starting…\n");
 
-	// ── 1. Hash the shared demo password ──────────────────────────────────────
 	console.log("  Hashing password…");
 	const passwordHash = await hashPassword(DEMO_PASSWORD);
 
-	// ── 2. Upsert users ───────────────────────────────────────────────────────
 	console.log("  Upserting users…");
 	const userIds: Record<string, string> = {};
 
@@ -1076,7 +1048,6 @@ async function main() {
 	}
 	console.log(`    ✓ ${Object.keys(PLAYERS).length} users`);
 
-	// ── 3. Upsert player profiles ─────────────────────────────────────────────
 	console.log("  Upserting player profiles…");
 	for (const [key, p] of Object.entries(PLAYERS)) {
 		await db
@@ -1107,7 +1078,6 @@ async function main() {
 	}
 	console.log(`    ✓ ${Object.keys(PLAYERS).length} player profiles`);
 
-	// ── 4. Seed hero pools ────────────────────────────────────────────────────
 	console.log("  Seeding hero pools…");
 	for (const [key, p] of Object.entries(PLAYERS)) {
 		const userId = userIds[key];
@@ -1120,7 +1090,6 @@ async function main() {
 	}
 	console.log(`    ✓ hero pools seeded`);
 
-	// ── 5. Upsert organizations ───────────────────────────────────────────────
 	console.log("  Upserting organizations…");
 	const orgIds: Record<string, string> = {};
 
@@ -1159,7 +1128,6 @@ async function main() {
 	}
 	console.log(`    ✓ ${Object.keys(ORGS).length} organizations`);
 
-	// ── 6. Seed org members ───────────────────────────────────────────────────
 	console.log("  Seeding org memberships…");
 
 	// Owner memberships
@@ -1257,7 +1225,6 @@ async function main() {
 
 	console.log(`    ✓ org memberships seeded`);
 
-	// ── 7. Create teams ───────────────────────────────────────────────────────
 	console.log("  Creating teams…");
 	const teamIds: string[] = [];
 	const tagToTeamId: Record<string, string> = {}; // tag-lowercase → teamId
@@ -1277,7 +1244,6 @@ async function main() {
 		tagToTeamId[team.tag.toLowerCase()] = teamId;
 		console.log(`    ✓ [${team.tag}] ${team.name} (id: ${teamId.slice(0, 8)}…)`);
 
-		// ── 8. Seed team rosters ─────────────────────────────────────────────
 		for (const entry of team.roster) {
 			const userId = userIds[entry.username];
 			if (!userId) {
@@ -1307,7 +1273,6 @@ async function main() {
 				});
 		}
 
-		// ── 9. Seed availability ──────────────────────────────────────────────
 		for (const entry of team.roster) {
 			if (entry.memberType !== "player") continue;
 			const userId = userIds[entry.username];
@@ -1322,7 +1287,6 @@ async function main() {
 			await db.insert(availabilityTable).values(slots);
 		}
 
-		// ── 10. Seed update posts ─────────────────────────────────────────────
 		const adminUser = team.roster.find(
 			(r) => r.permissionRole === "admin" && r.memberType === "player"
 		);
@@ -1333,7 +1297,6 @@ async function main() {
 			await upsertUpdate(authorId, teamId, orgId2, post);
 		}
 
-		// ── 11. Seed recruiting listings ──────────────────────────────────────
 		const ownerUser = team.roster.find(
 			(r) => r.permissionRole === "admin" && r.memberType === "player"
 		);
@@ -1347,7 +1310,6 @@ async function main() {
 		}
 	}
 
-	// ── 12. Free-agent LFT listings ───────────────────────────────────────────
 	console.log("  Seeding free-agent LFT listings…");
 	for (const fa of FREE_AGENT_LISTINGS) {
 		const userId = userIds[fa.username];
@@ -1363,7 +1325,6 @@ async function main() {
 	}
 	console.log(`    ✓ ${FREE_AGENT_LISTINGS.length} LFT listings`);
 
-	// ── 13. Add demo user to both teams (read-only view of everything) ─────────
 	console.log("  Adding demo admin to team rosters…");
 	for (const teamId of teamIds) {
 		await db
@@ -1381,7 +1342,6 @@ async function main() {
 			});
 	}
 
-	// ── 14. Upload demo images ────────────────────────────────────────────────
 	console.log("  Uploading demo images (skips gracefully if directories are empty)…");
 	const publicUrl = (process.env.S3_PUBLIC_URL ?? "http://localhost:9000").replace(/\/$/, "");
 
@@ -1391,7 +1351,6 @@ async function main() {
 		slugToOrgId[orgDef.slug] = orgIds[key];
 	}
 
-	// ── Players ──────────────────────────────────────────────────────────────
 	const playerResult = await uploadEntityImages({
 		dir: join(DEMO_IMAGES_ROOT, "players"),
 		bucket: "demo-players",
@@ -1408,7 +1367,6 @@ async function main() {
 	if (playerResult.skipped.length)
 		console.log(`    ~ unmatched: ${playerResult.skipped.join(", ")}`);
 
-	// ── Teams ────────────────────────────────────────────────────────────────
 	const teamResult = await uploadEntityImages({
 		dir: join(DEMO_IMAGES_ROOT, "teams"),
 		bucket: "demo-teams",
@@ -1424,7 +1382,6 @@ async function main() {
 	console.log(`    ✓ teams:   ${teamResult.uploaded} image(s) uploaded`);
 	if (teamResult.skipped.length) console.log(`    ~ unmatched: ${teamResult.skipped.join(", ")}`);
 
-	// ── Orgs ─────────────────────────────────────────────────────────────────
 	const orgResult = await uploadEntityImages({
 		dir: join(DEMO_IMAGES_ROOT, "orgs"),
 		bucket: "demo-orgs",
@@ -1440,7 +1397,6 @@ async function main() {
 	console.log(`    ✓ orgs:    ${orgResult.uploaded} image(s) uploaded`);
 	if (orgResult.skipped.length) console.log(`    ~ unmatched: ${orgResult.skipped.join(", ")}`);
 
-	// ── Summary ───────────────────────────────────────────────────────────────
 	console.log("\n✅  Demo seed complete!\n");
 	console.log("  Accounts (password: Scrimflow1!):\n");
 

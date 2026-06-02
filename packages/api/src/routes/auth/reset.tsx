@@ -62,11 +62,27 @@ resetRoutes.post("/forgot-password", async (c) => {
 	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 	const resetUrl = `${appUrl}/auth?reset_token=${resetSession.id}`;
 
-	await sendMail({
-		to: email,
-		subject: "Reset your Scrimflow password",
-		template: <PasswordResetEmail resetUrl={resetUrl} />,
-	}).catch((err: unknown) => logger.error({ err }, "password reset email send failed"));
+	try {
+		await sendMail({
+			to: email,
+			subject: "Reset your Scrimflow password",
+			template: <PasswordResetEmail resetUrl={resetUrl} />,
+		});
+	} catch (err) {
+		logger.error({ err }, "password reset email send failed");
+		await db
+			.delete(passwordResetSessionTable)
+			.where(eq(passwordResetSessionTable.id, resetSession.id))
+			.catch((deleteErr: unknown) =>
+				logger.error(
+					{ err: deleteErr, resetSessionId: resetSession.id },
+					"failed to roll back password reset session after email failure"
+				)
+			);
+		// Return the same constant response as every other branch so an email
+		// outage can't be used to enumerate which addresses have accounts.
+		return c.json({ nextStep: "forgot-password-sent", email } satisfies ActionResult);
+	}
 
 	const geo = await fetchGeoData(client.ip);
 	writeAuditLog(

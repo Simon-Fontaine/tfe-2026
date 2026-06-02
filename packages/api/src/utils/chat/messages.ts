@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { chatChannelMemberTable, chatChannelTable, chatMessageTable } from "@/db/schema";
@@ -13,6 +13,7 @@ export async function createMessageForUser(params: {
 	userId: string;
 	content: string;
 	replyToMessageId?: string;
+	clientNonce?: string;
 }) {
 	const membership = await db.query.chatChannelMemberTable.findFirst({
 		where: and(
@@ -46,10 +47,31 @@ export async function createMessageForUser(params: {
 			senderId: params.userId,
 			content: params.content,
 			replyToMessageId: params.replyToMessageId ?? null,
+			clientNonce: params.clientNonce ?? null,
+		})
+		.onConflictDoNothing({
+			target: [chatMessageTable.channelId, chatMessageTable.senderId, chatMessageTable.clientNonce],
+			where: sql`${chatMessageTable.clientNonce} is not null`,
 		})
 		.returning({ id: chatMessageTable.id });
 
-	return { status: "ok", messageId: message.id } as const;
+	if (message) return { status: "ok", messageId: message.id } as const;
+
+	// Insert was a no-op: a message with this (sender, nonce) already exists in the
+	// channel, so a retried send is idempotent — return the original message.
+	if (params.clientNonce) {
+		const existing = await db.query.chatMessageTable.findFirst({
+			where: and(
+				eq(chatMessageTable.channelId, params.conversationId),
+				eq(chatMessageTable.senderId, params.userId),
+				eq(chatMessageTable.clientNonce, params.clientNonce)
+			),
+			columns: { id: true },
+		});
+		if (existing) return { status: "ok", messageId: existing.id } as const;
+	}
+
+	return { status: "error" } as const;
 }
 
 export async function getMessageByIdForConversation(params: {

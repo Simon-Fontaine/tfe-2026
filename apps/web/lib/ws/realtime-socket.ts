@@ -9,11 +9,9 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 const MAX_RECONNECT_MS = 30_000;
 
 /**
- * Single shared websocket for the whole browser session. Carries both
- * app-domain traffic (scrim/team/org/notifications/recruit) and chat-domain
- * traffic (conversations, typing, presence). Chat-domain events are applied to
- * the chat store directly; every event is also broadcast to listeners so domain
- * bridges (inbox, scrims, updates, recruit) can react.
+ * Single shared websocket for the whole browser session, carrying both app-domain
+ * and chat-domain traffic. Chat events apply to the chat store directly; every event
+ * is also broadcast to listeners so domain bridges (inbox, scrims, …) can react.
  */
 class RealtimeSocketService {
 	private ws: WebSocket | null = null;

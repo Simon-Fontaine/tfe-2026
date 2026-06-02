@@ -29,21 +29,15 @@ import type { RequestContextEnv } from "@/middleware/request-context";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
 import { fetchGeoData } from "@/utils/geo";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface AttestationData {
 	credentialId: string;
 	attestationObject: string;
 	clientDataJSON: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const RP_ID = process.env.WEBAUTHN_RP_ID ?? "localhost";
 const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:3000";
 const SUPPORTED_ALGORITHMS = new Set([coseAlgorithmES256, coseAlgorithmRS256]);
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function ensureRecoveryCode(userId: string): Promise<string | null> {
 	const user = await db
@@ -195,8 +189,6 @@ async function verifyAndExtractRegistration(
 
 	return { credentialId: credential.id, publicKeyBytes, algorithmId };
 }
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
 
 const webauthnSetupRoutes = new Hono<RequestContextEnv & AuthEnv>();
 webauthnSetupRoutes.use("*", requireAuth);

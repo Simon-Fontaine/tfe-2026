@@ -142,18 +142,29 @@ verifyRoutes.post("/resend", async (c) => {
 	const client = c.get("client");
 
 	const code = await createEmailVerificationRequest(userId, user.email, client.ip);
-	await sendMail({
-		to: user.email,
-		subject: "Your new Scrimflow verification code",
-		template: (
-			<VerificationEmail
-				code={code}
-				title="Here's your new verification code"
-				message="You requested a new verification code for your Scrimflow account."
-				actionText="enter the following code"
-			/>
-		),
-	}).catch((err: unknown) => logger.error({ err }, "resend verification email failed"));
+	try {
+		await sendMail({
+			to: user.email,
+			subject: "Your new Scrimflow verification code",
+			template: (
+				<VerificationEmail
+					code={code}
+					title="Here's your new verification code"
+					message="You requested a new verification code for your Scrimflow account."
+					actionText="enter the following code"
+				/>
+			),
+		});
+	} catch (err) {
+		logger.error({ err }, "resend verification email failed");
+		return c.json(
+			{
+				error:
+					"We couldn't send the verification email. Please try again in a moment or contact support.",
+			} satisfies ActionResult,
+			502
+		);
+	}
 
 	return c.json({} satisfies ActionResult);
 });

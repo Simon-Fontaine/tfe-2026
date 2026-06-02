@@ -14,8 +14,6 @@ if (key.byteLength !== 16) {
 	throw new Error("ENCRYPTION_KEY must be a 16-byte key encoded as base64 (for AES-128-GCM).");
 }
 
-// ─── Core byte-level encrypt / decrypt ─────────────────────────────────────────
-
 /** Encrypts raw bytes using AES-128-GCM. */
 function encrypt(data: Uint8Array): Uint8Array {
 	const iv = new Uint8Array(16);
@@ -44,8 +42,6 @@ function decrypt(encrypted: Uint8Array): Uint8Array {
 	out.write(decipher.final());
 	return out.bytes();
 }
-
-// ─── Text column helpers ───────────────────────────────────────────────────────
 
 /** Encrypts bytes to base64 string. */
 export function encryptToText(data: Uint8Array): string {

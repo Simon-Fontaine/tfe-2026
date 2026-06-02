@@ -33,8 +33,6 @@ export type {
 	UserSearchResult,
 };
 
-// ─── Queries ───────────────────────────────────────────────────────────────────
-
 export const getTeamWithRoster = cache(
 	async (teamId: string, _userId: string): Promise<TeamWithRoster | null> => {
 		const result = await getTeamWithRosterRouteState(teamId, _userId);

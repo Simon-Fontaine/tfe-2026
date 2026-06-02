@@ -1,5 +1,6 @@
 import type { ScrimSummary } from "@scrimflow/shared";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { DatabaseError } from "pg";
 import { db } from "@/db";
 import {
 	mapTable,
@@ -23,6 +24,23 @@ export class ScrimWorkflowError extends Error {
 }
 
 export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Max time a scrim-mutating transaction waits on the `FOR UPDATE` row lock. */
+export const SCRIM_LOCK_TIMEOUT_MS = 5000;
+
+/**
+ * Bounds how long the current transaction blocks on a contended scrim row lock.
+ * Pair with a `SELECT … FOR UPDATE`; on timeout Postgres raises `55P03`, which
+ * callers should map to a 503 (see `isLockTimeoutError`).
+ */
+export async function setScrimLockTimeout(tx: DbTransaction): Promise<void> {
+	await tx.execute(sql.raw(`SET LOCAL lock_timeout = '${SCRIM_LOCK_TIMEOUT_MS}ms'`));
+}
+
+/** True when a transaction failed because the `FOR UPDATE` lock timed out (`55P03`). */
+export function isLockTimeoutError(error: unknown): boolean {
+	return error instanceof DatabaseError && error.code === "55P03";
+}
 
 export async function findScrimWithRelations(scrimId: string) {
 	return db.query.scrimTable.findFirst({

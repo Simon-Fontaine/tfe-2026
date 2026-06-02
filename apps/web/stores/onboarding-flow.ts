@@ -8,11 +8,7 @@ import type { OW2Rank, OW2Role } from "@/lib/ow2";
 
 export type { OW2Rank, OW2Role };
 
-// ─── Step definitions ─────────────────────────────────────────────────────────
-
 export type OnboardingStep = "battletag" | "roles-and-rank" | "hero-pool" | "intent" | "complete";
-
-// ─── State ────────────────────────────────────────────────────────────────────
 
 interface OnboardingData {
 	battletag: string;
@@ -34,8 +30,6 @@ interface OnboardingFlowState {
 	hydrate: (progress: OnboardingProgress, progressKey: string) => void;
 	transitionTo: (step: OnboardingStep, partialData?: Partial<OnboardingData>) => void;
 }
-
-// ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useOnboardingFlow = create<OnboardingFlowState>((set) => ({
 	step: "battletag",

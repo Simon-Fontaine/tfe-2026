@@ -62,8 +62,6 @@ const optionalPermissionRole = v.optional(
 	v.picklist(TEAM_PERMISSION_ROLE_VALUES, "Please select a team permission role")
 );
 
-// ─── Organisation ─────────────────────────────────────────────────────────────
-
 export const CreateOrgSchema = v.object({
 	name: v.pipe(
 		v.string(),
@@ -281,8 +279,6 @@ export const RemoveOrgMemberSchema = v.object({
 
 export type RemoveOrgMemberInput = v.InferOutput<typeof RemoveOrgMemberSchema>;
 
-// ─── Team ─────────────────────────────────────────────────────────────────────
-
 export const CreateTeamSchema = v.object({
 	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 	name: v.pipe(
@@ -384,8 +380,6 @@ export type UpdateTeamMemberPermissionInput = v.InferOutput<
 	typeof UpdateTeamMemberPermissionSchema
 >;
 
-// ─── Team management ──────────────────────────────────────────────────────────
-
 export const ToggleRecruitingSchema = v.object({
 	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
 });
@@ -413,8 +407,6 @@ export const DeleteTeamSchema = v.object({
 
 export type DeleteTeamInput = v.InferOutput<typeof DeleteTeamSchema>;
 
-// ─── Team invites ─────────────────────────────────────────────────────────────
-
 export const InviteToTeamSchema = v.object({
 	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),
 	userId: v.pipe(v.string(), v.uuid("Invalid user ID")),
@@ -440,8 +432,6 @@ export const CancelTeamInviteSchema = v.object({
 });
 
 export type CancelTeamInviteInput = v.InferOutput<typeof CancelTeamInviteSchema>;
-
-// ─── Org invites ──────────────────────────────────────────────────────────────
 
 export const InviteToOrgSchema = v.object({
 	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),

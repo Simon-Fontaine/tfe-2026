@@ -3,15 +3,11 @@ import logger from "@/utils/logger";
 
 /** Redis-backed rate limiter with in-memory fallback. */
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export interface RateLimitResult {
 	allowed: boolean;
 	/** Milliseconds until the rate-limit window resets (0 when allowed). */
 	retryAfterMs: number;
 }
-
-// ─── In-memory fallback ──────────────────────────────────────────────────────
 
 interface Bucket {
 	count: number;
@@ -46,8 +42,6 @@ function memCheck(id: string, limit: number, windowMs: number): RateLimitResult 
 function memReset(id: string): void {
 	memStore.delete(id);
 }
-
-// ─── Redis backend ─────────────────────────────────────────────────────────────
 
 // Atomically increments the counter and ensures the key always has a TTL.
 // Handles orphaned keys (TTL = -1) left by prior non-atomic paths.
@@ -85,8 +79,6 @@ async function redisCheck(
 async function redisReset(client: NonNullable<typeof redis>, id: string): Promise<void> {
 	await client.del(`rl:${id}`);
 }
-
-// ─── Public API ────────────────────────────────────────────────────────────────
 
 /** Formats a millisecond duration into a human-readable string. */
 export function formatRetryAfter(ms: number): string {

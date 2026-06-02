@@ -1,19 +1,13 @@
 import * as v from "valibot";
 
-// ─── Password constants ────────────────────────────────────────────────────────
-
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const PASSWORD_LONG_LENGTH = 14;
-
-// ─── Regex ───────────────────────────────────────────────────────────────────
 
 const RE_LOWERCASE = /[a-z]/;
 const RE_UPPERCASE = /[A-Z]/;
 const RE_NUMBER = /[0-9]/;
 const RE_SPECIAL = /[^a-zA-Z0-9]/;
-
-// ─── Password strength ───────────────────────────────────────────────────────
 
 export interface PasswordChecks {
 	hasMinLength: boolean;
@@ -64,8 +58,6 @@ export function getPasswordStrength(password: string): PasswordStrengthResult {
 	return { score, strength, checks };
 }
 
-// ─── Shared pipes ────────────────────────────────────────────────────────────
-
 const passwordComplexityPipe = v.pipe(
 	v.string(),
 	v.nonEmpty("Password is required"),
@@ -76,8 +68,6 @@ const passwordComplexityPipe = v.pipe(
 	v.regex(RE_NUMBER, "Password must contain at least one number"),
 	v.regex(RE_SPECIAL, "Password must contain at least one special character")
 );
-
-// ─── Login ───────────────────────────────────────────────────────────────────
 
 export const LoginSchema = v.object({
 	email: v.pipe(
@@ -95,8 +85,6 @@ export const LoginSchema = v.object({
 });
 
 export type LoginInput = v.InferOutput<typeof LoginSchema>;
-
-// ─── Register ────────────────────────────────────────────────────────────────
 
 export const RegisterSchema = v.pipe(
 	v.object({
@@ -136,8 +124,6 @@ export const RegisterSchema = v.pipe(
 
 export type RegisterInput = v.InferOutput<typeof RegisterSchema>;
 
-// ─── Forgot Password ─────────────────────────────────────────────────────────
-
 export const ForgotPasswordSchema = v.object({
 	email: v.pipe(
 		v.string(),
@@ -149,8 +135,6 @@ export const ForgotPasswordSchema = v.object({
 });
 
 export type ForgotPasswordInput = v.InferOutput<typeof ForgotPasswordSchema>;
-
-// ─── Verify Code ─────────────────────────────────────────────────────────────
 
 export const VerifyCodeSchema = v.object({
 	code: v.pipe(
@@ -164,8 +148,6 @@ export const VerifyCodeSchema = v.object({
 
 export type VerifyCodeInput = v.InferOutput<typeof VerifyCodeSchema>;
 
-// ─── Reset Password ──────────────────────────────────────────────────────────
-
 export const ResetPasswordSchema = v.pipe(
 	v.object({
 		password: passwordComplexityPipe,
@@ -178,8 +160,6 @@ export const ResetPasswordSchema = v.pipe(
 );
 
 export type ResetPasswordInput = v.InferOutput<typeof ResetPasswordSchema>;
-
-// ─── Change Password ─────────────────────────────────────────────────────────
 
 /** Step 1: verify current password and trigger an emailed confirmation code. */
 export const RequestPasswordChangeSchema = v.object({
@@ -216,15 +196,11 @@ export type ConfirmPasswordChangeInput = v.InferOutput<typeof ConfirmPasswordCha
 export const ChangePasswordSchema = ConfirmPasswordChangeSchema;
 export type ChangePasswordInput = ConfirmPasswordChangeInput;
 
-// ─── Recovery Code ───────────────────────────────────────────────────────────
-
 export const RecoveryCodeSchema = v.object({
 	code: v.pipe(v.string(), v.trim(), v.nonEmpty("Recovery code is required")),
 });
 
 export type RecoveryCodeInput = v.InferOutput<typeof RecoveryCodeSchema>;
-
-// ─── Change Email ─────────────────────────────────────────────────────────────
 
 export const ChangeEmailSchema = v.object({
 	newEmail: v.pipe(
@@ -238,8 +214,6 @@ export const ChangeEmailSchema = v.object({
 
 export type ChangeEmailInput = v.InferOutput<typeof ChangeEmailSchema>;
 
-// ─── Delete Account ───────────────────────────────────────────────────────────
-
 export const DeleteAccountSchema = v.object({
 	reason: v.optional(
 		v.pipe(v.string(), v.trim(), v.maxLength(500, "Reason must be at most 500 characters"))
@@ -247,8 +221,6 @@ export const DeleteAccountSchema = v.object({
 });
 
 export type DeleteAccountInput = v.InferOutput<typeof DeleteAccountSchema>;
-
-// ─── Change Username ──────────────────────────────────────────────────────────
 
 export const ChangeUsernameSchema = v.object({
 	username: v.pipe(
@@ -262,8 +234,6 @@ export const ChangeUsernameSchema = v.object({
 });
 
 export type ChangeUsernameInput = v.InferOutput<typeof ChangeUsernameSchema>;
-
-// ─── Credential Name ─────────────────────────────────────────────────────────
 
 export const CredentialNameSchema = v.object({
 	name: v.pipe(

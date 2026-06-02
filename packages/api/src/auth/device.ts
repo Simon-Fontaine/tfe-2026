@@ -5,8 +5,6 @@ import { db } from "@/db";
 import { sessionTable, userDeviceTable } from "@/db/schema";
 import logger from "@/utils/logger";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export interface ClientContext {
 	/** Originating client IP from trust-ordered proxy headers. */
 	ip: string | null;
@@ -20,9 +18,15 @@ export interface ClientContext {
 	deviceType: "mobile" | "tablet" | "desktop" | null;
 }
 
-// ─── IP extraction ─────────────────────────────────────────────────────────────
-
-/** Resolves client IP handling common proxy headers. */
+/**
+ * Resolves client IP handling common proxy headers.
+ *
+ * `cf-connecting-ip` is preferred because Cloudflare overwrites it with the true
+ * client IP. This is only trustworthy because the origin is firewalled to
+ * Cloudflare's published IP ranges — if the origin were directly reachable, a
+ * client could spoof any of these headers. The leftmost `x-forwarded-for` is a
+ * fallback for non-Cloudflare paths (e.g. local dev) and is itself spoofable.
+ */
 export function getClientIp(headers: { get(name: string): string | null }): string | null {
 	const cf = headers.get("cf-connecting-ip");
 	if (cf) return cf.trim();
@@ -36,7 +40,6 @@ export function getClientIp(headers: { get(name: string): string | null }): stri
 	return null;
 }
 
-// ─── User-Agent parsing ────────────────────────────────────────────────────────
 // Dependency-free regex parser — avoids ua-parser-js for a small common subset.
 
 function parseBrowser(ua: string): string | null {
@@ -67,14 +70,10 @@ function parseDeviceType(ua: string): "mobile" | "tablet" | "desktop" {
 	return "desktop";
 }
 
-// ─── Fingerprinting ────────────────────────────────────────────────────────────
-
 /** Computes User-Agent fingerprint. */
 export function computeFingerprint(userAgent: string): string {
 	return encodeHexLowerCase(sha256(new TextEncoder().encode(userAgent)));
 }
-
-// ─── Main context extractor ────────────────────────────────────────────────────
 
 /** Extracts ClientContext once per request to avoid repeated header reads. */
 export function extractClientContext(headers: { get(name: string): string | null }): ClientContext {
@@ -99,8 +98,6 @@ export function extractClientContext(headers: { get(name: string): string | null
 		deviceType,
 	};
 }
-
-// ─── Device resolution ─────────────────────────────────────────────────────────
 
 export interface DeviceResult {
 	deviceId: string;

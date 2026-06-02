@@ -48,8 +48,10 @@ export function InboxRealtimeBootstrap({ initialUnreadCount }: InboxRealtimeBoot
 		};
 	}, []);
 
-	// Re-sync unread count whenever the socket reconnects so missed events
-	// during a disconnect don't leave the badge stale.
+	// Re-sync whenever the socket reconnects so events missed during a disconnect
+	// (new notifications, read/dismiss state) don't leave the inbox stale. We
+	// refresh both the unread badge and the list — the store merge preserves any
+	// local read/dismissed state.
 	useEffect(() => {
 		let prevConnected: boolean | null = null;
 
@@ -60,15 +62,26 @@ export function InboxRealtimeBootstrap({ initialUnreadCount }: InboxRealtimeBoot
 
 				if (!isReconnect) return;
 
+				const store = useInboxStore.getState();
+
 				try {
-					const res = await fetch(apiRoutes.notifications.unreadCount, {
-						credentials: "include",
-					});
-					if (!res.ok) return;
-					const data = (await res.json()) as { data: { count: number } };
-					useInboxStore.getState().hydrateUnreadCount(data.data.count);
+					const [countRes, listRes] = await Promise.all([
+						fetch(apiRoutes.notifications.unreadCount, { credentials: "include" }),
+						fetch(apiRoutes.notifications.root, { credentials: "include" }),
+					]);
+
+					if (countRes.ok) {
+						const countData = (await countRes.json()) as { data: { count: number } };
+						store.hydrateUnreadCount(countData.data.count);
+					}
+					if (listRes.ok) {
+						const listData = (await listRes.json()) as {
+							data: Parameters<typeof store.hydrateNotifications>[0];
+						};
+						store.hydrateNotifications(listData.data);
+					}
 				} catch {
-					// fail silently — stale count is preferable to a broken shell
+					// fail silently — stale inbox is preferable to a broken shell
 				}
 			}
 		);

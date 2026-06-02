@@ -15,16 +15,12 @@ import type { RequestContextEnv } from "@/middleware/request-context";
 import { formatRetryAfter } from "@/rate-limit";
 import { fetchGeoData } from "@/utils/geo";
 
-// ─── Validation ─────────────────────────────────────────────────────────────
-
 const TotpCodeSchema = v.pipe(
 	v.string(),
 	v.trim(),
 	v.length(6, "Code must be exactly 6 digits"),
 	v.regex(/^\d{6}$/, "Code must contain only digits")
 );
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function ensureRecoveryCode(userId: string): Promise<string | null> {
 	const user = await db
@@ -41,8 +37,6 @@ async function ensureRecoveryCode(userId: string): Promise<string | null> {
 	await db.update(userTable).set({ recoveryCode: encrypted }).where(eq(userTable.id, userId));
 	return code;
 }
-
-// ─── Routes ─────────────────────────────────────────────────────────────────
 
 const totpSetupRoutes = new Hono<RequestContextEnv & AuthEnv>();
 totpSetupRoutes.use("*", requireAuth);
