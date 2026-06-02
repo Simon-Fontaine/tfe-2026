@@ -103,7 +103,7 @@ async function UpdatesListSection({ scope }: { scope: "all" | "team" | "organiza
 	}
 
 	return (
-		<div className="divide-y border">
+		<div className="space-y-4">
 			{filteredUpdates.map((post) => (
 				<UpdatePostCard
 					key={post.id}
@@ -111,7 +111,6 @@ async function UpdatesListSection({ scope }: { scope: "all" | "team" | "organiza
 					showScopeLink
 					showVisibilityBadge={false}
 					detailHref={publicRoutes.updates.byId(post.id)}
-					className="border-0 px-4 py-3"
 				/>
 			))}
 		</div>
