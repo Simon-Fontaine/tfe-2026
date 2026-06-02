@@ -22,7 +22,9 @@ www.{$DOMAIN} {
 
     handle /assets/* {
         uri strip_prefix /assets
-        reverse_proxy storage:9000
+        reverse_proxy storage:9000 {
+            header_up Host {host}
+        }
     }
 
     handle /api/* {

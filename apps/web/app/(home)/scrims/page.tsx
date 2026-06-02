@@ -3,6 +3,7 @@ import type { ScrimStatus } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -62,15 +63,13 @@ export default async function ScrimsDirectoryPage({ searchParams }: ScrimsDirect
 				</Button>
 			}
 		>
-			<div className="flex flex-wrap gap-2">
-				{SCRIM_FILTERS.map((filter) => (
-					<Link key={filter} href={publicRoutes.scrims.withStatus(filter)}>
-						<Badge variant={status === filter ? "default" : "outline"}>
-							{filter === "all" ? "All scrims" : SCRIM_STATUS_LABELS[filter]}
-						</Badge>
-					</Link>
-				))}
-			</div>
+			<PublicFilterBar
+				options={SCRIM_FILTERS.map((filter) => ({
+					label: filter === "all" ? "All scrims" : SCRIM_STATUS_LABELS[filter],
+					href: publicRoutes.scrims.withStatus(filter),
+					active: status === filter,
+				}))}
+			/>
 			<Suspense fallback={<PublicListLoading />}>
 				<ScrimsListSection status={status} />
 			</Suspense>

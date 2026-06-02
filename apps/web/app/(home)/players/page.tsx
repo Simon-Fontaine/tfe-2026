@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 };
 
 import { Suspense } from "react";
+import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -43,27 +44,23 @@ export default async function PlayersDirectoryPage({ searchParams }: PlayersDire
 				</Button>
 			}
 		>
-			<div className="flex flex-wrap gap-2">
-				{(
+			<PublicFilterBar
+				options={(
 					[
 						["all", "All players"],
 						["tank", "Tank"],
 						["damage", "DPS"],
 						["support", "Support"],
 					] as const
-				).map(([value, label]) => (
-					<Link
-						key={value}
-						href={
-							value === "all"
-								? publicRoutes.players.root
-								: `${publicRoutes.players.root}?role=${value}`
-						}
-					>
-						<Badge variant={role === value ? "default" : "outline"}>{label}</Badge>
-					</Link>
-				))}
-			</div>
+				).map(([value, label]) => ({
+					label,
+					href:
+						value === "all"
+							? publicRoutes.players.root
+							: `${publicRoutes.players.root}?role=${value}`,
+					active: role === value,
+				}))}
+			/>
 			<Suspense fallback={<PublicListLoading itemCount={8} itemHeightClassName="h-14" />}>
 				<PlayerListSection role={role} />
 			</Suspense>

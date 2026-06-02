@@ -135,147 +135,151 @@ function RosterRow({ member, canManage, canManageAdmins, teamId }: RosterRowProp
 
 	return (
 		<div className={cn("transition-opacity", isPending && "opacity-50 pointer-events-none")}>
-			<div className="flex flex-wrap items-center gap-3 px-4 py-3">
-				<Avatar className="size-8 rounded-none overflow-hidden after:rounded-none shrink-0">
-					<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
-					<AvatarFallback className="rounded-none text-[10px]">
-						<HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
-					</AvatarFallback>
-				</Avatar>
+			<div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+				<div className="flex min-w-0 flex-1 items-center gap-3">
+					<Avatar className="size-8 shrink-0 overflow-hidden rounded-none after:rounded-none">
+						<AvatarImage src={member.avatarUrl ?? undefined} className="rounded-none" />
+						<AvatarFallback className="rounded-none text-[10px]">
+							<HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
+						</AvatarFallback>
+					</Avatar>
 
-				<div className="min-w-40 flex-1">
-					<Link
-						href={publicRoutes.players.byUsername(member.username)}
-						className="truncate text-xs font-medium hover:underline"
-					>
-						{member.displayName}
-					</Link>
-					<p className="text-[10px] text-muted-foreground">
-						{member.roleInTeam
-							? ROLE_LABELS[member.roleInTeam]
-							: member.staffRole
-								? member.staffRole[0].toUpperCase() + member.staffRole.slice(1)
-								: "Staff"}
-						{member.rank &&
-							` · ${RANK_LABELS[member.rank] ?? member.rank}${member.rankDivision ? ` ${member.rankDivision}` : ""}`}
-					</p>
-					{member.mainHero && (
-						<div className="mt-1 flex items-center gap-1.5">
-							{member.mainHero.imageUrl && (
-								<div className="relative size-5 shrink-0 overflow-hidden">
-									<Image
-										src={member.mainHero.imageUrl}
-										alt=""
-										fill
-										sizes="20px"
-										unoptimized
-										className="object-cover object-top"
-									/>
-								</div>
-							)}
-							<span className="text-[10px] text-muted-foreground">
-								{member.mainHero.displayName}
-							</span>
-						</div>
-					)}
+					<div className="min-w-0 flex-1">
+						<Link
+							href={publicRoutes.players.byUsername(member.username)}
+							className="block truncate text-xs font-medium hover:underline"
+						>
+							{member.displayName}
+						</Link>
+						<p className="truncate text-[10px] text-muted-foreground">
+							{member.roleInTeam
+								? ROLE_LABELS[member.roleInTeam]
+								: member.staffRole
+									? member.staffRole[0].toUpperCase() + member.staffRole.slice(1)
+									: "Staff"}
+							{member.rank &&
+								` · ${RANK_LABELS[member.rank] ?? member.rank}${member.rankDivision ? ` ${member.rankDivision}` : ""}`}
+						</p>
+						{member.mainHero && (
+							<div className="mt-1 flex items-center gap-1.5">
+								{member.mainHero.imageUrl && (
+									<div className="relative size-5 shrink-0 overflow-hidden">
+										<Image
+											src={member.mainHero.imageUrl}
+											alt=""
+											fill
+											sizes="20px"
+											unoptimized
+											className="object-cover object-top"
+										/>
+									</div>
+								)}
+								<span className="truncate text-[10px] text-muted-foreground">
+									{member.mainHero.displayName}
+								</span>
+							</div>
+						)}
+					</div>
 				</div>
 
-				<Badge
-					variant="outline"
-					className={cn("text-[10px] shrink-0", STATUS_VARIANTS[member.status])}
-				>
-					{member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-				</Badge>
-				<Badge variant="outline" className="text-[10px] shrink-0">
-					{member.permissionRole === "admin" ? "Admin access" : "Member access"}
-				</Badge>
+				<div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+					<Badge
+						variant="outline"
+						className={cn("min-w-16 justify-center text-[10px]", STATUS_VARIANTS[member.status])}
+					>
+						{member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+					</Badge>
+					<Badge variant="outline" className="min-w-24 justify-center text-[10px]">
+						{member.permissionRole === "admin" ? "Admin access" : "Member access"}
+					</Badge>
 
-				{canManage && (
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<button
-								type="button"
-								aria-label={`Manage ${member.displayName}`}
-								className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-							>
-								<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-							</button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-40">
-							<DropdownMenuLabel className="text-xs">Member type</DropdownMenuLabel>
-							<DropdownMenuItem
-								className="text-xs"
-								onSelect={() =>
-									updateMemberDetails({
-										memberType: member.memberType === "player" ? "staff" : "player",
-										roleInTeam: member.memberType === "staff" ? "damage" : undefined,
-										staffRole: member.memberType === "player" ? "staff" : undefined,
-									})
-								}
-							>
-								{member.memberType === "player" ? "Convert to staff" : "Convert to player"}
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuLabel className="text-xs">
-								{member.memberType === "player" ? "Game role" : "Staff role"}
-							</DropdownMenuLabel>
-							{member.memberType === "player"
-								? (Object.entries(ROLE_LABELS) as Array<["tank" | "damage" | "support", string]>)
-										.filter(([role]) => role !== member.roleInTeam)
-										.map(([role, label]) => (
-											<DropdownMenuItem
-												key={role}
-												className="text-xs"
-												onSelect={() => updateMemberDetails({ roleInTeam: role })}
-											>
-												{label}
-											</DropdownMenuItem>
-										))
-								: STAFF_ROLE_OPTIONS.filter((option) => option.value !== member.staffRole).map(
-										(option) => (
-											<DropdownMenuItem
-												key={option.value}
-												className="text-xs"
-												onSelect={() => updateMemberDetails({ staffRole: option.value })}
-											>
-												{option.label}
-											</DropdownMenuItem>
-										)
-									)}
-							<DropdownMenuSeparator />
-							<DropdownMenuLabel className="text-xs">Change status</DropdownMenuLabel>
-							{STATUS_OPTIONS.filter((o) => o.value !== member.status).map((opt) => (
-								<DropdownMenuItem
-									key={opt.value}
-									className="text-xs"
-									onSelect={() => changeStatus(opt.value)}
+					{canManage && (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<button
+									type="button"
+									aria-label={`Manage ${member.displayName}`}
+									className="flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 								>
-									{opt.label}
+									<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+								</button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="w-40">
+								<DropdownMenuLabel className="text-xs">Member type</DropdownMenuLabel>
+								<DropdownMenuItem
+									className="text-xs"
+									onSelect={() =>
+										updateMemberDetails({
+											memberType: member.memberType === "player" ? "staff" : "player",
+											roleInTeam: member.memberType === "staff" ? "damage" : undefined,
+											staffRole: member.memberType === "player" ? "staff" : undefined,
+										})
+									}
+								>
+									{member.memberType === "player" ? "Convert to staff" : "Convert to player"}
 								</DropdownMenuItem>
-							))}
-							{canManageAdmins && (
-								<>
-									<DropdownMenuSeparator />
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel className="text-xs">
+									{member.memberType === "player" ? "Game role" : "Staff role"}
+								</DropdownMenuLabel>
+								{member.memberType === "player"
+									? (Object.entries(ROLE_LABELS) as Array<["tank" | "damage" | "support", string]>)
+											.filter(([role]) => role !== member.roleInTeam)
+											.map(([role, label]) => (
+												<DropdownMenuItem
+													key={role}
+													className="text-xs"
+													onSelect={() => updateMemberDetails({ roleInTeam: role })}
+												>
+													{label}
+												</DropdownMenuItem>
+											))
+									: STAFF_ROLE_OPTIONS.filter((option) => option.value !== member.staffRole).map(
+											(option) => (
+												<DropdownMenuItem
+													key={option.value}
+													className="text-xs"
+													onSelect={() => updateMemberDetails({ staffRole: option.value })}
+												>
+													{option.label}
+												</DropdownMenuItem>
+											)
+										)}
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel className="text-xs">Change status</DropdownMenuLabel>
+								{STATUS_OPTIONS.filter((o) => o.value !== member.status).map((opt) => (
 									<DropdownMenuItem
+										key={opt.value}
 										className="text-xs"
-										onSelect={() =>
-											changePermissionRole(member.permissionRole === "admin" ? "member" : "admin")
-										}
+										onSelect={() => changeStatus(opt.value)}
 									>
-										{member.permissionRole === "admin" ? "Remove admin" : "Make admin"}
+										{opt.label}
 									</DropdownMenuItem>
-								</>
-							)}
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="text-xs text-destructive focus:text-destructive"
-								onSelect={() => setRemoveDialogOpen(true)}
-							>
-								Remove from team
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				)}
+								))}
+								{canManageAdmins && (
+									<>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											className="text-xs"
+											onSelect={() =>
+												changePermissionRole(member.permissionRole === "admin" ? "member" : "admin")
+											}
+										>
+											{member.permissionRole === "admin" ? "Remove admin" : "Make admin"}
+										</DropdownMenuItem>
+									</>
+								)}
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									className="text-xs text-destructive focus:text-destructive"
+									onSelect={() => setRemoveDialogOpen(true)}
+								>
+									Remove from team
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					)}
+				</div>
 			</div>
 
 			{mutationError ? (

@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { InvitePlayerDialog } from "@/components/teams/invite-player-dialog";
 import { RosterTable } from "@/components/teams/roster-table";
 import { TeamInvitesSection } from "@/components/teams/team-invites-section";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
@@ -43,6 +42,11 @@ export default async function AppTeamRosterPage({
 	const activeRoster = isStaffTab ? team.data.staff : team.data.players;
 	const activePlayers = team.data.players.filter((member) => member.status !== "inactive").length;
 	const activeStaff = team.data.staff.filter((member) => member.status !== "inactive").length;
+	const summaryPillClass =
+		"inline-flex h-7 items-center border px-3 text-xs font-medium transition-colors";
+	const activeSummaryPillClass = "border-foreground text-foreground";
+	const inactiveSummaryPillClass =
+		"border-border text-muted-foreground hover:border-foreground hover:text-foreground";
 
 	return (
 		<PageContainer>
@@ -77,25 +81,33 @@ export default async function AppTeamRosterPage({
 				}
 			/>
 
-			<div className="flex flex-wrap gap-2">
+			<div className="flex flex-wrap items-center gap-2">
 				<Link href={`${appRoutes.teams.roster(team.data.id)}?type=players`}>
-					<Badge
-						variant="outline"
-						className={cn(!isStaffTab && "border-foreground text-foreground")}
+					<span
+						className={cn(
+							summaryPillClass,
+							!isStaffTab ? activeSummaryPillClass : inactiveSummaryPillClass
+						)}
 					>
 						Players: {activePlayers} active
-					</Badge>
+					</span>
 				</Link>
 				<Link href={`${appRoutes.teams.roster(team.data.id)}?type=staff`}>
-					<Badge
-						variant="outline"
-						className={cn(isStaffTab && "border-foreground text-foreground")}
+					<span
+						className={cn(
+							summaryPillClass,
+							isStaffTab ? activeSummaryPillClass : inactiveSummaryPillClass
+						)}
 					>
 						Staff: {activeStaff} active
-					</Badge>
+					</span>
 				</Link>
-				<Badge variant="outline">Admins: {team.data.adminCount}</Badge>
-				<Badge variant="outline">Pending invites: {team.data.pendingInvites.length}</Badge>
+				<span className={cn(summaryPillClass, "border-border text-muted-foreground")}>
+					Admins: {team.data.adminCount}
+				</span>
+				<span className={cn(summaryPillClass, "border-border text-muted-foreground")}>
+					Pending invites: {team.data.pendingInvites.length}
+				</span>
 			</div>
 
 			<RosterTable

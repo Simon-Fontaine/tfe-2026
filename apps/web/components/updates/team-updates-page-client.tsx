@@ -6,6 +6,7 @@ import type { RealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -147,7 +148,7 @@ export function TeamUpdatesPageClient({
 					</CreateUpdatePostDialog>
 				</div>
 			)}
-			<div className="divide-y">
+			<div className="space-y-3">
 				{updates.map((post) => (
 					<UpdateListItem
 						key={post.id}
@@ -183,42 +184,50 @@ function UpdateListItem({ post, canManage, onEdit, onDelete, deletingId }: Updat
 	}).format(new Date(post.createdAt));
 
 	return (
-		<div className="flex items-start justify-between gap-4 py-3">
-			<div className="min-w-0 flex-1 space-y-1">
-				<p className="truncate text-sm font-medium">{post.title}</p>
-				<p className="text-xs text-muted-foreground">
-					{timestamp}
-					{post.authorDisplayName ? ` · ${post.authorDisplayName}` : ""}
-				</p>
-			</div>
-			{canManage && (
-				<>
-					<EditUpdatePostDialog post={post} onUpdated={onEdit}>
-						<button ref={editTriggerRef} type="button" className="sr-only" tabIndex={-1}>
-							Edit
-						</button>
-					</EditUpdatePostDialog>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button size="icon" variant="ghost" className="size-8 shrink-0">
-								<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem onSelect={() => editTriggerRef.current?.click()}>
+		<article className="border p-4 text-sm">
+			<div className="flex items-start justify-between gap-4">
+				<div className="min-w-0 flex-1 space-y-2">
+					<div className="flex flex-wrap items-center gap-2">
+						<h2 className="truncate font-medium">{post.title}</h2>
+						<Badge variant="outline" className="text-[10px]">
+							{post.visibility === "public" ? "Public" : "Workspace only"}
+						</Badge>
+					</div>
+					<p className="text-xs text-muted-foreground">
+						{timestamp}
+						{post.authorDisplayName ? ` - ${post.authorDisplayName}` : ""}
+					</p>
+				</div>
+				{canManage && (
+					<>
+						<EditUpdatePostDialog post={post} onUpdated={onEdit}>
+							<button ref={editTriggerRef} type="button" className="sr-only" tabIndex={-1}>
 								Edit
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="text-destructive"
-								disabled={deletingId === post.id}
-								onSelect={() => onDelete(post.id)}
-							>
-								Delete
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</>
-			)}
-		</div>
+							</button>
+						</EditUpdatePostDialog>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button size="icon" variant="ghost" className="size-8 shrink-0">
+									<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onSelect={() => editTriggerRef.current?.click()}>
+									Edit
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									className="text-destructive"
+									disabled={deletingId === post.id}
+									onSelect={() => onDelete(post.id)}
+								>
+									Delete
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</>
+				)}
+			</div>
+			<p className="mt-3 whitespace-pre-wrap leading-relaxed text-foreground/90">{post.body}</p>
+		</article>
 	);
 }

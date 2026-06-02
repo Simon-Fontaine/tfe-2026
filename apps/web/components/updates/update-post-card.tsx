@@ -24,6 +24,7 @@ interface UpdatePostCardProps {
 	post: UpdatePostSummary;
 	actions?: React.ReactNode;
 	showScopeLink?: boolean;
+	showVisibilityBadge?: boolean;
 	detailHref?: string;
 	className?: string;
 }
@@ -32,6 +33,7 @@ export function UpdatePostCard({
 	post,
 	actions,
 	showScopeLink = false,
+	showVisibilityBadge = true,
 	detailHref,
 	className,
 }: UpdatePostCardProps) {
@@ -43,9 +45,11 @@ export function UpdatePostCard({
 				<div className="space-y-2">
 					<div className="flex flex-wrap items-center gap-2">
 						<h2 className="text-sm font-semibold">{post.title}</h2>
-						<Badge variant="outline">
-							{post.visibility === "public" ? "Public" : "Workspace only"}
-						</Badge>
+						{showVisibilityBadge ? (
+							<Badge variant="outline">
+								{post.visibility === "public" ? "Public" : "Workspace only"}
+							</Badge>
+						) : null}
 					</div>
 					<div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
 						<div className="flex items-center gap-1.5">

@@ -194,9 +194,9 @@ export function OrgUpdatesPageClient({
 				<p className="border px-3 py-2 text-sm text-destructive">{deleteError}</p>
 			) : null}
 
-			<div className="border-t">
+			<div className="space-y-3">
 				{updates.map((post) => (
-					<article key={post.id} className="border-b py-4 text-sm">
+					<article key={post.id} className="border p-4 text-sm">
 						<div className="flex items-start justify-between gap-4">
 							<div className="min-w-0 space-y-2">
 								<div className="flex flex-wrap items-center gap-2">

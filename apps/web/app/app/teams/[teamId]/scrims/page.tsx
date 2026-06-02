@@ -145,6 +145,9 @@ export default async function TeamScrimsPage({
 	const { scrims, nextCursor } = scrimsState.data;
 
 	const needsActionScrims = scrims.filter((s) => isNeedsAction(s, teamData.id));
+	const pendingProposalScrims = scrims.filter(
+		(s) => s.status === "pending" && !isNeedsAction(s, teamData.id)
+	);
 	const upcomingScrims = scrims.filter(
 		(s) =>
 			!isNeedsAction(s, teamData.id) && ["accepted", "scheduled", "in_progress"].includes(s.status)
@@ -212,6 +215,27 @@ export default async function TeamScrimsPage({
 						) : (
 							<div>
 								{needsActionScrims.map((scrim) => (
+									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
+								))}
+							</div>
+						)}
+					</section>
+
+					<section>
+						<div className="mb-4 flex items-center justify-between border-b pb-2">
+							<h2 className="text-lg font-semibold">Pending proposals</h2>
+							<Badge variant="outline">
+								{pendingProposalScrims.length}{" "}
+								{pendingProposalScrims.length === 1 ? "scrim" : "scrims"}
+							</Badge>
+						</div>
+						{pendingProposalScrims.length === 0 ? (
+							<div className="py-8 text-center text-sm text-muted-foreground">
+								No outgoing proposals waiting on an opponent.
+							</div>
+						) : (
+							<div>
+								{pendingProposalScrims.map((scrim) => (
 									<ScrimRow key={scrim.id} scrim={scrim} teamId={teamData.id} />
 								))}
 							</div>

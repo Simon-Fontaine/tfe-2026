@@ -9,93 +9,57 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
 	return (
-		<PublicPageShell title="Terms of Service" maxWidth="6xl" contentClassName="space-y-6">
-			<PublicPageSection title="Use the product truthfully">
+		<PublicPageShell
+			title="Terms of Service"
+			description="These terms are the practical rules for using Scrimflow. They are short by design."
+			contentClassName="space-y-8"
+		>
+			<PublicPageSection title="Use Scrimflow honestly">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Use Scrimflow to represent real teams, organizations, players, and recruiting needs. Do
-					not impersonate other people or programs, publish misleading public content, or use the
-					workspace to coordinate spam or abuse.
+					Create accounts, teams, organizations, recruiting listings, scrims, and updates that
+					represent real activity. Do not impersonate another person or program, falsify scrim
+					results, manipulate ratings, or publish misleading public content.
 				</p>
-				<ul className="mt-4 max-w-[64ch] space-y-2 text-sm text-muted-foreground">
-					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">No impersonation</span>— Do not
-						create accounts, teams, or org profiles that impersonate real people, organizations, or
-						other Scrimflow users.
-					</li>
-					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">No false match reporting</span>—
-						Do not confirm scrim results that did not happen or dispute results in bad faith to
-						manipulate ratings.
-					</li>
-					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">No spam or abuse</span>— Do not
-						use recruiting listings, chat, or public update posts to distribute unsolicited content
-						or coordinate harassment.
-					</li>
-					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">No credential abuse</span>— Do
-						not attempt to bypass authentication controls, share session tokens, or automate account
-						creation.
-					</li>
-				</ul>
 			</PublicPageSection>
 
-			<PublicPageSection title="Respect workspace boundaries">
+			<PublicPageSection title="Respect people and workspaces">
 				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Permissions matter</span>— Only
-						org and team members with the right role should manage settings, staff, recruiting, and
-						administrative actions.
+						<span className="shrink-0 font-medium text-foreground">Permissions</span>
+						<span>Only use team and organization tools you are authorized to access.</span>
 					</li>
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">
-							Public content stays public
-						</span>
-						— If you publish org, team, player, recruiting, scrim, or update content, assume it can
-						be viewed from the public route family.
+						<span className="shrink-0 font-medium text-foreground">Conduct</span>
+						<span>Do not harass people, spam recruiting listings, or abuse chat and updates.</span>
 					</li>
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">
-							Security flows are mandatory
+						<span className="shrink-0 font-medium text-foreground">Security</span>
+						<span>
+							Do not share session tokens, bypass access controls, or automate account abuse.
 						</span>
-						— Account verification, recovery, and security steps are part of platform access, not
-						optional extras.
 					</li>
 				</ul>
 			</PublicPageSection>
 
-			<PublicPageSection title="Account termination">
-				<dl className="max-w-[64ch] space-y-3">
-					<div>
-						<dt className="text-sm font-medium text-foreground">Suspension</dt>
-						<dd className="mt-0.5 text-sm text-muted-foreground">
-							Accounts that repeatedly violate usage rules may be suspended. Suspended accounts lose
-							access to workspace actions but public profile data remains readable while a review is
-							in progress.
-						</dd>
-					</div>
-					<div>
-						<dt className="text-sm font-medium text-foreground">Permanent removal</dt>
-						<dd className="mt-0.5 text-sm text-muted-foreground">
-							Accounts found to be impersonating users, manipulating match results, or coordinating
-							abuse will be permanently removed. Associated team and org memberships are also
-							terminated. Contact{" "}
-							<a
-								href="mailto:support@scrimflow.com"
-								className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
-							>
-								support@scrimflow.com
-							</a>{" "}
-							to appeal.
-						</dd>
-					</div>
-				</dl>
+			<PublicPageSection title="Public content">
+				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
+					If you publish a team, organization, player profile, recruiting listing, scrim, or update,
+					expect it to be visible on public Scrimflow pages. Keep private information out of public
+					fields.
+				</p>
 			</PublicPageSection>
 
-			<PublicPageSection title="Questions about usage rules">
+			<PublicPageSection title="Moderation">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					If a policy or account-state consequence is unclear, contact support with the affected
-					account and workspace context before taking irreversible action.
+					Accounts or workspaces that violate these rules may lose access to specific actions or be
+					suspended. To report impersonation, abuse, or ownership problems, email{" "}
+					<a
+						href="mailto:support@scrimflow.com"
+						className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+					>
+						support@scrimflow.com
+					</a>
+					.
 				</p>
 			</PublicPageSection>
 		</PublicPageShell>

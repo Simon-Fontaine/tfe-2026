@@ -15,6 +15,7 @@ export default function AboutPage() {
 	return (
 		<PublicPageShell
 			title="About Scrimflow"
+			description="Scrimflow is an Overwatch 2 team management workspace for rosters, recruiting, scrims, updates, and day-to-day coordination."
 			contentClassName="space-y-8"
 			actions={
 				<Button asChild size="sm">
@@ -22,34 +23,41 @@ export default function AboutPage() {
 				</Button>
 			}
 		>
-			<PublicPageSection title="What the platform covers">
+			<PublicPageSection title="What it is for">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Scrimflow is designed to replace the fragmented mix of Discord channels, spreadsheets, and
-					manual follow-up that competitive Overwatch 2 teams rely on today. Public pages help
-					visitors evaluate teams, orgs, players, recruiting, scrims, and updates before they ever
-					enter the authenticated workspace.
+					Scrimflow helps players, teams, and organizations keep competitive operations in one
+					place. Teams can manage rosters, publish recruiting needs, schedule scrims, review
+					results, post updates, and keep team conversations tied to the work they support.
 				</p>
 			</PublicPageSection>
 
-			<PublicPageSection title="What happens after sign-in">
+			<PublicPageSection title="What is public">
+				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
+					Public pages show the information teams, organizations, and players choose to publish:
+					profiles, recruiting listings, public scrims, and updates. Private workspace data stays
+					inside the app.
+				</p>
+			</PublicPageSection>
+
+			<PublicPageSection title="What is inside the app">
 				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Personal workspace</span>— Manage
-						inbox, calendar, profile, settings, and security from <code>/app</code>.
+						<span className="shrink-0 font-medium text-foreground">Personal workspace</span>
+						<span>Inbox, calendar, profile, privacy, account, and security settings.</span>
 					</li>
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Team operations</span>— Run
-						recruiting, scrims, chat, updates, and team administration inside one shell.
+						<span className="shrink-0 font-medium text-foreground">Team workspace</span>
+						<span>Roster, schedule, scrims, chat, recruiting, updates, and team settings.</span>
 					</li>
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Organization control</span>—
-						Manage staff, teams, brand, invites, and settings across org-backed programs.
+						<span className="shrink-0 font-medium text-foreground">Organization workspace</span>
+						<span>Teams, staff, brand profile, updates, and ownership controls.</span>
 					</li>
 				</ul>
 			</PublicPageSection>
 
 			<PublicPageSection
-				title="Start with the right surface"
+				title="Start here"
 				actions={
 					<div className="flex flex-wrap gap-2">
 						<Button asChild size="sm" variant="outline">
@@ -62,8 +70,8 @@ export default function AboutPage() {
 				}
 			>
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					If you are evaluating the product, start with the public directories. If you already know
-					you need the workspace, create an account and move directly into <code>/app</code>.
+					Browse public pages to find teams, players, and recruiting opportunities. Sign in when you
+					need to manage your own profile, team, organization, or scrim workflow.
 				</p>
 			</PublicPageSection>
 		</PublicPageShell>

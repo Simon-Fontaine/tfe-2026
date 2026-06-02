@@ -1,7 +1,6 @@
 import { GameController01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -11,6 +10,7 @@ export const metadata: Metadata = {
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Suspense } from "react";
+import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -41,19 +41,19 @@ export default async function OrgsDirectoryPage({ searchParams }: OrgsDirectoryP
 				</Button>
 			}
 		>
-			<div className="flex flex-wrap gap-2">
-				{(
+			<PublicFilterBar
+				options={(
 					[
 						["teams", "Most teams"],
 						["roster", "Largest rosters"],
 						["name", "A to Z"],
 					] as const
-				).map(([value, label]) => (
-					<Link key={value} href={publicRoutes.orgs.withSort(value)}>
-						<Badge variant={sort === value ? "default" : "outline"}>{label}</Badge>
-					</Link>
-				))}
-			</div>
+				).map(([value, label]) => ({
+					label,
+					href: publicRoutes.orgs.withSort(value),
+					active: sort === value,
+				}))}
+			/>
 			<Suspense fallback={<PublicListLoading itemCount={6} itemHeightClassName="h-16" />}>
 				<OrgListSection sort={sort} />
 			</Suspense>

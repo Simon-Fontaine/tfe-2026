@@ -2,11 +2,11 @@ import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { RecruitmentListingCard } from "@/components/recruit/recruitment-listing-card";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getManageableRecruitEntities, getPublicRecruitmentListings } from "@/lib/data/recruit";
@@ -46,32 +46,27 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 				</Button>
 			}
 		>
-			<div className="flex flex-wrap gap-2">
-				{CATEGORY_FILTERS.map((filter) => (
-					<Link
-						key={filter}
-						href={
-							filter === "all"
-								? publicRoutes.recruiting.root
-								: `${publicRoutes.recruiting.root}?category=${filter}`
-						}
-					>
-						<Badge variant={category === filter ? "default" : "outline"}>
-							{filter === "all" ? "All listings" : RECRUITMENT_CATEGORY_LABELS[filter]}
-						</Badge>
-					</Link>
-				))}
-			</div>
+			<PublicFilterBar
+				options={CATEGORY_FILTERS.map((filter) => ({
+					label: filter === "all" ? "All listings" : RECRUITMENT_CATEGORY_LABELS[filter],
+					href:
+						filter === "all"
+							? publicRoutes.recruiting.root
+							: `${publicRoutes.recruiting.root}?category=${filter}`,
+					active: category === filter,
+				}))}
+			/>
 
-			<div className="flex flex-wrap gap-2">
-				{(
+			<PublicFilterBar
+				options={(
 					[
 						["all", "All member types"],
 						["player", "Players"],
 						["staff", "Staff"],
 					] as const
-				).map(([value, label]) => {
-					const href =
+				).map(([value, label]) => ({
+					label,
+					href:
 						value === "all"
 							? category === "all"
 								? publicRoutes.recruiting.root
@@ -79,17 +74,10 @@ export default async function PublicRecruitingPage({ searchParams }: PublicRecru
 							: `${publicRoutes.recruiting.root}?${new URLSearchParams({
 									...(category !== "all" ? { category } : {}),
 									memberType: value,
-								}).toString()}`;
-
-					return (
-						<Link key={value} href={href}>
-							<Badge variant={(memberType ?? "all") === value ? "default" : "outline"}>
-								{label}
-							</Badge>
-						</Link>
-					);
-				})}
-			</div>
+								}).toString()}`,
+					active: (memberType ?? "all") === value,
+				}))}
+			/>
 
 			<Suspense fallback={<PublicListLoading />}>
 				<RecruitingListSection

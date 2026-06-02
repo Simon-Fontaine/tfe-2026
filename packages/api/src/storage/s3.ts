@@ -10,6 +10,13 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let _s3Client: S3Client | null = null;
+let _publicSignedS3Client: S3Client | null = null;
+
+type StoragePublicUrlParts = {
+	origin: string;
+	pathPrefix: string;
+	fullBaseUrl: string;
+};
 
 function getS3Client(): S3Client {
 	if (!_s3Client) {
@@ -24,6 +31,68 @@ function getS3Client(): S3Client {
 		});
 	}
 	return _s3Client;
+}
+
+function getPublicSignedS3Client(): S3Client {
+	if (!_publicSignedS3Client) {
+		_publicSignedS3Client = new S3Client({
+			endpoint: getStoragePublicUrlParts().origin,
+			region: "auto",
+			credentials: {
+				accessKeyId: process.env.S3_ACCESS_KEY ?? "",
+				secretAccessKey: process.env.S3_SECRET_KEY ?? "",
+			},
+			forcePathStyle: true, // required for MinIO
+		});
+	}
+	return _publicSignedS3Client;
+}
+
+function normalizeBaseUrl(url: string): string {
+	return url.replace(/\/+$/, "");
+}
+
+function getStoragePublicUrlParts(): StoragePublicUrlParts {
+	const configuredUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
+	if (!configuredUrl) {
+		return { origin: "", pathPrefix: "", fullBaseUrl: "" };
+	}
+
+	const parsed = new URL(configuredUrl);
+	const origin = parsed.origin;
+	const pathPrefix = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/, "");
+
+	return {
+		origin,
+		pathPrefix,
+		fullBaseUrl: `${origin}${pathPrefix}`,
+	};
+}
+
+function buildPublicUrl(bucket: string, key: string) {
+	const { fullBaseUrl } = getStoragePublicUrlParts();
+	return `${normalizeBaseUrl(fullBaseUrl)}/${bucket}/${key}`;
+}
+
+function toBrowserPublicUrl(signedUrl: string): string {
+	const { origin, pathPrefix } = getStoragePublicUrlParts();
+	if (!pathPrefix) return signedUrl;
+
+	const parsed = new URL(signedUrl);
+	if (parsed.origin !== origin) return signedUrl;
+	if (parsed.pathname === pathPrefix || parsed.pathname.startsWith(`${pathPrefix}/`)) {
+		return parsed.toString();
+	}
+
+	parsed.pathname = `${pathPrefix}${parsed.pathname}`;
+	return parsed.toString();
+}
+
+function storageUrlCandidates(): string[] {
+	const urls = [process.env.S3_PUBLIC_URL, process.env.S3_ENDPOINT].filter(
+		(value): value is string => !!value
+	);
+	return Array.from(new Set(urls.map(normalizeBaseUrl)));
 }
 
 // Tracks which buckets have had their public-read policy confirmed this process
@@ -68,8 +137,7 @@ export async function ensureBucketPublicPolicy(bucket: string): Promise<void> {
 }
 
 export function buildObjectUrl(bucket: string, key: string) {
-	const publicUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
-	return `${publicUrl}/${bucket}/${key}`;
+	return buildPublicUrl(bucket, key);
 }
 
 /**
@@ -152,8 +220,8 @@ export async function createPutUploadUrl(params: {
 	contentType: string;
 	expiresInSeconds?: number;
 }) {
-	const client = getS3Client();
-	const uploadUrl = await getSignedUrl(
+	const client = getPublicSignedS3Client();
+	const signedUrl = await getSignedUrl(
 		client,
 		new PutObjectCommand({
 			Bucket: params.bucket,
@@ -166,7 +234,7 @@ export async function createPutUploadUrl(params: {
 	);
 
 	return {
-		uploadUrl,
+		uploadUrl: toBrowserPublicUrl(signedUrl),
 		objectUrl: buildObjectUrl(params.bucket, params.key),
 	};
 }
@@ -194,10 +262,11 @@ export async function createGetSignedUrl(
 	key: string,
 	expiresInSeconds = 1800
 ): Promise<string> {
-	const client = getS3Client();
-	return getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+	const client = getPublicSignedS3Client();
+	const signedUrl = await getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
 		expiresIn: expiresInSeconds,
 	});
+	return toBrowserPublicUrl(signedUrl);
 }
 
 /**
@@ -205,10 +274,11 @@ export async function createGetSignedUrl(
  * Returns null if the URL does not match the expected pattern.
  */
 export function keyFromUrl(url: string, bucket: string): string | null {
-	const publicUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
-	const prefix = `${publicUrl}/${bucket}/`;
-	if (url.startsWith(prefix)) {
-		return url.slice(prefix.length);
+	for (const baseUrl of storageUrlCandidates()) {
+		const prefix = `${baseUrl}/${bucket}/`;
+		if (url.startsWith(prefix)) {
+			return url.slice(prefix.length);
+		}
 	}
 	return null;
 }

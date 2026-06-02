@@ -2,6 +2,7 @@ import { Notification01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
@@ -42,15 +43,13 @@ export default async function UpdatesPage({ searchParams }: UpdatesPageProps) {
 				</Button>
 			}
 		>
-			<div className="flex flex-wrap gap-2">
-				{UPDATE_FILTERS.map((filter) => (
-					<Link key={filter} href={publicRoutes.updates.withScope(filter)}>
-						<Button size="sm" variant={scope === filter ? "default" : "outline"}>
-							{filter === "all" ? "All updates" : `${filter} updates`}
-						</Button>
-					</Link>
-				))}
-			</div>
+			<PublicFilterBar
+				options={UPDATE_FILTERS.map((filter) => ({
+					label: filter === "all" ? "All updates" : `${filter} updates`,
+					href: publicRoutes.updates.withScope(filter),
+					active: scope === filter,
+				}))}
+			/>
 			<Suspense fallback={<PublicListLoading />}>
 				<UpdatesListSection scope={scope} />
 			</Suspense>
@@ -110,6 +109,7 @@ async function UpdatesListSection({ scope }: { scope: "all" | "team" | "organiza
 					key={post.id}
 					post={post}
 					showScopeLink
+					showVisibilityBadge={false}
 					detailHref={publicRoutes.updates.byId(post.id)}
 					className="border-0 px-4 py-3"
 				/>
