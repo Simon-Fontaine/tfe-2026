@@ -1,10 +1,69 @@
 import type { ChatConversationSummary } from "@scrimflow/shared";
-import { and, count, desc, eq, gt, isNull, lt, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNull, lt, ne, or } from "drizzle-orm";
 
 import { db } from "@/db";
-import { chatChannelMemberTable, chatMessageTable, scrimTable } from "@/db/schema";
+import {
+	chatChannelMemberTable,
+	chatChannelTable,
+	chatMessageTable,
+	scrimTable,
+} from "@/db/schema";
 import { getConversationDetailForUser } from "./access";
 import { ensureScrimConversationLifecycle, ensureTeamConversation } from "./lifecycle";
+
+/**
+ * Chat channel ids tied to a team: its team room plus the lobby/negotiation
+ * channels of every scrim the team is part of. Used to revoke chat access in
+ * realtime when a member leaves/is removed from the team.
+ */
+export async function listChatChannelIdsForTeam(teamId: string): Promise<string[]> {
+	const scrims = await db.query.scrimTable.findMany({
+		where: or(eq(scrimTable.homeTeamId, teamId), eq(scrimTable.awayTeamId, teamId)),
+		columns: { id: true },
+		limit: 200,
+	});
+	const scrimIds = scrims.map((scrim) => scrim.id);
+
+	const teamChannelFilter = and(
+		eq(chatChannelTable.channelType, "team"),
+		eq(chatChannelTable.teamId, teamId)
+	);
+
+	const channels = await db.query.chatChannelTable.findMany({
+		where:
+			scrimIds.length > 0
+				? or(teamChannelFilter, inArray(chatChannelTable.scrimId, scrimIds))
+				: teamChannelFilter,
+		columns: { id: true },
+	});
+
+	return channels.map((channel) => channel.id);
+}
+
+/**
+ * Distinct user ids that share at least one active conversation with the given
+ * user (excluding the user). Used to fan out presence updates to peers.
+ */
+export async function listConversationPeerUserIds(userId: string): Promise<string[]> {
+	const memberships = await db.query.chatChannelMemberTable.findMany({
+		where: and(eq(chatChannelMemberTable.userId, userId), isNull(chatChannelMemberTable.leftAt)),
+		columns: { channelId: true },
+	});
+	const channelIds = memberships.map((membership) => membership.channelId);
+	if (channelIds.length === 0) return [];
+
+	const peers = await db.query.chatChannelMemberTable.findMany({
+		where: and(
+			inArray(chatChannelMemberTable.channelId, channelIds),
+			isNull(chatChannelMemberTable.leftAt)
+		),
+		columns: { userId: true },
+	});
+
+	const unique = new Set(peers.map((peer) => peer.userId));
+	unique.delete(userId);
+	return [...unique];
+}
 
 function normalizeMessageContent(content: string, deletedAt: Date | null): string {
 	if (deletedAt) return "[deleted]";

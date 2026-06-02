@@ -88,6 +88,7 @@ export const SubmitScrimResultSchema = v.object({
 				),
 				players: v.array(
 					v.object({
+						userId: optionalUuid,
 						playerName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)),
 						side: v.picklist(OCR_PLAYER_SIDE_VALUES, "Invalid player side"),
 						hero: nullableShortString,

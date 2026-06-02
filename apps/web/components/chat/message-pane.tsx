@@ -1,20 +1,27 @@
 "use client";
 
-import type { ChatConversationSummary, ChatMessage } from "@scrimflow/shared";
-import { useEffect, useRef } from "react";
+import type {
+	ChatConversationSummary,
+	ChatMessage,
+	ChatParticipantSummary,
+} from "@scrimflow/shared";
+import { useEffect, useMemo, useRef } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
-import { chatSocket } from "@/lib/ws/chat-socket";
+import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { useChatStore } from "@/stores/chat";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./message-list";
+import { TypingIndicator } from "./typing-indicator";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
+const EMPTY_TYPERS: string[] = [];
 
 interface MessagePaneProps {
 	conversationId: string;
 	currentUserId: string;
 	conversation: ChatConversationSummary | undefined;
+	participants?: ChatParticipantSummary[];
 	isArchived?: boolean;
 }
 
@@ -22,10 +29,19 @@ export function MessagePane({
 	conversationId,
 	currentUserId,
 	conversation,
+	participants,
 	isArchived,
 }: MessagePaneProps) {
+	const participantNames = useMemo(() => {
+		const names: Record<string, string> = {};
+		for (const participant of participants ?? []) {
+			names[participant.userId] = participant.displayName;
+		}
+		return names;
+	}, [participants]);
 	const { setMessages, appendMessage, clearUnread } = useChatStore();
 	const messages = useChatStore((s) => s.messages[conversationId] ?? EMPTY_MESSAGES);
+	const typingUserIds = useChatStore((s) => s.typing[conversationId] ?? EMPTY_TYPERS);
 	const isLoading = useChatStore(
 		(s) => s.messages[conversationId] === undefined && s.loadingOlder[conversationId] !== false
 	);
@@ -60,9 +76,9 @@ export function MessagePane({
 
 	// Subscribe to WebSocket conversation room
 	useEffect(() => {
-		chatSocket.subscribe(conversationId);
+		realtimeSocket.subscribeConversation(conversationId);
 		return () => {
-			chatSocket.unsubscribe(conversationId);
+			realtimeSocket.unsubscribeConversation(conversationId);
 		};
 	}, [conversationId]);
 
@@ -150,6 +166,14 @@ export function MessagePane({
 			</div>
 
 			<MessageList conversationId={conversationId} currentUserId={currentUserId} />
+
+			{typingUserIds.length > 0 ? (
+				<TypingIndicator
+					userIds={typingUserIds}
+					displayNames={participantNames}
+					className="shrink-0 border-t px-4 py-1.5"
+				/>
+			) : null}
 
 			{(() => {
 				const effectivelyArchived = isArchived ?? conversation?.isArchived;

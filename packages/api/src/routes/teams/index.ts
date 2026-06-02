@@ -51,8 +51,10 @@ import type { AuthEnv } from "@/middleware/auth";
 import type { RequestContextEnv } from "@/middleware/request-context";
 import { createNotification } from "@/notifications";
 import { checkRateLimit, formatRetryAfter } from "@/rate-limit";
+import { revokeChatConversationsForUser } from "@/realtime/chat-hub";
 import { revokeRealtimeUserAccess } from "@/realtime/scrim-hub";
 import { extractErrors } from "@/routes/auth/utils";
+import { listChatChannelIdsForTeam } from "@/utils/chat";
 import {
 	getCurrentLifecycleWorkflow,
 	getLifecycleMutationBlockReason,
@@ -1830,6 +1832,7 @@ teamRoutes.delete("/:id/leave", async (c) => {
 		userId: roster.userId,
 		payload: { scope: "team", teamId, scrimIds: await listScrimIdsForTeam(teamId) },
 	});
+	revokeChatConversationsForUser(roster.userId, await listChatChannelIdsForTeam(teamId));
 
 	return c.json({ success: true });
 });
@@ -1919,6 +1922,7 @@ teamRoutes.patch("/:id/roster/:memberId", async (c) => {
 			userId: member.userId,
 			payload: { scope: "team", teamId, scrimIds: await listScrimIdsForTeam(teamId) },
 		});
+		revokeChatConversationsForUser(member.userId, await listChatChannelIdsForTeam(teamId));
 	}
 
 	return c.json({ success: true });
@@ -1952,6 +1956,7 @@ teamRoutes.delete("/:id/roster/:memberId", async (c) => {
 		userId: member.userId,
 		payload: { scope: "team", teamId, scrimIds: await listScrimIdsForTeam(teamId) },
 	});
+	revokeChatConversationsForUser(member.userId, await listChatChannelIdsForTeam(teamId));
 
 	return c.json({ success: true });
 });

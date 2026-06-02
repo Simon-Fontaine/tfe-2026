@@ -90,8 +90,10 @@ function toDomainAuditEvent(row: typeof domainAuditEventTable.$inferSelect): Dom
 	};
 }
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 async function getTargetSuspensionState(
-	tx: typeof db,
+	tx: DbTransaction,
 	targetType: ReportTargetType,
 	targetId: string
 ): Promise<boolean | null> {
@@ -120,7 +122,7 @@ async function getTargetSuspensionState(
 }
 
 async function getTargetHiddenState(
-	tx: typeof db,
+	tx: DbTransaction,
 	targetType: ReportTargetType,
 	targetId: string
 ): Promise<boolean | null> {
@@ -957,12 +959,14 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 	} else {
 		const row = await db.query.organizationTable.findFirst({
 			where: eq(organizationTable.id, entityId),
-			columns: { id: true, name: true, isModerationSuspended: true, isArchived: true },
+			columns: { id: true, name: true, isModerationSuspended: true, lifecycleStatus: true },
 		});
 		if (!row) return c.json({ error: "Not found." }, 404);
 		displayName = row.name;
 		isSuspended = row.isModerationSuspended ?? false;
-		isArchived = row.isArchived ?? false;
+		// Organizations have no denormalised is_archived flag; lifecycleStatus is the source of
+		// truth (invariant: is_archived = lifecycle_status != "active").
+		isArchived = row.lifecycleStatus !== "active";
 	}
 
 	const [activeActions, recentAuditRows, ownershipWorkflowRaw] = await Promise.all([
@@ -1129,7 +1133,7 @@ moderationRoutes.post("/governance/ownership/:workflowId/resolve", async (c) => 
 		outcome: "success",
 		reason: input.reason,
 		metadata: { workflowId, action: input.action, escalationTier: "moderator" },
-	}).catch(() => {});
+	});
 
 	const updatedWorkflow = await db.query.ownershipWorkflowTable.findFirst({
 		where: eq(ownershipWorkflowTable.id, workflowId),

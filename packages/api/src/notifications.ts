@@ -207,6 +207,41 @@ export async function mapNotification(
 	};
 }
 
+/**
+ * Mark a user's unread `new_message` notifications for a conversation as read and
+ * publish `notification:read` so the inbox badge clears the moment they open the
+ * chat (rather than lingering at "1" while they're reading it).
+ */
+export async function markChatChannelNotificationsRead(
+	userId: string,
+	conversationId: string
+): Promise<void> {
+	const updated = await db
+		.update(notificationTable)
+		.set({ isRead: true })
+		.where(
+			and(
+				eq(notificationTable.userId, userId),
+				eq(notificationTable.referenceType, "chat_channel"),
+				eq(notificationTable.referenceId, conversationId),
+				eq(notificationTable.isRead, false),
+				eq(notificationTable.isDismissed, false)
+			)
+		)
+		.returning({ id: notificationTable.id });
+
+	if (updated.length === 0) return;
+
+	const unreadCount = await getUnreadNotificationCount(userId);
+	for (const row of updated) {
+		publishUserRealtimeEvent({
+			userId,
+			event: "notification:read",
+			payload: { notificationId: row.id, unreadCount },
+		});
+	}
+}
+
 async function getUnreadNotificationCount(userId: string) {
 	const [result] = await db
 		.select({ count: count() })

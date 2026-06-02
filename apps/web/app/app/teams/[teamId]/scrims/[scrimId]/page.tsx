@@ -3,22 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ConfirmScrimDialog } from "@/components/scrims/confirm-scrim-dialog";
-import { ReportScrimResultDialog } from "@/components/scrims/report-scrim-result-dialog";
-import { ResolveScrimDisputeDialog } from "@/components/scrims/resolve-scrim-dispute-dialog";
+import { ScrimActivityFeed } from "@/components/scrims/scrim-activity-feed";
 import { ScrimConfirmationSection } from "@/components/scrims/scrim-confirmation-section";
 import { ScrimDetailRealtimeSync } from "@/components/scrims/scrim-detail-realtime-sync";
-import { ScrimDisputeResponseDialog } from "@/components/scrims/scrim-dispute-response-dialog";
-import { ScrimLifecycleTimeline } from "@/components/scrims/scrim-lifecycle-timeline";
+import { ScrimDetailTabs } from "@/components/scrims/scrim-detail-tabs";
 import { ScrimMapsSection } from "@/components/scrims/scrim-maps-section";
-import { ScrimNegotiationHistory } from "@/components/scrims/scrim-negotiation-history";
+import { ScrimNextStep } from "@/components/scrims/scrim-next-step";
 import { ScrimOcrJobsPanel } from "@/components/scrims/scrim-ocr-jobs-panel";
-import { ScrimRatingSection } from "@/components/scrims/scrim-rating-section";
-import { ScrimRespondActions } from "@/components/scrims/scrim-respond-actions";
+import { ScrimOverviewSection } from "@/components/scrims/scrim-overview-section";
 import { ScrimResultRevisions } from "@/components/scrims/scrim-result-revisions";
-import { ScrimSeriesOverview } from "@/components/scrims/scrim-series-overview";
-import { ScrimStatusBadge } from "@/components/scrims/scrim-status-badge";
-import { Badge } from "@/components/ui/badge";
+import { ScrimSummaryHeader } from "@/components/scrims/scrim-summary-header";
 import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
@@ -26,33 +20,8 @@ import { getScrimChatRouteState } from "@/lib/data/chat";
 import { getScrimRouteState } from "@/lib/data/scrims";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
+import { deriveScrimViewModel } from "@/lib/scrims/view-model";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
-
-function formatTimestamp(value: string | null, emptyLabel = "Not set") {
-	return value
-		? new Intl.DateTimeFormat("en-GB", {
-				dateStyle: "medium",
-				timeStyle: "short",
-			}).format(new Date(value))
-		: emptyLabel;
-}
-
-function getUploadDisabledReason({
-	canManage,
-	hasOpponent,
-	status,
-}: {
-	canManage: boolean;
-	hasOpponent: boolean;
-	status: string;
-}) {
-	if (!canManage) return "Only team managers can upload match evidence.";
-	if (!hasOpponent) return "Add an opponent before uploading result evidence.";
-	if (status === "pending") return "Evidence opens after the scrim is accepted or started.";
-	if (status === "cancelled") return "Cancelled scrims cannot accept new evidence.";
-	if (status === "completed") return "This result package is locked after both teams confirm.";
-	return null;
-}
 
 export default async function TeamScrimDetailPage({
 	params,
@@ -145,94 +114,37 @@ export default async function TeamScrimDetailPage({
 	const availableChatConversations =
 		chatConversationsState.kind === "success" ? chatConversationsState.data : [];
 
-	const currentConfirmation =
-		scrim.confirmations.find(
-			(confirmation: (typeof scrim.confirmations)[number]) => confirmation.teamId === team.id
-		) ?? null;
-	const canReportResult =
-		team.currentUser.canManage &&
-		!!scrim.awayTeam &&
-		scrim.status !== "pending" &&
-		scrim.status !== "cancelled" &&
-		scrim.status !== "completed";
-	const canResolveDispute =
-		scrim.status === "disputed" &&
-		(team.currentUser.orgRole === "owner" || team.currentUser.orgRole === "admin");
-	const latestRevision =
-		scrim.resultRevisions.length > 0
-			? scrim.resultRevisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a))
-			: null;
-	const reportingTeamFromLastRevision = latestRevision?.reportingTeamId ?? null;
-	const canRespondToDispute =
-		team.currentUser.canManage &&
-		scrim.status === "disputed" &&
-		team.id === reportingTeamFromLastRevision;
-	const canReviewConfirmation =
-		team.currentUser.canManage &&
-		!canRespondToDispute &&
-		(scrim.status === "awaiting_confirmation" || scrim.status === "disputed");
-	const canUploadEvidence =
-		team.currentUser.canManage &&
-		!!scrim.awayTeam &&
-		scrim.status !== "pending" &&
-		scrim.status !== "cancelled" &&
-		scrim.status !== "completed";
-	const uploadDisabledReason = getUploadDisabledReason({
+	const view = deriveScrimViewModel(scrim, {
+		teamId: team.id,
 		canManage: team.currentUser.canManage,
-		hasOpponent: !!scrim.awayTeam,
-		status: scrim.status,
+		orgRole: team.currentUser.orgRole,
 	});
-	const disputeResolution =
-		scrim.dispute.resolution ?? (scrim.status === "disputed" ? "pending" : null);
-	const latestRevisionScoreboardCount =
-		latestRevision?.snapshot.maps.filter((map) => !!map.scoreboardOcrJobId).length ?? 0;
-	const activeOcrJobCount = scrim.ocrJobs.filter(
-		(job) => job.status === "queued" || job.status === "processing"
-	).length;
-	const reviewedMapCount = scrim.maps.length;
-	const mapsWithStatsCount = scrim.maps.filter((map) => map.players.length > 0).length;
-	const packageState =
-		scrim.status === "completed"
-			? "Locked"
-			: scrim.status === "awaiting_confirmation"
-				? "Awaiting confirmation"
-				: scrim.status === "disputed"
-					? "Disputed"
-					: reviewedMapCount > 0
-						? "Draft ready"
-						: "Draft not started";
-	const nextStepLabel = canResolveDispute
-		? "Resolve the dispute"
-		: canRespondToDispute
-			? "Respond to the dispute"
-			: canReviewConfirmation
-				? "Review opponent result"
-				: canReportResult
-					? reviewedMapCount > 0
-						? "Review and submit package"
-						: "Build the result package"
-					: scrim.status === "completed"
-						? "Review final record"
-						: "Follow scrim progress";
 
 	const homeDisplayTag = scrim.homeTeamSnapshot?.tag ?? scrim.homeTeam.tag;
 	const homeDisplayName = scrim.homeTeamSnapshot?.name ?? scrim.homeTeam.name;
-	const awayDisplayTag = scrim.awayTeam
-		? (scrim.awayTeamSnapshot?.tag ?? scrim.awayTeam.tag)
-		: (scrim.awayTeamSnapshot?.tag ?? null);
 	const awayDisplayName = scrim.awayTeam
 		? (scrim.awayTeamSnapshot?.name ?? scrim.awayTeam.name)
 		: (scrim.awayTeamSnapshot?.name ?? null);
-	const title = awayDisplayTag
-		? `[${homeDisplayTag}] ${homeDisplayName} vs [${awayDisplayTag}] ${awayDisplayName}`
+	const title = awayDisplayName
+		? `[${homeDisplayTag}] ${homeDisplayName} vs ${awayDisplayName}`
 		: `[${homeDisplayTag}] ${homeDisplayName} vs Open opponent`;
-	const breadcrumbTitle = awayDisplayTag
+	const breadcrumbTitle = awayDisplayName
 		? `${homeDisplayName} vs ${awayDisplayName}`
 		: `${homeDisplayName} vs Open opponent`;
+
 	const primaryChatConversation =
 		availableChatConversations.find((c) => c.type === "scrim_lobby") ??
 		availableChatConversations[0] ??
 		null;
+	// The chat entrypoint must stay stable across background refreshes, so it is
+	// derived from whether the scrim has an opponent (deterministic) rather than
+	// from the best-effort conversations fetch. Deep-link to the specific
+	// conversation when we have it, otherwise fall back to the team chat workspace.
+	const primaryChatHref = primaryChatConversation
+		? `${appRoutes.teams.chat(team.id)}?conversation=${primaryChatConversation.id}`
+		: scrim.awayTeam
+			? appRoutes.teams.chat(team.id)
+			: null;
 
 	return (
 		<PageContainer>
@@ -258,284 +170,74 @@ export default async function TeamScrimDetailPage({
 				}
 			/>
 
-			<section className="border p-4">
-				<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2">
-							<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-								Result Workbench
-							</p>
-							<ScrimStatusBadge status={scrim.status} disputeResolution={disputeResolution} />
-							<Badge variant="outline">{packageState}</Badge>
-						</div>
-						<p className="mt-2 text-2xl font-semibold tracking-tight">
-							{scrim.homeTeam.name} {scrim.homeMapScore} - {scrim.awayMapScore}{" "}
-							{scrim.awayTeam?.name ?? "Opponent"}
-						</p>
-						<p className="mt-1 text-sm text-muted-foreground">
-							Assemble one match result package. Maps are the work units; screenshots and OCR stay
-							as draft evidence until you submit.
-						</p>
-					</div>
-					<div className="flex w-full flex-col gap-2 lg:w-64">
-						<p className="text-xs font-medium text-muted-foreground">{nextStepLabel}</p>
-						{canReportResult ? (
-							<ReportScrimResultDialog scrim={scrim} reportingTeamId={team.id}>
-								<Button size="sm" className="w-full">
-									Open Result Workbench
-								</Button>
-							</ReportScrimResultDialog>
-						) : null}
-						{canReviewConfirmation ? (
-							<ConfirmScrimDialog
-								scrimId={scrim.id}
-								teamId={team.id}
-								currentStatus={currentConfirmation?.status ?? "pending"}
-							>
-								<Button size="sm" className="w-full">
-									Review confirmation
-								</Button>
-							</ConfirmScrimDialog>
-						) : null}
-						{canRespondToDispute ? (
-							<ScrimDisputeResponseDialog scrimId={scrim.id} reportingTeamId={team.id}>
-								<Button size="sm" className="w-full">
-									Respond to dispute
-								</Button>
-							</ScrimDisputeResponseDialog>
-						) : null}
-						{canResolveDispute ? (
-							<ResolveScrimDisputeDialog scrimId={scrim.id}>
-								<Button size="sm" className="w-full">
-									Resolve dispute
-								</Button>
-							</ResolveScrimDisputeDialog>
-						) : null}
-						{primaryChatConversation ? (
-							<Button asChild size="sm" variant="outline" className="w-full">
-								<Link
-									href={`${appRoutes.teams.chat(team.id)}?conversation=${primaryChatConversation.id}`}
-								>
-									Open scrim chat
-								</Link>
-							</Button>
-						) : null}
-					</div>
-				</div>
-				<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-					<div className="border p-3">
-						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-							Maps reviewed
-						</p>
-						<p className="mt-1 text-lg font-semibold">{reviewedMapCount}</p>
-						<p className="text-xs text-muted-foreground">
-							{reviewedMapCount > 0
-								? "Saved in the latest package."
-								: "Add manually or from a scan."}
-						</p>
-					</div>
-					<div className="border p-3">
-						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-							Scoreboards
-						</p>
-						<p className="mt-1 text-lg font-semibold">
-							{latestRevisionScoreboardCount}/{reviewedMapCount || 0}
-						</p>
-						<p className="text-xs text-muted-foreground">Optional evidence for verified stats.</p>
-					</div>
-					<div className="border p-3">
-						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-							Player stats
-						</p>
-						<p className="mt-1 text-lg font-semibold">
-							{mapsWithStatsCount}/{reviewedMapCount || 0}
-						</p>
-						<p className="text-xs text-muted-foreground">Maps with saved player rows.</p>
-					</div>
-					<div className="border p-3">
-						<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-							OCR activity
-						</p>
-						<p className="mt-1 text-lg font-semibold">{activeOcrJobCount}</p>
-						<p className="text-xs text-muted-foreground">
-							{activeOcrJobCount > 0 ? "Reading screenshots now." : "No scans running."}
-						</p>
-					</div>
-				</div>
-			</section>
+			<ScrimSummaryHeader scrim={scrim} view={view} />
 
-			<div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-				<div className="sm:col-span-2 space-y-4">
-					<ScrimSeriesOverview
-						config={scrim.config}
-						homeMapScore={scrim.homeMapScore}
-						awayMapScore={scrim.awayMapScore}
-						scheduledAt={scrim.scheduledAt}
-						startedAt={scrim.startedAt}
-						endedAt={scrim.endedAt}
-						createdByDisplayName={scrim.createdByDisplayName}
-						pendingConfirmationCount={scrim.pendingConfirmationCount}
-					/>
-					<ScrimNegotiationHistory revisions={scrim.negotiationRevisions} />
-					{scrim.status === "cancelled" && team.currentUser.canManage ? (
-						<section className="border p-4">
-							<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-								Schedule recovery
-							</p>
-							<p className="mt-2 text-sm text-muted-foreground">
-								This scrim was cancelled. You can request a new scrim with the same or a different
-								opponent from the scrim queue.
-							</p>
-							<div className="mt-3">
-								<Button asChild size="sm" variant="outline">
-									<Link href={appRoutes.teams.scrims(team.id)}>Go to scrim queue</Link>
-								</Button>
-							</div>
-						</section>
-					) : null}
-					<ScrimConfirmationSection
-						confirmations={scrim.confirmations}
-						dispute={scrim.dispute}
-						disputeResolution={disputeResolution}
-						scrimId={scrim.id}
-						scrimStatus={scrim.status}
-						canResolveDispute={canResolveDispute}
-					/>
-					<ScrimMapsSection maps={scrim.maps} resultRevisions={scrim.resultRevisions} />
-					<ScrimResultRevisions
-						resultRevisions={scrim.resultRevisions}
-						scrimStatus={scrim.status}
-						disputeResolution={disputeResolution}
-					/>
-					<ScrimRatingSection
-						ratingEvents={scrim.ratingEvents}
-						chatConversations={availableChatConversations}
+			<ScrimNextStep
+				scrim={scrim}
+				view={view}
+				teamId={team.id}
+				rosterPlayers={team.players}
+				canManage={team.currentUser.canManage}
+				primaryChatHref={primaryChatHref}
+			/>
+
+			<ScrimDetailTabs
+				defaultTab={view.defaultTab}
+				showResult={view.showResultTab}
+				showConfirmations={view.showConfirmationsTab}
+				overview={
+					<ScrimOverviewSection
+						scrim={scrim}
+						view={view}
 						teamId={team.id}
-						scrimStatus={scrim.status}
-						disputeResolution={disputeResolution}
-					/>
-					<ScrimOcrJobsPanel
-						scrimId={scrim.id}
-						jobs={scrim.ocrJobs}
+						teamTag={team.tag}
+						teamName={team.name}
 						canManage={team.currentUser.canManage}
-						canUploadEvidence={canUploadEvidence}
-						uploadDisabledReason={uploadDisabledReason}
-						resultRevisions={scrim.resultRevisions}
-						maps={scrim.maps}
+						chatConversations={availableChatConversations}
+						chatFallbackHref={scrim.awayTeam ? appRoutes.teams.chat(team.id) : null}
+						scrimQueueHref={appRoutes.teams.scrims(team.id)}
 					/>
-				</div>
-
-				<div className="sm:col-span-1 sm:sticky sm:top-6 self-start space-y-4">
-					<section className="border p-4">
-						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-							Status
-						</p>
-						<ScrimStatusBadge status={scrim.status} disputeResolution={scrim.dispute.resolution} />
-						<p className="mt-2 text-xs text-muted-foreground">
-							{formatTimestamp(scrim.scheduledAt, "Scheduling in progress")}
-						</p>
-					</section>
-
-					<section className="border p-4">
-						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-							Scrim controls
-						</p>
-						<div className="flex flex-col gap-2">
-							<Button asChild size="sm" variant="outline">
-								<Link href={appRoutes.teams.scrims(team.id)}>Back to scrim queue</Link>
-							</Button>
-							<ScrimRespondActions
-								scrimId={scrim.id}
-								teamId={team.id}
-								scrimStatus={scrim.status}
-								awayTeamId={scrim.awayTeam?.id ?? null}
-								scheduledAt={scrim.scheduledAt}
-								canManage={team.currentUser.canManage}
-							/>
-							<p className="border p-3 text-xs text-muted-foreground">
-								Result review, evidence uploads, confirmations, and dispute actions now live in the
-								Result Workbench above.
-							</p>
-						</div>
-					</section>
-
-					<section className="border p-4">
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-							Current team context
-						</p>
-						<div className="mt-4 space-y-3 text-sm">
-							<div className="border p-3">
-								<p className="font-semibold">
-									[{team.tag}] {team.name}
-								</p>
-								<p className="mt-1 text-xs text-muted-foreground">
-									You are viewing this scrim from the{" "}
-									{scrim.homeTeam.id === team.id ? "home team" : "away team"} workspace.
-								</p>
-							</div>
-							<div className="border p-3">
-								<p className="font-semibold">
-									{team.currentUser.canManage ? "Manager controls available" : "Member access"}
-								</p>
-								<p className="mt-1 text-xs text-muted-foreground">
-									{team.currentUser.canManage
-										? "You can accept requests, report results, and review confirmations from this team workspace."
-										: "You can review scrim details and follow match status from this team workspace."}
-								</p>
-							</div>
-						</div>
-					</section>
-
-					<section className="border p-4">
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-							Teams
-						</p>
-						<div className="mt-4 space-y-3">
-							<div className="border p-3">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Home</p>
-								<p className="mt-1 text-sm font-semibold">
-									[{homeDisplayTag}] {homeDisplayName}
-									{scrim.homeTeam.isArchived && (
-										<span className="ml-1 text-xs font-normal text-muted-foreground">
-											(archived)
-										</span>
-									)}
-								</p>
-								<p className="mt-1 text-xs text-muted-foreground">Rating {scrim.homeTeam.rating}</p>
-							</div>
-							<div className="border p-3">
-								<p className="text-[11px] uppercase tracking-wide text-muted-foreground">Away</p>
-								{scrim.awayTeam ? (
-									<>
-										<p className="mt-1 text-sm font-semibold">
-											[{scrim.awayTeamSnapshot?.tag ?? scrim.awayTeam.tag}]{" "}
-											{scrim.awayTeamSnapshot?.name ?? scrim.awayTeam.name}
-											{scrim.awayTeam.isArchived && (
-												<span className="ml-1 text-xs font-normal text-muted-foreground">
-													(archived)
-												</span>
-											)}
-										</p>
-										<p className="mt-1 text-xs text-muted-foreground">
-											Rating {scrim.awayTeam.rating}
-										</p>
-									</>
-								) : scrim.awayTeamSnapshot ? (
-									<p className="mt-1 text-sm font-semibold">
-										[{scrim.awayTeamSnapshot.tag}] {scrim.awayTeamSnapshot.name}
-										<span className="ml-1 text-xs font-normal text-muted-foreground">
-											(no longer available)
-										</span>
-									</p>
-								) : (
-									<p className="mt-1 text-sm font-semibold">No opponent assigned yet</p>
-								)}
-							</div>
-						</div>
-					</section>
-					<ScrimLifecycleTimeline scrim={scrim} />
-				</div>
-			</div>
+				}
+				result={
+					<div className="space-y-4">
+						<ScrimMapsSection
+							maps={scrim.maps}
+							resultRevisions={scrim.resultRevisions}
+							scrimId={scrim.id}
+							ocrJobs={scrim.ocrJobs}
+							canManage={team.currentUser.canManage}
+							canUploadEvidence={view.canUploadEvidence}
+							uploadDisabledReason={view.uploadDisabledReason}
+						/>
+						<ScrimOcrJobsPanel
+							scrimId={scrim.id}
+							jobs={scrim.ocrJobs}
+							canManage={team.currentUser.canManage}
+							canUploadEvidence={view.canUploadEvidence}
+							uploadDisabledReason={view.uploadDisabledReason}
+							resultRevisions={scrim.resultRevisions}
+							maps={scrim.maps}
+						/>
+					</div>
+				}
+				confirmations={
+					<div className="space-y-4">
+						<ScrimConfirmationSection
+							confirmations={scrim.confirmations}
+							dispute={scrim.dispute}
+							disputeResolution={view.disputeResolution}
+							scrimStatus={scrim.status}
+							canResolveDispute={view.canResolveDispute}
+						/>
+						<ScrimResultRevisions
+							resultRevisions={scrim.resultRevisions}
+							scrimStatus={scrim.status}
+							disputeResolution={view.disputeResolution}
+						/>
+					</div>
+				}
+				activity={<ScrimActivityFeed scrim={scrim} />}
+			/>
 		</PageContainer>
 	);
 }

@@ -1,13 +1,23 @@
 "use client";
 
 import { MessageNotification02Icon } from "@hugeicons/core-free-icons";
-import type { ChatConversationSummary } from "@scrimflow/shared";
-import { useEffect, useState } from "react";
+import type {
+	ChatConversationDetail,
+	ChatConversationSummary,
+	ChatParticipantSummary,
+} from "@scrimflow/shared";
+import { useRouter } from "next/navigation";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { useChatSocket } from "@/hooks/use-chat-socket";
-import { useChatStore } from "@/stores/chat";
+import { apiRoutes } from "@/lib/routes";
+import { realtimeSocket } from "@/lib/ws/realtime-socket";
+import { selectOrderedConversations, useChatStore } from "@/stores/chat";
+import { ConversationMembers } from "./conversation-members";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { MessagePane } from "./message-pane";
+
+const EMPTY_PARTICIPANTS: ChatParticipantSummary[] = [];
 
 interface ChatWorkspaceProps {
 	contextKey?: string;
@@ -18,15 +28,6 @@ interface ChatWorkspaceProps {
 	initialConversationId?: string | null;
 }
 
-function getScopedConversations(
-	conversations: ChatConversationSummary[],
-	contextKey: string | undefined
-) {
-	if (!contextKey?.startsWith("team:")) return conversations;
-	const teamId = contextKey.slice("team:".length);
-	return conversations.filter((conversation) => conversation.teamId === teamId);
-}
-
 export function ChatWorkspace({
 	contextKey,
 	currentUserId,
@@ -35,19 +36,85 @@ export function ChatWorkspace({
 	emptyDescription,
 	initialConversationId,
 }: ChatWorkspaceProps) {
+	// Initialise the shared WebSocket connection
+	useChatSocket();
+	const router = useRouter();
+
+	const wasConnectedRef = useRef<boolean | null>(null);
+
+	const conversationsById = useChatStore((s) => s.conversationsById);
+	const mergeConversations = useChatStore((s) => s.mergeConversations);
+
+	// The server scopes this context's conversations (team room + its scrim
+	// channels). We render exactly that id set — never re-derived from teamId.
+	const orderedIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+
+	useEffect(() => {
+		mergeConversations(conversations);
+	}, [conversations, mergeConversations]);
+
+	const list = useMemo(() => {
+		const live = selectOrderedConversations(conversationsById, orderedIds);
+		return live.length > 0 ? live : conversations;
+	}, [conversationsById, orderedIds, conversations]);
+
 	const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
 		initialConversationId && conversations.some((c) => c.id === initialConversationId)
 			? initialConversationId
 			: (conversations[0]?.id ?? null)
 	);
+	const selectedConversationIdRef = useRef(selectedConversationId);
+	selectedConversationIdRef.current = selectedConversationId;
 
-	// Initialise the shared WebSocket connection
-	useChatSocket();
-
-	const storeConversations = useChatStore((s) => s.conversations);
-	const scopedStoreConversations = getScopedConversations(storeConversations, contextKey);
-	const list = scopedStoreConversations.length > 0 ? scopedStoreConversations : conversations;
 	const selectedConversation = list.find((c) => c.id === selectedConversationId);
+
+	// Fetch the selected conversation's participants (with username + presence
+	// status) for the member rail and typing-indicator names.
+	const [participants, setParticipants] = useState<ChatParticipantSummary[]>(EMPTY_PARTICIPANTS);
+	const loadParticipants = useCallback((conversationId: string | null) => {
+		if (!conversationId) {
+			setParticipants(EMPTY_PARTICIPANTS);
+			return;
+		}
+		void fetch(apiRoutes.chat.byId(conversationId), { credentials: "include" })
+			.then(async (res) => {
+				if (!res.ok) return;
+				const json = (await res.json()) as { data?: ChatConversationDetail };
+				// Ignore if the user switched conversations while the request was in flight.
+				if (json.data && selectedConversationIdRef.current === conversationId) {
+					setParticipants(json.data.participants);
+					// Seed the presence store so message-bubble dots are accurate immediately
+					// (live changes still arrive via presence:update events).
+					useChatStore.getState().setPresences(
+						json.data.participants.map((participant) => ({
+							userId: participant.userId,
+							status: participant.status,
+							lastSeenAt: null,
+						}))
+					);
+				}
+			})
+			.catch(() => {
+				/* best-effort — member rail just stays empty */
+			});
+	}, []);
+
+	useEffect(() => {
+		loadParticipants(selectedConversationId);
+	}, [selectedConversationId, loadParticipants]);
+
+	// Resync the conversation list + member presence after a socket reconnect so
+	// anything missed while offline is reflected (skips the initial connect, only
+	// fires on a genuine drop→reconnect transition).
+	useEffect(() => {
+		return realtimeSocket.addConnectionListener((connected) => {
+			if (wasConnectedRef.current === false && connected) {
+				startTransition(() => router.refresh());
+				loadParticipants(selectedConversationIdRef.current);
+			}
+			wasConnectedRef.current = connected;
+		});
+	}, [router, loadParticipants]);
 
 	useEffect(() => {
 		const nextSelectedConversationId =
@@ -76,28 +143,33 @@ export function ChatWorkspace({
 	}
 
 	return (
-		<div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+		<div className="grid min-h-[480px] gap-4 lg:h-[calc(100dvh-13rem)] lg:grid-cols-[260px_minmax(0,1fr)_minmax(200px,240px)]">
 			<ConversationSidebar
 				key={contextKey ?? "default"}
-				contextKey={contextKey}
-				initialConversations={conversations}
+				conversations={list}
 				selectedConversationId={selectedConversationId}
 				onSelect={setSelectedConversationId}
+				className="border"
 			/>
 
 			{selectedConversationId ? (
-				<div className="flex min-h-[520px] flex-col border">
+				<div className="flex min-h-0 flex-col border">
 					<MessagePane
 						conversationId={selectedConversationId}
 						currentUserId={currentUserId}
 						conversation={selectedConversation}
+						participants={participants}
 					/>
 				</div>
 			) : (
-				<div className="flex min-h-[520px] items-center justify-center border">
+				<div className="flex min-h-0 items-center justify-center border">
 					<p className="text-sm text-muted-foreground">Select a conversation.</p>
 				</div>
 			)}
+
+			<div className="hidden min-h-0 lg:block">
+				<ConversationMembers participants={participants} />
+			</div>
 		</div>
 	);
 }

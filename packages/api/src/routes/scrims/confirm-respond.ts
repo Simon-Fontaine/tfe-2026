@@ -599,9 +599,7 @@ export function registerScrimConfirmRespondRoutes(scrimRoutes: Hono<AuthEnv>) {
 			if (scrim.status === "cancelled") {
 				return c.json({ error: "This scrim is already cancelled." }, 400);
 			}
-			if (scrim.status === "completed") {
-				return c.json({ error: "Completed scrims cannot be changed." }, 400);
-			}
+			// "completed" is already rejected near the top of the handler (see status guard above).
 
 			cancelActorTeamId = (await verifyTeamManager(scrim.homeTeamId, user.id))
 				? scrim.homeTeamId

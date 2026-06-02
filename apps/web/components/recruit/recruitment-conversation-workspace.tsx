@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 import { APPLICATION_STATUS_LABELS } from "@/lib/recruitment";
-import { useChatStore } from "@/stores/chat";
+import { selectLiveConversationsByType, useChatStore } from "@/stores/chat";
 
 interface RecruitmentConversationWorkspaceProps {
 	currentUserId: string;
@@ -23,23 +23,20 @@ export function RecruitmentConversationWorkspace({
 }: RecruitmentConversationWorkspaceProps) {
 	useChatSocket();
 
-	const storeConversations = useChatStore((s) => s.conversations);
-	const setConversations = useChatStore((s) => s.setConversations);
+	const conversationsById = useChatStore((s) => s.conversationsById);
+	const mergeConversations = useChatStore((s) => s.mergeConversations);
 	const [isStoreHydrated, setIsStoreHydrated] = useState(false);
 	const serverConversationIds = new Set(
 		conversations.map((conversation) => conversation.conversationId)
 	);
 	const liveRecruitmentConversations = isStoreHydrated
-		? storeConversations.filter(
-				(conversation) =>
-					conversation.type === "recruitment" && !serverConversationIds.has(conversation.id)
-			)
+		? selectLiveConversationsByType(conversationsById, "recruitment", serverConversationIds)
 		: [];
 
 	// Initialise the chat store so live message events (appendMessage, clearUnread)
 	// can find these conversations by id.
 	useEffect(() => {
-		setConversations(
+		mergeConversations(
 			conversations.map((c) => ({
 				id: c.conversationId,
 				type: "recruitment" as const,
@@ -55,7 +52,7 @@ export function RecruitmentConversationWorkspace({
 			}))
 		);
 		setIsStoreHydrated(true);
-	}, [conversations, setConversations]);
+	}, [conversations, mergeConversations]);
 
 	// Sort before computing defaultId so the pre-selected conversation matches
 	// the first item the user sees in the sidebar.
@@ -97,7 +94,7 @@ export function RecruitmentConversationWorkspace({
 			{/* Sidebar */}
 			<div className="divide-y overflow-hidden border">
 				{sortedConversations.map((conversation) => {
-					const liveEntry = storeConversations.find((c) => c.id === conversation.conversationId);
+					const liveEntry = conversationsById[conversation.conversationId];
 					const unreadCount = liveEntry?.unreadCount ?? conversation.unreadCount;
 					const lastMessagePreview =
 						liveEntry?.lastMessagePreview ?? conversation.lastMessagePreview;

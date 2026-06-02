@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppRealtimeEvent } from "@scrimflow/shared";
+import type { RealtimeEvent } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef } from "react";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
@@ -36,7 +36,7 @@ export function ScrimsStoreBootstrap({ teamId, needsActionCount }: ScrimsStoreBo
 			}, 500);
 		}
 
-		function handleEvent(event: AppRealtimeEvent) {
+		function handleEvent(event: RealtimeEvent) {
 			if (event.type !== "scrim:changed" || event.teamId !== teamId) return;
 			scheduleRefresh();
 		}

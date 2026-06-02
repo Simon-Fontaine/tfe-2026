@@ -30,8 +30,7 @@ docker compose -f docker-compose.dev.yml down
 # Infrastructure only
 docker compose -f docker-compose.dev.yml up db cache storage storage-init mail redis-commander -d
 
-# Run app
-cd next-app
+# Install deps and run the web app + API (from the repo root)
 pnpm install
 pnpm dev
 ```
@@ -50,6 +49,36 @@ pnpm db:push
 
 # Open Drizzle Studio
 pnpm db:studio
+```
+
+## Verification
+
+```bash
+# Lint + format (Biome)
+pnpm lint
+pnpm format
+
+# Type-check every workspace package (web, api, shared)
+pnpm typecheck
+
+# Biome + typecheck + Drizzle schema check (requires the dev DB running)
+pnpm check
+
+# Production build (Next.js standalone output + API)
+pnpm build
+```
+
+## Production Deployment
+
+Production runs the full stack (PostgreSQL, Redis, MinIO, API, OCR worker, Next.js app, and a
+Caddy reverse proxy with automatic HTTPS) via `docker-compose.prod.yml`.
+
+- [deployment.md](deployment.md) — step-by-step production deployment runbook
+- [production-env.md](production-env.md) — full production environment variable reference
+- [.env.production.example](.env.production.example) — copy to `.env.production` and fill in secrets
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
 ## Stack

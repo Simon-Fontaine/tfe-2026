@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppRealtimeEvent } from "@scrimflow/shared";
+import type { RealtimeEvent } from "@scrimflow/shared";
 import { useEffect } from "react";
 import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
@@ -16,7 +16,7 @@ export function InboxRealtimeBootstrap({ initialUnreadCount }: InboxRealtimeBoot
 	}, [initialUnreadCount]);
 
 	useEffect(() => {
-		const removeListener = realtimeSocket.addListener((event: AppRealtimeEvent) => {
+		const removeListener = realtimeSocket.addListener((event: RealtimeEvent) => {
 			const store = useInboxStore.getState();
 
 			switch (event.type) {

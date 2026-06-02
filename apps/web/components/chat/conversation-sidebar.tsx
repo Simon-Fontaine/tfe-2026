@@ -5,39 +5,23 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useChatStore } from "@/stores/chat";
 
 interface ConversationSidebarProps {
-	contextKey?: string;
-	initialConversations: ChatConversationSummary[];
+	conversations: ChatConversationSummary[];
 	selectedConversationId: string | null;
 	onSelect: (id: string) => void;
-}
-
-function getScopedConversations(
-	conversations: ChatConversationSummary[],
-	contextKey: string | undefined
-) {
-	if (!contextKey?.startsWith("team:")) return conversations;
-	const teamId = contextKey.slice("team:".length);
-	return conversations.filter((conversation) => conversation.teamId === teamId);
+	className?: string;
 }
 
 export function ConversationSidebar({
-	contextKey,
-	initialConversations,
+	conversations,
 	selectedConversationId,
 	onSelect,
+	className,
 }: ConversationSidebarProps) {
-	const { conversations, setConversations } = useChatStore();
 	const router = useRouter();
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
-
-	// Keep the store aligned with the current server-rendered chat context.
-	useEffect(() => {
-		setConversations(initialConversations);
-	}, [initialConversations, setConversations]);
 
 	// Sync selected conversation to URL search param
 	useEffect(() => {
@@ -53,12 +37,9 @@ export function ConversationSidebar({
 		router.replace(query ? `${pathname}?${query}` : pathname);
 	}, [pathname, router, searchParams, selectedConversationId]);
 
-	const scopedConversations = getScopedConversations(conversations, contextKey);
-	const list = scopedConversations.length > 0 ? scopedConversations : initialConversations;
-
 	return (
-		<div className="flex flex-col overflow-y-auto">
-			{list.map((conversation) => (
+		<div className={cn("flex min-h-0 flex-col overflow-y-auto", className)}>
+			{conversations.map((conversation) => (
 				<ConversationItem
 					key={conversation.id}
 					conversation={conversation}

@@ -2,7 +2,7 @@
 
 import { MoreHorizontalIcon, NewsIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { AppRealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
+import type { RealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef, useState } from "react";
@@ -66,7 +66,7 @@ export function OrgUpdatesPageClient({
 	}, [initialUpdates]);
 
 	useEffect(() => {
-		function handleEvent(event: AppRealtimeEvent) {
+		function handleEvent(event: RealtimeEvent) {
 			if (!("organizationId" in event) || event.organizationId !== organizationId) return;
 
 			switch (event.type) {

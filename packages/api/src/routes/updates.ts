@@ -262,6 +262,7 @@ updatesRoutes.post("/", async (c) => {
 			teamId,
 			event: "update:created",
 			payload: {
+				scope: "team",
 				update: mapped,
 			},
 		});
@@ -286,6 +287,7 @@ updatesRoutes.post("/", async (c) => {
 			organizationId,
 			event: "update:created",
 			payload: {
+				scope: "org",
 				update: mapped,
 			},
 		});
@@ -344,6 +346,7 @@ updatesRoutes.patch("/:id", async (c) => {
 			teamId: updated.teamId,
 			event: "update:updated",
 			payload: {
+				scope: "team",
 				update: mapped,
 			},
 		});
@@ -352,6 +355,7 @@ updatesRoutes.patch("/:id", async (c) => {
 			organizationId: updated.organizationId,
 			event: "update:updated",
 			payload: {
+				scope: "org",
 				update: mapped,
 			},
 		});
@@ -394,6 +398,7 @@ updatesRoutes.delete("/:id", async (c) => {
 			teamId: existing.teamId,
 			event: "update:deleted",
 			payload: {
+				scope: "team",
 				updateId,
 			},
 		});
@@ -402,6 +407,7 @@ updatesRoutes.delete("/:id", async (c) => {
 			organizationId: existing.organizationId,
 			event: "update:deleted",
 			payload: {
+				scope: "org",
 				updateId,
 			},
 		});

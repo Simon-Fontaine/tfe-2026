@@ -1,4 +1,7 @@
-import type { RecruitmentApplicationReviewSummary } from "@scrimflow/shared";
+import type {
+	RecruitmentApplicationReviewSummary,
+	RecruitmentApplicationSummary,
+} from "@scrimflow/shared";
 import {
 	and,
 	asc,
@@ -469,7 +472,7 @@ export function mapRecruitmentApplication(row: {
 	applicantOrganization?: { id: string; name: string; slug?: string } | null;
 	listing?: { id: string; type: "lft" | "lfp" | "lfr" | "lfs"; title: string } | null;
 	chatChannels?: Array<{ id: string }>;
-}) {
+}): RecruitmentApplicationSummary {
 	const senderType =
 		row.applicantTeamId !== null
 			? "team"

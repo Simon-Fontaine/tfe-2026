@@ -74,8 +74,10 @@ async function uploadEntityImages(params: {
 	publicUrl: string;
 	entities: Array<{
 		key: string;
-		setAvatar: (url: string) => Promise<void>;
-		setBanner: (url: string) => Promise<void>;
+		// Awaited only for its side effect; Drizzle query builders are thenable, so accept any
+		// PromiseLike rather than forcing callers to wrap them in Promise<void>.
+		setAvatar: (url: string) => PromiseLike<unknown>;
+		setBanner: (url: string) => PromiseLike<unknown>;
 	}>;
 }): Promise<{ uploaded: number; skipped: string[] }> {
 	const { dir, bucket, publicUrl, entities } = params;

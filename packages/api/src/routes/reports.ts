@@ -43,7 +43,7 @@ async function snapshotTarget(
 		case "team": {
 			const row = await db.query.teamTable.findFirst({
 				where: eq(teamTable.id, targetId),
-				columns: { name: true, tag: true, slug: true },
+				columns: { name: true, tag: true },
 			});
 			return row ?? null;
 		}
@@ -57,7 +57,7 @@ async function snapshotTarget(
 		case "listing": {
 			const row = await db.query.recruitmentListingTable.findFirst({
 				where: eq(recruitmentListingTable.id, targetId),
-				columns: { title: true, category: true },
+				columns: { title: true, type: true },
 			});
 			return row ?? null;
 		}

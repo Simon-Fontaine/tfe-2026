@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { chatSocket } from "@/lib/ws/chat-socket";
+import { realtimeSocket } from "@/lib/ws/realtime-socket";
 
 interface MessageInputProps {
 	conversationId: string;
@@ -27,7 +27,7 @@ export function MessageInput({ conversationId, disabled, onSend }: MessageInputP
 		return () => {
 			if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 			if (isTypingRef.current) {
-				chatSocket.sendTypingStop(conversationId);
+				realtimeSocket.sendTypingStop(conversationId);
 				isTypingRef.current = false;
 			}
 		};
@@ -38,18 +38,18 @@ export function MessageInput({ conversationId, disabled, onSend }: MessageInputP
 
 		if (value.trim().length > 0) {
 			if (!isTypingRef.current) {
-				chatSocket.sendTypingStart(conversationId);
+				realtimeSocket.sendTypingStart(conversationId);
 				isTypingRef.current = true;
 			}
 			if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 			typingTimerRef.current = setTimeout(() => {
-				chatSocket.sendTypingStop(conversationId);
+				realtimeSocket.sendTypingStop(conversationId);
 				isTypingRef.current = false;
 			}, TYPING_DEBOUNCE_MS);
 		} else {
 			if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 			if (isTypingRef.current) {
-				chatSocket.sendTypingStop(conversationId);
+				realtimeSocket.sendTypingStop(conversationId);
 				isTypingRef.current = false;
 			}
 		}
@@ -62,7 +62,7 @@ export function MessageInput({ conversationId, disabled, onSend }: MessageInputP
 		// Stop typing indicator immediately
 		if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 		if (isTypingRef.current) {
-			chatSocket.sendTypingStop(conversationId);
+			realtimeSocket.sendTypingStop(conversationId);
 			isTypingRef.current = false;
 		}
 

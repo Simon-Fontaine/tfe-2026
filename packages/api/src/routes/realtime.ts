@@ -1,9 +1,18 @@
-import type { AppRealtimeClientCommand } from "@scrimflow/shared";
+import type { RealtimeClientCommand } from "@scrimflow/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "@/db";
 import { scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
+import {
+	publishConversationEvent,
+	refreshSocketPresence,
+	registerChatSocket,
+	subscribeSocketToConversation,
+	unregisterChatSocket,
+	unsubscribeSocketFromConversation,
+} from "@/realtime/chat-hub";
+import { broadcastUserPresence } from "@/realtime/presence-broadcast";
 import {
 	disconnectRealtimeSession,
 	registerRealtimeSocket,
@@ -15,6 +24,7 @@ import {
 	unsubscribeSocketFromScrim,
 	unsubscribeSocketFromTeam,
 } from "@/realtime/scrim-hub";
+import { hasConversationAccess } from "@/utils/chat";
 import { getOrgPermissions } from "@/utils/org";
 import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
 import {
@@ -36,9 +46,22 @@ function sendRealtimeError(
 		scrimId?: string;
 		teamId?: string;
 		organizationId?: string;
+		conversationId?: string;
 	}
 ) {
 	ws.send(JSON.stringify({ type: "realtime:error", ...params }));
+}
+
+function sendChatError(
+	ws: WsRouteSocket,
+	params: {
+		error: string;
+		code: WsErrorCode;
+		retryable: boolean;
+		conversationId?: string;
+	}
+) {
+	ws.send(JSON.stringify({ type: "chat:error", ...params }));
 }
 
 async function canAccessScrim(userId: string, scrimId: string) {
@@ -79,16 +102,32 @@ realtimeRoutes.get(
 
 		const ensureActiveSession = createWsSessionGuard(session.id, disconnectRealtimeSession);
 
+		// Hono's Bun adapter creates a NEW `WSContext` wrapper on every callback
+		// (open/message/close), even though the underlying socket is the same. The
+		// realtime/chat hubs key their subscription Maps by socket identity, so we
+		// must pin a single stable reference for this connection (captured in
+		// `onOpen`) and use it everywhere — otherwise `socketMeta.get(ws)` misses in
+		// `onMessage` and every subscribe/typing/presence command silently no-ops.
+		let connectionSocket: WsRouteSocket | null = null;
+
 		async function handleCommand(raw: string, ws: WsRouteSocket) {
-			const parsed = parseWsCommand<AppRealtimeClientCommand>(raw, ws, sendRealtimeError);
+			const parsed = parseWsCommand<RealtimeClientCommand>(raw, ws, sendRealtimeError);
 			if (!parsed) return;
 
+			// ── Shared control commands ──────────────────────────────────────────
 			if (parsed.type === "ping") {
 				if (!(await ensureActiveSession())) return;
 				ws.send(JSON.stringify({ type: "realtime:pong" }));
 				return;
 			}
 
+			if (parsed.type === "presence:heartbeat") {
+				if (!(await ensureActiveSession())) return;
+				refreshSocketPresence(ws);
+				return;
+			}
+
+			// ── App-domain subscriptions ─────────────────────────────────────────
 			if (parsed.type === "subscribe:scrim") {
 				if (!(await ensureActiveSession())) return;
 
@@ -187,15 +226,67 @@ realtimeRoutes.get(
 				unsubscribeSocketFromOrg(ws, parsed.organizationId);
 				return;
 			}
+
+			// ── Chat-domain commands ─────────────────────────────────────────────
+			if (
+				parsed.type === "subscribe" ||
+				parsed.type === "unsubscribe" ||
+				parsed.type === "typing:start" ||
+				parsed.type === "typing:stop"
+			) {
+				if (!parsed.conversationId) {
+					sendChatError(ws, {
+						error: "conversationId is required.",
+						code: "missing_field",
+						retryable: false,
+					});
+					return;
+				}
+
+				if (parsed.type === "unsubscribe") {
+					unsubscribeSocketFromConversation(ws, parsed.conversationId);
+					return;
+				}
+
+				if (parsed.type === "subscribe" && !(await ensureActiveSession())) return;
+
+				const hasAccess = await hasConversationAccess(parsed.conversationId, user.id);
+				if (!hasAccess) {
+					sendChatError(ws, {
+						error: "You do not have access to this conversation.",
+						code: "access_denied",
+						retryable: false,
+						conversationId: parsed.conversationId,
+					});
+					return;
+				}
+
+				if (parsed.type === "subscribe") {
+					subscribeSocketToConversation(ws, parsed.conversationId);
+					return;
+				}
+
+				publishConversationEvent({
+					conversationId: parsed.conversationId,
+					event: parsed.type,
+					excludeUserId: user.id,
+					payload: { userId: user.id },
+				});
+			}
 		}
 
 		return {
 			onOpen(_event, ws) {
+				// Pin this connection's stable socket reference (see note above).
+				connectionSocket = ws;
 				registerRealtimeSocket(ws, user.id, session.id);
+				const { firstConnection } = registerChatSocket(ws, user.id, session.id);
+				if (firstConnection) void broadcastUserPresence(user.id, "online");
 			},
 			onMessage(event, ws) {
-				void handleCommand(event.data.toString(), ws).catch(() => {
-					sendRealtimeError(ws, {
+				const socket = connectionSocket ?? ws;
+				void handleCommand(event.data.toString(), socket).catch(() => {
+					sendRealtimeError(socket, {
 						error: "Unable to process command.",
 						code: "internal_error",
 						retryable: true,
@@ -203,10 +294,18 @@ realtimeRoutes.get(
 				});
 			},
 			onClose(_event, ws) {
-				unregisterRealtimeSocket(ws);
+				const socket = connectionSocket ?? ws;
+				unregisterRealtimeSocket(socket);
+				const { lastConnection } = unregisterChatSocket(socket);
+				if (lastConnection) void broadcastUserPresence(user.id, "offline");
+				connectionSocket = null;
 			},
 			onError(_event, ws) {
-				unregisterRealtimeSocket(ws);
+				const socket = connectionSocket ?? ws;
+				unregisterRealtimeSocket(socket);
+				const { lastConnection } = unregisterChatSocket(socket);
+				if (lastConnection) void broadcastUserPresence(user.id, "offline");
+				connectionSocket = null;
 			},
 		};
 	})

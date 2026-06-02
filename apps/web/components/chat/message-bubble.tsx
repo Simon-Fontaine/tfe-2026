@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/stores/chat";
+import { PresenceDot } from "./presence-dot";
 
 interface MessageBubbleProps {
 	message: ChatMessage;
@@ -20,6 +22,7 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, currentUserId, onEdit, onDelete }: MessageBubbleProps) {
 	const isOwn = message.senderId === currentUserId;
 	const isDeleted = Boolean(message.deletedAt);
+	const senderStatus = useChatStore((s) => s.presence[message.senderId]?.status);
 	const [isEditing, setIsEditing] = useState(false);
 	const [editContent, setEditContent] = useState(message.content);
 	const [isSaving, setIsSaving] = useState(false);
@@ -46,6 +49,7 @@ export function MessageBubble({ message, currentUserId, onEdit, onDelete }: Mess
 					<AvatarFallback className="rounded-none text-[10px] font-bold">
 						{(message.senderDisplayName ?? "?").slice(0, 2).toUpperCase()}
 					</AvatarFallback>
+					<PresenceDot status={senderStatus} />
 				</Avatar>
 			) : null}
 

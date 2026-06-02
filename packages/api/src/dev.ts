@@ -1,3 +1,5 @@
+export {};
+
 const api = Bun.spawn(["bun", "--watch", "src/index.ts"], {
 	stdout: "inherit",
 	stderr: "inherit",

@@ -2,6 +2,7 @@ import { and, count, desc, eq, gt, isNull, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { chatChannelMemberTable, chatChannelTable, chatMessageTable } from "@/db/schema";
+import { getUsersPresence } from "@/realtime/presence";
 
 function normalizeMessageContent(content: string, deletedAt: Date | null): string {
 	if (deletedAt) return "[deleted]";
@@ -75,7 +76,7 @@ export async function getConversationDetailForUser(conversationId: string, userI
 			members: {
 				where: isNull(chatChannelMemberTable.leftAt),
 				with: {
-					user: { columns: { id: true, displayName: true, avatarUrl: true } },
+					user: { columns: { id: true, username: true, displayName: true, avatarUrl: true } },
 				},
 			},
 			messages: {
@@ -85,6 +86,9 @@ export async function getConversationDetailForUser(conversationId: string, userI
 		},
 	});
 	if (!channel) return null;
+
+	const presences = await getUsersPresence(channel.members.map((member) => member.user.id));
+	const statusByUserId = new Map(presences.map((presence) => [presence.userId, presence.status]));
 
 	return {
 		id: channel.id,
@@ -102,9 +106,11 @@ export async function getConversationDetailForUser(conversationId: string, userI
 		participantCount: channel.members.length,
 		participants: channel.members.map((member) => ({
 			userId: member.user.id,
+			username: member.user.username,
 			displayName: member.user.displayName,
 			avatarUrl: member.user.avatarUrl,
 			role: member.role,
+			status: statusByUserId.get(member.user.id) ?? "offline",
 			joinedAt: member.createdAt.toISOString(),
 			leftAt: member.leftAt?.toISOString() ?? null,
 		})),

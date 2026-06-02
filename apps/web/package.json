@@ -6,7 +6,8 @@
 		"prebuild": "node -e \"require('node:fs').rmSync('.next', { recursive: true, force: true })\"",
 		"dev": "next dev",
 		"build": "next build",
-		"start": "next start"
+		"start": "next start",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",

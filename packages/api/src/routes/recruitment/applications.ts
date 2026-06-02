@@ -305,6 +305,10 @@ recruitmentApplicationsRoutes.post("/:id/decision", async (c) => {
 
 		switch (application.listing.type) {
 			case "lfp": {
+				if (!application.listing.organizationId || !application.listing.teamId) {
+					throw new Error("LFP listings must reference an organization and team.");
+				}
+
 				await ensureOrganizationMembership(tx, {
 					organizationId: application.listing.organizationId,
 					userId: application.applicantUserId,

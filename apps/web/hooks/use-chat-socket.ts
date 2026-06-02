@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { chatSocket } from "@/lib/ws/chat-socket";
+import { realtimeSocket } from "@/lib/ws/realtime-socket";
 
 /**
- * Initialises the shared WebSocket connection when the component mounts
- * and tears it down on unmount.
+ * Ensures the shared realtime websocket is connected while chat UI is mounted.
  *
- * Mount this once at the top of the chat UI tree (e.g. ChatWorkspace).
+ * The socket is a session-wide singleton shared with inbox / scrim / updates
+ * bridges, so this only opens the connection — it never tears it down on unmount.
  */
 export function useChatSocket(): void {
 	useEffect(() => {
-		chatSocket.connect();
-		return () => {
-			chatSocket.disconnect();
-		};
+		realtimeSocket.connect();
 	}, []);
 }

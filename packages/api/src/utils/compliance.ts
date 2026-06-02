@@ -100,12 +100,7 @@ export async function purgeScheduledAccountDeletions(now = new Date()) {
 				targetId: request.userId,
 				outcome: "success",
 				metadata: { anonymizedAt: anonymizedAt.toISOString() },
-			}).catch((err: unknown) =>
-				logger.error(
-					{ err, userId: request.userId },
-					"Failed to write lifecycle_archived audit event"
-				)
-			);
+			});
 		} catch (error) {
 			failedUserIds.push(request.userId);
 			logger.error(

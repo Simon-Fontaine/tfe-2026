@@ -35,6 +35,7 @@ export function deriveSeriesScore(
 }
 
 type ResultSnapshotPlayerInput = {
+	userId?: string | null;
 	playerName: string;
 	side: ScrimResultRevisionSnapshot["maps"][number]["players"][number]["side"];
 	hero: string | null;
@@ -79,6 +80,7 @@ export function buildScrimResultSnapshot(params: {
 			awayScore: map.awayScore,
 			durationSeconds: map.durationSeconds,
 			players: map.players.map((player) => ({
+				userId: player.userId ?? null,
 				playerName: player.playerName,
 				side: player.side,
 				hero: player.hero,
@@ -109,6 +111,7 @@ export function buildPersistedScrimResultSnapshot(scrim: ScrimRow): ScrimResultR
 			awayScore: map.awayScore,
 			durationSeconds: map.durationSeconds ?? null,
 			players: map.playerStats.map((player) => ({
+				userId: player.userId ?? null,
 				playerName: player.playerName,
 				side: player.side as ResultSnapshotPlayerInput["side"],
 				hero: player.hero ?? null,
@@ -299,7 +302,7 @@ export async function replaceScrimDetailedResult(
 		return sourceMap.players.map((player) => ({
 			scrimMapId: insertedMap.id,
 			side: player.side,
-			userId: null,
+			userId: player.userId ?? null,
 			teamId:
 				player.side === "home"
 					? params.homeTeamId

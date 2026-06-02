@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppRealtimeEvent } from "@scrimflow/shared";
+import type { RealtimeEvent } from "@scrimflow/shared";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
@@ -21,7 +21,7 @@ export function RecruitingRealtimeBootstrap({
 	}, [initialPendingCount]);
 
 	useEffect(() => {
-		const remove = realtimeSocket.addListener((event: AppRealtimeEvent) => {
+		const remove = realtimeSocket.addListener((event: RealtimeEvent) => {
 			if (event.type === "recruit:managed-pending-count") {
 				useRecruitingStore.getState().setPendingApplicationCount(event.pendingCount);
 			}

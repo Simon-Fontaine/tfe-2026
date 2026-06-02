@@ -6,22 +6,18 @@ import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
 import { useChatStore } from "@/stores/chat";
 import { MessageBubble } from "./message-bubble";
-import { TypingIndicator } from "./typing-indicator";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
-const EMPTY_TYPERS: string[] = [];
 
 interface MessageListProps {
 	conversationId: string;
 	currentUserId: string;
-	participantNames?: Record<string, string>;
 }
 
-export function MessageList({ conversationId, currentUserId, participantNames }: MessageListProps) {
+export function MessageList({ conversationId, currentUserId }: MessageListProps) {
 	const messages = useChatStore((s) => s.messages[conversationId] ?? EMPTY_MESSAGES);
 	const nextCursor = useChatStore((s) => s.nextCursors[conversationId]);
 	const isLoadingOlder = useChatStore((s) => s.loadingOlder[conversationId] ?? false);
-	const typingUserIds = useChatStore((s) => s.typing[conversationId] ?? EMPTY_TYPERS);
 	const { prependMessages, setLoadingOlder, updateMessage, deleteMessage } = useChatStore();
 
 	const bottomRef = useRef<HTMLDivElement>(null);
@@ -161,14 +157,6 @@ export function MessageList({ conversationId, currentUserId, participantNames }:
 					/>
 				))}
 			</div>
-
-			{typingUserIds.length > 0 ? (
-				<TypingIndicator
-					userIds={typingUserIds}
-					displayNames={participantNames}
-					className="px-1 py-2"
-				/>
-			) : null}
 
 			<div ref={bottomRef} />
 		</div>

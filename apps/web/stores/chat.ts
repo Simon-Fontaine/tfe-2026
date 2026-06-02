@@ -9,11 +9,47 @@ function sortConversations(conversations: ChatConversationSummary[]) {
 	});
 }
 
+/**
+ * Resolve an ordered, server-scoped id list against the normalized store and
+ * return the present conversations sorted by recency. The caller (a page/context)
+ * owns the id list, so the client never re-derives scope from `teamId`.
+ */
+export function selectOrderedConversations(
+	conversationsById: Record<string, ChatConversationSummary>,
+	orderedIds: string[]
+): ChatConversationSummary[] {
+	const present: ChatConversationSummary[] = [];
+	for (const id of orderedIds) {
+		const conversation = conversationsById[id];
+		if (conversation) present.push(conversation);
+	}
+	return sortConversations(present);
+}
+
+/** Live conversations of a given type that are not already in the server-scoped set. */
+export function selectLiveConversationsByType(
+	conversationsById: Record<string, ChatConversationSummary>,
+	type: ChatConversationSummary["type"],
+	excludeIds: Set<string>
+): ChatConversationSummary[] {
+	const matches: ChatConversationSummary[] = [];
+	for (const conversation of Object.values(conversationsById)) {
+		if (conversation.type === type && !excludeIds.has(conversation.id)) {
+			matches.push(conversation);
+		}
+	}
+	return sortConversations(matches);
+}
+
 // ─── State shape ──────────────────────────────────────────────────────────────
 
 interface ChatState {
-	/** All conversations for the current context (hydrated from server). */
-	conversations: ChatConversationSummary[];
+	/**
+	 * All known conversations keyed by id. Normalized so multiple contexts (team
+	 * chat, recruitment, …) can coexist without overwriting each other. Each
+	 * context renders only the ids the server scoped to it.
+	 */
+	conversationsById: Record<string, ChatConversationSummary>;
 	/** Loaded messages keyed by conversationId (newest last). */
 	messages: Record<string, ChatMessage[]>;
 	/** Next pagination cursor keyed by conversationId. null = no more pages. */
@@ -29,7 +65,11 @@ interface ChatState {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 interface ChatActions {
-	setConversations(conversations: ChatConversationSummary[]): void;
+	/** Upsert many conversations (server hydration / reconnect resync). Never drops others. */
+	mergeConversations(conversations: ChatConversationSummary[]): void;
+
+	/** Remove conversations the user lost access to. */
+	removeConversations(ids: string[]): void;
 
 	/** Replace the full message list for a conversation (initial load). */
 	setMessages(conversationId: string, messages: ChatMessage[], nextCursor: string | null): void;
@@ -64,21 +104,61 @@ interface ChatActions {
 
 	setPresence(presence: UserPresence): void;
 
+	/** Seed/refresh presence for many users at once (e.g. from a participant fetch). */
+	setPresences(presences: UserPresence[]): void;
+
 	setTyping(conversationId: string, userId: string, isTyping: boolean): void;
+}
+
+function mergeConversationInto(
+	conversationsById: Record<string, ChatConversationSummary>,
+	conversation: ChatConversationSummary
+): Record<string, ChatConversationSummary> {
+	const existing = conversationsById[conversation.id];
+	return {
+		...conversationsById,
+		[conversation.id]: existing ? { ...existing, ...conversation } : conversation,
+	};
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useChatStore = create<ChatState & ChatActions>((set) => ({
-	conversations: [],
+	conversationsById: {},
 	messages: {},
 	nextCursors: {},
 	loadingOlder: {},
 	presence: {},
 	typing: {},
 
-	setConversations(conversations) {
-		set({ conversations: sortConversations(conversations) });
+	mergeConversations(conversations) {
+		set((s) => {
+			let next = s.conversationsById;
+			let changed = false;
+			for (const conversation of conversations) {
+				const merged = mergeConversationInto(next, conversation);
+				if (merged !== next || merged[conversation.id] !== next[conversation.id]) {
+					next = merged;
+					changed = true;
+				}
+			}
+			return changed ? { conversationsById: next } : {};
+		});
+	},
+
+	removeConversations(ids) {
+		set((s) => {
+			if (ids.length === 0) return {};
+			const next = { ...s.conversationsById };
+			let changed = false;
+			for (const id of ids) {
+				if (id in next) {
+					delete next[id];
+					changed = true;
+				}
+			}
+			return changed ? { conversationsById: next } : {};
+		});
 	},
 
 	setMessages(conversationId, messages, nextCursor) {
@@ -127,33 +207,37 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 					m.clientNonce === message.clientNonce &&
 					!m.deletedAt
 			);
-			if (matchingTempIndex !== -1) {
-				const next = [...existing];
-				next[matchingTempIndex] = message;
-				return { messages: { ...s.messages, [conversationId]: next } };
-			}
-			return { messages: { ...s.messages, [conversationId]: [...existing, message] } };
+
+			const nextMessages =
+				matchingTempIndex !== -1
+					? existing.map((m, index) => (index === matchingTempIndex ? message : m))
+					: [...existing, message];
+
+			// Bump last preview / recency for the conversation (if known).
+			const conversation = s.conversationsById[conversationId];
+			const nextConversationsById = conversation
+				? {
+						...s.conversationsById,
+						[conversationId]: {
+							...conversation,
+							lastMessagePreview: message.content.slice(0, 100),
+							lastMessageAt: message.createdAt,
+						},
+					}
+				: s.conversationsById;
+
+			return {
+				messages: { ...s.messages, [conversationId]: nextMessages },
+				conversationsById: nextConversationsById,
+			};
 		});
-		// Bump conversation unread count and last preview for non-active conversations
-		set((s) => ({
-			conversations: sortConversations(
-				s.conversations.map((conv) => {
-					if (conv.id !== conversationId) return conv;
-					return {
-						...conv,
-						lastMessagePreview: message.content.slice(0, 100),
-						lastMessageAt: message.createdAt,
-					};
-				})
-			),
-		}));
 	},
 
 	updateMessage(conversationId, message, conversation) {
 		set((s) => {
-			const existing = s.messages[conversationId];
 			const updates: Partial<ChatState> = {};
 
+			const existing = s.messages[conversationId];
 			if (existing) {
 				updates.messages = {
 					...s.messages,
@@ -161,20 +245,19 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 				};
 			}
 
-			updates.conversations = sortConversations(
-				s.conversations.map((conv) => {
-					if (conv.id !== conversationId) return conv;
-					if (conversation) return { ...conv, ...conversation };
-					if (conv.lastMessageAt === message.createdAt) {
-						return {
-							...conv,
-							lastMessagePreview: message.deletedAt ? "[deleted]" : message.content.slice(0, 100),
-							lastMessageAt: message.createdAt,
-						};
-					}
-					return conv;
-				})
-			);
+			const current = s.conversationsById[conversationId];
+			if (conversation) {
+				updates.conversationsById = mergeConversationInto(s.conversationsById, conversation);
+			} else if (current && current.lastMessageAt === message.createdAt) {
+				updates.conversationsById = {
+					...s.conversationsById,
+					[conversationId]: {
+						...current,
+						lastMessagePreview: message.deletedAt ? "[deleted]" : message.content.slice(0, 100),
+						lastMessageAt: message.createdAt,
+					},
+				};
+			}
 
 			return updates;
 		});
@@ -182,10 +265,10 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 
 	deleteMessage(conversationId, messageId, deletedAt, conversation) {
 		set((s) => {
-			const existing = s.messages[conversationId];
-			const deletedMessage = existing?.find((m) => m.id === messageId);
 			const updates: Partial<ChatState> = {};
 
+			const existing = s.messages[conversationId];
+			const deletedMessage = existing?.find((m) => m.id === messageId);
 			if (existing) {
 				updates.messages = {
 					...s.messages,
@@ -195,45 +278,50 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
 				};
 			}
 
-			updates.conversations = sortConversations(
-				s.conversations.map((conv) => {
-					if (conv.id !== conversationId) return conv;
-					if (conversation) return { ...conv, ...conversation };
-					if (deletedMessage && conv.lastMessageAt === deletedMessage.createdAt) {
-						return { ...conv, lastMessagePreview: "[deleted]" };
-					}
-					return conv;
-				})
-			);
+			const current = s.conversationsById[conversationId];
+			if (conversation) {
+				updates.conversationsById = mergeConversationInto(s.conversationsById, conversation);
+			} else if (current && deletedMessage && current.lastMessageAt === deletedMessage.createdAt) {
+				updates.conversationsById = {
+					...s.conversationsById,
+					[conversationId]: { ...current, lastMessagePreview: "[deleted]" },
+				};
+			}
 
 			return updates;
 		});
 	},
 
 	upsertConversation(conversation) {
+		set((s) => ({ conversationsById: mergeConversationInto(s.conversationsById, conversation) }));
+	},
+
+	clearUnread(conversationId) {
 		set((s) => {
-			const exists = s.conversations.some((c) => c.id === conversation.id);
-			if (!exists) {
-				return { conversations: sortConversations([conversation, ...s.conversations]) };
-			}
+			const existing = s.conversationsById[conversationId];
+			if (!existing || existing.unreadCount === 0) return {};
 			return {
-				conversations: sortConversations(
-					s.conversations.map((c) => (c.id === conversation.id ? { ...c, ...conversation } : c))
-				),
+				conversationsById: {
+					...s.conversationsById,
+					[conversationId]: { ...existing, unreadCount: 0 },
+				},
 			};
 		});
 	},
 
-	clearUnread(conversationId) {
-		set((s) => ({
-			conversations: s.conversations.map((c) =>
-				c.id === conversationId ? { ...c, unreadCount: 0 } : c
-			),
-		}));
-	},
-
 	setPresence(presence) {
 		set((s) => ({ presence: { ...s.presence, [presence.userId]: presence } }));
+	},
+
+	setPresences(presences) {
+		if (presences.length === 0) return;
+		set((s) => {
+			const next = { ...s.presence };
+			for (const presence of presences) {
+				next[presence.userId] = presence;
+			}
+			return { presence: next };
+		});
 	},
 
 	setTyping(conversationId, userId, isTyping) {

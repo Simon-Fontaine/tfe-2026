@@ -2,7 +2,7 @@
 
 import { Megaphone01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { AppRealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
+import type { RealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -43,7 +43,7 @@ export function TeamUpdatesPageClient({
 	}, [initialUpdates]);
 
 	useEffect(() => {
-		function handleEvent(event: AppRealtimeEvent) {
+		function handleEvent(event: RealtimeEvent) {
 			if (!("teamId" in event) || event.teamId !== teamId) return;
 
 			switch (event.type) {

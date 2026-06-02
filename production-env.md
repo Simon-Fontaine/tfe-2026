@@ -51,7 +51,6 @@ Container-internal addresses use Docker service names (`http://api:3001`, `db:54
 | `OCR_WORKER_MAX_RETRIES` | api, worker | optional | no | OCR retry limit (`3`) |
 | `OCR_WORKER_RETRY_BASE_MS` | api, worker | optional | no | Base retry delay ms (`30000`) |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | app | optional | yes | Stable Server Actions encryption key — required for rolling deploys or multiple web containers |
-| `DEPLOYMENT_VERSION` | app | optional | no | Version tag for skew protection in multi-container deploys |
 
 ## Notes
 

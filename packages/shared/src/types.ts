@@ -907,9 +907,11 @@ export type ChatConversationSummary = {
 
 export type ChatParticipantSummary = {
 	userId: string;
+	username: string;
 	displayName: string;
 	avatarUrl: string | null;
 	role: string;
+	status: UserPresenceStatus;
 	joinedAt: IsoDateString;
 	leftAt: IsoDateString | null;
 };
@@ -1020,7 +1022,8 @@ export type ChatRealtimeEvent =
 			deletedAt: IsoDateString;
 			actorUserId: string;
 			conversation: ChatConversationSummary;
-	  };
+	  }
+	| { type: "conversation:access-revoked"; conversationIds: string[] };
 
 export type ScrimOcrJobRealtimePayload = {
 	jobId: string;
@@ -1082,31 +1085,37 @@ export type AppRealtimeEvent =
 	| { type: "notification:restored"; notificationId: string; unreadCount: number }
 	| {
 			type: "update:created";
+			scope: "team";
 			teamId: string;
 			update: UpdatePostSummary;
 	  }
 	| {
 			type: "update:updated";
+			scope: "team";
 			teamId: string;
 			update: UpdatePostSummary;
 	  }
 	| {
 			type: "update:deleted";
+			scope: "team";
 			teamId: string;
 			updateId: string;
 	  }
 	| {
 			type: "update:created";
+			scope: "org";
 			organizationId: string;
 			update: UpdatePostSummary;
 	  }
 	| {
 			type: "update:updated";
+			scope: "org";
 			organizationId: string;
 			update: UpdatePostSummary;
 	  }
 	| {
 			type: "update:deleted";
+			scope: "org";
 			organizationId: string;
 			updateId: string;
 	  }
@@ -1139,6 +1148,14 @@ export type AppRealtimeEvent =
 			pendingCount: number;
 	  }
 	| { type: "recruit:application-decided"; applicationId: string; status: "accepted" | "rejected" };
+
+/**
+ * Unified realtime event/command surface. A single websocket carries both the
+ * app-domain (scrim/team/org/notifications/recruit) and chat-domain (messages,
+ * typing, presence) traffic; their `type` discriminants are disjoint.
+ */
+export type RealtimeEvent = AppRealtimeEvent | ChatRealtimeEvent;
+export type RealtimeClientCommand = AppRealtimeClientCommand | ChatClientCommand;
 
 // ─── Scrim types ────────────────────────────────────────────────────────────
 
@@ -1360,6 +1377,7 @@ export type ScrimResultChangeSummary = {
 };
 
 export type ScrimResultRevisionPlayerSnapshot = {
+	userId: string | null;
 	playerName: string;
 	side: "home" | "away" | "unknown";
 	hero: string | null;
@@ -1781,7 +1799,8 @@ export type DomainAuditDomain =
 	| "result"
 	| "evidence"
 	| "data_lifecycle"
-	| "admin";
+	| "admin"
+	| "governance";
 
 export type DomainAuditActorType = "user" | "system" | "worker";
 
@@ -1808,7 +1827,9 @@ export type DomainAuditActionType =
 	| "data_export_requested"
 	| "lifecycle_archived"
 	| "lifecycle_restored"
-	| "lifecycle_deletion_pending";
+	| "lifecycle_deletion_pending"
+	| "governance_recovery_applied"
+	| "governance_containment_applied";
 
 export type DomainAuditEvent = {
 	id: string;

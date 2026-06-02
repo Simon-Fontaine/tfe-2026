@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+	type AnyPgColumn,
 	boolean,
 	index,
 	integer,
@@ -987,6 +988,7 @@ type ScrimResultRevisionJsonValue =
 	| ScrimResultRevisionJsonValue[];
 
 type ScrimResultRevisionPlayerSnapshot = {
+	userId: string | null;
 	playerName: string;
 	side: "home" | "away" | "unknown";
 	hero: string | null;
@@ -1155,7 +1157,9 @@ export const scrimMapTable = pgTable(
 		awayScore: smallint("away_score").notNull().default(0),
 
 		/** OCR job that extracted this data. */
-		ocrJobId: uuid("ocr_job_id").references(() => ocrJobTable.id, { onDelete: "set null" }),
+		ocrJobId: uuid("ocr_job_id").references((): AnyPgColumn => ocrJobTable.id, {
+			onDelete: "set null",
+		}),
 
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 	},
@@ -1289,7 +1293,9 @@ export const ocrJobTable = pgTable(
 		imageUrl: text("image_url").notNull(),
 
 		/** Target map for scoreboard OCR jobs. Null for game_history jobs and legacy unassociated scoreboard jobs. */
-		scrimMapId: uuid("scrim_map_id").references(() => scrimMapTable.id, { onDelete: "set null" }),
+		scrimMapId: uuid("scrim_map_id").references((): AnyPgColumn => scrimMapTable.id, {
+			onDelete: "set null",
+		}),
 
 		status: ocrJobStatusEnum("status").notNull().default("queued"),
 		progressStage: text("progress_stage").notNull().default("queued"),

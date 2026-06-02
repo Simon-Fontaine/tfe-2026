@@ -27,6 +27,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
+import { toDateTimeLocal, toIsoTimestamp } from "@/lib/scrims/format";
 import { readApiPayload } from "./form-errors";
 
 interface ScrimRespondActionsProps {
@@ -36,23 +37,6 @@ interface ScrimRespondActionsProps {
 	awayTeamId: string | null;
 	scheduledAt: string | null;
 	canManage: boolean;
-}
-
-function toDateTimeLocal(value: string | null) {
-	if (!value) return "";
-
-	const date = new Date(value);
-	const pad = (part: number) => String(part).padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-		date.getHours()
-	)}:${pad(date.getMinutes())}`;
-}
-
-function toIsoTimestamp(value: string) {
-	if (!value) return undefined;
-
-	const parsed = new Date(value);
-	return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 }
 
 type RespondAction = "accept" | "cancel" | "decline" | "reschedule" | "propose_changes" | "start";
@@ -115,8 +99,6 @@ export function ScrimRespondActions({
 		scrimStatus !== "completed" &&
 		scrimStatus !== "awaiting_confirmation" &&
 		scrimStatus !== "disputed";
-	const showLockedGuidance =
-		canManage && (scrimStatus === "awaiting_confirmation" || scrimStatus === "disputed");
 
 	if (
 		!canAccept &&
@@ -124,8 +106,7 @@ export function ScrimRespondActions({
 		!canProposeChanges &&
 		!canReschedule &&
 		!canStart &&
-		!canCancel &&
-		!showLockedGuidance
+		!canCancel
 	) {
 		return null;
 	}
@@ -208,13 +189,6 @@ export function ScrimRespondActions({
 
 	return (
 		<div className="flex flex-wrap items-center gap-2">
-			{showLockedGuidance ? (
-				<p className="text-sm text-muted-foreground">
-					{scrimStatus === "awaiting_confirmation"
-						? "Results have been reported — confirm or dispute using the section below."
-						: "This scrim is under dispute — use the dispute resolution section below."}
-				</p>
-			) : null}
 			{canAccept ? (
 				<Dialog open={acceptOpen} onOpenChange={setAcceptOpen}>
 					<DialogTrigger asChild>

@@ -1,5 +1,5 @@
 import { CreateScrimSchema } from "@scrimflow/shared";
-import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
 import { db } from "@/db";
@@ -25,54 +25,15 @@ import {
 } from "./detail";
 import { fetchMapImagesByName, findScrimWithRelations, toIsoDate } from "./shared";
 
-export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
-	scrimRoutes.get("/", async (c) => {
-		const user = c.get("user");
-		const requestedTeamId = c.req.query("teamId");
-
-		let teamIds: string[] = [];
-
-		if (requestedTeamId) {
-			const allowed = await canViewTeam(requestedTeamId, user.id);
-			if (!allowed) {
-				return c.json({ error: "You do not have access to this team's scrims." }, 403);
-			}
-			teamIds = [requestedTeamId];
-		} else {
-			const memberships = await db.query.teamRosterTable.findMany({
-				where: and(
-					eq(teamRosterTable.userId, user.id),
-					inArray(teamRosterTable.status, TEAM_VIEWABLE_STATUSES)
-				),
-				columns: { teamId: true },
-			});
-			teamIds = [...new Set(memberships.map((membership) => membership.teamId))];
-		}
-
-		if (teamIds.length === 0) {
-			return c.json({ data: [], nextCursor: null });
-		}
-
-		const cursor = c.req.query("cursor") ?? null;
-		const limitParam = Number(c.req.query("limit") ?? "20");
-		const limit = Math.min(Math.max(1, limitParam), 50);
-
-		const ACTIVE_STATUSES = [
-			"pending",
-			"accepted",
-			"scheduled",
-			"in_progress",
-			"awaiting_confirmation",
-			"disputed",
-		] as const;
-		const PAST_STATUSES = ["completed", "cancelled"] as const;
-
-		const teamFilter = or(
-			inArray(scrimTable.homeTeamId, teamIds),
-			inArray(scrimTable.awayTeamId, teamIds)
-		);
-
-		const scrimWith = {
+// Inlined relation config (rather than an extracted `as const` object) so Drizzle infers the
+// precise literal-keyed result type that matches `ScrimSummaryRow`. Shared by the active/past
+// list queries below.
+function queryScrimSummaries(filters: { where: SQL | undefined; orderBy: SQL[]; limit?: number }) {
+	return db.query.scrimTable.findMany({
+		where: filters.where,
+		orderBy: filters.orderBy,
+		limit: filters.limit,
+		with: {
 			homeTeam: {
 				columns: {
 					id: true,
@@ -128,6 +89,7 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 					id: true,
 					scrimId: true,
 					screenshotType: true,
+					scrimMapId: true,
 					imageUrl: true,
 					status: true,
 					progressStage: true,
@@ -154,7 +116,56 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 				},
 				orderBy: [desc(ocrJobTable.createdAt)],
 			},
-		} as const;
+		},
+	});
+}
+
+export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
+	scrimRoutes.get("/", async (c) => {
+		const user = c.get("user");
+		const requestedTeamId = c.req.query("teamId");
+
+		let teamIds: string[] = [];
+
+		if (requestedTeamId) {
+			const allowed = await canViewTeam(requestedTeamId, user.id);
+			if (!allowed) {
+				return c.json({ error: "You do not have access to this team's scrims." }, 403);
+			}
+			teamIds = [requestedTeamId];
+		} else {
+			const memberships = await db.query.teamRosterTable.findMany({
+				where: and(
+					eq(teamRosterTable.userId, user.id),
+					inArray(teamRosterTable.status, TEAM_VIEWABLE_STATUSES)
+				),
+				columns: { teamId: true },
+			});
+			teamIds = [...new Set(memberships.map((membership) => membership.teamId))];
+		}
+
+		if (teamIds.length === 0) {
+			return c.json({ data: [], nextCursor: null });
+		}
+
+		const cursor = c.req.query("cursor") ?? null;
+		const limitParam = Number(c.req.query("limit") ?? "20");
+		const limit = Math.min(Math.max(1, limitParam), 50);
+
+		const ACTIVE_STATUSES = [
+			"pending",
+			"accepted",
+			"scheduled",
+			"in_progress",
+			"awaiting_confirmation",
+			"disputed",
+		] as const;
+		const PAST_STATUSES = ["completed", "cancelled"] as const;
+
+		const teamFilter = or(
+			inArray(scrimTable.homeTeamId, teamIds),
+			inArray(scrimTable.awayTeamId, teamIds)
+		);
 
 		const pastWhere = cursor
 			? and(
@@ -165,14 +176,12 @@ export function registerScrimListCreateRoutes(scrimRoutes: Hono<AuthEnv>) {
 			: and(teamFilter, inArray(scrimTable.status, [...PAST_STATUSES]));
 
 		const [activeRows, pastRows] = await Promise.all([
-			db.query.scrimTable.findMany({
+			queryScrimSummaries({
 				where: and(teamFilter, inArray(scrimTable.status, [...ACTIVE_STATUSES])),
-				with: scrimWith,
 				orderBy: [desc(scrimTable.scheduledAt), desc(scrimTable.createdAt)],
 			}),
-			db.query.scrimTable.findMany({
+			queryScrimSummaries({
 				where: pastWhere,
-				with: scrimWith,
 				orderBy: [desc(scrimTable.createdAt)],
 				limit: limit + 1,
 			}),

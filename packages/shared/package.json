@@ -11,6 +11,9 @@
 		"./config/*": "./src/config/*.ts",
 		"./types": "./src/types.ts"
 	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
 	"dependencies": {
 		"valibot": "^1.2.0"
 	},

@@ -115,6 +115,8 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
+Every `docker compose` command below passes `--env-file .env.production` so Compose substitutes these values (it only auto-loads a file named `.env`).
+
 Fill every `change_me_*` value. See [`production-env.md`](production-env.md) for variable descriptions. Key secrets:
 
 | Variable | How to generate |
@@ -132,7 +134,7 @@ Fill every `change_me_*` value. See [`production-env.md`](production-env.md) for
 On the very first deploy, migrations run automatically via the `db-migrate` service when you bring the stack up (see Section 7). For subsequent deploys after a code update that includes schema changes, run migrations explicitly:
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm db-migrate
+docker compose --env-file .env.production -f docker-compose.prod.yml run --rm db-migrate
 ```
 
 This runs `bunx drizzle-kit migrate` against the production database inside the API image. The command exits 0 on success. Run it before restarting the API and worker services to avoid serving code against a stale schema.
@@ -142,7 +144,7 @@ This runs `bunx drizzle-kit migrate` against the production database inside the 
 ## 7. First Start
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
 This builds the images, runs migrations via `db-migrate`, initialises MinIO buckets via `storage-init`, and starts all services. Caddy obtains the TLS certificate on first request to port 80.
@@ -150,7 +152,7 @@ This builds the images, runs migrations via `db-migrate`, initialises MinIO buck
 Check status:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
 ```
 
 `db-migrate` and `storage-init` will show as exited with code 0 — that is expected.
@@ -176,26 +178,26 @@ Open `https://scrimflow.com`, create an account, confirm login and file uploads 
 ```bash
 cd /home/deploy/scrimflow
 git pull
-docker compose -f docker-compose.prod.yml build api app worker
-docker compose -f docker-compose.prod.yml up -d --no-deps api app worker
+docker compose --env-file .env.production -f docker-compose.prod.yml build api app worker
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --no-deps api app worker
 ```
 
 If the update includes migrations:
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm db-migrate
+docker compose --env-file .env.production -f docker-compose.prod.yml run --rm db-migrate
 ```
 
 ### Logs
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f [service]
+docker compose --env-file .env.production -f docker-compose.prod.yml logs -f [service]
 ```
 
 ### Postgres backup
 
 ```bash
-docker compose -f docker-compose.prod.yml exec db \
+docker compose --env-file .env.production -f docker-compose.prod.yml exec db \
   pg_dump -U $DB_USER $DB_NAME | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 ```
 
@@ -203,7 +205,7 @@ Restore:
 
 ```bash
 gunzip -c backup_YYYYMMDD_HHMMSS.sql.gz | \
-  docker compose -f docker-compose.prod.yml exec -T db psql -U $DB_USER $DB_NAME
+  docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $DB_USER $DB_NAME
 ```
 
 ### MinIO backup

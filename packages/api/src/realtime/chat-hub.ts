@@ -157,17 +157,26 @@ function notifySessionInvalidation(ws: ChatSocket, reason: RealtimeSessionInvali
 	}
 }
 
-export function registerChatSocket(ws: ChatSocket, userId: string, sessionId: string) {
+export function registerChatSocket(
+	ws: ChatSocket,
+	userId: string,
+	sessionId: string
+): { firstConnection: boolean } {
+	const existingUserSockets = userSockets.get(userId);
+	const firstConnection = !existingUserSockets || existingUserSockets.size === 0;
+
 	socketMeta.set(ws, { sessionId, userId, subscriptions: new Set() });
 	getOrCreateSet(sessionSockets, sessionId).add(ws);
 	getOrCreateSet(userSockets, userId).add(ws);
 	send(ws, { type: "chat:connected", userId });
 	void setUserOnline(userId);
+
+	return { firstConnection };
 }
 
-export function unregisterChatSocket(ws: ChatSocket) {
+export function unregisterChatSocket(ws: ChatSocket): { lastConnection: boolean } {
 	const meta = socketMeta.get(ws);
-	if (!meta) return;
+	if (!meta) return { lastConnection: false };
 
 	for (const conversationId of meta.subscriptions) {
 		const sockets = conversationSockets.get(conversationId);
@@ -184,6 +193,7 @@ export function unregisterChatSocket(ws: ChatSocket) {
 		}
 	}
 
+	let lastConnection = false;
 	const socketsForUser = userSockets.get(meta.userId);
 	if (socketsForUser) {
 		socketsForUser.delete(ws);
@@ -191,10 +201,12 @@ export function unregisterChatSocket(ws: ChatSocket) {
 			userSockets.delete(meta.userId);
 			// Only mark offline when no remaining sockets for this user
 			void setUserOffline(meta.userId);
+			lastConnection = true;
 		}
 	}
 
 	socketMeta.delete(ws);
+	return { lastConnection };
 }
 
 export function disconnectChatSession(
@@ -305,8 +317,34 @@ export function publishUsersEvent(params: {
 	}
 }
 
+/**
+ * Tell a user's chat sockets that they lost access to the given conversations.
+ * The client removes them from the list and unsubscribes; server-side membership
+ * is the source of truth, so this is a live-UX signal (it self-corrects on the
+ * next list fetch).
+ */
+export function revokeChatConversationsForUser(userId: string, conversationIds: string[]) {
+	if (conversationIds.length === 0) return;
+	localFanOutUser(userId, "conversation:access-revoked", { conversationIds });
+	void redisPublishUser(userId, "conversation:access-revoked", { conversationIds });
+}
+
 export function refreshSocketPresence(ws: ChatSocket) {
 	const meta = socketMeta.get(ws);
 	if (!meta) return;
 	void refreshPresence(meta.userId);
+}
+
+/**
+ * Whether the user currently has a socket subscribed to (i.e. is viewing) the
+ * conversation on this process. Used to suppress message notifications for
+ * members who are already in the room.
+ */
+export function isUserSubscribedToConversation(conversationId: string, userId: string): boolean {
+	const sockets = conversationSockets.get(conversationId);
+	if (!sockets) return false;
+	for (const ws of sockets) {
+		if (socketMeta.get(ws)?.userId === userId) return true;
+	}
+	return false;
 }

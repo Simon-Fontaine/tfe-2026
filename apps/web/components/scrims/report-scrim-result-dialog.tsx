@@ -8,6 +8,7 @@ import {
 	type OcrScoreboardPlayer,
 	type OW2Role,
 	type ScrimDetail,
+	type TeamMemberSummary,
 } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useRef, useState } from "react";
@@ -23,6 +24,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -35,10 +37,12 @@ import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
+import { toDateTimeLocal, toIsoTimestamp } from "@/lib/scrims/format";
 import { cn } from "@/lib/utils";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";
 
 type PlayerDraft = {
+	userId: string | null;
 	playerName: string;
 	side: (typeof OCR_PLAYER_SIDE_VALUES)[number];
 	hero: string;
@@ -67,6 +71,7 @@ type ReportScrimResultDialogProps = {
 	children: React.ReactNode;
 	scrim: ScrimDetail;
 	reportingTeamId: string;
+	rosterPlayers?: TeamMemberSummary[];
 };
 
 type ResultSubmissionPayload = {
@@ -84,6 +89,7 @@ type ResultSubmissionPayload = {
 		durationSeconds: number | null;
 		scoreboardOcrJobId?: string;
 		players: Array<{
+			userId?: string;
 			playerName: string;
 			side: PlayerDraft["side"];
 			hero: string | null;
@@ -98,27 +104,13 @@ type ResultSubmissionPayload = {
 	}>;
 };
 
-function toDateTimeLocal(value: string | null) {
-	if (!value) return "";
-	const date = new Date(value);
-	const pad = (part: number) => String(part).padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-		date.getHours()
-	)}:${pad(date.getMinutes())}`;
-}
-
-function toIsoTimestamp(value: string) {
-	if (!value) return undefined;
-	const parsed = new Date(value);
-	return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-}
-
 function nullableNumberToField(value: number | null) {
 	return value === null ? "" : String(value);
 }
 
 function createEmptyPlayerDraft(): PlayerDraft {
 	return {
+		userId: null,
 		playerName: "",
 		side: "unknown",
 		hero: "",
@@ -150,6 +142,7 @@ function mapSavedPlayerToDraft(
 	player: ScrimDetail["maps"][number]["players"][number]
 ): PlayerDraft {
 	return {
+		userId: player.userId ?? null,
 		playerName: player.playerName,
 		side: player.side,
 		hero: player.hero ?? "",
@@ -274,6 +267,7 @@ function mapScoreboardPlayerToDraft(
 	side: PlayerDraft["side"]
 ): PlayerDraft {
 	return {
+		userId: null,
 		playerName: player.playerName,
 		side,
 		hero: player.hero ?? "",
@@ -291,8 +285,21 @@ export function ReportScrimResultDialog({
 	children,
 	scrim,
 	reportingTeamId,
+	rosterPlayers = [],
 }: ReportScrimResultDialogProps) {
 	const router = useRouter();
+	const reportingTeamSide: PlayerDraft["side"] =
+		reportingTeamId === scrim.homeTeam.id ? "home" : "away";
+	const rosterOptions = rosterPlayers
+		.filter((player) => player.status !== "inactive")
+		.map((player) => ({
+			userId: player.userId,
+			displayName: player.displayName,
+			username: player.username,
+			role: player.roleInTeam ?? player.gameRole ?? null,
+			mainHero: player.mainHero?.displayName ?? "",
+		}))
+		.sort((a, b) => a.displayName.localeCompare(b.displayName));
 	const reviewableJobs = scrim.ocrJobs.filter(
 		(job) => job.status === "completed" && job.validatedOutput?.screenshotType === "game_history"
 	);
@@ -532,6 +539,7 @@ export function ReportScrimResultDialog({
 							throw new Error(`Map ${mapIndex + 1} player ${playerIndex + 1} needs a player name.`);
 						}
 						return {
+							userId: player.userId ?? undefined,
 							playerName: player.playerName.trim(),
 							side: player.side,
 							hero: player.hero.trim() || null,
@@ -631,14 +639,14 @@ export function ReportScrimResultDialog({
 				</DialogHeader>
 
 				{scrim.status === "completed" ? (
-					<div className="border border-muted p-3 text-xs text-muted-foreground">
+					<div className="bg-muted/40 p-3 text-xs text-muted-foreground">
 						<strong>This result is locked.</strong> Both teams have confirmed — the result can no
 						longer be replaced through this editor.
 					</div>
 				) : scrim.maps.length > 0 ||
 					scrim.status === "awaiting_confirmation" ||
 					scrim.status === "disputed" ? (
-					<div className="border border-muted p-3 text-xs text-muted-foreground">
+					<div className="bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
 						<strong>Existing result will be replaced.</strong> Submitting overwrites the current map
 						rows and resets both teams&apos; confirmations. The previous result is preserved in
 						revision history.
@@ -647,33 +655,39 @@ export function ReportScrimResultDialog({
 
 				<form onSubmit={handleSubmit} className="space-y-6">
 					<div className="grid gap-3 sm:grid-cols-3">
-						<div className="border p-3">
-							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-								Map drafts
-							</p>
-							<p className="mt-1 text-lg font-semibold">{maps.length}</p>
-							<p className="text-xs text-muted-foreground">Saved only after final submit.</p>
-						</div>
-						<div className="border p-3">
-							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-								Verified stats
-							</p>
-							<p className="mt-1 text-lg font-semibold">
-								{mapsWithScoreboards}/{maps.length || 0}
-							</p>
-							<p className="text-xs text-muted-foreground">Optional scoreboard-backed maps.</p>
-						</div>
-						<div className="border p-3">
-							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-								Player rows
-							</p>
-							<p className="mt-1 text-lg font-semibold">
-								{mapsWithPlayers}/{maps.length || 0}
-							</p>
-							<p className="text-xs text-muted-foreground">
-								Stats can stay empty for score-only reports.
-							</p>
-						</div>
+						<Card size="sm">
+							<CardContent>
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+									Map drafts
+								</p>
+								<p className="mt-1 text-lg font-semibold">{maps.length}</p>
+								<p className="text-xs text-muted-foreground">Saved only after final submit.</p>
+							</CardContent>
+						</Card>
+						<Card size="sm">
+							<CardContent>
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+									Verified stats
+								</p>
+								<p className="mt-1 text-lg font-semibold">
+									{mapsWithScoreboards}/{maps.length || 0}
+								</p>
+								<p className="text-xs text-muted-foreground">Optional scoreboard-backed maps.</p>
+							</CardContent>
+						</Card>
+						<Card size="sm">
+							<CardContent>
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+									Player rows
+								</p>
+								<p className="mt-1 text-lg font-semibold">
+									{mapsWithPlayers}/{maps.length || 0}
+								</p>
+								<p className="text-xs text-muted-foreground">
+									Stats can stay empty for score-only reports.
+								</p>
+							</CardContent>
+						</Card>
 					</div>
 					<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
 						<div className="space-y-4 border p-4">
@@ -682,7 +696,7 @@ export function ReportScrimResultDialog({
 									Series result
 								</p>
 								{maps.length > 0 ? (
-									<div className="mt-2 border p-3 text-sm font-semibold">
+									<div className="mt-2 bg-muted/30 p-3 text-sm font-semibold">
 										{scrim.homeTeam.name} {derivedSeriesScore.homeMapScore} -{" "}
 										{derivedSeriesScore.awayMapScore} {scrim.awayTeam?.name ?? "Opponent"}
 										<p className="mt-1 text-xs font-normal text-muted-foreground">
@@ -746,7 +760,7 @@ export function ReportScrimResultDialog({
 								</div>
 							</div>
 
-							<div className="border p-3">
+							<div className="bg-muted/30 p-3">
 								<p className="text-sm font-semibold">Series scan draft</p>
 								<p className="mt-1 text-xs text-muted-foreground">
 									Use a completed game-history scan to hydrate local map drafts. Review them before
@@ -804,7 +818,7 @@ export function ReportScrimResultDialog({
 								) : null}
 							</div>
 
-							<div className="border p-3">
+							<div className="bg-muted/30 p-3">
 								<p className="text-sm font-semibold">Scoreboard stat review</p>
 								<p className="mt-1 text-xs text-muted-foreground">
 									Preview completed scoreboard scans before applying player rows to a map draft.
@@ -909,7 +923,7 @@ export function ReportScrimResultDialog({
 
 										{previewScoreboardJob?.validatedOutput?.screenshotType === "scoreboard" &&
 										previewMap ? (
-											<div className="border p-3">
+											<div className="bg-background p-3">
 												<div className="flex flex-wrap items-start justify-between gap-2">
 													<div>
 														<p className="text-sm font-semibold">
@@ -937,7 +951,7 @@ export function ReportScrimResultDialog({
 															["Enemy team", previewScoreboardJob.validatedOutput.enemyTeam],
 														] as const
 													).map(([label, players]) => (
-														<div key={label} className="border p-2">
+														<div key={label} className="bg-background p-2">
 															<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 																{label}
 															</p>
@@ -996,14 +1010,14 @@ export function ReportScrimResultDialog({
 							</div>
 
 							{maps.length === 0 ? (
-								<div className="border p-4 text-sm text-muted-foreground">
+								<div className="bg-muted/30 p-4 text-sm text-muted-foreground">
 									No reviewed maps yet. This submission will stay series-only unless you add or load
 									maps.
 								</div>
 							) : (
 								<div className="space-y-4">
 									{maps.map((map, mapIndex) => (
-										<div key={map.draftKey} className="border p-4">
+										<div key={map.draftKey} className="bg-muted/30 p-4">
 											<div className="flex items-center justify-between gap-2">
 												<div>
 													<p className="text-sm font-semibold">Map {mapIndex + 1}</p>
@@ -1124,7 +1138,7 @@ export function ReportScrimResultDialog({
 												</p>
 											) : null}
 
-											<details className="mt-4 border p-3">
+											<details className="mt-4 bg-background p-3">
 												<summary className="cursor-pointer text-sm font-semibold">
 													Player stats ({map.players.length})
 												</summary>
@@ -1155,7 +1169,7 @@ export function ReportScrimResultDialog({
 															<div
 																key={`map-${mapIndex + 1}-player-${playerIndex + 1}`}
 																className={cn(
-																	"border p-3",
+																	"bg-card p-3",
 																	player.side === "unknown" && "bg-muted/20"
 																)}
 															>
@@ -1183,9 +1197,56 @@ export function ReportScrimResultDialog({
 																	</Button>
 																</div>
 
-																<div className="mt-4 grid gap-3 lg:grid-cols-4">
+																<div className="mt-4 grid gap-3 lg:grid-cols-6">
 																	<div className="lg:col-span-2">
-																		<p className="text-xs font-medium">Player name</p>
+																		<p className="text-xs font-medium">Roster link</p>
+																		<select
+																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} roster link`}
+																			value={player.userId ?? ""}
+																			onChange={(event) => {
+																				const linkedPlayer = rosterOptions.find(
+																					(option) => option.userId === event.target.value
+																				);
+																				updatePlayer(mapIndex, playerIndex, (current) => ({
+																					...current,
+																					userId: linkedPlayer?.userId ?? null,
+																					playerName:
+																						linkedPlayer?.displayName ?? current.playerName,
+																					role:
+																						(linkedPlayer?.role as PlayerDraft["role"]) ??
+																						current.role,
+																					hero: linkedPlayer?.mainHero || current.hero,
+																				}));
+																			}}
+																			className="h-9 w-full border bg-background px-3 text-sm"
+																			disabled={submitting || player.side !== reportingTeamSide}
+																		>
+																			<option value="">
+																				{player.side === reportingTeamSide
+																					? "Unlinked / manual"
+																					: "Unavailable for this side"}
+																			</option>
+																			{player.userId &&
+																			!rosterOptions.some(
+																				(option) => option.userId === player.userId
+																			) ? (
+																				<option value={player.userId}>{player.playerName}</option>
+																			) : null}
+																			{rosterOptions.map((option) => (
+																				<option key={option.userId} value={option.userId}>
+																					{option.displayName}
+																					{option.role ? ` · ${option.role}` : ""}
+																				</option>
+																			))}
+																		</select>
+																		<p className="mt-1 text-[11px] text-muted-foreground">
+																			{player.side === reportingTeamSide
+																				? "Links this stat row to a roster player."
+																				: "Opponent rows stay manual unless their roster is available."}
+																		</p>
+																	</div>
+																	<div className="lg:col-span-2">
+																		<p className="text-xs font-medium">Display / OCR name</p>
 																		<Input
 																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} name`}
 																			value={player.playerName}
@@ -1206,6 +1267,10 @@ export function ReportScrimResultDialog({
 																			onChange={(event) =>
 																				updatePlayer(mapIndex, playerIndex, (current) => ({
 																					...current,
+																					userId:
+																						event.target.value === reportingTeamSide
+																							? current.userId
+																							: null,
 																					side: event.target.value as PlayerDraft["side"],
 																				}))
 																			}

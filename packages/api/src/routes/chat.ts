@@ -1,5 +1,4 @@
 import {
-	type ChatClientCommand,
 	CreateDirectConversationSchema,
 	EditChatMessageSchema,
 	ReadConversationSchema,
@@ -9,16 +8,11 @@ import {
 import { Hono } from "hono";
 import * as v from "valibot";
 import type { AuthEnv } from "@/middleware/auth";
-import { createNotification } from "@/notifications";
+import { createNotification, markChatChannelNotificationsRead } from "@/notifications";
 import {
-	disconnectChatSession,
+	isUserSubscribedToConversation,
 	publishConversationEvent,
 	publishUserEvent,
-	refreshSocketPresence,
-	registerChatSocket,
-	subscribeSocketToConversation,
-	unregisterChatSocket,
-	unsubscribeSocketFromConversation,
 } from "@/realtime/chat-hub";
 import { getUserPresence } from "@/realtime/presence";
 import { extractErrors } from "@/routes/auth/utils";
@@ -31,7 +25,6 @@ import {
 	getConversationDetailForUser,
 	getConversationSummaryForUser,
 	getMessageByIdForConversation,
-	hasConversationAccess,
 	listConversationMembers,
 	listConversationsForUser,
 	listMessagesForUser,
@@ -41,13 +34,6 @@ import {
 	markMessagesReadForUser,
 } from "@/utils/chat";
 import { getTeamAccessContext, isUserOnTeam } from "@/utils/team";
-import {
-	createWsSessionGuard,
-	parseWsCommand,
-	type WsErrorCode,
-	type WsRouteSocket,
-} from "@/utils/ws-session";
-import { upgradeWebSocket } from "@/websocket";
 
 const chatRoutes = new Hono<AuthEnv>();
 
@@ -113,119 +99,6 @@ async function publishConversationMutationToMembers(params: {
 		})
 	);
 }
-
-// ─── WebSocket ────────────────────────────────────────────────────────────────
-
-function sendChatError(
-	ws: WsRouteSocket,
-	params: {
-		error: string;
-		code: WsErrorCode;
-		retryable: boolean;
-		conversationId?: string;
-	}
-) {
-	ws.send(JSON.stringify({ type: "chat:error", ...params }));
-}
-
-chatRoutes.get(
-	"/ws",
-	upgradeWebSocket((c) => {
-		const user = c.get("user");
-		const session = c.get("session");
-
-		const ensureActiveSession = createWsSessionGuard(session.id, disconnectChatSession);
-
-		async function handleCommand(raw: string, ws: WsRouteSocket) {
-			const parsed = parseWsCommand<ChatClientCommand>(raw, ws, sendChatError);
-			if (!parsed) return;
-
-			if (parsed.type === "ping") {
-				if (!(await ensureActiveSession())) return;
-				ws.send(JSON.stringify({ type: "chat:pong" }));
-				return;
-			}
-
-			if (parsed.type === "presence:heartbeat") {
-				if (!(await ensureActiveSession())) return;
-				refreshSocketPresence(ws);
-				return;
-			}
-
-			if (!("conversationId" in parsed) || !parsed.conversationId) {
-				sendChatError(ws, {
-					error: "conversationId is required.",
-					code: "missing_field",
-					retryable: false,
-				});
-				return;
-			}
-
-			if (parsed.type === "subscribe" && !(await ensureActiveSession())) return;
-
-			const hasAccess = await hasConversationAccess(parsed.conversationId, user.id);
-			if (!hasAccess) {
-				sendChatError(ws, {
-					error: "You do not have access to this conversation.",
-					code: "access_denied",
-					retryable: false,
-					conversationId: parsed.conversationId,
-				});
-				return;
-			}
-
-			if (parsed.type === "subscribe") {
-				subscribeSocketToConversation(ws, parsed.conversationId);
-				return;
-			}
-
-			if (parsed.type === "unsubscribe") {
-				unsubscribeSocketFromConversation(ws, parsed.conversationId);
-				return;
-			}
-
-			if (parsed.type === "typing:start") {
-				publishConversationEvent({
-					conversationId: parsed.conversationId,
-					event: "typing:start",
-					excludeUserId: user.id,
-					payload: { userId: user.id },
-				});
-				return;
-			}
-
-			if (parsed.type === "typing:stop") {
-				publishConversationEvent({
-					conversationId: parsed.conversationId,
-					event: "typing:stop",
-					excludeUserId: user.id,
-					payload: { userId: user.id },
-				});
-			}
-		}
-
-		return {
-			onOpen(_event, ws) {
-				registerChatSocket(ws, user.id, session.id);
-			},
-			onMessage(event, ws) {
-				void handleCommand(event.data.toString(), ws).catch(() => {
-					sendChatError(ws, {
-						error: "Unable to process command.",
-						code: "internal_error",
-						retryable: true,
-					});
-				});
-			},
-			onClose(_event, ws) {
-				unregisterChatSocket(ws);
-			},
-			onError(_event, ws) {
-				unregisterChatSocket(ws);
-			},
-		};
-	})
-);
 
 // ─── Conversations ────────────────────────────────────────────────────────────
 
@@ -375,7 +248,14 @@ chatRoutes.post("/conversations/:id/messages", async (c) => {
 				},
 			});
 
-			if (member.userId === user.id || member.isMuted) continue;
+			// Skip self, muted members, and anyone currently viewing the room.
+			if (
+				member.userId === user.id ||
+				member.isMuted ||
+				isUserSubscribedToConversation(conversationId, member.userId)
+			) {
+				continue;
+			}
 
 			await createNotification({
 				userId: member.userId,
@@ -503,6 +383,10 @@ chatRoutes.post("/conversations/:id/read", async (c) => {
 	if (result.status === "not_found") return c.json({ error: "Conversation not found." }, 404);
 	if (result.status === "invalid_message")
 		return c.json({ error: "Invalid last read message for this conversation." }, 400);
+
+	// Clear any unread message notifications for this conversation so the inbox
+	// badge doesn't linger while the user is reading the chat.
+	void markChatChannelNotificationsRead(user.id, conversationId);
 
 	// Upsert per-message receipt if a specific message ID was provided
 	if (parsed.output.lastReadMessageId) {

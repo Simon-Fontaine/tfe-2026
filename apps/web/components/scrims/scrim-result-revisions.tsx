@@ -1,15 +1,11 @@
 import { Calendar03Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ScrimDetail, ScrimDisputeResolution } from "@scrimflow/shared";
-
-function formatTimestamp(value: string | null, emptyLabel = "Not set") {
-	return value
-		? new Intl.DateTimeFormat("en-GB", {
-				dateStyle: "medium",
-				timeStyle: "short",
-			}).format(new Date(value))
-		: emptyLabel;
-}
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
+import { formatScrimTimestamp } from "@/lib/scrims/format";
+import { cn } from "@/lib/utils";
 
 function formatRevisionBasisLabel(
 	basis: ScrimDetail["resultRevisions"][number]["changeSummary"]["basis"]
@@ -50,127 +46,127 @@ export function ScrimResultRevisions({
 	disputeResolution,
 }: ScrimResultRevisionsProps) {
 	return (
-		<section className="border p-4">
-			<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-				Result revision history
-			</p>
-			<div className="mt-4 space-y-3">
+		<Card>
+			<CardHeader>
+				<CardTitle>Result revision history</CardTitle>
+			</CardHeader>
+			<CardContent>
 				{resultRevisions.length === 0 ? (
-					<div className="border p-3">
+					<div className="bg-muted/30 p-3">
 						<p className="text-sm font-semibold">No reviewed result revisions yet</p>
 						<p className="mt-1 text-xs text-muted-foreground">
-							Once a manager submits a reviewed result package, every subsequent revision will be
+							Once a manager submits a reviewed result package, every subsequent revision is
 							preserved here with its correction diff.
 						</p>
 					</div>
 				) : (
-					resultRevisions.map((revision, index) => {
-						const visibleFieldChanges = revision.changeSummary.fieldChanges.slice(0, 8);
-						const hiddenChangeCount =
-							revision.changeSummary.fieldChanges.length - visibleFieldChanges.length;
-						const supportingScoreboardJobCount = getSupportingScoreboardJobCount(revision);
-						const hasOcrEvidence = !!revision.sourceOcrJobId || supportingScoreboardJobCount > 0;
-						const isLatest = index === 0;
+					<div className="space-y-3">
+						{resultRevisions.map((revision, index) => {
+							const visibleFieldChanges = revision.changeSummary.fieldChanges.slice(0, 8);
+							const hiddenChangeCount =
+								revision.changeSummary.fieldChanges.length - visibleFieldChanges.length;
+							const supportingScoreboardJobCount = getSupportingScoreboardJobCount(revision);
+							const hasOcrEvidence = !!revision.sourceOcrJobId || supportingScoreboardJobCount > 0;
+							const isLatest = index === 0;
 
-						return (
-							<div key={revision.id} className="border p-3">
-								<div className="flex flex-wrap items-center justify-between gap-2">
-									<div>
-										<p className="text-sm font-semibold">Revision #{revision.revisionNumber}</p>
-										<p className="mt-1 text-xs text-muted-foreground">
-											{revision.submittedByDisplayName
-												? `Submitted by ${revision.submittedByDisplayName}`
-												: "Submitted by an unknown manager"}
-											{revision.reportingTeamName
-												? ` from [${revision.reportingTeamTag ?? "TEAM"}] ${revision.reportingTeamName}`
-												: ""}
-											{" · "}
-											{formatTimestamp(revision.createdAt)}
-										</p>
-									</div>
-									<div className="flex flex-wrap gap-2">
-										<span className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold">
-											{revision.homeMapScore} - {revision.awayMapScore}
-										</span>
-										<span className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold">
-											{revision.changeSummary.changeCount} change(s) vs{" "}
-											{formatRevisionBasisLabel(revision.changeSummary.basis)}
-										</span>
-										<span className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold">
-											{hasOcrEvidence ? "OCR-assisted" : "Manual"}
-										</span>
-										{supportingScoreboardJobCount > 0 ? (
-											<span className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold">
-												{supportingScoreboardJobCount} scoreboard OCR job(s)
-											</span>
-										) : null}
-										{isLatest && scrimStatus === "completed" ? (
-											<span className="inline-flex items-center rounded-sm border border-green-500/50 px-2 py-0.5 text-xs font-semibold text-green-700 dark:text-green-400">
-												Settled result
-											</span>
-										) : null}
-										{isLatest && disputeResolution === "voided" ? (
-											<span className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-												Result voided — not applied
-											</span>
-										) : null}
-									</div>
-								</div>
-
-								<div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-									<div className="flex items-center gap-2">
-										<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
-										<span>
-											Series window {formatTimestamp(revision.startedAt, "Not set")} to{" "}
-											{formatTimestamp(revision.endedAt, "Not set")}
-										</span>
-									</div>
-									<div className="flex items-center gap-2">
-										<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={2} className="size-3.5" />
-										<span>
-											{revision.snapshot.maps.length} map row(s) ·{" "}
-											{revision.snapshot.maps.reduce((total, map) => total + map.players.length, 0)}{" "}
-											player row(s)
-										</span>
-									</div>
-								</div>
-
-								{revision.sourceOcrJobId || supportingScoreboardJobCount > 0 ? (
-									<p className="mt-3 text-xs text-muted-foreground">
-										{revision.sourceOcrJobId ? "Game history OCR source" : "Manual entry"}
-										{supportingScoreboardJobCount > 0
-											? ` · ${supportingScoreboardJobCount} supporting scoreboard OCR job(s)`
-											: ""}
-									</p>
-								) : null}
-
-								{visibleFieldChanges.length > 0 ? (
-									<div className="mt-3 space-y-2">
-										{visibleFieldChanges.map((fieldChange) => (
-											<div key={fieldChange.path} className="border p-2 text-xs">
-												<p className="font-medium">{fieldChange.path}</p>
-												<p className="mt-1 text-muted-foreground">
-													{formatRevisionValue(fieldChange.before)} →{" "}
-													{formatRevisionValue(fieldChange.after)}
-												</p>
-											</div>
-										))}
-										{hiddenChangeCount > 0 ? (
-											<p className="text-xs text-muted-foreground">
-												+ {hiddenChangeCount} more change(s) in this revision
+							return (
+								<div
+									key={revision.id}
+									className={cn(
+										"p-3",
+										isLatest ? "bg-primary/5 ring-1 ring-primary/20" : "bg-muted/30"
+									)}
+								>
+									<div className="flex flex-wrap items-start justify-between gap-2">
+										<div className="min-w-0">
+											<p className="text-sm font-semibold">Revision #{revision.revisionNumber}</p>
+											<p className="mt-1 text-xs text-muted-foreground">
+												{revision.submittedByDisplayName
+													? `Submitted by ${revision.submittedByDisplayName}`
+													: "Submitted by an unknown manager"}
+												{revision.reportingTeamName
+													? ` from [${revision.reportingTeamTag ?? "TEAM"}] ${revision.reportingTeamName}`
+													: ""}
+												{" · "}
+												{formatScrimTimestamp(revision.createdAt)}
 											</p>
-										) : null}
+										</div>
+										<div className="flex flex-wrap gap-1.5">
+											<Badge variant="outline">
+												{revision.homeMapScore} - {revision.awayMapScore}
+											</Badge>
+											<Badge variant="outline">
+												{revision.changeSummary.changeCount} change(s) vs{" "}
+												{formatRevisionBasisLabel(revision.changeSummary.basis)}
+											</Badge>
+											<Badge variant="outline">{hasOcrEvidence ? "OCR-assisted" : "Manual"}</Badge>
+											{supportingScoreboardJobCount > 0 ? (
+												<Badge variant="outline">
+													{supportingScoreboardJobCount} scoreboard OCR job(s)
+												</Badge>
+											) : null}
+											{isLatest && scrimStatus === "completed" ? (
+												<Badge variant="outline" className={STATUS_BADGE_CLASSES.completed}>
+													Settled result
+												</Badge>
+											) : null}
+											{isLatest && disputeResolution === "voided" ? (
+												<Badge variant="outline" className={STATUS_BADGE_CLASSES.voided}>
+													Result voided — not applied
+												</Badge>
+											) : null}
+										</div>
 									</div>
-								) : (
-									<p className="mt-3 text-xs text-muted-foreground">
-										This revision matches its comparison baseline exactly.
-									</p>
-								)}
-							</div>
-						);
-					})
+
+									<div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+										<div className="flex items-center gap-2">
+											<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
+											<span>
+												Series window {formatScrimTimestamp(revision.startedAt, "Not set")} to{" "}
+												{formatScrimTimestamp(revision.endedAt, "Not set")}
+											</span>
+										</div>
+										<div className="flex items-center gap-2">
+											<HugeiconsIcon icon={LinkSquare02Icon} strokeWidth={2} className="size-3.5" />
+											<span>
+												{revision.snapshot.maps.length} map row(s) ·{" "}
+												{revision.snapshot.maps.reduce(
+													(total, map) => total + map.players.length,
+													0
+												)}{" "}
+												player row(s)
+											</span>
+										</div>
+									</div>
+
+									{visibleFieldChanges.length > 0 ? (
+										<div className="mt-3 space-y-1.5">
+											{visibleFieldChanges.map((fieldChange) => (
+												<div key={fieldChange.path} className="bg-background/60 p-2 text-xs">
+													<p className="font-medium">{fieldChange.path}</p>
+													<p className="mt-1 text-muted-foreground">
+														{formatRevisionValue(fieldChange.before)} →{" "}
+														{formatRevisionValue(fieldChange.after)}
+													</p>
+												</div>
+											))}
+											{hiddenChangeCount > 0 ? (
+												<p className="text-xs text-muted-foreground">
+													+ {hiddenChangeCount} more change(s) in this revision
+												</p>
+											) : null}
+										</div>
+									) : (
+										<p className="mt-3 text-xs text-muted-foreground">
+											This revision matches its comparison baseline exactly.
+										</p>
+									)}
+								</div>
+							);
+						})}
+					</div>
 				)}
-			</div>
-		</section>
+			</CardContent>
+		</Card>
 	);
 }

@@ -311,7 +311,6 @@ export const apiRoutes = {
 		createDirect: "/api/chat/conversations/direct",
 		teamConversations: (teamId: string) => `/api/chat/teams/${teamId}/conversations`,
 		scrimConversations: (scrimId: string) => `/api/chat/scrims/${scrimId}/conversations`,
-		ws: "/api/chat/ws",
 		byId: (conversationId: string) => `/api/chat/conversations/${conversationId}`,
 		messages: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
 		message: (conversationId: string, messageId: string) =>
