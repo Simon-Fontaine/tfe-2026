@@ -1,12 +1,11 @@
-{
-    email {$ACME_EMAIL:}
-}
-
 www.{$DOMAIN} {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
     redir https://{$DOMAIN}{uri} permanent
 }
 
 {$DOMAIN} {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+
     encode gzip zstd
 
     request_body {

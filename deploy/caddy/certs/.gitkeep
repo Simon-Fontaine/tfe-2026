@@ -1,0 +1,4 @@
+# Cloudflare Origin certificate goes here on the production host:
+#   origin.pem      (Origin Certificate)
+#   origin-key.pem  (Private Key, chmod 600)
+# These are gitignored (*.pem / *.key). See deployment.md Section 4.2.

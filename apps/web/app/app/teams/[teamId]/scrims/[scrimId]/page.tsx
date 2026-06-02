@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ReportScrimResultDialog } from "@/components/scrims/report-scrim-result-dialog";
 import { ScrimActivityFeed } from "@/components/scrims/scrim-activity-feed";
 import { ScrimConfirmationSection } from "@/components/scrims/scrim-confirmation-section";
 import { ScrimDetailRealtimeSync } from "@/components/scrims/scrim-detail-realtime-sync";
@@ -217,6 +218,17 @@ export default async function TeamScrimDetailPage({
 							uploadDisabledReason={view.uploadDisabledReason}
 							resultRevisions={scrim.resultRevisions}
 							maps={scrim.maps}
+							reviewAction={
+								view.canReportResult ? (
+									<ReportScrimResultDialog
+										scrim={scrim}
+										reportingTeamId={team.id}
+										rosterPlayers={team.players}
+									>
+										<Button size="sm">Review result</Button>
+									</ReportScrimResultDialog>
+								) : null
+							}
 						/>
 					</div>
 				}

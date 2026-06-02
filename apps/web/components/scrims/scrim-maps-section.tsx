@@ -272,8 +272,9 @@ export function ScrimMapsSection({
 													<p className="text-xs text-muted-foreground">
 														{hasScoreboardEvidence
 															? "Applied in the latest submitted package."
-															: scoreboardJob.status === "completed"
-																? "Ready. Open the workbench to review and apply rows."
+															: scoreboardJob.status === "completed" ||
+																	scoreboardJob.status === "requires_review"
+																? "Ready to review. Open the workbench to review and apply rows."
 																: scoreboardJob.status === "failed"
 																	? (scoreboardJob.errorMessage ?? "This scoreboard scan failed.")
 																	: "Review or replace this scoreboard evidence."}

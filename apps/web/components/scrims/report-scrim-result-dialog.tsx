@@ -300,11 +300,17 @@ export function ReportScrimResultDialog({
 			mainHero: player.mainHero?.displayName ?? "",
 		}))
 		.sort((a, b) => a.displayName.localeCompare(b.displayName));
+	// Both `completed` and `requires_review` jobs carry `validatedOutput` and are valid
+	// drafts to review here — the workbench is the human-review surface, so jobs flagged
+	// for review are exactly what it should accept. `superseded`/`failed`/in-flight jobs
+	// stay excluded.
+	const isImportableDraft = (job: ScrimDetail["ocrJobs"][number]) =>
+		job.status === "completed" || job.status === "requires_review";
 	const reviewableJobs = scrim.ocrJobs.filter(
-		(job) => job.status === "completed" && job.validatedOutput?.screenshotType === "game_history"
+		(job) => isImportableDraft(job) && job.validatedOutput?.screenshotType === "game_history"
 	);
 	const scoreboardJobs = scrim.ocrJobs.filter(
-		(job) => job.status === "completed" && job.validatedOutput?.screenshotType === "scoreboard"
+		(job) => isImportableDraft(job) && job.validatedOutput?.screenshotType === "scoreboard"
 	);
 	const associatedScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId !== null);
 	const legacyScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId === null);

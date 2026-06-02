@@ -14,7 +14,7 @@ import type {
 	ScrimResultRevisionSummary,
 } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { type ReactNode, startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +112,7 @@ interface ScrimOcrJobsPanelProps {
 	uploadDisabledReason?: string | null;
 	resultRevisions?: ScrimResultRevisionSummary[];
 	maps?: ScrimMapSummary[];
+	reviewAction?: ReactNode;
 }
 
 export function ScrimOcrJobsPanel({
@@ -122,6 +123,7 @@ export function ScrimOcrJobsPanel({
 	uploadDisabledReason = null,
 	resultRevisions = [],
 	maps = [],
+	reviewAction = null,
 }: ScrimOcrJobsPanelProps) {
 	const router = useRouter();
 	const [liveJobs, setLiveJobs] = useState(jobs);
@@ -328,11 +330,16 @@ export function ScrimOcrJobsPanel({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Evidence and OCR</CardTitle>
-				<CardDescription>
-					Scans are draft assistance — maps, stats, and evidence become official only when the
-					result package is submitted.
-				</CardDescription>
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div className="space-y-1.5">
+						<CardTitle>Evidence and OCR</CardTitle>
+						<CardDescription>
+							Scans are draft assistance — maps, stats, and evidence become official only when the
+							result package is submitted.
+						</CardDescription>
+					</div>
+					{reviewAction}
+				</div>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="bg-muted/30 p-3">
@@ -589,7 +596,7 @@ export function ScrimOcrJobsPanel({
 												</div>
 											) : null}
 
-											{job.status === "completed" &&
+											{(job.status === "completed" || job.status === "requires_review") &&
 											job.validatedOutput &&
 											!revisionsByOcrJobId.has(job.id) &&
 											!mapsByOcrJobId.has(job.id) &&

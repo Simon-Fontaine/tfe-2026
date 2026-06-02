@@ -71,10 +71,9 @@ pnpm build
 ## Production Deployment
 
 Production runs the full stack (PostgreSQL, Redis, MinIO, API, OCR worker, Next.js app, and a
-Caddy reverse proxy with automatic HTTPS) via `docker-compose.prod.yml`.
+Caddy reverse proxy) via `docker-compose.prod.yml`, behind the Cloudflare proxy.
 
 - [deployment.md](deployment.md) — step-by-step production deployment runbook
-- [production-env.md](production-env.md) — full production environment variable reference
 - [.env.production.example](.env.production.example) — copy to `.env.production` and fill in secrets
 
 ```bash
