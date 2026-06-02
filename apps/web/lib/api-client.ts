@@ -1,7 +1,7 @@
 "use server";
 
 import type { PermissionDenialReason } from "@scrimflow/shared";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
@@ -30,7 +30,22 @@ const API_ABORTED_ERROR = "The request was canceled.";
 
 async function authHeaders(): Promise<Record<string, string>> {
 	const cookieStore = await cookies();
-	return { cookie: cookieStore.toString() };
+	const incomingHeaders = await headers();
+	const forwardedHeaders: Record<string, string> = { cookie: cookieStore.toString() };
+
+	for (const name of [
+		"user-agent",
+		"x-forwarded-for",
+		"x-real-ip",
+		"cf-connecting-ip",
+		"x-forwarded-proto",
+		"x-forwarded-host",
+	] as const) {
+		const value = incomingHeaders.get(name);
+		if (value) forwardedHeaders[name] = value;
+	}
+
+	return forwardedHeaders;
 }
 
 function isApiError(value: Response | ApiError): value is ApiError {

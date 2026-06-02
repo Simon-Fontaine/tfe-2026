@@ -176,18 +176,29 @@ loginRoutes.post("/", async (c) => {
 
 	if (needsExtraVerification && !twoFactor.registered2FA) {
 		const code = await createEmailVerificationRequest(user.id, user.email, client.ip);
-		await sendMail({
-			to: user.email,
-			subject: "Confirm your new sign-in location",
-			template: (
-				<VerificationEmail
-					code={code}
-					title="Verify this sign-in"
-					message="We detected a sign-in from a new device or location. Enter the code below to confirm it's you."
-					actionText="enter the following code"
-				/>
-			),
-		}).catch((err: unknown) => logger.error({ err }, "device verification email send failed"));
+		try {
+			await sendMail({
+				to: user.email,
+				subject: "Confirm your new sign-in location",
+				template: (
+					<VerificationEmail
+						code={code}
+						title="Verify this sign-in"
+						message="We detected a sign-in from a new device or location. Enter the code below to confirm it's you."
+						actionText="enter the following code"
+					/>
+				),
+			});
+		} catch (err) {
+			logger.error({ err }, "device verification email send failed");
+			return c.json(
+				{
+					error:
+						"We couldn't send the verification email. Please try again in a moment or contact support.",
+				} satisfies ActionResult,
+				502
+			);
+		}
 		setPendingCookie(c, user.id);
 		return c.json({
 			nextStep: "new-device-verification",

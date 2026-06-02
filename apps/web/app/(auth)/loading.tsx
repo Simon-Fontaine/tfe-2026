@@ -9,27 +9,18 @@ export default function AuthLoading() {
 				<div className="flex items-center gap-3">
 					<Skeleton className="h-8 w-8" />
 					<div className="space-y-1.5">
-						<Skeleton className="h-3 w-32" />
+						<Skeleton className="h-3 w-28" />
+						<Skeleton className="h-2 w-40" />
 					</div>
 				</div>
 
-				<div className="space-y-3">
-					<div className="space-y-1.5">
-						<Skeleton className="h-3 w-16" />
-						<Skeleton className="h-10 w-full" />
-					</div>
-					<div className="space-y-1.5">
-						<Skeleton className="h-3 w-16" />
-						<Skeleton className="h-10 w-full" />
-					</div>
-					<div className="flex justify-end">
-						<Skeleton className="h-3 w-24" />
-					</div>
+				<div className="space-y-2.5">
+					<Skeleton className="h-3 w-full" />
+					<Skeleton className="h-3 w-4/5" />
 					<Skeleton className="h-10 w-full" />
-					<div className="py-1.5">
-						<Skeleton className="h-px w-full" />
+					<div className="flex justify-center pt-1">
+						<Skeleton className="h-3 w-28" />
 					</div>
-					<Skeleton className="h-10 w-full" />
 				</div>
 			</div>
 		</AuthShellLayout>
