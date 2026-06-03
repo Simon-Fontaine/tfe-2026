@@ -185,6 +185,10 @@ services:
       target: runner
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        API_URL: http://api:3001
+        APP_URL: ${APP_URL}
+        S3_ENDPOINT: http://storage:9000
+        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     container_name: scrimflow_app
     restart: unless-stopped
     environment:
