@@ -1,4 +1,4 @@
-import { GameController01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { UserGroupIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,13 @@ export const metadata: Metadata = {
 	description: "Discover Overwatch 2 esports organizations on Scrimflow.",
 };
 
-import { HugeiconsIcon } from "@hugeicons/react";
 import { publicRoutes } from "@scrimflow/shared";
 import { Suspense } from "react";
+import { OrgsDirectoryList } from "@/components/home/orgs-directory-list";
 import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getPublicOrgs } from "@/lib/data/organization";
 
 type OrgSort = "teams" | "roster" | "name";
@@ -98,35 +97,5 @@ async function OrgListSection({ sort }: { sort: OrgSort }) {
 		return b.teamCount - a.teamCount;
 	});
 
-	return (
-		<div className="divide-y border">
-			{sortedOrgs.map((org) => (
-				<Link
-					key={org.id}
-					href={publicRoutes.orgs.bySlug(org.slug)}
-					className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
-				>
-					<Avatar className="size-10 shrink-0 overflow-hidden rounded-none after:rounded-none">
-						<AvatarImage src={org.avatarUrl ?? undefined} className="rounded-none" />
-						<AvatarFallback className="rounded-none text-xs font-bold">
-							{org.name.substring(0, 2).toUpperCase()}
-						</AvatarFallback>
-					</Avatar>
-					<div className="min-w-0 flex-1">
-						<p className="truncate text-sm font-semibold">{org.name}</p>
-						<div className="mt-0.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-							<span className="flex items-center gap-1">
-								<HugeiconsIcon icon={GameController01Icon} strokeWidth={2} className="size-3" />
-								{org.teamCount} team{org.teamCount === 1 ? "" : "s"}
-							</span>
-							<span className="flex items-center gap-1">
-								<HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3" />
-								{org.activeRosterCount} active
-							</span>
-						</div>
-					</div>
-				</Link>
-			))}
-		</div>
-	);
+	return <OrgsDirectoryList orgs={sortedOrgs} />;
 }

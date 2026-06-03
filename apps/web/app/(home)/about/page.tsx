@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
 	title: "About",
 	description:
-		"Scrimflow helps Overwatch 2 teams run day-to-day operations from a shared workspace.",
+		"Scrimflow is a workspace that helps Overwatch 2 teams run their roster, scrims, and recruiting in one place.",
 };
 
 export default function AboutPage() {
 	return (
 		<PublicPageShell
 			title="About Scrimflow"
-			description="Scrimflow is an Overwatch 2 team management workspace for rosters, recruiting, scrims, updates, and day-to-day coordination."
+			description="A workspace for Overwatch 2 teams to run the day-to-day, from rosters and scrims to recruiting and updates, all in one place."
 			contentClassName="space-y-8"
 			actions={
 				<Button asChild size="sm">
@@ -23,55 +23,56 @@ export default function AboutPage() {
 				</Button>
 			}
 		>
-			<PublicPageSection title="What it is for">
+			<PublicPageSection title="Why we built it">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Scrimflow helps players, teams, and organizations keep competitive operations in one
-					place. Teams can manage rosters, publish recruiting needs, schedule scrims, review
-					results, post updates, and keep team conversations tied to the work they support.
+					Most teams run their season across spreadsheets, Discord threads, and DMs. Plans get
+					buried, results never get logged, and someone always ends up chasing the latest version.
+					Scrimflow brings the roster, schedule, scrims, and recruiting into one place so players
+					and staff can spend less time on logistics and more time playing.
 				</p>
 			</PublicPageSection>
 
-			<PublicPageSection title="What is public">
-				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Public pages show the information teams, organizations, and players choose to publish:
-					profiles, recruiting listings, public scrims, and updates. Private workspace data stays
-					inside the app.
-				</p>
-			</PublicPageSection>
-
-			<PublicPageSection title="What is inside the app">
+			<PublicPageSection title="What you can do">
 				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Personal workspace</span>
-						<span>Inbox, calendar, profile, privacy, account, and security settings.</span>
+						<span aria-hidden>·</span>
+						<span>Build and manage your roster, with staff and player roles.</span>
 					</li>
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Team workspace</span>
-						<span>Roster, schedule, scrims, chat, recruiting, updates, and team settings.</span>
+						<span aria-hidden>·</span>
+						<span>Schedule scrims, then log the results and let ratings update.</span>
 					</li>
 					<li className="flex gap-2">
-						<span className="shrink-0 font-medium text-foreground">Organization workspace</span>
-						<span>Teams, staff, brand profile, updates, and ownership controls.</span>
+						<span aria-hidden>·</span>
+						<span>Post recruiting listings and handle applications without leaving the app.</span>
+					</li>
+					<li className="flex gap-2">
+						<span aria-hidden>·</span>
+						<span>Publish updates and keep team chat next to the work it relates to.</span>
 					</li>
 				</ul>
 			</PublicPageSection>
 
+			<PublicPageSection title="What's public, what's private">
+				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
+					You decide what the world sees. Profiles, recruiting listings, completed scrims, and
+					updates appear on public pages only when you choose to publish them. Everything else in
+					your workspace, including chat, settings, and security details, stays private.
+				</p>
+			</PublicPageSection>
+
 			<PublicPageSection
-				title="Start here"
+				title="Where it stands"
 				actions={
-					<div className="flex flex-wrap gap-2">
-						<Button asChild size="sm" variant="outline">
-							<Link href={publicRoutes.recruiting.root}>Browse recruiting</Link>
-						</Button>
-						<Button asChild size="sm" variant="outline">
-							<Link href={publicRoutes.teams.root}>Browse teams</Link>
-						</Button>
-					</div>
+					<Button asChild size="sm" variant="outline">
+						<Link href={publicRoutes.contact}>Contact us</Link>
+					</Button>
 				}
 			>
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Browse public pages to find teams, players, and recruiting opportunities. Sign in when you
-					need to manage your own profile, team, organization, or scrim workflow.
+					Scrimflow is in open beta and free to use while we build it out with the community. If
+					something is missing or not working the way you would expect, tell us. Early feedback
+					shapes what we work on next.
 				</p>
 			</PublicPageSection>
 		</PublicPageShell>

@@ -10,8 +10,8 @@ import { Suspense } from "react";
 import { PublicListLoading } from "@/components/home/public-page-loading";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { TeamDiscoveryCard } from "@/components/teams/discovery/team-discovery-card";
 import { TeamDiscoveryFilters } from "@/components/teams/discovery/team-discovery-filters";
+import { TeamsDirectoryList } from "@/components/teams/discovery/teams-directory-list";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
 
 interface TeamsDirectoryPageProps {
@@ -65,11 +65,5 @@ async function TeamListSection({ recruitingFilter }: { recruitingFilter: boolean
 		);
 	}
 
-	return (
-		<div className="divide-y border">
-			{teams.map((team) => (
-				<TeamDiscoveryCard key={team.id} team={team} />
-			))}
-		</div>
-	);
+	return <TeamsDirectoryList teams={teams} />;
 }

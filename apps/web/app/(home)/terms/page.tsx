@@ -4,21 +4,21 @@ import { PublicPageShell } from "@/components/home/public-page-shell";
 
 export const metadata: Metadata = {
 	title: "Terms of Service",
-	description: "Terms governing use of the Scrimflow platform.",
+	description: "The ground rules for using Scrimflow.",
 };
 
 export default function TermsPage() {
 	return (
 		<PublicPageShell
 			title="Terms of Service"
-			description="These terms are the practical rules for using Scrimflow. They are short by design."
+			description="The ground rules for using Scrimflow. Short, plain, and meant to keep things fair."
 			contentClassName="space-y-8"
 		>
-			<PublicPageSection title="Use Scrimflow honestly">
+			<PublicPageSection title="Play it straight">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Create accounts, teams, organizations, recruiting listings, scrims, and updates that
-					represent real activity. Do not impersonate another person or program, falsify scrim
-					results, manipulate ratings, or publish misleading public content.
+					Set up accounts, teams, organizations, recruiting listings, scrims, and updates that
+					reflect real activity. Don't impersonate another person or team, fake scrim results,
+					manipulate ratings, or post misleading information on public pages.
 				</p>
 			</PublicPageSection>
 
@@ -26,33 +26,30 @@ export default function TermsPage() {
 				<ul className="max-w-[64ch] space-y-2 text-sm text-muted-foreground">
 					<li className="flex gap-2">
 						<span className="shrink-0 font-medium text-foreground">Permissions</span>
-						<span>Only use team and organization tools you are authorized to access.</span>
+						<span>Use only the team and organization tools you've been given access to.</span>
 					</li>
 					<li className="flex gap-2">
 						<span className="shrink-0 font-medium text-foreground">Conduct</span>
-						<span>Do not harass people, spam recruiting listings, or abuse chat and updates.</span>
+						<span>Don't harass people, spam recruiting listings, or abuse chat and updates.</span>
 					</li>
 					<li className="flex gap-2">
 						<span className="shrink-0 font-medium text-foreground">Security</span>
-						<span>
-							Do not share session tokens, bypass access controls, or automate account abuse.
-						</span>
+						<span>Don't share session tokens, work around access controls, or automate abuse.</span>
 					</li>
 				</ul>
 			</PublicPageSection>
 
-			<PublicPageSection title="Public content">
+			<PublicPageSection title="Anything public is public">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					If you publish a team, organization, player profile, recruiting listing, scrim, or update,
-					expect it to be visible on public Scrimflow pages. Keep private information out of public
-					fields.
+					When you publish a team, organization, profile, recruiting listing, scrim, or update,
+					treat it as visible to anyone. Keep private details out of public fields.
 				</p>
 			</PublicPageSection>
 
-			<PublicPageSection title="Moderation">
+			<PublicPageSection title="When rules are broken">
 				<p className="max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
-					Accounts or workspaces that violate these rules may lose access to specific actions or be
-					suspended. To report impersonation, abuse, or ownership problems, email{" "}
+					We may limit specific actions, or suspend accounts and workspaces, when these rules are
+					broken. To report impersonation, abuse, or an ownership dispute, email{" "}
 					<a
 						href="mailto:support@scrimflow.com"
 						className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
@@ -62,6 +59,8 @@ export default function TermsPage() {
 					.
 				</p>
 			</PublicPageSection>
+
+			<p className="text-xs text-muted-foreground">Last updated June 3, 2026.</p>
 		</PublicPageShell>
 	);
 }
