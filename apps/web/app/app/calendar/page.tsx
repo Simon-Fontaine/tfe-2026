@@ -1,10 +1,10 @@
 import { UserGroup02Icon } from "@hugeicons/core-free-icons";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getActiveTeamsForUser } from "@/lib/data/player";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppCalendarPage() {

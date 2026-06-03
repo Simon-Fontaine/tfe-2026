@@ -1,6 +1,6 @@
 import type { PermissionDenialReason } from "@scrimflow/shared";
 
-export type WorkspaceRouteScope = "personal" | "org" | "team";
+type WorkspaceRouteScope = "personal" | "org" | "team";
 
 export interface RouteStateMissing {
 	kind: "missing";
@@ -11,13 +11,13 @@ export interface RouteStateNoAccess {
 	reason?: PermissionDenialReason;
 }
 
-export interface RouteStateWrongContext {
+interface RouteStateWrongContext {
 	kind: "wrong-context";
 	scope: Exclude<WorkspaceRouteScope, "personal">;
 	requestedId: string;
 }
 
-export type RouteStateUnavailable = RouteStateMissing | RouteStateNoAccess | RouteStateWrongContext;
+type RouteStateUnavailable = RouteStateMissing | RouteStateNoAccess | RouteStateWrongContext;
 
 export type RouteStateResult<T> = { kind: "success"; data: T } | RouteStateUnavailable;
 
@@ -40,13 +40,6 @@ export function routeStateMissing(): RouteStateMissing {
 
 export function routeStateNoAccess(reason?: PermissionDenialReason): RouteStateNoAccess {
 	return { kind: "no-access", ...(reason && { reason }) };
-}
-
-export function routeStateWrongContext(
-	scope: RouteStateWrongContext["scope"],
-	requestedId: string
-): RouteStateWrongContext {
-	return { kind: "wrong-context", scope, requestedId };
 }
 
 export function getWorkspacePathContext(pathname: string): WorkspacePathContext {

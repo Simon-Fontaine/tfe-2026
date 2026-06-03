@@ -8,7 +8,7 @@ import type {
  * Coarse lifecycle stage the detail UI keys its layout off of. Derived from the
  * scrim status plus whether a reviewed result exists yet.
  */
-export type ScrimStage =
+type ScrimStage =
 	| "negotiation"
 	| "reporting"
 	| "awaiting_confirmation"
@@ -17,7 +17,7 @@ export type ScrimStage =
 	| "cancelled";
 
 /** The single most important thing the current viewer can do right now. */
-export type ScrimPrimaryAction =
+type ScrimPrimaryAction =
 	| "report_result"
 	| "review_confirmation"
 	| "respond_dispute"

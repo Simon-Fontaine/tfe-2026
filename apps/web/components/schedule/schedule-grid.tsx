@@ -1,9 +1,8 @@
 "use client";
 
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
-
 import type { AvailabilityRow, UserTeam } from "@/lib/data/player";
-import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { OneOffList } from "./one-off-list";
 import { WeeklyGrid } from "./weekly-grid";

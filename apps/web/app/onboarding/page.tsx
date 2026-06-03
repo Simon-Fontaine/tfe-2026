@@ -1,8 +1,8 @@
 import type { OnboardingProgress } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { OnboardingStepRouter } from "@/components/onboarding/onboarding-step-router";
 import { apiGet } from "@/lib/api-client";
 import { getActiveHeroes } from "@/lib/data/heroes";
-import { apiRoutes } from "@/lib/routes";
 
 interface OnboardingPageProps {
 	searchParams: Promise<{ next?: string }>;

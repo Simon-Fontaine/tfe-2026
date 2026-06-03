@@ -1,8 +1,8 @@
 "use server";
 
 import type { GovernanceHold } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { apiDelete, apiGet, apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./password";
 
 export interface DeletionStatus {

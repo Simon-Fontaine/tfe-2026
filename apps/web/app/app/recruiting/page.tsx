@@ -1,5 +1,6 @@
 import { Add01Icon, Search01Icon, SearchList02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -26,7 +27,6 @@ import {
 	RECRUITMENT_CATEGORY_LABELS,
 	RECRUITMENT_RANK_VALUES,
 } from "@/lib/recruitment";
-import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 

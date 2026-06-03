@@ -1,10 +1,10 @@
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getUnreadNotificationCount } from "@/lib/data/notifications";
 import { getOrgsForUser } from "@/lib/data/orgs";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export type WorkspaceSession = Awaited<ReturnType<typeof getCurrentSession>> & {
 	session: NonNullable<Awaited<ReturnType<typeof getCurrentSession>>["session"]>;

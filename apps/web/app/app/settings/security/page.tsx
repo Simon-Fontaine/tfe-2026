@@ -1,3 +1,4 @@
+import { apiRoutes } from "@scrimflow/shared";
 import {
 	listPasskeysAction,
 	listSecurityKeysAction,
@@ -14,7 +15,6 @@ import { TotpManagementSection } from "@/components/settings/totp-management-sec
 import { TwoFactorMethodsSection } from "@/components/settings/two-factor-methods-section";
 import { Separator } from "@/components/ui/separator";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 import { SecurityStatusProvider } from "@/stores/security-status";
 

@@ -1,9 +1,9 @@
 "use client";
 
 import type { RecruitmentApplicationReviewSummary } from "@scrimflow/shared";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 import {
 	decideRecruitmentApplicationAction,
 	requestApplicationFollowUpAction,
@@ -24,7 +24,6 @@ import {
 	ROLE_LABELS,
 	STAFF_ROLE_LABELS,
 } from "@/lib/recruitment";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const STAFF_OPTIONS = ["coach", "analyst", "manager", "staff"] as const;

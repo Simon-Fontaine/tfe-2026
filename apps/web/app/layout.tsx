@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/config/site";
+import { requiredEnv } from "@/lib/env";
 
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const appUrl = requiredEnv("NEXT_PUBLIC_APP_URL");
 
 export const metadata: Metadata = {
 	metadataBase: new URL(appUrl),

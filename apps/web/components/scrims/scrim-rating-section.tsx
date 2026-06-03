@@ -1,12 +1,12 @@
 import { MessageNotification02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ScrimDetail, ScrimDisputeResolution } from "@scrimflow/shared";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
-import { appRoutes } from "@/lib/routes";
 
 function formatSignedRatingDelta(value: number) {
 	return value > 0 ? `+${value}` : `${value}`;

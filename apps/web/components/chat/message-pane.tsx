@@ -5,9 +5,9 @@ import type {
 	ChatMessage,
 	ChatParticipantSummary,
 } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useEffect, useMemo, useRef } from "react";
 import { Spinner } from "@/components/ui/spinner";
-import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { useChatStore } from "@/stores/chat";
 import { MessageInput } from "./message-input";

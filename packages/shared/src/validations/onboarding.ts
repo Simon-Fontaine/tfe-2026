@@ -178,10 +178,7 @@ export const CreatePlayerProfileSchema = v.pipe(
 	)
 );
 
-export const CompleteOnboardingSchema = CreatePlayerProfileSchema;
-
 export type CreatePlayerProfileInput = v.InferOutput<typeof CreatePlayerProfileSchema>;
-export type CompleteOnboardingInput = v.InferOutput<typeof CompleteOnboardingSchema>;
 
 export const OnboardingProgressDataSchema = v.object({
 	battletag: v.optional(

@@ -1,5 +1,5 @@
+import { publicRoutes } from "@scrimflow/shared";
 import { PublicFilterBar } from "@/components/home/public-filter-bar";
-import { publicRoutes } from "@/lib/routes";
 
 interface TeamDiscoveryFiltersProps {
 	recruitingFilter: boolean | undefined;

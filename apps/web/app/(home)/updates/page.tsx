@@ -1,4 +1,5 @@
 import { Notification01Icon } from "@hugeicons/core-free-icons";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -10,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { UpdatePostCard } from "@/components/updates/update-post-card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicUpdates } from "@/lib/data/updates";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Updates",

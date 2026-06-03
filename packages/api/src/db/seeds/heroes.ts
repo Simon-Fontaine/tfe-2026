@@ -3,11 +3,12 @@ import { join } from "node:path";
 
 import { eq } from "drizzle-orm";
 
+import { requiredEnv } from "@/config/env";
 import type { db as Db } from "..";
 import { heroTable } from "../schema";
 import { createS3Client, ensurePublicBucket, uploadFile } from "./lib/s3";
 
-const BUCKET = "heroes";
+const BUCKET = requiredEnv("S3_BUCKET_HEROES");
 const IMAGES_DIR = join(import.meta.dir, "../../../images/heroes");
 
 type HeroRole = "tank" | "damage" | "support";
@@ -85,7 +86,7 @@ export async function seedHeroes(db: typeof Db): Promise<void> {
 	const s3 = createS3Client();
 	await ensurePublicBucket(s3, BUCKET);
 
-	const publicUrl = (process.env.S3_PUBLIC_URL ?? "http://localhost:9000").replace(/\/$/, "");
+	const publicUrl = requiredEnv("S3_PUBLIC_URL").replace(/\/$/, "");
 	const files = (await readdir(IMAGES_DIR)).filter((f) => f.endsWith(".png"));
 	const unknown: string[] = [];
 	let uploaded = 0;

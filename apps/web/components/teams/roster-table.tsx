@@ -2,6 +2,7 @@
 
 import { MoreHorizontalIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { publicRoutes } from "@scrimflow/shared";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -34,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import type { RosterMember, RosterStatus } from "@/lib/data/team";
-import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS = { tank: "Tank", damage: "DPS", support: "Support" } as const;

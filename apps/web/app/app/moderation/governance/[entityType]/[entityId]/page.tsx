@@ -1,4 +1,5 @@
 import type { GovernanceEntityState } from "@scrimflow/shared";
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -8,7 +9,6 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 import { OwnershipResolutionForm } from "./ownership-resolution-form";

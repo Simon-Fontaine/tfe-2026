@@ -1,3 +1,4 @@
+import { appRoutes } from "@scrimflow/shared";
 import { redirect } from "next/navigation";
 import {
 	listPasskeysAction,
@@ -5,7 +6,6 @@ import {
 } from "@/app/(auth)/auth/webauthn-setup-actions";
 import { AuthStepRouter } from "@/components/auth/auth-step-router";
 import { getCurrentSession } from "@/lib/auth/session";
-import { appRoutes } from "@/lib/routes";
 import type { AuthStep, TwoFactorMethods } from "@/stores/auth-flow";
 
 interface AuthPageProps {
@@ -15,7 +15,7 @@ interface AuthPageProps {
 export default async function AuthPage({ searchParams }: AuthPageProps) {
 	const { session, user } = await getCurrentSession();
 	if (session && user && (!user.registered2FA || session.twoFactorVerified)) {
-		redirect(appRoutes.me);
+		redirect(appRoutes.root);
 	}
 
 	const { reset_token, next, step } = await searchParams;

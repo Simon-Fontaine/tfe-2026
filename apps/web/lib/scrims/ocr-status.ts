@@ -61,7 +61,7 @@ export function formatConfidenceFlag(flag: string) {
 }
 
 /** Most recent non-superseded scoreboard job for a map, if any. */
-export function latestScoreboardJobForMap(mapId: string, jobs: OcrJobSummary[]) {
+function latestScoreboardJobForMap(mapId: string, jobs: OcrJobSummary[]) {
 	let latest: OcrJobSummary | null = null;
 	for (const job of jobs) {
 		if (job.screenshotType !== "scoreboard" || job.scrimMapId !== mapId) continue;

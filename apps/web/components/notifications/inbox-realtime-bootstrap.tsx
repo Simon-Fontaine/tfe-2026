@@ -1,8 +1,8 @@
 "use client";
 
 import type { RealtimeEvent } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useEffect } from "react";
-import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { useInboxStore } from "@/stores/inbox";
 
@@ -34,9 +34,6 @@ export function InboxRealtimeBootstrap({ initialUnreadCount }: InboxRealtimeBoot
 					break;
 				case "notification:dismissed":
 					store.dismissNotification(event.notificationId, event.unreadCount);
-					break;
-				case "notification:restored":
-					store.restoreNotification(event.notificationId, event.unreadCount);
 					break;
 				default:
 					break;

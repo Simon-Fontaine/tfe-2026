@@ -4,12 +4,14 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 let homeTeamId: string;
+let targetTeamId: string;
 
 test.beforeAll(() => {
 	const fixtures = JSON.parse(
 		readFileSync(join(process.cwd(), ".playwright/fixtures.json"), "utf-8")
 	);
 	homeTeamId = fixtures.homeTeamId;
+	targetTeamId = fixtures.targetTeamId;
 });
 
 test("scrim creation smoke test", async ({ page }) => {
@@ -26,6 +28,7 @@ test("scrim creation smoke test", async ({ page }) => {
 
 	// Wait for dialog to open
 	await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+	await page.getByRole("dialog").locator("select").selectOption(targetTeamId);
 
 	// Set scheduledAt to 7 days in the future
 	const scheduledAt = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 16);

@@ -1,6 +1,7 @@
 "use client";
 
 import type { UpdatePostSummary, UpdatePostVisibility } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRoutes } from "@/lib/routes";
 
 type FormFieldErrors = Partial<Record<"title" | "body" | "visibility", string[]>>;
 

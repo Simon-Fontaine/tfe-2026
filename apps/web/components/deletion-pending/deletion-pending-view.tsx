@@ -2,15 +2,14 @@
 
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
-
 import { signOutAction } from "@/app/(auth)/auth/sign-out-actions";
 import { cancelAccountDeletionAction } from "@/app/actions/settings/account-deletion";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { appRoutes } from "@/lib/routes";
 
 interface DeletionPendingViewProps {
 	scheduledAt: string;

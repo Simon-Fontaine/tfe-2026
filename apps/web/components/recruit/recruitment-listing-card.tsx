@@ -6,6 +6,7 @@ import type {
 	RecruitmentApplicationReviewSummary,
 	RecruitmentListingSummary,
 } from "@scrimflow/shared";
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -40,7 +41,6 @@ import {
 	RECRUITMENT_CATEGORY_LABELS,
 	RECRUITMENT_STATUS_LABELS,
 } from "@/lib/recruitment";
-import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 interface RecruitmentListingCardProps {

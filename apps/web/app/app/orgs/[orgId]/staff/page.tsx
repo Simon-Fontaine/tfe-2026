@@ -1,5 +1,6 @@
 import { UserAdd01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getOrgWithTeamsRouteState, type OrgMemberSummary } from "@/lib/data/orgs";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const ROLE_LABELS: Record<string, string> = {

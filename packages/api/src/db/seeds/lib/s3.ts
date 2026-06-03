@@ -6,20 +6,16 @@ import {
 	PutObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
+import { requiredEnv } from "@/config/env";
 
 /**
  * Creates a MinIO-compatible S3 client from environment variables.
  * Requires S3_ENDPOINT, S3_ACCESS_KEY, and S3_SECRET_KEY to be defined.
- * Falls back to http://localhost:9000 when S3_ENDPOINT is unset (local dev).
  */
 export function createS3Client(): S3Client {
-	const endpoint = process.env.S3_ENDPOINT ?? "http://localhost:9000";
-	const accessKeyId = process.env.S3_ACCESS_KEY;
-	const secretAccessKey = process.env.S3_SECRET_KEY;
-
-	if (!accessKeyId || !secretAccessKey) {
-		throw new Error("S3_ACCESS_KEY and S3_SECRET_KEY must be set in .env before running seeds");
-	}
+	const endpoint = requiredEnv("S3_ENDPOINT");
+	const accessKeyId = requiredEnv("S3_ACCESS_KEY");
+	const secretAccessKey = requiredEnv("S3_SECRET_KEY");
 
 	return new S3Client({
 		endpoint,

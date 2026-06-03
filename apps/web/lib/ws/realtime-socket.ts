@@ -1,5 +1,5 @@
 import type { RealtimeClientCommand, RealtimeEvent } from "@scrimflow/shared";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes } from "@scrimflow/shared";
 import { useChatStore } from "@/stores/chat";
 
 type RealtimeListener = (event: RealtimeEvent) => void;

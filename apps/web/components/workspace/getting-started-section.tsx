@@ -6,12 +6,12 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PlayerProfileFull } from "@/lib/data/player";
-import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 interface ChecklistCardProps {

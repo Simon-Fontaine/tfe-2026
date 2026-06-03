@@ -1054,7 +1054,6 @@ export type AppRealtimeEvent =
 	  }
 	| { type: "notification:unread"; notificationId: string; unreadCount: number }
 	| { type: "notification:dismissed"; notificationId: string; unreadCount: number }
-	| { type: "notification:restored"; notificationId: string; unreadCount: number }
 	| {
 			type: "update:created";
 			scope: "team";

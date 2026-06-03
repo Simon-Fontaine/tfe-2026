@@ -13,6 +13,7 @@ import {
 	UserSearch01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -37,7 +38,6 @@ import {
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
 import { getWorkspacePathContext } from "@/lib/route-state";
-import { appRoutes } from "@/lib/routes";
 import { useRecruitingStore } from "@/stores/recruiting";
 import { useScrimStore } from "@/stores/scrims";
 import { ContextSwitcher, type SwitcherOrg, type SwitcherTeam } from "./context-switcher";
@@ -221,7 +221,7 @@ export function WorkspaceSidebar({
 				]
 			: [
 					{
-						links: [{ label: "Home", href: appRoutes.me, icon: Home01Icon, exact: true }],
+						links: [{ label: "Home", href: appRoutes.root, icon: Home01Icon, exact: true }],
 					},
 					{
 						label: "Personal",

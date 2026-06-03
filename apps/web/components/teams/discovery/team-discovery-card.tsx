@@ -1,11 +1,11 @@
 import { GameController01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import type { DiscoveryTeam } from "@/lib/data/discovery";
-import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 interface TeamDiscoveryCardProps {

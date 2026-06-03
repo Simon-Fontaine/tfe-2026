@@ -9,6 +9,7 @@ import type {
 	PublicOrgSummary,
 	UserOrg,
 } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
 import {
@@ -17,7 +18,6 @@ import {
 	routeStateNoAccess,
 	routeStateSuccess,
 } from "@/lib/route-state";
-import { apiRoutes } from "@/lib/routes";
 
 export type {
 	OrgInviteSummary,
@@ -61,15 +61,6 @@ export const getOrgWithTeamsRouteState = cache(
 
 export async function getPendingOrgInvitesForUser(_userId: string): Promise<OrgInviteSummary[]> {
 	const res = await apiGet<OrgInviteSummary[]>(apiRoutes.orgs.invites.received);
-	if ("data" in res) return res.data;
-	throw new Error(res.error);
-}
-
-export async function getOrgPendingInvites(
-	orgId: string,
-	_userId: string
-): Promise<OrgPendingInvite[]> {
-	const res = await apiGet<OrgPendingInvite[]>(apiRoutes.orgs.invites.pending(orgId));
 	if ("data" in res) return res.data;
 	throw new Error(res.error);
 }

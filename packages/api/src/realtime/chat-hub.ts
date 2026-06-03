@@ -1,5 +1,5 @@
 import type { RealtimeSessionInvalidationReason } from "@scrimflow/shared";
-import Redis from "ioredis";
+import redis from "@/db/redis";
 import logger from "@/utils/logger";
 import { refreshPresence, setUserOffline, setUserOnline } from "./presence";
 
@@ -10,7 +10,6 @@ import { refreshPresence, setUserOffline, setUserOnline } from "./presence";
  * - In-memory Maps provide fast local fan-out within a single process.
  * - Redis pub/sub bridges events across multiple API processes.
  *   Channels: `chat:conv:{conversationId}` and `chat:user:{userId}`
- * - Falls back to in-memory-only when Redis is unavailable.
  */
 
 type ChatSocket = {
@@ -29,50 +28,36 @@ const sessionSockets = new Map<string, Set<ChatSocket>>();
 const userSockets = new Map<string, Set<ChatSocket>>();
 const conversationSockets = new Map<string, Set<ChatSocket>>();
 
-function createRedisSubscriber(): Redis | null {
-	const url = process.env.REDIS_URL;
-	if (!url) return null;
-	const client = new Redis(url, {
-		commandTimeout: 500,
-		maxRetriesPerRequest: 2,
-		enableReadyCheck: true,
-		lazyConnect: false,
-	});
+function createRedisSubscriber() {
+	const client = redis.duplicate();
 	client.on("error", (err: Error) => {
 		logger.error({ err }, "chat-hub redis subscriber error");
 	});
 	return client;
 }
 
-function getRedisPublisher(): Redis | null {
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	return (require("@/db/redis").default as Redis | null) ?? null;
-}
-
 // Dedicated subscriber connection (cannot share with publisher)
 const redisSubscriber = createRedisSubscriber();
 
-if (redisSubscriber) {
-	redisSubscriber.on("message", (channel: string, message: string) => {
-		try {
-			const parsed = JSON.parse(message) as {
-				event: string;
-				payload: Record<string, unknown>;
-				excludeUserId?: string;
-			};
+redisSubscriber.on("message", (channel: string, message: string) => {
+	try {
+		const parsed = JSON.parse(message) as {
+			event: string;
+			payload: Record<string, unknown>;
+			excludeUserId?: string;
+		};
 
-			if (channel.startsWith("chat:conv:")) {
-				const conversationId = channel.slice("chat:conv:".length);
-				localFanOutConversation(conversationId, parsed.event, parsed.payload, parsed.excludeUserId);
-			} else if (channel.startsWith("chat:user:")) {
-				const userId = channel.slice("chat:user:".length);
-				localFanOutUser(userId, parsed.event, parsed.payload);
-			}
-		} catch {
-			// Malformed message — ignore
+		if (channel.startsWith("chat:conv:")) {
+			const conversationId = channel.slice("chat:conv:".length);
+			localFanOutConversation(conversationId, parsed.event, parsed.payload, parsed.excludeUserId);
+		} else if (channel.startsWith("chat:user:")) {
+			const userId = channel.slice("chat:user:".length);
+			localFanOutUser(userId, parsed.event, parsed.payload);
 		}
-	});
-}
+	} catch {
+		// Malformed message — ignore
+	}
+});
 
 function send(ws: ChatSocket, payload: unknown) {
 	// A throw from a half-closed socket must not abort a fan-out loop mid-broadcast,
@@ -122,10 +107,8 @@ async function redisPublishConversation(
 	payload: Record<string, unknown>,
 	excludeUserId?: string
 ) {
-	const publisher = getRedisPublisher();
-	if (!publisher) return;
 	try {
-		await publisher.publish(
+		await redis.publish(
 			`chat:conv:${conversationId}`,
 			JSON.stringify({ event, payload, excludeUserId })
 		);
@@ -135,10 +118,8 @@ async function redisPublishConversation(
 }
 
 async function redisPublishUser(userId: string, event: string, payload: Record<string, unknown>) {
-	const publisher = getRedisPublisher();
-	if (!publisher) return;
 	try {
-		await publisher.publish(`chat:user:${userId}`, JSON.stringify({ event, payload }));
+		await redis.publish(`chat:user:${userId}`, JSON.stringify({ event, payload }));
 	} catch (err) {
 		logger.warn({ err }, "chat-hub: failed to publish user event to Redis");
 	}
@@ -238,11 +219,9 @@ export function subscribeSocketToConversation(ws: ChatSocket, conversationId: st
 	getOrCreateSet(conversationSockets, conversationId).add(ws);
 
 	// Subscribe this process to the Redis channel if not already subscribed
-	if (redisSubscriber) {
-		void redisSubscriber.subscribe(`chat:conv:${conversationId}`).catch((err: Error) => {
-			logger.warn({ err, conversationId }, "chat-hub: failed to subscribe to Redis channel");
-		});
-	}
+	void redisSubscriber.subscribe(`chat:conv:${conversationId}`).catch((err: Error) => {
+		logger.warn({ err, conversationId }, "chat-hub: failed to subscribe to Redis channel");
+	});
 
 	send(ws, { type: "conversation:subscribed", conversationId });
 }
@@ -258,14 +237,9 @@ export function unsubscribeSocketFromConversation(ws: ChatSocket, conversationId
 		if (sockets.size === 0) {
 			conversationSockets.delete(conversationId);
 			// No local subscribers left — unsubscribe from Redis channel
-			if (redisSubscriber) {
-				void redisSubscriber.unsubscribe(`chat:conv:${conversationId}`).catch((err: Error) => {
-					logger.warn(
-						{ err, conversationId },
-						"chat-hub: failed to unsubscribe from Redis channel"
-					);
-				});
-			}
+			void redisSubscriber.unsubscribe(`chat:conv:${conversationId}`).catch((err: Error) => {
+				logger.warn({ err, conversationId }, "chat-hub: failed to unsubscribe from Redis channel");
+			});
 		}
 	}
 

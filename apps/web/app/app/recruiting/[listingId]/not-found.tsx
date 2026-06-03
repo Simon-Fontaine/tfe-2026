@@ -1,8 +1,8 @@
 import { Search01Icon } from "@hugeicons/core-free-icons";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageContainer } from "@/components/workspace/page-container";
-import { appRoutes } from "@/lib/routes";
 
 export default function ListingNotFound() {
 	return (

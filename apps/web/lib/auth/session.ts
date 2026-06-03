@@ -1,16 +1,10 @@
 import type { Session, SessionUser, SessionValidationResult } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
-export type {
-	Session,
-	SessionFlags,
-	SessionMetadata,
-	SessionUser,
-	SessionValidationResult,
-} from "@scrimflow/shared";
+export type { Session, SessionUser, SessionValidationResult } from "@scrimflow/shared";
 
 /** Request-memoized current session via API. */
 export const getCurrentSession = cache(async (): Promise<SessionValidationResult> => {

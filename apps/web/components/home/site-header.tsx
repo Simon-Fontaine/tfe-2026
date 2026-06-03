@@ -2,8 +2,8 @@
 
 import { Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
-
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { getUserInitials, UserMenuDropdown } from "@/components/shared/user-menu-dropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +17,6 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { type NavLink, siteConfig } from "@/lib/config/site";
-import { publicRoutes } from "@/lib/routes";
 
 interface SiteHeaderProps {
 	user?: { email: string; displayName: string; username: string; avatarUrl: string | null } | null;

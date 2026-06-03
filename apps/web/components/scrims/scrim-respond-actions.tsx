@@ -1,6 +1,7 @@
 "use client";
 
 import type { ScrimDetail } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -26,7 +27,6 @@ import {
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { apiRoutes } from "@/lib/routes";
 import { toDateTimeLocal, toIsoTimestamp } from "@/lib/scrims/format";
 import { readApiPayload } from "./form-errors";
 

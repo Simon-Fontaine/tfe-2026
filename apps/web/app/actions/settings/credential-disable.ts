@@ -1,8 +1,8 @@
 "use server";
 
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
 import { apiDelete, apiPost } from "@/lib/api-client";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 import type { ActionResult } from "./password";
 
 export async function requestPasskeyDisableAction(

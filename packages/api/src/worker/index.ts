@@ -1,9 +1,10 @@
+import { requiredNumberEnv } from "@/config/env";
 import { claimNextOcrJob, processClaimedOcrJob } from "@/ocr/process-job";
 import { deleteExpiredSessions, purgeScheduledAccountDeletions } from "@/utils/compliance";
 import logger from "@/utils/logger";
 import { sweepExpiredListings } from "@/utils/recruit";
 
-const OCR_WORKER_POLL_INTERVAL_MS = Number(process.env.OCR_WORKER_POLL_INTERVAL_MS ?? 4_000);
+const OCR_WORKER_POLL_INTERVAL_MS = requiredNumberEnv("OCR_WORKER_POLL_INTERVAL_MS");
 const RECRUITMENT_EXPIRY_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 const ACCOUNT_DELETION_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 const SESSION_CLEANUP_SWEEP_INTERVAL_MS = 15 * 60 * 1000;

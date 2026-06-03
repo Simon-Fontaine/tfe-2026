@@ -1,9 +1,9 @@
 "use server";
 
+import { apiRoutes } from "@scrimflow/shared";
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { isApiActionError, toFormActionError } from "@/lib/action-result";
 import { apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
 export async function submitReportAction(
 	_prev: FormActionResult | null,

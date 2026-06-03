@@ -1,8 +1,8 @@
 "use client";
 
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const TABS = [

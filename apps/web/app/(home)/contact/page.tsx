@@ -1,9 +1,9 @@
+import { publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicPageSection } from "@/components/home/public-page-section";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { Button } from "@/components/ui/button";
-import { publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Contact",

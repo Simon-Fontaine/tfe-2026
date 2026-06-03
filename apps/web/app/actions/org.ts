@@ -1,14 +1,13 @@
 "use server";
 
+import { apiRoutes, appRoutes, publicRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { isApiActionError, toFormActionError } from "@/lib/action-result";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
-import { apiRoutes, appRoutes, publicRoutes } from "@/lib/routes";
 
 async function getOrgSlug(orgId: string): Promise<string | null> {
 	const { user } = await getCurrentSession();

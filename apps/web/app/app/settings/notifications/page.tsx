@@ -2,10 +2,10 @@ import type {
 	MandatoryNotificationPolicy,
 	NotificationPreferenceSettings,
 } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { NotificationPreferencesSection } from "@/components/settings/notification-preferences-section";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppNotificationsSettingsPage() {

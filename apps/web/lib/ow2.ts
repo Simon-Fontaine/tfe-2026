@@ -52,11 +52,6 @@ export const ROLES: RoleMeta[] = [
 	},
 ];
 
-export const ROLE_META = Object.fromEntries(ROLES.map((r) => [r.id, r])) as Record<
-	OW2Role,
-	RoleMeta
->;
-
 export interface RankMeta {
 	id: OW2Rank;
 	label: string;
@@ -134,8 +129,3 @@ export const RANKS: RankMeta[] = [
 		badgeClass: "border-[#FFB020]/50 bg-[#FFB020]/15 text-[#FFB020]",
 	},
 ];
-
-export const RANK_META = Object.fromEntries(RANKS.map((r) => [r.id, r])) as Record<
-	OW2Rank,
-	RankMeta
->;

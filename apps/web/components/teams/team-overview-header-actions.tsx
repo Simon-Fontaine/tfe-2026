@@ -3,6 +3,7 @@
 import { MoreHorizontalIcon, Sword03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { DiscoveryTeam } from "@scrimflow/shared";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useState } from "react";
 import { CreateScrimDialog } from "@/components/scrims/create-scrim-dialog";
@@ -15,7 +16,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CreateUpdatePostDialog } from "@/components/updates/create-update-post-dialog";
-import { appRoutes } from "@/lib/routes";
 
 interface TeamOverviewHeaderActionsProps {
 	teamId: string;

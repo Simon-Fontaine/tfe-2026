@@ -1,9 +1,9 @@
 "use client";
 
 import type { RecruitmentApplicationSummary } from "@scrimflow/shared";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 import {
 	updateRecruitmentApplicationAction,
 	withdrawRecruitmentApplicationAction,
@@ -15,7 +15,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import { APPLICATION_STATUS_LABELS, RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
-import { appRoutes } from "@/lib/routes";
 
 interface RecruitmentSentApplicationsPanelProps {
 	applications: RecruitmentApplicationSummary[];

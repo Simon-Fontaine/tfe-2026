@@ -2,11 +2,11 @@
 
 import { Notification01Icon } from "@hugeicons/core-free-icons";
 import type { NotificationSummary } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { Button } from "@/components/ui/button";
-import { apiRoutes } from "@/lib/routes";
 import { useInboxStore } from "@/stores/inbox";
 import { type InboxFilter, InboxFilterBar } from "./inbox-filter-bar";
 import { MarkAllReadButton } from "./mark-all-read-button";

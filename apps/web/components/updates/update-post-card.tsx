@@ -1,10 +1,10 @@
 import { Calendar03Icon, LinkSquare02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { UpdatePostSummary } from "@scrimflow/shared";
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 function formatTimestamp(value: string) {

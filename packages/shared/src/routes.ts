@@ -273,7 +273,6 @@ export const apiRoutes = {
 		readAll: "/api/notifications/read-all",
 		unread: (notificationId: string) => `/api/notifications/${notificationId}/unread`,
 		dismiss: (notificationId: string) => `/api/notifications/${notificationId}/dismiss`,
-		restore: (notificationId: string) => `/api/notifications/${notificationId}/restore`,
 	},
 	updates: {
 		root: "/api/updates",
@@ -324,7 +323,6 @@ export const apiRoutes = {
 
 export const appRoutes = {
 	root: "/app",
-	me: "/app",
 	inbox: "/app/inbox",
 	invites: "/app/invites",
 	calendar: "/app/calendar",

@@ -1,3 +1,4 @@
+import { apiRoutes } from "@scrimflow/shared";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AvatarUploadSection } from "@/components/profile/avatar-upload-section";
 import { BannerUploadSection } from "@/components/profile/banner-upload-section";
@@ -8,7 +9,6 @@ import { apiGet } from "@/lib/api-client";
 import { getActiveHeroes } from "@/lib/data/heroes";
 import { getPlayerProfileFull } from "@/lib/data/player";
 import { ROLES } from "@/lib/ow2";
-import { apiRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 type UserInfo = {

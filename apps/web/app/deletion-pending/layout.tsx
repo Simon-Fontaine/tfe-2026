@@ -1,13 +1,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export default async function DeletionPendingLayout({ children }: { children: ReactNode }) {
 	const { session, user } = await getCurrentSession();

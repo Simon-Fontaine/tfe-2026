@@ -1,4 +1,5 @@
 import { Blockchain01Icon } from "@hugeicons/core-free-icons";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -26,7 +27,6 @@ import {
 	RECRUITMENT_CATEGORY_DESCRIPTIONS,
 	RECRUITMENT_CATEGORY_LABELS,
 } from "@/lib/recruitment";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 

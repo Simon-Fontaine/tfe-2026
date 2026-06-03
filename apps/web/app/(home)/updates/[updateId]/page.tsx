@@ -1,4 +1,5 @@
 import { Notification01Icon } from "@hugeicons/core-free-icons";
+import { publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +9,6 @@ import { PublicRelatedRouteCards } from "@/components/home/public-related-route-
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Button } from "@/components/ui/button";
 import { getPublicUpdateById } from "@/lib/data/updates";
-import { publicRoutes } from "@/lib/routes";
 
 function formatTimestamp(value: string) {
 	return new Intl.DateTimeFormat("en-GB", {

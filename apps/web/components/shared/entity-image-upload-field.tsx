@@ -2,12 +2,12 @@
 
 import { Camera01Icon, Delete01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { apiRoutes } from "@scrimflow/shared";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { apiRoutes } from "@/lib/routes";
 
 type UploadKind = "org-avatar" | "org-banner" | "team-avatar" | "team-banner";
 

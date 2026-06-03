@@ -1,4 +1,4 @@
-import { canApplyToInvite, type UserTeam } from "@scrimflow/shared";
+import { appRoutes, canApplyToInvite, type UserTeam } from "@scrimflow/shared";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,7 +17,6 @@ import {
 } from "@/lib/data/personal-home";
 import type { RecruitmentApplicationSummary } from "@/lib/data/recruit";
 import type { TeamInviteSummary } from "@/lib/data/team";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 type SectionResult<T> = { status: "success"; data: T } | { status: "error"; error: string };

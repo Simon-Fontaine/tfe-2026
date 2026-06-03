@@ -6,11 +6,11 @@ import type {
 	ChatConversationSummary,
 	ChatParticipantSummary,
 } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { useChatSocket } from "@/hooks/use-chat-socket";
-import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { selectOrderedConversations, useChatStore } from "@/stores/chat";
 import { ConversationMembers } from "./conversation-members";

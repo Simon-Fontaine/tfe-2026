@@ -1,6 +1,6 @@
 import { Sword03Icon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
-import { appRoutes, publicRoutes } from "@/lib/routes";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 
 export type NavLink = {
 	label: string;

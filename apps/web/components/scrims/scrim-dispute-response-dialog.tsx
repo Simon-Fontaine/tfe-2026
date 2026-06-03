@@ -1,6 +1,7 @@
 "use client";
 
 import type { ScrimDetail } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import { toast } from "sonner";
@@ -16,7 +17,6 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRoutes } from "@/lib/routes";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";
 
 interface ScrimDisputeResponseDialogProps {

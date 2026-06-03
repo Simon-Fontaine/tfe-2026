@@ -177,34 +177,4 @@ notificationRoutes.post("/:id/dismiss", async (c) => {
 	return c.json({ success: true });
 });
 
-// POST /:id/restore — Restore a dismissed notification
-notificationRoutes.post("/:id/restore", async (c) => {
-	const user = c.get("user");
-	const notificationId = c.req.param("id");
-	const notification = await db.query.notificationTable.findFirst({
-		where: and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)),
-		columns: { id: true, isDismissed: true, isRead: true },
-	});
-	if (!notification) {
-		return c.json({ error: "Notification not found." }, 404);
-	}
-
-	if (notification.isDismissed) {
-		await db
-			.update(notificationTable)
-			.set({ isDismissed: false })
-			.where(and(eq(notificationTable.id, notificationId), eq(notificationTable.userId, user.id)));
-
-		const unreadCount = await getUnreadNotificationCount(user.id);
-
-		publishUserRealtimeEvent({
-			userId: user.id,
-			event: "notification:restored",
-			payload: { notificationId, unreadCount },
-		});
-	}
-
-	return c.json({ success: true });
-});
-
 export { notificationRoutes };

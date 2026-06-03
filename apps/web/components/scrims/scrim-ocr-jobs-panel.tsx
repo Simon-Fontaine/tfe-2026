@@ -8,6 +8,7 @@ import type {
 	ScrimMapSummary,
 	ScrimResultRevisionSummary,
 } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { type ReactNode, startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -16,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { apiRoutes } from "@/lib/routes";
 import { formatScrimTimestamp } from "@/lib/scrims/format";
 import {
 	ACTIVE_JOB_STATUSES,

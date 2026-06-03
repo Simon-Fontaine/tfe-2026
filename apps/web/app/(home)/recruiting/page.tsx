@@ -1,4 +1,5 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -11,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getManageableRecruitEntities, getPublicRecruitmentListings } from "@/lib/data/recruit";
 import { RECRUITMENT_CATEGORY_LABELS } from "@/lib/recruitment";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export const metadata: Metadata = {
 	title: "Recruiting",

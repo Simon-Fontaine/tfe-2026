@@ -3,6 +3,7 @@
 import { RefreshIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OcrJobSummary, ScrimDetail } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
-import { apiRoutes } from "@/lib/routes";
 import {
 	deriveMapScoreboardState,
 	getStageProgress,

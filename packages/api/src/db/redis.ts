@@ -1,18 +1,17 @@
 import Redis from "ioredis";
+import { requiredEnv } from "@/config/env";
 import logger from "@/utils/logger";
 
 /**
  * Singleton Redis client, preserving connection across dev reloads.
- * Exports null when unconfigured for in-memory fallbacks.
  */
 
 declare global {
-	var __redis: Redis | null | undefined;
+	var __redis: Redis | undefined;
 }
 
-function createClient(): Redis | null {
-	const url = process.env.REDIS_URL;
-	if (!url) return null;
+function createClient(): Redis {
+	const url = requiredEnv("REDIS_URL");
 
 	const client = new Redis(url, {
 		// Prevent slow Redis stalling
@@ -24,14 +23,13 @@ function createClient(): Redis | null {
 	});
 
 	client.on("error", (err: Error) => {
-		// Log without throwing for fallbacks
 		logger.error({ err }, "redis connection error");
 	});
 
 	return client;
 }
 
-const redis: Redis | null =
+const redis: Redis =
 	process.env.NODE_ENV === "production" ? createClient() : (globalThis.__redis ?? createClient());
 
 if (process.env.NODE_ENV === "development") {

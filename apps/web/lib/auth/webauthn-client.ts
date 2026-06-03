@@ -3,7 +3,7 @@
 import { decodeBase64, encodeBase64 } from "@oslojs/encoding";
 import { createWebAuthnChallengeAction } from "@/app/(auth)/auth/webauthn-actions";
 
-export async function createChallenge(): Promise<Uint8Array> {
+async function createChallenge(): Promise<Uint8Array> {
 	const encoded = await createWebAuthnChallengeAction();
 	return decodeBase64(encoded);
 }

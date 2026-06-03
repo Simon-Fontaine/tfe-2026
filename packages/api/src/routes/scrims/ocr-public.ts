@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Hono } from "hono";
 import { DatabaseError } from "pg";
 import * as v from "valibot";
+import { requiredEnv } from "@/config/env";
 import { db } from "@/db";
 import { ocrJobTable, scrimMapTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
@@ -15,7 +16,7 @@ import { mapOcrJob, mapScrimDetail, mapScrimSummary, publishOcrJobRealtimeUpdate
 import { findScrimWithRelations, ScrimWorkflowError } from "./shared";
 
 const OCR_LOCK_TIMEOUT_MS = 5000;
-const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
+const SCREENSHOT_BUCKET = requiredEnv("S3_BUCKET_SCREENSHOTS");
 
 export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 	scrimRoutes.get("/:id/ocr-jobs", async (c) => {

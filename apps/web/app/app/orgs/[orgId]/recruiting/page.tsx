@@ -1,5 +1,6 @@
 import { Add01Icon, UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -14,7 +15,6 @@ import {
 	getMyRecruitmentListings,
 	getRecruitmentApplicationsForListing,
 } from "@/lib/data/recruit";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgRecruitingPage({

@@ -1,10 +1,10 @@
 "use client";
 
 import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
+import { appRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { AuthPanelHeader } from "@/components/shared/auth-panel-header";
 import { Button } from "@/components/ui/button";
-import { appRoutes } from "@/lib/routes";
 
 export function OnboardingCompletePanel() {
 	const router = useRouter();

@@ -1,9 +1,8 @@
 "use client";
 
+import { appRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-
-import { appRoutes } from "@/lib/routes";
 
 const CATEGORIES = [
 	{ label: "All Categories", value: "" },

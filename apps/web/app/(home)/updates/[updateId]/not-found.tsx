@@ -1,7 +1,7 @@
 import { Notification01Icon } from "@hugeicons/core-free-icons";
+import { publicRoutes } from "@scrimflow/shared";
 import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
-import { publicRoutes } from "@/lib/routes";
 
 export default function UpdateNotFound() {
 	return (

@@ -45,5 +45,3 @@ export const STATUS_BADGE_CLASSES = {
 	reportResolved: "border-green-600 text-green-600",
 	reportDismissed: "",
 } as const;
-
-export type StatusBadgeKey = keyof typeof STATUS_BADGE_CLASSES;

@@ -10,6 +10,7 @@ import {
 	UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -31,7 +32,6 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { getWorkspacePathContext } from "@/lib/route-state";
-import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useWorkspaceContextStore } from "@/stores/workspace-context";
 
@@ -178,7 +178,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 
 							<DropdownMenuGroup>
 								<ContextDropdownItem
-									href={appRoutes.me}
+									href={appRoutes.root}
 									icon={UserCircle02Icon}
 									label="Personal"
 									description="Profile, inbox, and calendar"
@@ -258,7 +258,7 @@ export function ContextSwitcher({ orgs, teams }: ContextSwitcherProps) {
 										variant="outline"
 										className="w-full justify-start"
 									>
-										<Link href={appRoutes.me} onClick={() => setOpen(false)}>
+										<Link href={appRoutes.root} onClick={() => setOpen(false)}>
 											<HugeiconsIcon icon={Home01Icon} strokeWidth={2} className="size-4" />
 											Open personal workspace
 										</Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	apiRoutes,
 	type OCR_PLAYER_SIDE_VALUES,
 	OCR_ROLE_VALUES,
 	type OcrJobSummary,
@@ -23,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { apiRoutes } from "@/lib/routes";
 import { getJobBadgeClass, getStageLabel } from "@/lib/scrims/ocr-status";
 import { type FormFieldErrors, readApiPayload } from "./form-errors";
 

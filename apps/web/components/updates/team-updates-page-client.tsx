@@ -3,6 +3,7 @@
 import { Megaphone01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { RealtimeEvent, UpdatePostSummary } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -14,7 +15,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { apiRoutes } from "@/lib/routes";
 import { realtimeSocket } from "@/lib/ws/realtime-socket";
 import { CreateUpdatePostDialog } from "./create-update-post-dialog";
 import { EditUpdatePostDialog } from "./edit-update-post-dialog";

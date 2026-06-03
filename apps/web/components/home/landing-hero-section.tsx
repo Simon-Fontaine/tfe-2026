@@ -1,10 +1,10 @@
 import { ArrowRight01Icon, LockIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 const highlights = [
 	{ value: "Free", label: "For all teams" },

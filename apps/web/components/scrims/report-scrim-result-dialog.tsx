@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	apiRoutes,
 	OCR_MAP_TYPE_VALUES,
 	OCR_MAX_MAP_SCORE,
 	type OcrGameHistoryMatch,
@@ -32,7 +33,6 @@ import {
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { apiRoutes } from "@/lib/routes";
 import { toDateTimeLocal, toIsoTimestamp } from "@/lib/scrims/format";
 import { isReviewableJob } from "@/lib/scrims/ocr-status";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";

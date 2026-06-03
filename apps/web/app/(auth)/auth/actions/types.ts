@@ -1,1 +1,1 @@
-export type { ActionResult, AuthStep, TwoFactorMethods } from "@scrimflow/shared";
+export type { ActionResult } from "@scrimflow/shared";

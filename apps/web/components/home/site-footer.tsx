@@ -1,6 +1,6 @@
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { siteConfig } from "@/lib/config/site";
-import { publicRoutes } from "@/lib/routes";
 
 const FOOTER_GROUPS = [
 	{

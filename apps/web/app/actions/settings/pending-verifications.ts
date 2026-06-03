@@ -1,7 +1,7 @@
 "use server";
 
+import { apiRoutes } from "@scrimflow/shared";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
 export interface PendingVerifications {
 	emailChange: { pendingEmail: string } | null;

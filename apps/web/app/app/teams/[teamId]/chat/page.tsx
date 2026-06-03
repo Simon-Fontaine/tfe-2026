@@ -1,4 +1,5 @@
 import { MessageNotification02Icon } from "@hugeicons/core-free-icons";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChatWorkspace } from "@/components/chat/chat-workspace";
@@ -8,7 +9,6 @@ import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getTeamChatRouteState } from "@/lib/data/chat";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function TeamChatPage({

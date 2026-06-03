@@ -2,10 +2,10 @@
 
 import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-
 import { moderationCaseAction } from "@/app/actions/moderation";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +14,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { appRoutes } from "@/lib/routes";
 
 interface QueueRowActionsDropdownProps {
 	reportId: string;
-	userId: string;
 }
 
-export function QueueRowActionsDropdown({ reportId, userId }: QueueRowActionsDropdownProps) {
+export function QueueRowActionsDropdown({ reportId }: QueueRowActionsDropdownProps) {
 	const router = useRouter();
 	const [isPending, startTransition] = useTransition();
 

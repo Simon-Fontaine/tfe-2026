@@ -1,10 +1,10 @@
 "use client";
 
 import type { ChatParticipantSummary, UserPresenceStatus } from "@scrimflow/shared";
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { publicRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat";
 import { PresenceDot } from "./presence-dot";

@@ -1,9 +1,9 @@
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { OnboardingShellLayout } from "@/components/onboarding/onboarding-shell-layout";
 import { apiGet } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 export default async function OnboardingLayout({ children }: { children: ReactNode }) {
 	const { session, user } = await getCurrentSession();

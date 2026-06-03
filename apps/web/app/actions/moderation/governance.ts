@@ -1,8 +1,8 @@
 "use server";
 
 import type { ModeratorOwnershipResolutionInput } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
 export interface GovernanceActionResult {
 	success?: boolean;

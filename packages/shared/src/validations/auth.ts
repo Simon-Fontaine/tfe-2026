@@ -193,9 +193,6 @@ export const ConfirmPasswordChangeSchema = v.pipe(
 
 export type ConfirmPasswordChangeInput = v.InferOutput<typeof ConfirmPasswordChangeSchema>;
 
-export const ChangePasswordSchema = ConfirmPasswordChangeSchema;
-export type ChangePasswordInput = ConfirmPasswordChangeInput;
-
 export const RecoveryCodeSchema = v.object({
 	code: v.pipe(v.string(), v.trim(), v.nonEmpty("Recovery code is required")),
 });

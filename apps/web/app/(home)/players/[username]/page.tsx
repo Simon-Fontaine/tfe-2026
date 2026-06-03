@@ -1,4 +1,5 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +17,6 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicPlayerByUsername } from "@/lib/data/player";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { ROLE_LABELS } from "@/lib/recruitment";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({
 	params,

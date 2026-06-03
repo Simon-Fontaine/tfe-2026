@@ -1,10 +1,10 @@
 import type { RecruitmentConversationSummary } from "@scrimflow/shared";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { RecruitmentConversationWorkspace } from "@/components/recruit/recruitment-conversation-workspace";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getMyRecruitmentConversationSummaries } from "@/lib/data/chat";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 interface AppRecruitingConversationsPageProps {

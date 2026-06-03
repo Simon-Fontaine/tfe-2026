@@ -4,8 +4,8 @@ import type {
 	RecruitmentListingCategory,
 	RecruitmentListingSummary,
 } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { cache } from "react";
-
 import { apiGet } from "@/lib/api-client";
 import type { RecruitEntityOption } from "@/lib/recruitment";
 import {
@@ -14,7 +14,6 @@ import {
 	routeStateNoAccess,
 	routeStateSuccess,
 } from "@/lib/route-state";
-import { apiRoutes } from "@/lib/routes";
 import { getOrgsForUser } from "./organization";
 
 export type {
@@ -130,13 +129,6 @@ export const getPublicRecruitmentListings = cache(
 		);
 		if ("data" in res) return res.data;
 		throw new Error(res.error);
-	}
-);
-
-export const getRecruitmentListingById = cache(
-	async (listingId: string): Promise<RecruitmentListingSummary | null> => {
-		const result = await getRecruitmentListingRouteState(listingId);
-		return result.kind === "success" ? result.data : null;
 	}
 );
 

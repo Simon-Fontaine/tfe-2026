@@ -1,10 +1,9 @@
 "use server";
 
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
-
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiDelete, apiPost } from "@/lib/api-client";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 function revalidateScheduleSurfaces(teamId: string) {
 	revalidatePath(appRoutes.root);

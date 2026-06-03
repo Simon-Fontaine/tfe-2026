@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type WorkspaceScope = "personal" | "org" | "team";
+type WorkspaceScope = "personal" | "org" | "team";
 
 interface WorkspaceContextState {
 	scope: WorkspaceScope;

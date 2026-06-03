@@ -1,7 +1,7 @@
 "use server";
 
+import { apiRoutes } from "@scrimflow/shared";
 import { apiPatch } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
 export interface ActionResult {
 	error?: string;

@@ -63,5 +63,3 @@ VerificationEmail.PreviewProps = {
 	message: "Use the code below to verify your email address and finish setting up your account.",
 	actionText: "enter the following code",
 } as VerificationEmailProps;
-
-export default VerificationEmail;

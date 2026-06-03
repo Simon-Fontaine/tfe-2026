@@ -2,6 +2,7 @@ import { render } from "@react-email/render";
 import nodemailer from "nodemailer";
 import type { ReactElement } from "react";
 
+import { requiredEnv, requiredNumberEnv } from "@/config/env";
 import logger from "@/utils/logger";
 
 // Lazy singleton — avoids SMTP connection attempts at module evaluation time.
@@ -10,8 +11,8 @@ let _transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 function getTransporter() {
 	if (!_transporter) {
 		_transporter = nodemailer.createTransport({
-			host: process.env.SMTP_HOST,
-			port: Number(process.env.SMTP_PORT ?? 1025),
+			host: requiredEnv("SMTP_HOST"),
+			port: requiredNumberEnv("SMTP_PORT"),
 			secure: process.env.SMTP_SECURE === "true",
 			...(process.env.SMTP_USER
 				? { auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } }
@@ -39,13 +40,13 @@ export async function sendMail({
 }) {
 	const html = await render(template);
 
-	const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+	const appUrl = requiredEnv("NEXT_PUBLIC_APP_URL");
 
 	let lastError: unknown;
 	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
 		try {
 			await getTransporter().sendMail({
-				from: process.env.SMTP_FROM,
+				from: requiredEnv("SMTP_FROM"),
 				to,
 				subject,
 				html,

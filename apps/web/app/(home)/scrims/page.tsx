@@ -1,5 +1,6 @@
 import { Calendar03Icon } from "@hugeicons/core-free-icons";
 import type { ScrimStatus } from "@scrimflow/shared";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -11,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicScrims } from "@/lib/data/scrims";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 const SCRIM_STATUS_LABELS = {
 	pending: "Pending",

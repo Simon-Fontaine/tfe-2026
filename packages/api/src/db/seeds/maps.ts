@@ -3,11 +3,12 @@ import { join } from "node:path";
 
 import { eq } from "drizzle-orm";
 
+import { requiredEnv } from "@/config/env";
 import type { db as Db } from "..";
 import { mapTable } from "../schema";
 import { createS3Client, ensurePublicBucket, uploadFile } from "./lib/s3";
 
-const BUCKET = "maps";
+const BUCKET = requiredEnv("S3_BUCKET_MAPS");
 const IMAGES_DIR = join(import.meta.dir, "../../../images/maps");
 
 type MapRow = typeof mapTable.$inferInsert;
@@ -87,7 +88,7 @@ export async function seedMaps(db: typeof Db) {
 	const s3 = createS3Client();
 	await ensurePublicBucket(s3, BUCKET);
 
-	const publicUrl = (process.env.S3_PUBLIC_URL ?? "http://localhost:9000").replace(/\/$/, "");
+	const publicUrl = requiredEnv("S3_PUBLIC_URL").replace(/\/$/, "");
 	const files = (await readdir(IMAGES_DIR)).filter((f) => f.endsWith(".webp"));
 	const unknown: string[] = [];
 	let uploaded = 0;

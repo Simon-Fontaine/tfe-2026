@@ -1,4 +1,4 @@
-import { ChangePasswordSchema, rateLimits } from "@scrimflow/shared";
+import { ConfirmPasswordChangeSchema, rateLimits } from "@scrimflow/shared";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
@@ -112,7 +112,7 @@ passwordRoutes.post("/confirm", async (c) => {
 	const rawBody = await c.req.json().catch(() => null);
 	if (!rawBody) return c.json({ error: "Invalid request body." }, 400);
 
-	const parsed = v.safeParse(ChangePasswordSchema, rawBody);
+	const parsed = v.safeParse(ConfirmPasswordChangeSchema, rawBody);
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const result = await validateAndConsumeSensitiveAction(

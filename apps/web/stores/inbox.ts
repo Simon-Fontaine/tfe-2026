@@ -44,7 +44,6 @@ interface InboxActions {
 	markAllNotificationsRead(unreadCount: number): void;
 	markNotificationUnread(notificationId: string, unreadCount: number): void;
 	dismissNotification(notificationId: string, unreadCount: number): void;
-	restoreNotification(notificationId: string, unreadCount: number): void;
 }
 
 export const useInboxStore = create<InboxState & InboxActions>((set) => ({
@@ -108,15 +107,6 @@ export const useInboxStore = create<InboxState & InboxActions>((set) => ({
 		set((state) => ({
 			notifications: state.notifications.map((notification) =>
 				notification.id === notificationId ? { ...notification, isDismissed: true } : notification
-			),
-			unreadCount,
-		}));
-	},
-
-	restoreNotification(notificationId, unreadCount) {
-		set((state) => ({
-			notifications: state.notifications.map((notification) =>
-				notification.id === notificationId ? { ...notification, isDismissed: false } : notification
 			),
 			unreadCount,
 		}));

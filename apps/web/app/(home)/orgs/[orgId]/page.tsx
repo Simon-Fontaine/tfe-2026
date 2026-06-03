@@ -4,6 +4,7 @@ import {
 	Notification01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,7 +22,6 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getPublicOrgByIdOrSlug, getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicUpdates } from "@/lib/data/updates";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({
 	params,

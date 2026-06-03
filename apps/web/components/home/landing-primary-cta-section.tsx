@@ -1,9 +1,9 @@
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config/site";
-import { publicRoutes } from "@/lib/routes";
 
 export function LandingPrimaryCTASection() {
 	return (

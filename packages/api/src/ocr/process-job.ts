@@ -5,6 +5,7 @@ import {
 } from "@scrimflow/shared";
 import { eq, sql } from "drizzle-orm";
 import * as v from "valibot";
+import { requiredEnv, requiredNumberEnv } from "@/config/env";
 import { db } from "@/db";
 import { ocrJobTable } from "@/db/schema";
 import { createNotification } from "@/notifications";
@@ -15,10 +16,10 @@ import { publishScrimEvent } from "@/realtime/scrim-hub";
 import { downloadFile, keyFromUrl } from "@/storage/s3";
 import logger from "@/utils/logger";
 
-const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
-const OCR_WORKER_LEASE_SECONDS = Number(process.env.OCR_WORKER_LEASE_SECONDS ?? 120);
-const OCR_WORKER_MAX_RETRIES = Number(process.env.OCR_WORKER_MAX_RETRIES ?? 3);
-const OCR_WORKER_RETRY_BASE_MS = Number(process.env.OCR_WORKER_RETRY_BASE_MS ?? 30_000);
+const SCREENSHOT_BUCKET = requiredEnv("S3_BUCKET_SCREENSHOTS");
+const OCR_WORKER_LEASE_SECONDS = requiredNumberEnv("OCR_WORKER_LEASE_SECONDS");
+const OCR_WORKER_MAX_RETRIES = requiredNumberEnv("OCR_WORKER_MAX_RETRIES");
+const OCR_WORKER_RETRY_BASE_MS = requiredNumberEnv("OCR_WORKER_RETRY_BASE_MS");
 const OCR_PROVIDER_NAME = "google-gemini";
 const TRANSIENT_PROVIDER_STATUSES = new Set([429, 500, 503, 504]);
 

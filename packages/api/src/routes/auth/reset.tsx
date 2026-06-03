@@ -6,6 +6,7 @@ import { writeAuditLog } from "@/auth/audit";
 import { sendSecurityAlertEmail } from "@/auth/email-security";
 import { hashPassword, verifyPasswordStrength } from "@/auth/password";
 import { invalidateUserSessions } from "@/auth/session";
+import { requiredEnv } from "@/config/env";
 import { generateNumericCode } from "@/crypto/utils";
 import { db } from "@/db";
 import { passwordResetSessionTable, userTable } from "@/db/schema";
@@ -59,7 +60,7 @@ resetRoutes.post("/forgot-password", async (c) => {
 	if (!resetSession)
 		return c.json({ nextStep: "forgot-password-sent", email } satisfies ActionResult);
 
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+	const appUrl = requiredEnv("NEXT_PUBLIC_APP_URL");
 	const resetUrl = `${appUrl}/auth?reset_token=${resetSession.id}`;
 
 	try {

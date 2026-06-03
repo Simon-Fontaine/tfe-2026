@@ -1,8 +1,8 @@
 "use server";
 
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { redirect } from "next/navigation";
 import { apiAuthPost } from "@/lib/api-client";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 interface VerifyResult {
 	error?: string;

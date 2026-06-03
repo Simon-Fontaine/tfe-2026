@@ -1,6 +1,7 @@
 "use client";
 
 import type { DiscoveryTeam, ScrimDetail } from "@scrimflow/shared";
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -17,7 +18,6 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";
 

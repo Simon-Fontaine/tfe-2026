@@ -1,6 +1,7 @@
 "use client";
 
 import type { PersonalPrivacySettings, PrivacyVisibility } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { updatePrivacySettingsAction } from "@/app/actions/settings/privacy";
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { apiRoutes } from "@/lib/routes";
 
 interface PrivacySettingsSectionProps {
 	initialSettings: PersonalPrivacySettings;

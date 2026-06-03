@@ -1,3 +1,4 @@
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -5,7 +6,6 @@ import { TeamSettingsPanel } from "@/components/teams/team-settings-panel";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppTeamSettingsPage({

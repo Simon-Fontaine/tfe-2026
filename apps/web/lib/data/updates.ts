@@ -1,4 +1,5 @@
 import type { UpdatePostSummary } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
 import {
@@ -7,7 +8,6 @@ import {
 	routeStateNoAccess,
 	routeStateSuccess,
 } from "@/lib/route-state";
-import { apiRoutes } from "@/lib/routes";
 
 function withQuery(path: string, params: Record<string, string | undefined>) {
 	const searchParams = new URLSearchParams();
@@ -19,17 +19,6 @@ function withQuery(path: string, params: Record<string, string | undefined>) {
 	const query = searchParams.toString();
 	return query ? `${path}?${query}` : path;
 }
-
-export const getTeamUpdates = cache(
-	async (
-		teamId: string,
-		cursor?: string
-	): Promise<{ posts: UpdatePostSummary[]; nextCursor: string | null }> => {
-		const result = await getTeamUpdatesRouteState(teamId, cursor);
-		if (result.kind === "success") return result.data;
-		return { posts: [], nextCursor: null };
-	}
-);
 
 export const getTeamUpdatesRouteState = cache(
 	async (

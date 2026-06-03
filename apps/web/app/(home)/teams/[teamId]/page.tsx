@@ -1,6 +1,7 @@
 import { ArrowRight01Icon, Notification01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OW2Role } from "@scrimflow/shared";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,7 +21,6 @@ import { getUserOrgRole } from "@/lib/data/organization";
 import { getManageableRecruitEntities } from "@/lib/data/recruit";
 import { getPublicTeamPreview } from "@/lib/data/team";
 import { getPublicUpdates } from "@/lib/data/updates";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({
 	params,

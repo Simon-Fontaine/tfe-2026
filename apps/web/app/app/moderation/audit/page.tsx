@@ -3,6 +3,7 @@ import type {
 	DomainAuditDomain,
 	DomainAuditEventsResponse,
 } from "@scrimflow/shared";
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,6 @@ import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { PageSection } from "@/components/workspace/page-section";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const DOMAIN_FILTERS: { label: string; value: DomainAuditDomain | "all" }[] = [

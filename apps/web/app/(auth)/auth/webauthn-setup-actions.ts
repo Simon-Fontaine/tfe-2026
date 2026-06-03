@@ -1,8 +1,8 @@
 "use server";
 
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
 import { apiAuthPost, apiGet } from "@/lib/api-client";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 interface SetupResult {
 	error?: string;
@@ -13,12 +13,6 @@ export interface CredentialInfo {
 	id: string;
 	name: string;
 	createdAt?: string;
-}
-
-export async function createRegistrationChallengeAction(): Promise<string> {
-	const res = await apiAuthPost<{ challenge: string }>(apiRoutes.auth.credentials.challenge);
-	if ("error" in res) throw new Error(res.error);
-	return res.challenge;
 }
 
 export async function registerPasskeyAction(

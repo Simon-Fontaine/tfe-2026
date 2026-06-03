@@ -3,7 +3,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Alert02Icon, ArrowLeft01Icon, Key01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { type RecoveryCodeInput, RecoveryCodeSchema } from "@scrimflow/shared";
+import { appRoutes, type RecoveryCodeInput, RecoveryCodeSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { recoveryCodeAction } from "@/app/(auth)/auth/actions";
@@ -15,7 +15,6 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthAction } from "@/hooks/use-auth-action";
-import { appRoutes } from "@/lib/routes";
 import { useAuthFlow } from "@/stores/auth-flow";
 
 export function RecoveryCodeStepPanel() {

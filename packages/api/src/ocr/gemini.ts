@@ -11,6 +11,7 @@ type GeminiResponse = {
 	}>;
 };
 
+import { requiredEnv } from "@/config/env";
 import { geminiRateLimiter } from "@/ocr/gemini-rate-limiter";
 
 export class GeminiApiError extends Error {
@@ -28,7 +29,7 @@ export class GeminiApiError extends Error {
 }
 
 export function getGeminiModel() {
-	return process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
+	return requiredEnv("GEMINI_MODEL");
 }
 
 export async function requestGeminiStructuredOutput(params: {
@@ -37,10 +38,7 @@ export async function requestGeminiStructuredOutput(params: {
 	mimeType: string;
 	responseJsonSchema: Record<string, unknown>;
 }) {
-	const apiKey = process.env.GEMINI_API_KEY;
-	if (!apiKey) {
-		throw new Error("GEMINI_API_KEY is not configured.");
-	}
+	const apiKey = requiredEnv("GEMINI_API_KEY");
 
 	// Honour RPM / RPD limits before consuming a quota slot.
 	await geminiRateLimiter.waitForSlot();

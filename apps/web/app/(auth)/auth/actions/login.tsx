@@ -1,7 +1,7 @@
 "use server";
 
+import { apiRoutes } from "@scrimflow/shared";
 import { apiAuthPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./types";
 import { toAuthActionResult } from "./utils";
 

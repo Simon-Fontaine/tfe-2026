@@ -23,6 +23,7 @@ import {
 	verifyWebAuthnSignature,
 	type WebAuthnUserCredential,
 } from "@/auth/webauthn";
+import { requiredEnv } from "@/config/env";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
 import { type AuthEnv, requireAuth } from "@/middleware/auth";
@@ -47,8 +48,8 @@ interface VerifyResult {
 	error?: string;
 }
 
-const RP_ID = process.env.WEBAUTHN_RP_ID ?? "localhost";
-const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:3000";
+const RP_ID = requiredEnv("WEBAUTHN_RP_ID");
+const ORIGIN = requiredEnv("WEBAUTHN_ORIGIN");
 
 async function verifyAssertion(
 	credential: WebAuthnUserCredential | null,

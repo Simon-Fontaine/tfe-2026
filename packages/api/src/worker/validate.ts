@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import Redis from "ioredis";
+import { requiredEnv } from "@/config/env";
 import { db } from "@/db";
 import { ocrJobTable, organizationTable, scrimTable, teamTable, userTable } from "@/db/schema";
 import { buildObjectUrl, ensureBucketPublicPolicy, uploadFile } from "@/storage/s3";
 
-const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
+const SCREENSHOT_BUCKET = requiredEnv("S3_BUCKET_SCREENSHOTS");
 const TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -14,11 +15,7 @@ const FIXTURE_PNG = Buffer.from(
 );
 
 async function checkRedis(): Promise<void> {
-	const redisUrl = process.env.REDIS_URL;
-	if (!redisUrl) {
-		console.error("❌ Redis connection failed: REDIS_URL is not set.");
-		process.exit(1);
-	}
+	const redisUrl = requiredEnv("REDIS_URL");
 
 	const redis = new Redis(redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1 });
 	try {

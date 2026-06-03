@@ -1,7 +1,7 @@
 "use server";
 
-import { apiAuthPost, apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes } from "@scrimflow/shared";
+import { apiAuthPost } from "@/lib/api-client";
 
 interface TotpSetupResult {
 	error?: string;
@@ -30,10 +30,4 @@ export async function verifyAndEnableTotpAction(
 	});
 	if ("error" in res) return { error: res.error };
 	return { success: true, ...(res.recoveryCode ? { recoveryCode: res.recoveryCode } : {}) };
-}
-
-export async function getTotpStatusAction(): Promise<{ enabled: boolean }> {
-	const res = await apiGet<{ enabled: boolean }>(apiRoutes.auth.totp.status);
-	if ("data" in res) return res.data;
-	return { enabled: false };
 }

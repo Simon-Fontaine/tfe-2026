@@ -29,6 +29,7 @@ import { join } from "node:path";
 import { and, eq, ne } from "drizzle-orm";
 
 import { hashPassword } from "@/auth/password";
+import { requiredEnv } from "@/config/env";
 import { db } from "@/db";
 import {
 	availabilityTable,
@@ -1343,7 +1344,7 @@ async function main() {
 	}
 
 	console.log("  Uploading demo images (skips gracefully if directories are empty)…");
-	const publicUrl = (process.env.S3_PUBLIC_URL ?? "http://localhost:9000").replace(/\/$/, "");
+	const publicUrl = requiredEnv("S3_PUBLIC_URL").replace(/\/$/, "");
 
 	// Build a slug → orgId lookup from the ORGS definition.
 	const slugToOrgId: Record<string, string> = {};

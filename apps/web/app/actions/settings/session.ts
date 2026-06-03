@@ -1,10 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-
-import { apiDelete, apiGet, apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
+import { apiRoutes } from "@scrimflow/shared";
+import { apiDelete, apiGet } from "@/lib/api-client";
 import type { ActionResult } from "./password";
 
 export interface SessionInfo {
@@ -34,11 +31,4 @@ export async function revokeAllOtherSessionsAction(): Promise<ActionResult> {
 	const res = await apiDelete(apiRoutes.settings.sessions.root);
 	if ("error" in res) return { error: res.error };
 	return { success: true };
-}
-
-export async function logoutAction(): Promise<void> {
-	await apiPost(apiRoutes.settings.sessions.logout);
-	const cookieStore = await cookies();
-	cookieStore.delete("session_token");
-	redirect("/");
 }

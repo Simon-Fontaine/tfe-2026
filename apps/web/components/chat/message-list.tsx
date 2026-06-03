@@ -1,9 +1,9 @@
 "use client";
 
 import type { ChatMessage } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useCallback, useEffect, useRef } from "react";
 import { Spinner } from "@/components/ui/spinner";
-import { apiRoutes } from "@/lib/routes";
 import { useChatStore } from "@/stores/chat";
 import { MessageBubble } from "./message-bubble";
 

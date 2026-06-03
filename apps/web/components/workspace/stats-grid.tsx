@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export interface StatItem {
+interface StatItem {
 	label: string;
 	value: string | number;
 	icon?: IconSvgElement;

@@ -1,4 +1,5 @@
 import { LockIcon } from "@hugeicons/core-free-icons";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -7,7 +8,6 @@ import { OrgProfilePanel } from "@/components/orgs/org-profile-panel";
 import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getOrgWithTeamsRouteState } from "@/lib/data/orgs";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 export default async function AppOrgBrandPage({ params }: { params: Promise<{ orgId: string }> }) {

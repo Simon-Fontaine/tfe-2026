@@ -1,14 +1,13 @@
 "use server";
 
+import { apiRoutes, appRoutes, publicRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
-
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { apiPatch } from "@/lib/api-client";
-import { apiRoutes, appRoutes, publicRoutes } from "@/lib/routes";
 
 function revalidateProfileSurfaces() {
 	revalidatePath(appRoutes.root);
-	revalidatePath(appRoutes.me);
+	revalidatePath(appRoutes.root);
 	revalidatePath(appRoutes.profile);
 	revalidatePath(appRoutes.recruiting.root);
 	revalidatePath(publicRoutes.players.root);

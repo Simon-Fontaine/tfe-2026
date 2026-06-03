@@ -1,6 +1,7 @@
 "use client";
 
 import type { DirectUploadIntent, FinalizedUpload, OcrJobSummary } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
-import { apiRoutes } from "@/lib/routes";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];

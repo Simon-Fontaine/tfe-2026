@@ -1,4 +1,5 @@
-import type { OcrJobSummary, ScrimDetail, ScrimSummary } from "@scrimflow/shared";
+import type { ScrimDetail, ScrimSummary } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
 import {
@@ -7,9 +8,8 @@ import {
 	routeStateNoAccess,
 	routeStateSuccess,
 } from "@/lib/route-state";
-import { apiRoutes } from "@/lib/routes";
 
-export type { OcrJobSummary, ScrimDetail, ScrimSummary };
+export type { ScrimDetail, ScrimSummary };
 
 export const getTeamScrims = cache(
 	async (
@@ -43,11 +43,6 @@ export const getTeamScrimsRouteState = cache(
 		throw new Error(res.error);
 	}
 );
-
-export const getScrimById = cache(async (scrimId: string): Promise<ScrimDetail | null> => {
-	const result = await getScrimRouteState(scrimId);
-	return result.kind === "success" ? result.data : null;
-});
 
 export const getScrimRouteState = cache(
 	async (scrimId: string): Promise<RouteStateResult<ScrimDetail>> => {

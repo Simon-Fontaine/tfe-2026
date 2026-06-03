@@ -2,10 +2,10 @@
 
 import { Notification01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { appRoutes } from "@/lib/routes";
 import { useInboxStore } from "@/stores/inbox";
 
 interface HeaderActionsProps {

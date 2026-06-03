@@ -35,44 +35,14 @@ function rowToCredential(row: CredentialRow): WebAuthnUserCredential {
 }
 
 const CHALLENGE_TTL_SECONDS = 5 * 60; // 5 minutes
-const CHALLENGE_TTL_MS = CHALLENGE_TTL_SECONDS * 1000;
-
-// In-memory Redis fallback.
-const challengeFallback = new Map<string, number>();
-
-// Periodic sweep for expired fallback challenges.
-setInterval(() => {
-	const now = Date.now();
-	for (const [key, expiresAt] of challengeFallback) {
-		if (now >= expiresAt) challengeFallback.delete(key);
-	}
-}, 60_000).unref();
 
 async function storeChallenge(encoded: string): Promise<void> {
-	if (redis) {
-		try {
-			await redis.set(`webauthn:challenge:${encoded}`, "1", "EX", CHALLENGE_TTL_SECONDS);
-			return;
-		} catch (err) {
-			logger.warn({ err }, "webauthn redis store error, using in-memory fallback");
-		}
-	}
-	challengeFallback.set(encoded, Date.now() + CHALLENGE_TTL_MS);
+	await redis.set(`webauthn:challenge:${encoded}`, "1", "EX", CHALLENGE_TTL_SECONDS);
 }
 
 async function consumeChallenge(encoded: string): Promise<boolean> {
-	if (redis) {
-		try {
-			const deleted = await redis.del(`webauthn:challenge:${encoded}`);
-			return deleted === 1;
-		} catch (err) {
-			logger.warn({ err }, "webauthn redis consume error, using in-memory fallback");
-		}
-	}
-	const expiresAt = challengeFallback.get(encoded);
-	if (expiresAt === undefined) return false;
-	challengeFallback.delete(encoded);
-	return Date.now() < expiresAt;
+	const deleted = await redis.del(`webauthn:challenge:${encoded}`);
+	return deleted === 1;
 }
 
 export async function createWebAuthnChallenge(): Promise<Uint8Array> {

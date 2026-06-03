@@ -8,6 +8,7 @@ import {
 	S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { requiredEnv } from "@/config/env";
 
 let _s3Client: S3Client | null = null;
 let _publicSignedS3Client: S3Client | null = null;
@@ -21,11 +22,11 @@ type StoragePublicUrlParts = {
 function getS3Client(): S3Client {
 	if (!_s3Client) {
 		_s3Client = new S3Client({
-			endpoint: process.env.S3_ENDPOINT,
+			endpoint: requiredEnv("S3_ENDPOINT"),
 			region: "auto",
 			credentials: {
-				accessKeyId: process.env.S3_ACCESS_KEY ?? "",
-				secretAccessKey: process.env.S3_SECRET_KEY ?? "",
+				accessKeyId: requiredEnv("S3_ACCESS_KEY"),
+				secretAccessKey: requiredEnv("S3_SECRET_KEY"),
 			},
 			forcePathStyle: true, // required for MinIO
 		});
@@ -39,8 +40,8 @@ function getPublicSignedS3Client(): S3Client {
 			endpoint: getStoragePublicUrlParts().origin,
 			region: "auto",
 			credentials: {
-				accessKeyId: process.env.S3_ACCESS_KEY ?? "",
-				secretAccessKey: process.env.S3_SECRET_KEY ?? "",
+				accessKeyId: requiredEnv("S3_ACCESS_KEY"),
+				secretAccessKey: requiredEnv("S3_SECRET_KEY"),
 			},
 			forcePathStyle: true, // required for MinIO
 		});
@@ -53,11 +54,7 @@ function normalizeBaseUrl(url: string): string {
 }
 
 function getStoragePublicUrlParts(): StoragePublicUrlParts {
-	const configuredUrl = process.env.S3_PUBLIC_URL ?? process.env.S3_ENDPOINT ?? "";
-	if (!configuredUrl) {
-		return { origin: "", pathPrefix: "", fullBaseUrl: "" };
-	}
-
+	const configuredUrl = requiredEnv("S3_PUBLIC_URL");
 	const parsed = new URL(configuredUrl);
 	const origin = parsed.origin;
 	const pathPrefix = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/, "");
@@ -89,9 +86,7 @@ function toBrowserPublicUrl(signedUrl: string): string {
 }
 
 function storageUrlCandidates(): string[] {
-	const urls = [process.env.S3_PUBLIC_URL, process.env.S3_ENDPOINT].filter(
-		(value): value is string => !!value
-	);
+	const urls = [requiredEnv("S3_PUBLIC_URL"), requiredEnv("S3_ENDPOINT")];
 	return Array.from(new Set(urls.map(normalizeBaseUrl)));
 }
 

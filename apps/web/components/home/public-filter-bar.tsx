@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type PublicFilterOption = {
+type PublicFilterOption = {
 	label: string;
 	href: string;
 	active: boolean;

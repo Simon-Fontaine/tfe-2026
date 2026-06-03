@@ -11,10 +11,10 @@ import {
 	UserCircle02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useTransition } from "react";
-
 import { signOutAction } from "@/app/(auth)/auth/sign-out-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -30,7 +30,6 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { appRoutes } from "@/lib/routes";
 
 export interface UserMenuUser {
 	displayName: string;

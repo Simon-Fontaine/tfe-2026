@@ -1,5 +1,6 @@
 "use client";
 
+import { appRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { appRoutes } from "@/lib/routes";
 
 interface OwnershipResolutionFormProps {
 	workflowId: string;

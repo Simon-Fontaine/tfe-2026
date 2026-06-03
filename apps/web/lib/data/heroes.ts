@@ -1,7 +1,7 @@
 import type { HeroRow } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import { cache } from "react";
 import { apiGet } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
 export type { HeroRow };
 

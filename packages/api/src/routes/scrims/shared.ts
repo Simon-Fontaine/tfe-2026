@@ -304,8 +304,6 @@ export function toIsoDate(date: Date | null): string | null {
 	return date?.toISOString() ?? null;
 }
 
-export type PublicScrimSummaryRow = ScrimSummaryRow;
-
 export function mapBaseScrimSummary(scrim: ScrimSummaryRow): ScrimSummary {
 	return {
 		id: scrim.id,

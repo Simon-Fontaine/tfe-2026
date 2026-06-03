@@ -1,8 +1,8 @@
 "use server";
 
+import { apiRoutes, appRoutes } from "@scrimflow/shared";
 import type { OnboardingActionResult } from "@/hooks/use-onboarding-action";
 import { apiPatch, apiPost } from "@/lib/api-client";
-import { apiRoutes, appRoutes } from "@/lib/routes";
 
 const MAX_NEXT_DESTINATION_LENGTH = 2048;
 

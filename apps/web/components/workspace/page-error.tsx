@@ -2,9 +2,9 @@
 
 import { AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { appRoutes } from "@/lib/routes";
 
 interface PageErrorProps {
 	error: Error & { digest?: string };
@@ -29,7 +29,7 @@ export function PageError({ error, reset, retry, title = "Failed to load" }: Pag
 			</div>
 			<div className="flex items-center gap-2">
 				<Button asChild variant="outline" size="sm">
-					<Link href={appRoutes.me}>Go Back</Link>
+					<Link href={appRoutes.root}>Go Back</Link>
 				</Button>
 				{retryAction ? (
 					<Button onClick={retryAction} variant="outline" size="sm">

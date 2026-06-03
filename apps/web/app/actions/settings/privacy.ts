@@ -1,9 +1,9 @@
 "use server";
 
 import type { PersonalPrivacySettingsInput, SessionValidationResult } from "@scrimflow/shared";
+import { apiRoutes, appRoutes, publicRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
 import { apiGet, apiPatch } from "@/lib/api-client";
-import { apiRoutes, appRoutes, publicRoutes } from "@/lib/routes";
 
 type SettingsActionResult = {
 	error?: string;

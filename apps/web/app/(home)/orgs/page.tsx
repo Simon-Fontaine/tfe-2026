@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 import { HugeiconsIcon } from "@hugeicons/react";
+import { publicRoutes } from "@scrimflow/shared";
 import { Suspense } from "react";
 import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
@@ -16,7 +17,6 @@ import { PublicPageShell } from "@/components/home/public-page-shell";
 import { EmptyStateBlock } from "@/components/shared/empty-state-block";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getPublicOrgs } from "@/lib/data/organization";
-import { publicRoutes } from "@/lib/routes";
 
 type OrgSort = "teams" | "roster" | "name";
 

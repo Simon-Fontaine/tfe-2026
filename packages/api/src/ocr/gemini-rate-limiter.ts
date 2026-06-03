@@ -1,3 +1,4 @@
+import { requiredNumberEnv } from "@/config/env";
 import logger from "@/utils/logger";
 
 /**
@@ -7,8 +8,8 @@ import logger from "@/utils/logger";
  * failure, since the quota is consumed either way.
  */
 
-const RPM_LIMIT = Number(process.env.GEMINI_RPM ?? 0);
-const RPD_LIMIT = Number(process.env.GEMINI_RPD ?? 0);
+const RPM_LIMIT = requiredNumberEnv("GEMINI_RPM");
+const RPD_LIMIT = requiredNumberEnv("GEMINI_RPD");
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 

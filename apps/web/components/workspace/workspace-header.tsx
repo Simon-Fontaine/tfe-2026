@@ -1,5 +1,6 @@
 "use client";
 
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
@@ -12,7 +13,6 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { appRoutes } from "@/lib/routes";
 import type { SwitcherOrg, SwitcherTeam } from "./context-switcher";
 import { HeaderActions } from "./header-actions";
 

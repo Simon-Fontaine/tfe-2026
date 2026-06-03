@@ -173,5 +173,3 @@ SecurityAlertEmail.PreviewProps = {
 	date: "Saturday, 21 Feb 2026 14:35:00 UTC",
 	alertType: "new_device",
 } as SecurityAlertEmailProps;
-
-export default SecurityAlertEmail;

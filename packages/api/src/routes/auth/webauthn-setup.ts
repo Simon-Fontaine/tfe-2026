@@ -21,6 +21,7 @@ import {
 	getUserSecurityKeyCredentials,
 	verifyWebAuthnChallenge,
 } from "@/auth/webauthn";
+import { requiredEnv } from "@/config/env";
 import { encryptStringToText } from "@/crypto/encryption";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
@@ -35,8 +36,8 @@ interface AttestationData {
 	clientDataJSON: string;
 }
 
-const RP_ID = process.env.WEBAUTHN_RP_ID ?? "localhost";
-const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:3000";
+const RP_ID = requiredEnv("WEBAUTHN_RP_ID");
+const ORIGIN = requiredEnv("WEBAUTHN_ORIGIN");
 const SUPPORTED_ALGORITHMS = new Set([coseAlgorithmES256, coseAlgorithmRS256]);
 
 async function ensureRecoveryCode(userId: string): Promise<string | null> {

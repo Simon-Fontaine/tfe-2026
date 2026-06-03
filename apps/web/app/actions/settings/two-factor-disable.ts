@@ -1,7 +1,7 @@
 "use server";
 
+import { apiRoutes } from "@scrimflow/shared";
 import { apiDelete, apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 import type { ActionResult } from "./password";
 
 export async function requestTwoFactorDisableAction(): Promise<ActionResult> {

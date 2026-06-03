@@ -1,7 +1,7 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { type CreateOrgInput, CreateOrgSchema } from "@scrimflow/shared";
+import { appRoutes, type CreateOrgInput, CreateOrgSchema } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,7 +21,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
-import { appRoutes } from "@/lib/routes";
 
 interface CreateOrgDialogProps {
 	children: React.ReactNode;

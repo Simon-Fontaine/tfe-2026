@@ -69,5 +69,3 @@ export const PasswordResetEmail = ({ resetUrl }: PasswordResetEmailProps) => {
 PasswordResetEmail.PreviewProps = {
 	resetUrl: "https://scrimflow.com/auth?reset_token=abc123",
 } as PasswordResetEmailProps;
-
-export default PasswordResetEmail;

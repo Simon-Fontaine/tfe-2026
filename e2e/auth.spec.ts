@@ -30,11 +30,10 @@ test("auth happy path", async ({ page }) => {
 			if (i > 0) await page.waitForTimeout(1_000);
 			const res = await fetch(`${MAILPIT_API}/messages`);
 			const data = (await res.json()) as { messages?: Array<{ ID: string }> };
-			const messageId = data.messages?.[0]?.ID;
-			if (messageId) {
-				const msgRes = await fetch(`${MAILPIT_API}/message/${messageId}`);
-				const msg = (await msgRes.json()) as { Text?: string };
-				const match = (msg.Text ?? "").match(/\b(\d{6})\b/);
+			for (const message of data.messages ?? []) {
+				const msgRes = await fetch(`${MAILPIT_API}/message/${message.ID}`);
+				const msg = (await msgRes.json()) as { HTML?: string; Text?: string };
+				const match = `${msg.Text ?? ""}\n${msg.HTML ?? ""}`.match(/\b(\d{6})\b/);
 				if (match) code = match[1];
 			}
 		}

@@ -1,5 +1,6 @@
 import { Add01Icon, Calendar03Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -20,7 +21,6 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { getTeamsForDiscovery } from "@/lib/data/discovery";
 import { getTeamScrimsRouteState, type ScrimSummary } from "@/lib/data/scrims";
 import { getTeamWithRosterRouteState } from "@/lib/data/teams";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 import { ScrimsStoreBootstrap } from "./scrims-store-bootstrap";
 

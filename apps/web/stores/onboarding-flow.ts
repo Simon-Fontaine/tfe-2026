@@ -6,9 +6,7 @@ import type {
 import { create } from "zustand";
 import type { OW2Rank, OW2Role } from "@/lib/ow2";
 
-export type { OW2Rank, OW2Role };
-
-export type OnboardingStep = "battletag" | "roles-and-rank" | "hero-pool" | "intent" | "complete";
+type OnboardingStep = "battletag" | "roles-and-rank" | "hero-pool" | "intent" | "complete";
 
 interface OnboardingData {
 	battletag: string;

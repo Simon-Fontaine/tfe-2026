@@ -1,14 +1,12 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { requiredEnv } from "./lib/env";
 
 function parseRemotePattern(
-	envUrl: string | undefined,
-	fallback: string
+	envUrl: string
 ): { protocol: "http" | "https"; hostname: string; port?: string; pathname: string } | null {
-	const raw = envUrl ?? fallback;
-	if (!raw) return null;
 	try {
-		const parsed = new URL(raw);
+		const parsed = new URL(envUrl);
 		const entry: { protocol: "http" | "https"; hostname: string; port?: string; pathname: string } =
 			{
 				protocol: parsed.protocol.replace(":", "") as "http" | "https",
@@ -22,8 +20,9 @@ function parseRemotePattern(
 	}
 }
 
-const s3Pattern = parseRemotePattern(process.env.S3_ENDPOINT, "http://localhost:9000");
-const s3PublicPattern = parseRemotePattern(process.env.S3_PUBLIC_URL, "");
+const apiUrl = requiredEnv("API_URL");
+const s3Pattern = parseRemotePattern(requiredEnv("S3_ENDPOINT"));
+const s3PublicPattern = parseRemotePattern(requiredEnv("S3_PUBLIC_URL"));
 
 // Include S3_PUBLIC_URL as a separate pattern only when it resolves to a different host
 // (e.g., a CDN in production). In dev both vars point to the same MinIO instance.
@@ -63,7 +62,7 @@ const nextConfig: NextConfig = {
 		return [
 			{
 				source: "/api/:path*",
-				destination: `${process.env.API_URL ?? "http://localhost:3001"}/api/:path*`,
+				destination: `${apiUrl}/api/:path*`,
 			},
 		];
 	},

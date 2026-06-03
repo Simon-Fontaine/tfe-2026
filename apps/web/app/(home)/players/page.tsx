@@ -7,6 +7,7 @@ export const metadata: Metadata = {
 	description: "Discover Overwatch 2 players by role and rank.",
 };
 
+import { publicRoutes } from "@scrimflow/shared";
 import { Suspense } from "react";
 import { PublicFilterBar } from "@/components/home/public-filter-bar";
 import { PublicListLoading } from "@/components/home/public-page-loading";
@@ -17,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getPublicPlayers } from "@/lib/data/player";
 import { ROLE_LABELS } from "@/lib/recruitment";
-import { publicRoutes } from "@/lib/routes";
 
 type PlayerRoleFilter = "all" | "tank" | "damage" | "support";
 

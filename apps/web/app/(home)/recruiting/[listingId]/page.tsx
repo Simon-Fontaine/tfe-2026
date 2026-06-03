@@ -1,4 +1,5 @@
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
+import { appRoutes, publicRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicPageSection } from "@/components/home/public-page-section";
@@ -19,7 +20,6 @@ import {
 	RECRUITMENT_CATEGORY_DESCRIPTIONS,
 	RECRUITMENT_CATEGORY_LABELS,
 } from "@/lib/recruitment";
-import { appRoutes, publicRoutes } from "@/lib/routes";
 
 export async function generateMetadata({ params }: { params: Promise<{ listingId: string }> }) {
 	const { listingId } = await params;

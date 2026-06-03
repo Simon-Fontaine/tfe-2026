@@ -1,16 +1,15 @@
 "use server";
 
 import type { MemberType, OW2Role, StaffRole } from "@scrimflow/shared";
+import { apiRoutes, appRoutes, publicRoutes } from "@scrimflow/shared";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { isApiActionError, toFormActionError } from "@/lib/action-result";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api-client";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getOrgWithTeams } from "@/lib/data/orgs";
 import { getTeamWithRoster } from "@/lib/data/teams";
-import { apiRoutes, appRoutes, publicRoutes } from "@/lib/routes";
 
 type TeamMemberType = MemberType;
 type TeamStaffRole = StaffRole;
@@ -34,7 +33,7 @@ async function getOrgSlug(orgId: string): Promise<string | null> {
 
 function revalidateAppWorkspace() {
 	revalidatePath(appRoutes.root);
-	revalidatePath(appRoutes.me);
+	revalidatePath(appRoutes.root);
 	revalidatePath(appRoutes.inbox);
 	revalidatePath(appRoutes.calendar);
 	revalidatePath(appRoutes.orgs.root);

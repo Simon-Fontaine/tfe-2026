@@ -1,9 +1,9 @@
 "use client";
 
 import type { RecruitmentListingSummary } from "@scrimflow/shared";
+import { appRoutes } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
 import { createRecruitmentApplicationAction } from "@/app/actions/recruit";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { RecruitEntityOption } from "@/lib/recruitment";
 import { getRecruitmentApplicationLabel } from "@/lib/recruitment";
-import { appRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 interface RecruitmentApplicationDialogProps {

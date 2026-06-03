@@ -1,8 +1,9 @@
 import { appRoutes } from "@scrimflow/shared";
 import type { MetadataRoute } from "next";
+import { requiredEnv } from "@/lib/env";
 
 export default function robots(): MetadataRoute.Robots {
-	const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+	const baseUrl = requiredEnv("NEXT_PUBLIC_APP_URL");
 
 	return {
 		rules: {

@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import * as v from "valibot";
 
+import { requiredEnv } from "@/config/env";
 import { db } from "@/db";
 import { scrimMapTable, scrimTable, userTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
@@ -24,9 +25,9 @@ import { isUserOnTeam } from "@/utils/team";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const BANNER_MAX_BYTES = 4 * 1024 * 1024; // 4 MB
-const AVATAR_BUCKET = process.env.S3_BUCKET_AVATARS ?? "avatars";
-const BANNER_BUCKET = process.env.S3_BUCKET_BANNERS ?? "banners";
-const SCREENSHOT_BUCKET = process.env.S3_BUCKET_SCREENSHOTS ?? "screenshots";
+const AVATAR_BUCKET = requiredEnv("S3_BUCKET_AVATARS");
+const BANNER_BUCKET = requiredEnv("S3_BUCKET_BANNERS");
+const SCREENSHOT_BUCKET = requiredEnv("S3_BUCKET_SCREENSHOTS");
 const ENTITY_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const ENTITY_BANNER_MAX_BYTES = 4 * 1024 * 1024;
 const SCREENSHOT_MAX_BYTES = 8 * 1024 * 1024;

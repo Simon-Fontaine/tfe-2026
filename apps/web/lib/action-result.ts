@@ -9,10 +9,6 @@ export type ApiMutationError = {
 	status: number;
 };
 
-export type ApiMutationSuccess<T extends Record<string, unknown> = Record<string, never>> = {
-	success: true;
-} & T;
-
 export function isApiActionError(result: unknown): result is ApiMutationError {
 	return typeof result === "object" && result !== null && "error" in result;
 }

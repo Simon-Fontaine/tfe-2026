@@ -1,10 +1,10 @@
 "use server";
 
 import type { CreateModerationActionInput } from "@scrimflow/shared";
+import { apiRoutes } from "@scrimflow/shared";
 import type { FormActionResult } from "@/hooks/use-form-action";
 import { isApiActionError, toFormActionError } from "@/lib/action-result";
 import { apiPatch, apiPost } from "@/lib/api-client";
-import { apiRoutes } from "@/lib/routes";
 
 export async function moderationCaseAction(
 	reportId: string,

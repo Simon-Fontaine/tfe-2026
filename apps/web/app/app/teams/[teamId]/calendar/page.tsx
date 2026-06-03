@@ -1,5 +1,6 @@
 import { Alert01Icon, Blockchain01Icon, Sword03Icon } from "@hugeicons/core-free-icons";
 import type { ScrimStatus, ScrimSummary } from "@scrimflow/shared";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -15,7 +16,6 @@ import { PageSection } from "@/components/workspace/page-section";
 import { getPlayerAvailability } from "@/lib/data/player";
 import { getTeamScrimsRouteState } from "@/lib/data/scrims";
 import { getTeamScheduleRouteState, getTeamWithRosterRouteState } from "@/lib/data/teams";
-import { appRoutes } from "@/lib/routes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
 const UPCOMING_SCRIM_STATUSES: ScrimStatus[] = [

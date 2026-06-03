@@ -1,4 +1,5 @@
 import { Calendar03Icon } from "@hugeicons/core-free-icons";
+import { appRoutes } from "@scrimflow/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -20,7 +21,6 @@ import { PageContainer } from "@/components/workspace/page-container";
 import { getScrimChatRouteState } from "@/lib/data/chat";
 import { getScrimRouteState } from "@/lib/data/scrims";
 import { getPublicTeamPreview, getTeamWithRosterRouteState } from "@/lib/data/teams";
-import { appRoutes } from "@/lib/routes";
 import { deriveScrimViewModel } from "@/lib/scrims/view-model";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
