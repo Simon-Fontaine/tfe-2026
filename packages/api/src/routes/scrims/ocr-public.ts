@@ -45,16 +45,15 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 		if (!(await canAccessScrim(user.id, scrim))) {
 			return c.json({ error: "You do not have access to this scrim." }, 403);
 		}
-		// Evidence is still useful while a scrim is disputed, so only the terminal
-		// completed/cancelled states are blocked here.
-		if (scrim.status === "completed" || scrim.status === "cancelled") {
-			return c.json(
-				{ error: "OCR processing can't be started once a scrim is completed or cancelled." },
-				409
-			);
-		}
-
 		const { screenshotType, imageUrl, scrimMapId } = parsed.output;
+
+		// Scoreboards stay editable post-completion; only game-history rescans lock.
+		if (scrim.status === "cancelled") {
+			return c.json({ error: "OCR processing can't be started for a cancelled scrim." }, 409);
+		}
+		if (scrim.status === "completed" && screenshotType !== "scoreboard") {
+			return c.json({ error: "Game history can't be scanned once a scrim is completed." }, 409);
+		}
 
 		if (screenshotType === "scoreboard") {
 			if (!scrimMapId) {
@@ -248,15 +247,19 @@ export function registerScrimOcrRoutes(scrimRoutes: Hono<AuthEnv>) {
 				403
 			);
 		}
-		if (scrim.status === "completed" || scrim.status === "cancelled") {
+		const existingJob = scrim.ocrJobs.find((job) => job.id === jobId);
+		if (!existingJob) return c.json({ error: "OCR job not found." }, 404);
+
+		// Scoreboards can be replaced post-completion; game-history scans lock.
+		if (scrim.status === "cancelled") {
+			return c.json({ error: "OCR jobs cannot be superseded for a cancelled scrim." }, 409);
+		}
+		if (scrim.status === "completed" && existingJob.screenshotType !== "scoreboard") {
 			return c.json(
-				{ error: "OCR jobs cannot be superseded for a scrim in this lifecycle state." },
+				{ error: "Game-history scans cannot be superseded once a scrim is completed." },
 				409
 			);
 		}
-
-		const existingJob = scrim.ocrJobs.find((job) => job.id === jobId);
-		if (!existingJob) return c.json({ error: "OCR job not found." }, 404);
 
 		if (existingJob.status === "superseded") {
 			return c.json({ error: "This OCR job has already been superseded." }, 409);

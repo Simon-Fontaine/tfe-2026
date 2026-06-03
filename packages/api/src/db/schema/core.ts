@@ -1002,7 +1002,12 @@ type ScrimResultFieldChange = {
 };
 
 type ScrimResultChangeSummary = {
-	basis: "ocr_job" | "previous_revision" | "existing_result" | "manual_baseline";
+	basis:
+		| "ocr_job"
+		| "previous_revision"
+		| "existing_result"
+		| "manual_baseline"
+		| "scoreboard_stats";
 	changeCount: number;
 	fieldChanges: ScrimResultFieldChange[];
 };

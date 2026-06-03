@@ -2,13 +2,9 @@
 
 import {
 	OCR_MAP_TYPE_VALUES,
-	OCR_PLAYER_SIDE_VALUES,
-	OCR_ROLE_VALUES,
+	OCR_MAX_MAP_SCORE,
 	type OcrGameHistoryMatch,
-	type OcrScoreboardPlayer,
-	type OW2Role,
 	type ScrimDetail,
-	type TeamMemberSummary,
 } from "@scrimflow/shared";
 import { useRouter } from "next/navigation";
 import { startTransition, useRef, useState } from "react";
@@ -38,40 +34,22 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { apiRoutes } from "@/lib/routes";
 import { toDateTimeLocal, toIsoTimestamp } from "@/lib/scrims/format";
-import { cn } from "@/lib/utils";
+import { isReviewableJob } from "@/lib/scrims/ocr-status";
 import { type FormFieldErrors, getFieldErrorText, readApiPayload } from "./form-errors";
-
-type PlayerDraft = {
-	userId: string | null;
-	playerName: string;
-	side: (typeof OCR_PLAYER_SIDE_VALUES)[number];
-	hero: string;
-	role: OW2Role | "";
-	eliminations: string;
-	assists: string;
-	deaths: string;
-	damage: string;
-	healing: string;
-	mitigation: string;
-};
 
 type MapDraft = {
 	draftKey: string;
-	mapId: string | null;
 	mapName: string;
 	mapType: (typeof OCR_MAP_TYPE_VALUES)[number];
-	scoreboardOcrJobId: string | null;
 	homeScore: string;
 	awayScore: string;
 	durationSeconds: string;
-	players: PlayerDraft[];
 };
 
 type ReportScrimResultDialogProps = {
 	children: React.ReactNode;
 	scrim: ScrimDetail;
 	reportingTeamId: string;
-	rosterPlayers?: TeamMemberSummary[];
 };
 
 type ResultSubmissionPayload = {
@@ -87,20 +65,6 @@ type ResultSubmissionPayload = {
 		homeScore: number;
 		awayScore: number;
 		durationSeconds: number | null;
-		scoreboardOcrJobId?: string;
-		players: Array<{
-			userId?: string;
-			playerName: string;
-			side: PlayerDraft["side"];
-			hero: string | null;
-			role: OW2Role | null;
-			eliminations: number | null;
-			assists: number | null;
-			deaths: number | null;
-			damage: number | null;
-			healing: number | null;
-			mitigation: number | null;
-		}>;
 	}>;
 };
 
@@ -108,51 +72,14 @@ function nullableNumberToField(value: number | null) {
 	return value === null ? "" : String(value);
 }
 
-function createEmptyPlayerDraft(): PlayerDraft {
-	return {
-		userId: null,
-		playerName: "",
-		side: "unknown",
-		hero: "",
-		role: "",
-		eliminations: "",
-		assists: "",
-		deaths: "",
-		damage: "",
-		healing: "",
-		mitigation: "",
-	};
-}
-
 function createEmptyMapDraft(): MapDraft {
 	return {
 		draftKey: `manual-${crypto.randomUUID()}`,
-		mapId: null,
 		mapName: "",
 		mapType: "unknown",
-		scoreboardOcrJobId: null,
 		homeScore: "0",
 		awayScore: "0",
 		durationSeconds: "",
-		players: [],
-	};
-}
-
-function mapSavedPlayerToDraft(
-	player: ScrimDetail["maps"][number]["players"][number]
-): PlayerDraft {
-	return {
-		userId: player.userId ?? null,
-		playerName: player.playerName,
-		side: player.side,
-		hero: player.hero ?? "",
-		role: player.role ?? "",
-		eliminations: nullableNumberToField(player.eliminations),
-		assists: nullableNumberToField(player.assists),
-		deaths: nullableNumberToField(player.deaths),
-		damage: nullableNumberToField(player.damage),
-		healing: nullableNumberToField(player.healing),
-		mitigation: nullableNumberToField(player.mitigation),
 	};
 }
 
@@ -178,28 +105,22 @@ function durationTextToSecondsField(value: string | null) {
 function mapOcrMatchToDraft(match: OcrGameHistoryMatch): MapDraft {
 	return {
 		draftKey: `ocr-${match.matchOrder}-${match.mapName}-${match.allyScore}-${match.enemyScore}`,
-		mapId: null,
 		mapName: match.mapName,
 		mapType: match.mapType ?? "unknown",
-		scoreboardOcrJobId: null,
 		homeScore: String(match.allyScore),
 		awayScore: String(match.enemyScore),
 		durationSeconds: durationTextToSecondsField(match.durationText),
-		players: [],
 	};
 }
 
 function mapSavedMapToDraft(map: ScrimDetail["maps"][number]): MapDraft {
 	return {
 		draftKey: `saved-${map.id}`,
-		mapId: map.id,
 		mapName: map.mapName,
 		mapType: map.mapType,
-		scoreboardOcrJobId: null,
 		homeScore: String(map.homeScore),
 		awayScore: String(map.awayScore),
 		durationSeconds: nullableNumberToField(map.durationSeconds),
-		players: map.players.map(mapSavedPlayerToDraft),
 	};
 }
 
@@ -253,6 +174,14 @@ function parseRequiredScore(value: string, label: string) {
 	return parsed;
 }
 
+function parseRoundScore(value: string, label: string) {
+	const parsed = Number(value);
+	if (!Number.isInteger(parsed) || parsed < 0 || parsed > OCR_MAX_MAP_SCORE) {
+		throw new Error(`${label} must be a whole number between 0 and ${OCR_MAX_MAP_SCORE}.`);
+	}
+	return parsed;
+}
+
 function deriveMapResult(homeScore: string, awayScore: string) {
 	const parsedHomeScore = Number(homeScore);
 	const parsedAwayScore = Number(awayScore);
@@ -262,58 +191,17 @@ function deriveMapResult(homeScore: string, awayScore: string) {
 	return "draw";
 }
 
-function mapScoreboardPlayerToDraft(
-	player: OcrScoreboardPlayer,
-	side: PlayerDraft["side"]
-): PlayerDraft {
-	return {
-		userId: null,
-		playerName: player.playerName,
-		side,
-		hero: player.hero ?? "",
-		role: player.role ?? "",
-		eliminations: String(player.eliminations),
-		assists: String(player.assists),
-		deaths: String(player.deaths),
-		damage: String(player.damage),
-		healing: String(player.healing),
-		mitigation: String(player.mitigation),
-	};
-}
-
 export function ReportScrimResultDialog({
 	children,
 	scrim,
 	reportingTeamId,
-	rosterPlayers = [],
 }: ReportScrimResultDialogProps) {
 	const router = useRouter();
-	const reportingTeamSide: PlayerDraft["side"] =
-		reportingTeamId === scrim.homeTeam.id ? "home" : "away";
-	const rosterOptions = rosterPlayers
-		.filter((player) => player.status !== "inactive")
-		.map((player) => ({
-			userId: player.userId,
-			displayName: player.displayName,
-			username: player.username,
-			role: player.roleInTeam ?? player.gameRole ?? null,
-			mainHero: player.mainHero?.displayName ?? "",
-		}))
-		.sort((a, b) => a.displayName.localeCompare(b.displayName));
-	// Both `completed` and `requires_review` jobs carry `validatedOutput` and are valid
-	// drafts to review here — the workbench is the human-review surface, so jobs flagged
-	// for review are exactly what it should accept. `superseded`/`failed`/in-flight jobs
-	// stay excluded.
-	const isImportableDraft = (job: ScrimDetail["ocrJobs"][number]) =>
-		job.status === "completed" || job.status === "requires_review";
+	// Both `completed` and `requires_review` game-history jobs carry
+	// `validatedOutput` and are valid map-list drafts to load here.
 	const reviewableJobs = scrim.ocrJobs.filter(
-		(job) => isImportableDraft(job) && job.validatedOutput?.screenshotType === "game_history"
+		(job) => isReviewableJob(job) && job.validatedOutput?.screenshotType === "game_history"
 	);
-	const scoreboardJobs = scrim.ocrJobs.filter(
-		(job) => isImportableDraft(job) && job.validatedOutput?.screenshotType === "scoreboard"
-	);
-	const associatedScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId !== null);
-	const legacyScoreboardJobs = scoreboardJobs.filter((job) => job.scrimMapId === null);
 	const initialState = getInitialState(scrim);
 	const [open, setOpen] = useState(false);
 	const [manualHomeMapScore, setManualHomeMapScore] = useState(initialState.manualHomeMapScore);
@@ -322,14 +210,6 @@ export function ReportScrimResultDialog({
 	const [localEndedAt, setLocalEndedAt] = useState(initialState.endedAt);
 	const [sourceOcrJobId, setSourceOcrJobId] = useState<string | null>(initialState.sourceOcrJobId);
 	const [selectedOcrJobId, setSelectedOcrJobId] = useState(reviewableJobs[0]?.id ?? "");
-	const [selectedScoreboardJobId, setSelectedScoreboardJobId] = useState(
-		legacyScoreboardJobs[0]?.id ?? ""
-	);
-	const [selectedScoreboardMapIndex, setSelectedScoreboardMapIndex] = useState("0");
-	const [scoreboardPreview, setScoreboardPreview] = useState<{
-		jobId: string;
-		mapKey: string;
-	} | null>(null);
 	const [maps, setMaps] = useState<MapDraft[]>(initialState.maps);
 	const [formError, setFormError] = useState<string | undefined>(undefined);
 	const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
@@ -346,9 +226,6 @@ export function ReportScrimResultDialog({
 		setLocalEndedAt(nextState.endedAt);
 		setSourceOcrJobId(nextState.sourceOcrJobId);
 		setSelectedOcrJobId(reviewableJobs[0]?.id ?? "");
-		setSelectedScoreboardJobId(legacyScoreboardJobs[0]?.id ?? "");
-		setSelectedScoreboardMapIndex("0");
-		setScoreboardPreview(null);
 		setMaps(nextState.maps);
 		setFormError(undefined);
 		setFieldErrors({});
@@ -359,19 +236,6 @@ export function ReportScrimResultDialog({
 	function updateMap(mapIndex: number, updater: (current: MapDraft) => MapDraft) {
 		setMaps((current) => current.map((map, index) => (index === mapIndex ? updater(map) : map)));
 		setFormError(undefined);
-	}
-
-	function updatePlayer(
-		mapIndex: number,
-		playerIndex: number,
-		updater: (current: PlayerDraft) => PlayerDraft
-	) {
-		updateMap(mapIndex, (map) => ({
-			...map,
-			players: map.players.map((player, index) =>
-				index === playerIndex ? updater(player) : player
-			),
-		}));
 	}
 
 	function handleLoadOcrDraft() {
@@ -392,96 +256,6 @@ export function ReportScrimResultDialog({
 		setManualAwayMapScore(String(derivedSeriesScore.awayMapScore));
 		setSourceOcrJobId(selectedJob.id);
 		setFormError(undefined);
-	}
-
-	function importScoreboardJobIntoMapIndex(job: ScrimDetail["ocrJobs"][number], mapIndex: number) {
-		if (!job.validatedOutput || job.validatedOutput.screenshotType !== "scoreboard") return;
-		const allySide: PlayerDraft["side"] = reportingTeamId === scrim.homeTeam.id ? "home" : "away";
-		const enemySide: PlayerDraft["side"] = allySide === "home" ? "away" : "home";
-		const importedPlayers = [
-			...job.validatedOutput.allyTeam.map((player) => mapScoreboardPlayerToDraft(player, allySide)),
-			...job.validatedOutput.enemyTeam.map((player) =>
-				mapScoreboardPlayerToDraft(player, enemySide)
-			),
-		];
-		updateMap(mapIndex, (current) => ({
-			...current,
-			scoreboardOcrJobId: job.id,
-			players: importedPlayers,
-		}));
-		setFormError(undefined);
-	}
-
-	function handleImportAssociatedScoreboardDraft(jobId: string) {
-		const job = associatedScoreboardJobs.find((j) => j.id === jobId);
-		if (!job?.validatedOutput || job.validatedOutput.screenshotType !== "scoreboard") {
-			setFormError("OCR job not ready for import.");
-			return;
-		}
-		const mapIndex = maps.findIndex((m) => m.mapId === job.scrimMapId);
-		if (mapIndex === -1) {
-			setFormError(
-				"The target map for this scoreboard job is not in the current reviewed maps. Load the saved maps first."
-			);
-			return;
-		}
-		setScoreboardPreview({ jobId: job.id, mapKey: maps[mapIndex].draftKey });
-		setFormError(undefined);
-	}
-
-	function handleImportScoreboardDraft() {
-		const selectedJob = legacyScoreboardJobs.find((job) => job.id === selectedScoreboardJobId);
-		if (
-			!selectedJob?.validatedOutput ||
-			selectedJob.validatedOutput.screenshotType !== "scoreboard"
-		) {
-			setFormError("Select a completed scoreboard OCR draft before importing player stats.");
-			return;
-		}
-
-		const mapIndex = Number(selectedScoreboardMapIndex);
-		if (!Number.isInteger(mapIndex) || mapIndex < 0 || mapIndex >= maps.length) {
-			setFormError("Select a reviewed map before importing scoreboard player stats.");
-			return;
-		}
-
-		setScoreboardPreview({ jobId: selectedJob.id, mapKey: maps[mapIndex].draftKey });
-		setFormError(undefined);
-	}
-
-	function handleApplyScoreboardPreview() {
-		if (!scoreboardPreview) return;
-		const selectedJob = scoreboardJobs.find((job) => job.id === scoreboardPreview.jobId);
-		if (
-			!selectedJob?.validatedOutput ||
-			selectedJob.validatedOutput.screenshotType !== "scoreboard"
-		) {
-			setFormError("OCR job not ready for import.");
-			return;
-		}
-		const mapIndex = maps.findIndex((map) => map.draftKey === scoreboardPreview.mapKey);
-		if (mapIndex === -1) {
-			setFormError("The target map changed. Review the scoreboard again before applying stats.");
-			setScoreboardPreview(null);
-			return;
-		}
-		if (selectedJob.scrimMapId) {
-			const targetMap = maps[mapIndex];
-			if (targetMap.mapId !== selectedJob.scrimMapId) {
-				setFormError(
-					"This scoreboard belongs to another map. Review the correct map before applying stats."
-				);
-				setScoreboardPreview(null);
-				return;
-			}
-		}
-		importScoreboardJobIntoMapIndex(selectedJob, mapIndex);
-		setScoreboardPreview(null);
-	}
-
-	function shouldWarnAboutEvidence(parsedMaps: ResultSubmissionPayload["maps"]) {
-		if (!parsedMaps || parsedMaps.length === 0) return true;
-		return parsedMaps.some((map) => !map.scoreboardOcrJobId || map.players.length === 0);
 	}
 
 	async function submitResultPackage(payload: ResultSubmissionPayload, mapCount: number) {
@@ -506,7 +280,7 @@ export function ReportScrimResultDialog({
 			}
 
 			toast.success(
-				mapCount > 0 ? "Result package submitted for confirmation." : "Series score submitted."
+				mapCount > 0 ? "Series result submitted for confirmation." : "Series score submitted."
 			);
 			resetState();
 			setOpen(false);
@@ -533,49 +307,12 @@ export function ReportScrimResultDialog({
 				return {
 					mapName: map.mapName.trim(),
 					mapType: map.mapType,
-					homeScore: parseRequiredScore(map.homeScore, `Map ${mapIndex + 1} home score`),
-					awayScore: parseRequiredScore(map.awayScore, `Map ${mapIndex + 1} away score`),
+					homeScore: parseRoundScore(map.homeScore, `Map ${mapIndex + 1} home score`),
+					awayScore: parseRoundScore(map.awayScore, `Map ${mapIndex + 1} away score`),
 					durationSeconds: parseOptionalInteger(
 						map.durationSeconds,
 						`Map ${mapIndex + 1} duration`
 					),
-					scoreboardOcrJobId: map.scoreboardOcrJobId ?? undefined,
-					players: map.players.map((player, playerIndex) => {
-						if (!player.playerName.trim()) {
-							throw new Error(`Map ${mapIndex + 1} player ${playerIndex + 1} needs a player name.`);
-						}
-						return {
-							userId: player.userId ?? undefined,
-							playerName: player.playerName.trim(),
-							side: player.side,
-							hero: player.hero.trim() || null,
-							role: player.role || null,
-							eliminations: parseOptionalInteger(
-								player.eliminations,
-								`Map ${mapIndex + 1} player ${playerIndex + 1} eliminations`
-							),
-							assists: parseOptionalInteger(
-								player.assists,
-								`Map ${mapIndex + 1} player ${playerIndex + 1} assists`
-							),
-							deaths: parseOptionalInteger(
-								player.deaths,
-								`Map ${mapIndex + 1} player ${playerIndex + 1} deaths`
-							),
-							damage: parseOptionalInteger(
-								player.damage,
-								`Map ${mapIndex + 1} player ${playerIndex + 1} damage`
-							),
-							healing: parseOptionalInteger(
-								player.healing,
-								`Map ${mapIndex + 1} player ${playerIndex + 1} healing`
-							),
-							mitigation: parseOptionalInteger(
-								player.mitigation,
-								`Map ${mapIndex + 1} player ${playerIndex + 1} mitigation`
-							),
-						};
-					}),
 				};
 			});
 
@@ -597,9 +334,10 @@ export function ReportScrimResultDialog({
 				maps: parsedMaps.length > 0 ? parsedMaps : undefined,
 			};
 
-			if (shouldWarnAboutEvidence(payload.maps)) {
+			// Score-only reports skip per-map detail entirely, so confirm intent.
+			if (parsedMaps.length === 0) {
 				setPendingSubmission(payload);
-				setPendingSubmissionMapCount(parsedMaps.length);
+				setPendingSubmissionMapCount(0);
 				return;
 			}
 
@@ -613,18 +351,7 @@ export function ReportScrimResultDialog({
 	const loadedOcrJob = sourceOcrJobId
 		? reviewableJobs.find((job) => job.id === sourceOcrJobId)
 		: null;
-	const selectedScoreboardJob = selectedScoreboardJobId
-		? legacyScoreboardJobs.find((job) => job.id === selectedScoreboardJobId)
-		: null;
-	const previewScoreboardJob = scoreboardPreview
-		? scoreboardJobs.find((job) => job.id === scoreboardPreview.jobId)
-		: null;
-	const previewMapIndex = scoreboardPreview
-		? maps.findIndex((map) => map.draftKey === scoreboardPreview.mapKey)
-		: -1;
-	const previewMap = previewMapIndex === -1 ? null : maps[previewMapIndex];
-	const mapsWithScoreboards = maps.filter((map) => !!map.scoreboardOcrJobId).length;
-	const mapsWithPlayers = maps.filter((map) => map.players.length > 0).length;
+	const hadSavedStats = scrim.maps.some((map) => map.players.length > 0);
 
 	return (
 		<Dialog
@@ -635,18 +362,18 @@ export function ReportScrimResultDialog({
 			}}
 		>
 			<DialogTrigger asChild>{children}</DialogTrigger>
-			<DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-6xl">
+			<DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-4xl">
 				<DialogHeader>
-					<DialogTitle>Result Workbench</DialogTitle>
+					<DialogTitle>Report series result</DialogTitle>
 					<DialogDescription>
-						Build a draft match result package map by map. OCR only changes this draft until you
-						submit it for both teams to confirm.
+						Set the maps played and their scores — this is what both teams confirm. Player-stat
+						scoreboards are reviewed separately on each map after submitting.
 					</DialogDescription>
 				</DialogHeader>
 
 				{scrim.status === "completed" ? (
 					<div className="bg-muted/40 p-3 text-xs text-muted-foreground">
-						<strong>This result is locked.</strong> Both teams have confirmed — the result can no
+						<strong>This result is locked.</strong> Both teams have confirmed — the series can no
 						longer be replaced through this editor.
 					</div>
 				) : scrim.maps.length > 0 ||
@@ -654,13 +381,14 @@ export function ReportScrimResultDialog({
 					scrim.status === "disputed" ? (
 					<div className="bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
 						<strong>Existing result will be replaced.</strong> Submitting overwrites the current map
-						rows and resets both teams&apos; confirmations. The previous result is preserved in
-						revision history.
+						rows and resets both teams&apos; confirmations.
+						{hadSavedStats ? " Saved player stats are cleared because the maps are rebuilt." : ""}{" "}
+						The previous result is preserved in revision history.
 					</div>
 				) : null}
 
 				<form onSubmit={handleSubmit} className="space-y-6">
-					<div className="grid gap-3 sm:grid-cols-3">
+					<div className="grid gap-3 sm:grid-cols-2">
 						<Card size="sm">
 							<CardContent>
 								<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -673,28 +401,20 @@ export function ReportScrimResultDialog({
 						<Card size="sm">
 							<CardContent>
 								<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-									Verified stats
+									Series score
 								</p>
 								<p className="mt-1 text-lg font-semibold">
-									{mapsWithScoreboards}/{maps.length || 0}
-								</p>
-								<p className="text-xs text-muted-foreground">Optional scoreboard-backed maps.</p>
-							</CardContent>
-						</Card>
-						<Card size="sm">
-							<CardContent>
-								<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-									Player rows
-								</p>
-								<p className="mt-1 text-lg font-semibold">
-									{mapsWithPlayers}/{maps.length || 0}
+									{maps.length > 0
+										? `${derivedSeriesScore.homeMapScore} - ${derivedSeriesScore.awayMapScore}`
+										: `${manualHomeMapScore || 0} - ${manualAwayMapScore || 0}`}
 								</p>
 								<p className="text-xs text-muted-foreground">
-									Stats can stay empty for score-only reports.
+									{maps.length > 0 ? "Derived from the map rows." : "Manual score-only entry."}
 								</p>
 							</CardContent>
 						</Card>
 					</div>
+
 					<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
 						<div className="space-y-4 border p-4">
 							<div>
@@ -774,7 +494,7 @@ export function ReportScrimResultDialog({
 								</p>
 								{reviewableJobs.length === 0 ? (
 									<p className="mt-3 text-xs text-muted-foreground">
-										No completed OCR drafts are available for this scrim yet.
+										No completed game-history scans are available for this scrim yet.
 									</p>
 								) : (
 									<>
@@ -822,175 +542,6 @@ export function ReportScrimResultDialog({
 										Loaded warnings: {loadedOcrJob.validatedOutput.warnings.join(" | ")}
 									</p>
 								) : null}
-							</div>
-
-							<div className="bg-muted/30 p-3">
-								<p className="text-sm font-semibold">Scoreboard stat review</p>
-								<p className="mt-1 text-xs text-muted-foreground">
-									Preview completed scoreboard scans before applying player rows to a map draft.
-									Scoreboards are optional evidence, not a submission requirement.
-								</p>
-								{scoreboardJobs.length === 0 ? (
-									<p className="mt-3 text-xs text-muted-foreground">
-										No completed scoreboard OCR drafts are available for this scrim yet.
-									</p>
-								) : maps.length === 0 ? (
-									<p className="mt-3 text-xs text-muted-foreground">
-										Add or load at least one reviewed map before importing scoreboard player stats.
-									</p>
-								) : (
-									<div className="mt-3 space-y-3">
-										{associatedScoreboardJobs.length > 0 ? (
-											<div>
-												<p className="text-xs font-medium text-muted-foreground">
-													Map-associated jobs
-												</p>
-												<div className="mt-2 space-y-2">
-													{associatedScoreboardJobs.map((job) => {
-														const targetMapIndex = maps.findIndex(
-															(m) => m.mapId === job.scrimMapId
-														);
-														const targetMap = targetMapIndex !== -1 ? maps[targetMapIndex] : null;
-														return (
-															<div
-																key={job.id}
-																className="flex items-center justify-between gap-2 text-xs"
-															>
-																<span className="text-muted-foreground">
-																	{formatJobLabel(job)}
-																	{targetMap
-																		? ` → Map ${targetMapIndex + 1}: ${targetMap.mapName || "Unnamed map"}`
-																		: " → target map not loaded"}
-																</span>
-																<Button
-																	type="button"
-																	size="sm"
-																	variant="outline"
-																	onClick={() => handleImportAssociatedScoreboardDraft(job.id)}
-																	disabled={submitting || targetMapIndex === -1}
-																>
-																	Review stats
-																</Button>
-															</div>
-														);
-													})}
-												</div>
-											</div>
-										) : null}
-
-										{legacyScoreboardJobs.length > 0 ? (
-											<div>
-												<p className="text-xs font-medium text-muted-foreground">
-													Unassociated (legacy) — select target map manually
-												</p>
-												<select
-													value={selectedScoreboardJobId}
-													onChange={(event) => setSelectedScoreboardJobId(event.target.value)}
-													className="mt-2 h-9 w-full border bg-background px-3 text-sm"
-													disabled={submitting}
-												>
-													{legacyScoreboardJobs.map((job) => (
-														<option key={job.id} value={job.id}>
-															{formatJobLabel(job)}
-														</option>
-													))}
-												</select>
-												<select
-													value={selectedScoreboardMapIndex}
-													onChange={(event) => setSelectedScoreboardMapIndex(event.target.value)}
-													className="mt-2 h-9 w-full border bg-background px-3 text-sm"
-													disabled={submitting}
-												>
-													{maps.map((map, index) => (
-														<option key={`scoreboard-target-${map.draftKey}`} value={String(index)}>
-															Map {index + 1}: {map.mapName || "Unnamed map"}
-														</option>
-													))}
-												</select>
-												<div className="mt-2 flex flex-wrap gap-2">
-													<Button
-														type="button"
-														size="sm"
-														variant="outline"
-														onClick={handleImportScoreboardDraft}
-														disabled={submitting}
-													>
-														Review stats
-													</Button>
-												</div>
-												{selectedScoreboardJob?.validatedOutput?.warnings.length ? (
-													<p className="mt-2 text-xs text-muted-foreground">
-														Loaded warnings:{" "}
-														{selectedScoreboardJob.validatedOutput.warnings.join(" | ")}
-													</p>
-												) : null}
-											</div>
-										) : null}
-
-										{previewScoreboardJob?.validatedOutput?.screenshotType === "scoreboard" &&
-										previewMap ? (
-											<div className="bg-background p-3">
-												<div className="flex flex-wrap items-start justify-between gap-2">
-													<div>
-														<p className="text-sm font-semibold">
-															Preview stats for Map{" "}
-															{previewMapIndex === -1 ? "" : previewMapIndex + 1}:{" "}
-															{previewMap.mapName || "Unnamed map"}
-														</p>
-														<p className="mt-1 text-xs text-muted-foreground">
-															Review the extracted rows before applying them to the local draft.
-														</p>
-													</div>
-													<Button
-														type="button"
-														size="sm"
-														onClick={handleApplyScoreboardPreview}
-														disabled={submitting}
-													>
-														Apply to draft
-													</Button>
-												</div>
-												<div className="mt-3 grid gap-3 lg:grid-cols-2">
-													{(
-														[
-															["Ally team", previewScoreboardJob.validatedOutput.allyTeam],
-															["Enemy team", previewScoreboardJob.validatedOutput.enemyTeam],
-														] as const
-													).map(([label, players]) => (
-														<div key={label} className="bg-background p-2">
-															<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-																{label}
-															</p>
-															<div className="mt-2 space-y-1 text-xs">
-																{players.length > 0 ? (
-																	players.map((player, index) => (
-																		<p key={`${previewScoreboardJob.id}-${label}-${index}`}>
-																			<span className="font-medium">
-																				{player.playerName || "Unknown player"}
-																			</span>{" "}
-																			<span className="text-muted-foreground">
-																				E {player.eliminations} · A {player.assists} · D{" "}
-																				{player.deaths} · DMG {player.damage} · HEAL{" "}
-																				{player.healing} · MIT {player.mitigation}
-																			</span>
-																		</p>
-																	))
-																) : (
-																	<p className="text-muted-foreground">No visible rows.</p>
-																)}
-															</div>
-														</div>
-													))}
-												</div>
-												{previewScoreboardJob.validatedOutput.warnings.length > 0 ? (
-													<p className="mt-3 text-xs text-muted-foreground">
-														Warnings: {previewScoreboardJob.validatedOutput.warnings.join(" | ")}
-													</p>
-												) : null}
-											</div>
-										) : null}
-									</div>
-								)}
 							</div>
 						</div>
 
@@ -1086,7 +637,7 @@ export function ReportScrimResultDialog({
 														aria-label={`Map ${mapIndex + 1} home rounds`}
 														type="number"
 														min={0}
-														max={9}
+														max={OCR_MAX_MAP_SCORE}
 														step={1}
 														value={map.homeScore}
 														onChange={(event) =>
@@ -1104,7 +655,7 @@ export function ReportScrimResultDialog({
 														aria-label={`Map ${mapIndex + 1} away rounds`}
 														type="number"
 														min={0}
-														max={9}
+														max={OCR_MAX_MAP_SCORE}
 														step={1}
 														value={map.awayScore}
 														onChange={(event) =>
@@ -1136,233 +687,6 @@ export function ReportScrimResultDialog({
 													disabled={submitting}
 												/>
 											</div>
-
-											{map.scoreboardOcrJobId ? (
-												<p className="mt-3 text-xs text-muted-foreground">
-													Verified stats applied from scoreboard evidence. They remain draft-only
-													until submission.
-												</p>
-											) : null}
-
-											<details className="mt-4 bg-background p-3">
-												<summary className="cursor-pointer text-sm font-semibold">
-													Player stats ({map.players.length})
-												</summary>
-												<div className="mt-4 space-y-4">
-													<div className="flex justify-end">
-														<Button
-															type="button"
-															size="sm"
-															variant="outline"
-															onClick={() =>
-																updateMap(mapIndex, (current) => ({
-																	...current,
-																	players: [...current.players, createEmptyPlayerDraft()],
-																}))
-															}
-															disabled={submitting}
-														>
-															Add player
-														</Button>
-													</div>
-
-													{map.players.length === 0 ? (
-														<p className="text-xs text-muted-foreground">
-															No player stats stored for this map.
-														</p>
-													) : (
-														map.players.map((player, playerIndex) => (
-															<div
-																key={`map-${mapIndex + 1}-player-${playerIndex + 1}`}
-																className={cn(
-																	"bg-card p-3",
-																	player.side === "unknown" && "bg-muted/20"
-																)}
-															>
-																<div className="flex items-center justify-between gap-2">
-																	<p className="text-sm font-semibold">Player {playerIndex + 1}</p>
-																	<Button
-																		type="button"
-																		size="sm"
-																		variant="outline"
-																		onClick={() =>
-																			updateMap(mapIndex, (current) => ({
-																				...current,
-																				scoreboardOcrJobId:
-																					current.players.length <= 1
-																						? null
-																						: current.scoreboardOcrJobId,
-																				players: current.players.filter(
-																					(_, index) => index !== playerIndex
-																				),
-																			}))
-																		}
-																		disabled={submitting}
-																	>
-																		Remove
-																	</Button>
-																</div>
-
-																<div className="mt-4 grid gap-3 lg:grid-cols-6">
-																	<div className="lg:col-span-2">
-																		<p className="text-xs font-medium">Roster link</p>
-																		<select
-																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} roster link`}
-																			value={player.userId ?? ""}
-																			onChange={(event) => {
-																				const linkedPlayer = rosterOptions.find(
-																					(option) => option.userId === event.target.value
-																				);
-																				updatePlayer(mapIndex, playerIndex, (current) => ({
-																					...current,
-																					userId: linkedPlayer?.userId ?? null,
-																					playerName:
-																						linkedPlayer?.displayName ?? current.playerName,
-																					role:
-																						(linkedPlayer?.role as PlayerDraft["role"]) ??
-																						current.role,
-																					hero: linkedPlayer?.mainHero || current.hero,
-																				}));
-																			}}
-																			className="h-9 w-full border bg-background px-3 text-sm"
-																			disabled={submitting || player.side !== reportingTeamSide}
-																		>
-																			<option value="">
-																				{player.side === reportingTeamSide
-																					? "Unlinked / manual"
-																					: "Unavailable for this side"}
-																			</option>
-																			{player.userId &&
-																			!rosterOptions.some(
-																				(option) => option.userId === player.userId
-																			) ? (
-																				<option value={player.userId}>{player.playerName}</option>
-																			) : null}
-																			{rosterOptions.map((option) => (
-																				<option key={option.userId} value={option.userId}>
-																					{option.displayName}
-																					{option.role ? ` · ${option.role}` : ""}
-																				</option>
-																			))}
-																		</select>
-																		<p className="mt-1 text-[11px] text-muted-foreground">
-																			{player.side === reportingTeamSide
-																				? "Links this stat row to a roster player."
-																				: "Opponent rows stay manual unless their roster is available."}
-																		</p>
-																	</div>
-																	<div className="lg:col-span-2">
-																		<p className="text-xs font-medium">Display / OCR name</p>
-																		<Input
-																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} name`}
-																			value={player.playerName}
-																			onChange={(event) =>
-																				updatePlayer(mapIndex, playerIndex, (current) => ({
-																					...current,
-																					playerName: event.target.value,
-																				}))
-																			}
-																			disabled={submitting}
-																		/>
-																	</div>
-																	<div>
-																		<p className="text-xs font-medium">Side</p>
-																		<select
-																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} side`}
-																			value={player.side}
-																			onChange={(event) =>
-																				updatePlayer(mapIndex, playerIndex, (current) => ({
-																					...current,
-																					userId:
-																						event.target.value === reportingTeamSide
-																							? current.userId
-																							: null,
-																					side: event.target.value as PlayerDraft["side"],
-																				}))
-																			}
-																			className="h-9 w-full border bg-background px-3 text-sm"
-																			disabled={submitting}
-																		>
-																			{OCR_PLAYER_SIDE_VALUES.map((value) => (
-																				<option key={value} value={value}>
-																					{value}
-																				</option>
-																			))}
-																		</select>
-																	</div>
-																	<div>
-																		<p className="text-xs font-medium">Role</p>
-																		<select
-																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} role`}
-																			value={player.role}
-																			onChange={(event) =>
-																				updatePlayer(mapIndex, playerIndex, (current) => ({
-																					...current,
-																					role: event.target.value as PlayerDraft["role"],
-																				}))
-																			}
-																			className="h-9 w-full border bg-background px-3 text-sm"
-																			disabled={submitting}
-																		>
-																			<option value="">Unknown</option>
-																			{OCR_ROLE_VALUES.map((value) => (
-																				<option key={value} value={value}>
-																					{value}
-																				</option>
-																			))}
-																		</select>
-																	</div>
-																</div>
-
-																<div className="mt-4 grid gap-3 lg:grid-cols-4">
-																	<div>
-																		<p className="text-xs font-medium">Hero</p>
-																		<Input
-																			aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} hero`}
-																			value={player.hero}
-																			onChange={(event) =>
-																				updatePlayer(mapIndex, playerIndex, (current) => ({
-																					...current,
-																					hero: event.target.value,
-																				}))
-																			}
-																			disabled={submitting}
-																		/>
-																	</div>
-																	{(
-																		[
-																			"eliminations",
-																			"assists",
-																			"deaths",
-																			"damage",
-																			"healing",
-																			"mitigation",
-																		] as const
-																	).map((field) => (
-																		<div key={field}>
-																			<p className="text-xs font-medium capitalize">{field}</p>
-																			<Input
-																				aria-label={`Map ${mapIndex + 1} player ${playerIndex + 1} ${field}`}
-																				type="number"
-																				min={0}
-																				step={1}
-																				value={player[field]}
-																				onChange={(event) =>
-																					updatePlayer(mapIndex, playerIndex, (current) => ({
-																						...current,
-																						[field]: event.target.value,
-																					}))
-																				}
-																				disabled={submitting}
-																			/>
-																		</div>
-																	))}
-																</div>
-															</div>
-														))
-													)}
-												</div>
-											</details>
 										</div>
 									))}
 								</div>
@@ -1375,7 +699,7 @@ export function ReportScrimResultDialog({
 					<div className="flex gap-2">
 						<Button type="submit" size="sm" disabled={submitting}>
 							{submitting && <Spinner className="mr-1.5" />}
-							Submit Result Package
+							Submit series result
 						</Button>
 						<Button
 							type="button"
@@ -1402,11 +726,11 @@ export function ReportScrimResultDialog({
 				>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>Submit with partial evidence?</AlertDialogTitle>
+							<AlertDialogTitle>Submit a score-only result?</AlertDialogTitle>
 							<AlertDialogDescription>
-								{pendingSubmissionMapCount === 0
-									? "This package is a score-only result without map or screenshot evidence. That is allowed for casual scrims; the opponent can still confirm or dispute the result."
-									: "This package is logically valid, but some maps have no scoreboard-backed player stats. That is allowed for casual scrims; the opponent can still confirm or dispute the result."}
+								This package records only the final series score, with no per-map detail. That is
+								allowed for casual scrims; the opponent can still confirm or dispute the result, and
+								you can add maps later by editing the result.
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>

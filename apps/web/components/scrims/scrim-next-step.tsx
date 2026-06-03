@@ -1,4 +1,4 @@
-import type { ScrimDetail, TeamMemberSummary } from "@scrimflow/shared";
+import type { ScrimDetail } from "@scrimflow/shared";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,6 @@ interface ScrimNextStepProps {
 	scrim: ScrimDetail;
 	view: ScrimViewModel;
 	teamId: string;
-	rosterPlayers: TeamMemberSummary[];
 	canManage: boolean;
 	primaryChatHref: string | null;
 }
@@ -22,14 +21,13 @@ export function ScrimNextStep({
 	scrim,
 	view,
 	teamId,
-	rosterPlayers,
 	canManage,
 	primaryChatHref,
 }: ScrimNextStepProps) {
 	const primaryButton =
 		view.primaryAction === "report_result" ? (
-			<ReportScrimResultDialog scrim={scrim} reportingTeamId={teamId} rosterPlayers={rosterPlayers}>
-				<Button size="sm">Open Result Workbench</Button>
+			<ReportScrimResultDialog scrim={scrim} reportingTeamId={teamId}>
+				<Button size="sm">Report series result</Button>
 			</ReportScrimResultDialog>
 		) : view.primaryAction === "review_confirmation" ? (
 			<ConfirmScrimDialog

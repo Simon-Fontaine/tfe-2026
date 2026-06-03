@@ -44,7 +44,8 @@ export interface ScrimViewModel {
 	canReviewConfirmation: boolean;
 	canRespondToDispute: boolean;
 	canResolveDispute: boolean;
-	canUploadEvidence: boolean;
+	/** Player-stat scoreboards stay editable post-completion (scores stay locked). */
+	canEditPlayerStats: boolean;
 	uploadDisabledReason: string | null;
 
 	currentConfirmation: ScrimConfirmationSummary | null;
@@ -152,7 +153,9 @@ export function deriveScrimViewModel(scrim: ScrimDetail, viewer: ScrimViewer): S
 		viewer.canManage &&
 		!canRespondToDispute &&
 		(status === "awaiting_confirmation" || status === "disputed");
-	const canUploadEvidence = viewer.canManage && hasOpponent && resultEditable;
+	// Player stats stay editable after completion (only the score is locked).
+	const canEditPlayerStats =
+		viewer.canManage && hasOpponent && status !== "pending" && status !== "cancelled";
 	const uploadDisabledReason = getUploadDisabledReason({
 		canManage: viewer.canManage,
 		hasOpponent,
@@ -209,7 +212,7 @@ export function deriveScrimViewModel(scrim: ScrimDetail, viewer: ScrimViewer): S
 
 	const hasResultData =
 		reviewedMapCount > 0 || scrim.ocrJobs.length > 0 || scrim.resultRevisions.length > 0;
-	const showResultTab = canUploadEvidence || hasResultData;
+	const showResultTab = canReportResult || canEditPlayerStats || hasResultData;
 	const showConfirmationsTab =
 		scrim.resultRevisions.length > 0 ||
 		status === "awaiting_confirmation" ||
@@ -239,7 +242,7 @@ export function deriveScrimViewModel(scrim: ScrimDetail, viewer: ScrimViewer): S
 		canReviewConfirmation,
 		canRespondToDispute,
 		canResolveDispute,
-		canUploadEvidence,
+		canEditPlayerStats,
 		uploadDisabledReason,
 
 		currentConfirmation,

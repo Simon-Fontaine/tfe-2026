@@ -3,6 +3,7 @@ import {
 	OCR_HERO_NAME_VALUES,
 	OCR_MAP_TYPE_VALUES,
 	OCR_MATCH_RESULT_VALUES,
+	OCR_MAX_MAP_SCORE,
 	OCR_ROLE_VALUES,
 	type OcrExtractedResult,
 } from "@scrimflow/shared";
@@ -72,12 +73,12 @@ function buildGameHistorySchema() {
 						allyScore: {
 							type: "integer",
 							minimum: 0,
-							maximum: 9,
+							maximum: OCR_MAX_MAP_SCORE,
 						},
 						enemyScore: {
 							type: "integer",
 							minimum: 0,
-							maximum: 9,
+							maximum: OCR_MAX_MAP_SCORE,
 						},
 					},
 				},

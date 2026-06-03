@@ -1332,7 +1332,8 @@ export type ScrimResultDiffBasis =
 	| "ocr_job"
 	| "previous_revision"
 	| "existing_result"
-	| "manual_baseline";
+	| "manual_baseline"
+	| "scoreboard_stats";
 
 export type ScrimResultFieldChange = {
 	path: string;

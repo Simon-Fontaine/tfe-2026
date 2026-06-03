@@ -1,4 +1,5 @@
 import type {
+	ApplyScrimMapPlayerStatsSchema,
 	JsonValue,
 	OcrGameHistoryExtractedResult,
 	ScrimResultChangeSummary,
@@ -6,11 +7,14 @@ import type {
 	ScrimResultRevisionSnapshot,
 	SubmitScrimResultSchema,
 } from "@scrimflow/shared";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type * as v from "valibot";
-import { scrimMapTable, scrimPlayerStatTable } from "@/db/schema";
+import { db } from "@/db";
+import { scrimMapTable, teamRosterTable } from "@/db/schema";
 import type { DbTransaction, ScrimRow } from "./shared";
-import { toIsoDate } from "./shared";
+import { ScrimWorkflowError, toIsoDate } from "./shared";
+
+type PlayerStatRowInput = v.InferOutput<typeof ApplyScrimMapPlayerStatsSchema>["players"][number];
 
 function resolveMapResult(homeScore: number, awayScore: number) {
 	if (homeScore > awayScore) return "victory" as const;
@@ -106,7 +110,7 @@ export function buildPersistedScrimResultSnapshot(scrim: ScrimRow): ScrimResultR
 			mapOrder: map.mapOrder,
 			mapName: map.mapName,
 			mapType: map.mapType as ScrimResultRevisionSnapshot["maps"][number]["mapType"],
-			scoreboardOcrJobId: null,
+			scoreboardOcrJobId: map.ocrJobId ?? null,
 			homeScore: map.homeScore,
 			awayScore: map.awayScore,
 			durationSeconds: map.durationSeconds ?? null,
@@ -257,13 +261,12 @@ export function createScrimResultChangeSummary(
 	};
 }
 
+// Replaces the maps + scores only. Player stats are a separate per-map resource;
+// the FK cascade clears stale stat rows when maps are deleted here.
 export async function replaceScrimDetailedResult(
 	tx: DbTransaction,
 	params: {
 		scrimId: string;
-		homeTeamId: string;
-		awayTeamId: string | null;
-		sourceOcrJobId: string | null;
 		maps: NonNullable<v.InferOutput<typeof SubmitScrimResultSchema>["maps"]>;
 	}
 ) {
@@ -273,55 +276,91 @@ export async function replaceScrimDetailedResult(
 		return;
 	}
 
-	const insertedMaps = await tx
-		.insert(scrimMapTable)
-		.values(
-			params.maps.map((map, index) => ({
-				scrimId: params.scrimId,
-				mapOrder: index + 1,
-				mapName: map.mapName,
-				mapType: map.mapType ?? "unknown",
-				durationSeconds: map.durationSeconds ?? null,
-				result: resolveMapResult(map.homeScore, map.awayScore),
-				homeScore: map.homeScore,
-				awayScore: map.awayScore,
-				ocrJobId: params.sourceOcrJobId,
-			}))
-		)
-		.returning({
-			id: scrimMapTable.id,
-			mapOrder: scrimMapTable.mapOrder,
-		});
+	await tx.insert(scrimMapTable).values(
+		params.maps.map((map, index) => ({
+			scrimId: params.scrimId,
+			mapOrder: index + 1,
+			mapName: map.mapName,
+			mapType: map.mapType ?? "unknown",
+			durationSeconds: map.durationSeconds ?? null,
+			result: resolveMapResult(map.homeScore, map.awayScore),
+			homeScore: map.homeScore,
+			awayScore: map.awayScore,
+			ocrJobId: null,
+		}))
+	);
+}
 
-	if (!insertedMaps.length) {
-		return;
-	}
+// Throws ScrimWorkflowError(400) if a linked player isn't active on their side's team.
+export async function assertRosterLinksValid(params: {
+	players: Pick<PlayerStatRowInput, "userId" | "side">[];
+	homeTeamId: string;
+	awayTeamId: string | null;
+	labelFor: (playerIndex: number) => string;
+}) {
+	const linkedPlayerIds = [
+		...new Set(params.players.flatMap((player) => (player.userId ? [player.userId] : []))),
+	];
+	if (linkedPlayerIds.length === 0) return;
 
-	const playerRows = insertedMaps.flatMap((insertedMap) => {
-		const sourceMap = params.maps[insertedMap.mapOrder - 1];
-		return sourceMap.players.map((player) => ({
-			scrimMapId: insertedMap.id,
-			side: player.side,
-			userId: player.userId ?? null,
-			teamId:
-				player.side === "home"
-					? params.homeTeamId
-					: player.side === "away"
-						? params.awayTeamId
-						: null,
-			playerName: player.playerName,
-			hero: player.hero ?? null,
-			role: player.role ?? null,
-			eliminations: player.eliminations ?? null,
-			assists: player.assists ?? null,
-			deaths: player.deaths ?? null,
-			damage: player.damage ?? null,
-			healing: player.healing ?? null,
-			mitigation: player.mitigation ?? null,
-		}));
+	const rosterRows = await db.query.teamRosterTable.findMany({
+		where: inArray(teamRosterTable.userId, linkedPlayerIds),
+		columns: { teamId: true, userId: true, status: true },
 	});
+	const activeTeamByUserId = new Set(
+		rosterRows
+			.filter((row) => row.status !== "inactive")
+			.map((row) => `${row.teamId}:${row.userId}`)
+	);
 
-	if (playerRows.length > 0) {
-		await tx.insert(scrimPlayerStatTable).values(playerRows);
+	for (const [playerIndex, player] of params.players.entries()) {
+		if (!player.userId) continue;
+		const expectedTeamId =
+			player.side === "home"
+				? params.homeTeamId
+				: player.side === "away"
+					? params.awayTeamId
+					: null;
+		if (!expectedTeamId) {
+			throw new ScrimWorkflowError(
+				400,
+				`${params.labelFor(playerIndex)} needs a home or away side before linking a roster player.`
+			);
+		}
+		if (!activeTeamByUserId.has(`${expectedTeamId}:${player.userId}`)) {
+			throw new ScrimWorkflowError(
+				400,
+				`${params.labelFor(playerIndex)} is linked to a player who is not active on the selected side.`
+			);
+		}
 	}
+}
+
+/** Maps validated player-stat rows to scrim_player_stat insert values for one map. */
+export function buildPlayerStatRows(params: {
+	scrimMapId: string;
+	homeTeamId: string;
+	awayTeamId: string | null;
+	players: PlayerStatRowInput[];
+}) {
+	return params.players.map((player) => ({
+		scrimMapId: params.scrimMapId,
+		side: player.side,
+		userId: player.userId ?? null,
+		teamId:
+			player.side === "home"
+				? params.homeTeamId
+				: player.side === "away"
+					? params.awayTeamId
+					: null,
+		playerName: player.playerName,
+		hero: player.hero ?? null,
+		role: player.role ?? null,
+		eliminations: player.eliminations ?? null,
+		assists: player.assists ?? null,
+		deaths: player.deaths ?? null,
+		damage: player.damage ?? null,
+		healing: player.healing ?? null,
+		mitigation: player.mitigation ?? null,
+	}));
 }

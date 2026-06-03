@@ -9,17 +9,12 @@ import {
 	RespondToScrimDisputeSchema,
 	SubmitScrimResultSchema,
 } from "@scrimflow/shared";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type { Hono } from "hono";
 import * as v from "valibot";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
 import { db } from "@/db";
-import {
-	scrimConfirmationTable,
-	scrimResultRevisionTable,
-	scrimTable,
-	teamRosterTable,
-} from "@/db/schema";
+import { scrimConfirmationTable, scrimResultRevisionTable, scrimTable } from "@/db/schema";
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { ensureScrimConversationLifecycle } from "@/utils/chat";
@@ -97,52 +92,6 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 			);
 		}
 
-		const linkedPlayerIds = [
-			...new Set(
-				(parsed.output.maps ?? []).flatMap((map) =>
-					map.players.flatMap((player) => (player.userId ? [player.userId] : []))
-				)
-			),
-		];
-		if (linkedPlayerIds.length > 0) {
-			const rosterRows = await db.query.teamRosterTable.findMany({
-				where: inArray(teamRosterTable.userId, linkedPlayerIds),
-				columns: { teamId: true, userId: true, status: true },
-			});
-			const activeTeamByUserId = new Map(
-				rosterRows
-					.filter((row) => row.status !== "inactive")
-					.map((row) => [`${row.teamId}:${row.userId}`, row])
-			);
-			for (const [mapIndex, map] of (parsed.output.maps ?? []).entries()) {
-				for (const [playerIndex, player] of map.players.entries()) {
-					if (!player.userId) continue;
-					const expectedTeamId =
-						player.side === "home"
-							? scrim.homeTeamId
-							: player.side === "away"
-								? scrim.awayTeamId
-								: null;
-					if (!expectedTeamId) {
-						return c.json(
-							{
-								error: `Map ${mapIndex + 1} player ${playerIndex + 1} needs a home or away side before linking a roster player.`,
-							},
-							400
-						);
-					}
-					if (!activeTeamByUserId.has(`${expectedTeamId}:${player.userId}`)) {
-						return c.json(
-							{
-								error: `Map ${mapIndex + 1} player ${playerIndex + 1} is linked to a player who is not active on the selected side.`,
-							},
-							400
-						);
-					}
-				}
-			}
-		}
-
 		const sourceJob = parsed.output.sourceOcrJobId
 			? scrim.ocrJobs.find((job) => job.id === parsed.output.sourceOcrJobId)
 			: null;
@@ -160,40 +109,6 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 					{
 						error:
 							"Only game history OCR drafts can prefill reviewed scrim results. Scoreboard OCR stays available as evidence only.",
-					},
-					400
-				);
-			}
-		}
-
-		const scoreboardSourceJobIds = [
-			...new Set(
-				(parsed.output.maps ?? []).flatMap((map) =>
-					map.scoreboardOcrJobId ? [map.scoreboardOcrJobId] : []
-				)
-			),
-		];
-		const scoreboardSourceJobs = scoreboardSourceJobIds.map((jobId) =>
-			scrim.ocrJobs.find((job) => job.id === jobId)
-		);
-		for (const [index, scoreboardSourceJob] of scoreboardSourceJobs.entries()) {
-			const scoreboardJobId = scoreboardSourceJobIds[index];
-			const scoreboardValidatedOutput =
-				(scoreboardSourceJob?.validatedOutput as ScrimDetail["ocrJobs"][number]["validatedOutput"]) ??
-				null;
-
-			if (!scoreboardSourceJob || !scoreboardValidatedOutput) {
-				return c.json(
-					{
-						error: `The selected scoreboard OCR draft ${scoreboardJobId} is no longer available for this scrim.`,
-					},
-					400
-				);
-			}
-			if (scoreboardValidatedOutput.screenshotType !== "scoreboard") {
-				return c.json(
-					{
-						error: "Only scoreboard OCR drafts can be attached as map-level player-stat evidence.",
 					},
 					400
 				);
@@ -246,23 +161,11 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 				mapOrder: index + 1,
 				mapName: map.mapName,
 				mapType: map.mapType ?? "unknown",
-				scoreboardOcrJobId: map.scoreboardOcrJobId ?? null,
+				scoreboardOcrJobId: null,
 				homeScore: map.homeScore,
 				awayScore: map.awayScore,
 				durationSeconds: map.durationSeconds ?? null,
-				players: map.players.map((player) => ({
-					userId: player.userId ?? null,
-					playerName: player.playerName,
-					side: player.side,
-					hero: player.hero ?? null,
-					role: player.role ?? null,
-					eliminations: player.eliminations ?? null,
-					assists: player.assists ?? null,
-					deaths: player.deaths ?? null,
-					damage: player.damage ?? null,
-					healing: player.healing ?? null,
-					mitigation: player.mitigation ?? null,
-				})),
+				players: [],
 			})),
 		});
 
@@ -325,9 +228,6 @@ export function registerScrimResultRoutes(scrimRoutes: Hono<AuthEnv>) {
 
 				await replaceScrimDetailedResult(tx, {
 					scrimId,
-					homeTeamId: scrim.homeTeamId,
-					awayTeamId: scrim.awayTeamId,
-					sourceOcrJobId: parsed.output.sourceOcrJobId ?? null,
 					maps: parsed.output.maps ?? [],
 				});
 

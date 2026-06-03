@@ -19,7 +19,7 @@ import { AccessGate } from "@/components/workspace/access-gate";
 import { PageContainer } from "@/components/workspace/page-container";
 import { getScrimChatRouteState } from "@/lib/data/chat";
 import { getScrimRouteState } from "@/lib/data/scrims";
-import { getTeamWithRosterRouteState } from "@/lib/data/teams";
+import { getPublicTeamPreview, getTeamWithRosterRouteState } from "@/lib/data/teams";
 import { appRoutes } from "@/lib/routes";
 import { deriveScrimViewModel } from "@/lib/scrims/view-model";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
@@ -121,6 +121,33 @@ export default async function TeamScrimDetailPage({
 		orgRole: team.currentUser.orgRole,
 	});
 
+	// Scoreboard player stats can link to either team's roster. The opponent's
+	// public roster lets managers attribute enemy stat rows too.
+	const reportingTeamSide = team.id === scrim.homeTeam.id ? "home" : "away";
+	const opponentTeamId =
+		team.id === scrim.homeTeam.id ? (scrim.awayTeam?.id ?? null) : scrim.homeTeam.id;
+	const opponentPreview = opponentTeamId ? await getPublicTeamPreview(opponentTeamId) : null;
+	const byDisplayName = (a: { displayName: string }, b: { displayName: string }) =>
+		a.displayName.localeCompare(b.displayName);
+	const ownRoster = team.players
+		.filter((player) => player.status !== "inactive")
+		.map((player) => ({
+			userId: player.userId,
+			displayName: player.displayName,
+			role: player.roleInTeam ?? player.gameRole ?? null,
+			mainHero: player.mainHero?.displayName ?? "",
+		}))
+		.sort(byDisplayName);
+	const opponentRoster = (opponentPreview?.roster ?? [])
+		.filter((player) => player.status !== "inactive")
+		.map((player) => ({
+			userId: player.userId,
+			displayName: player.displayName,
+			role: player.roleInTeam ?? null,
+			mainHero: "",
+		}))
+		.sort(byDisplayName);
+
 	const homeDisplayTag = scrim.homeTeamSnapshot?.tag ?? scrim.homeTeam.tag;
 	const homeDisplayName = scrim.homeTeamSnapshot?.name ?? scrim.homeTeam.name;
 	const awayDisplayName = scrim.awayTeam
@@ -177,7 +204,6 @@ export default async function TeamScrimDetailPage({
 				scrim={scrim}
 				view={view}
 				teamId={team.id}
-				rosterPlayers={team.players}
 				canManage={team.currentUser.canManage}
 				primaryChatHref={primaryChatHref}
 			/>
@@ -203,28 +229,26 @@ export default async function TeamScrimDetailPage({
 					<div className="space-y-4">
 						<ScrimMapsSection
 							maps={scrim.maps}
-							resultRevisions={scrim.resultRevisions}
 							scrimId={scrim.id}
 							ocrJobs={scrim.ocrJobs}
+							reportingTeamId={team.id}
+							reportingTeamSide={reportingTeamSide}
+							ownRoster={ownRoster}
+							opponentRoster={opponentRoster}
 							canManage={team.currentUser.canManage}
-							canUploadEvidence={view.canUploadEvidence}
+							canEditPlayerStats={view.canEditPlayerStats}
 							uploadDisabledReason={view.uploadDisabledReason}
 						/>
 						<ScrimOcrJobsPanel
 							scrimId={scrim.id}
 							jobs={scrim.ocrJobs}
-							canManage={team.currentUser.canManage}
-							canUploadEvidence={view.canUploadEvidence}
+							canReportResult={view.canReportResult}
 							uploadDisabledReason={view.uploadDisabledReason}
 							resultRevisions={scrim.resultRevisions}
 							maps={scrim.maps}
 							reviewAction={
 								view.canReportResult ? (
-									<ReportScrimResultDialog
-										scrim={scrim}
-										reportingTeamId={team.id}
-										rosterPlayers={team.players}
-									>
+									<ReportScrimResultDialog scrim={scrim} reportingTeamId={team.id}>
 										<Button size="sm">Review result</Button>
 									</ReportScrimResultDialog>
 								) : null

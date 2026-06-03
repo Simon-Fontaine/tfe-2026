@@ -12,88 +12,59 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { apiRoutes } from "@/lib/routes";
+import {
+	deriveMapScoreboardState,
+	getStageProgress,
+	type MapScoreboardState,
+} from "@/lib/scrims/ocr-status";
 import { cn } from "@/lib/utils";
 import { readApiPayload } from "./form-errors";
+import { type RosterLinkOption, ScrimMapScoreboardDialog } from "./scrim-map-scoreboard-dialog";
 import { UploadScrimEvidenceDialog } from "./upload-scrim-evidence-dialog";
-
-const ACTIVE_JOB_STATUSES = new Set(["queued", "processing"]);
 
 function formatOptionalStat(value: number | null) {
 	return value === null ? "—" : String(value);
 }
 
-function getJobBadgeClass(job: OcrJobSummary) {
-	if (job.status === "failed") return STATUS_BADGE_CLASSES.blocked;
-	if (job.status === "completed") return STATUS_BADGE_CLASSES.completed;
-	if (job.status === "requires_review") return STATUS_BADGE_CLASSES.pending;
-	if (job.status === "superseded") return STATUS_BADGE_CLASSES.inactive;
-	return STATUS_BADGE_CLASSES.underReview;
-}
-
-function getStageLabel(job: OcrJobSummary) {
-	if (job.status === "failed") return "Failed";
-	if (job.status === "requires_review") return "Requires review";
-	if (job.status === "completed") return "Ready to review";
-	if (job.status === "superseded") return "Superseded";
-	if (job.progressStage === "claimed") return "Claimed";
-	if (job.progressStage === "preprocessing") return "Preprocessing";
-	if (job.progressStage === "provider_request") return "Calling Gemini";
-	if (job.progressStage === "validating") return "Validating";
-	return "Queued";
-}
-
-function getStageProgress(stage: OcrJobSummary["progressStage"]) {
-	if (stage === "claimed") return 20;
-	if (stage === "preprocessing") return 40;
-	if (stage === "provider_request") return 68;
-	if (stage === "validating") return 88;
-	if (stage === "requires_review" || stage === "completed" || stage === "failed") return 100;
-	return 8;
-}
+const SCOREBOARD_CHIP: Record<MapScoreboardState, { label: string; className: string }> = {
+	none: { label: "No scoreboard", className: STATUS_BADGE_CLASSES.inactive },
+	processing: { label: "Scanning", className: STATUS_BADGE_CLASSES.underReview },
+	failed: { label: "Scan failed", className: STATUS_BADGE_CLASSES.blocked },
+	ready: { label: "Ready to review", className: STATUS_BADGE_CLASSES.pending },
+	saved: { label: "Stats saved", className: STATUS_BADGE_CLASSES.active },
+};
 
 interface ScrimMapsSectionProps {
 	maps: ScrimDetail["maps"];
-	resultRevisions?: ScrimDetail["resultRevisions"];
-	scrimId?: string;
+	scrimId: string;
 	ocrJobs?: OcrJobSummary[];
+	reportingTeamId: string;
+	reportingTeamSide: "home" | "away";
+	ownRoster?: RosterLinkOption[];
+	opponentRoster?: RosterLinkOption[];
 	canManage?: boolean;
-	canUploadEvidence?: boolean;
+	canEditPlayerStats?: boolean;
 	uploadDisabledReason?: string | null;
 }
 
 export function ScrimMapsSection({
 	maps,
-	resultRevisions = [],
-	scrimId = "",
+	scrimId,
 	ocrJobs = [],
+	reportingTeamId,
+	reportingTeamSide,
+	ownRoster = [],
+	opponentRoster = [],
 	canManage = false,
-	canUploadEvidence = false,
+	canEditPlayerStats = false,
 	uploadDisabledReason = null,
 }: ScrimMapsSectionProps) {
 	const router = useRouter();
 	const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
 	const [supersedingJobId, setSupersedingJobId] = useState<string | null>(null);
-	const latestRevision =
-		resultRevisions.length > 0
-			? resultRevisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a))
-			: null;
-	const scoreboardMapOrders = new Set(
-		latestRevision?.snapshot.maps
-			.filter((map) => !!map.scoreboardOcrJobId)
-			.map((map) => map.mapOrder) ?? []
-	);
-	const scoreboardJobByMapId = new Map<string, OcrJobSummary>();
-	for (const job of ocrJobs) {
-		if (job.screenshotType !== "scoreboard" || !job.scrimMapId || job.status === "superseded")
-			continue;
-		const existing = scoreboardJobByMapId.get(job.scrimMapId);
-		if (!existing || job.createdAt > existing.createdAt) {
-			scoreboardJobByMapId.set(job.scrimMapId, job);
-		}
-	}
 
 	async function handleRetry(jobId: string) {
-		if (retryingJobId || !scrimId) return;
+		if (retryingJobId) return;
 		setRetryingJobId(jobId);
 		const loading = toast.loading("Re-queueing scoreboard scan...");
 
@@ -103,16 +74,12 @@ export function ScrimMapsSection({
 				credentials: "include",
 			});
 			const payload = await readApiPayload<OcrJobSummary>(response);
-
 			if (!response.ok || !payload.data) {
 				toast.error(payload.error ?? "Unable to retry scoreboard scan.", { id: loading });
 				return;
 			}
-
 			toast.success("Scoreboard scan re-queued.", { id: loading });
-			startTransition(() => {
-				router.refresh();
-			});
+			startTransition(() => router.refresh());
 		} catch {
 			toast.error("Unable to reach the API server.", { id: loading });
 		} finally {
@@ -121,7 +88,7 @@ export function ScrimMapsSection({
 	}
 
 	async function handleSupersede(jobId: string) {
-		if (supersedingJobId || !scrimId) return;
+		if (supersedingJobId) return;
 		setSupersedingJobId(jobId);
 		const loading = toast.loading("Preparing scoreboard replacement...");
 
@@ -131,16 +98,12 @@ export function ScrimMapsSection({
 				credentials: "include",
 			});
 			const payload = await readApiPayload<OcrJobSummary>(response);
-
 			if (!response.ok || !payload.data) {
 				toast.error(payload.error ?? "Unable to replace scoreboard scan.", { id: loading });
 				return;
 			}
-
 			toast.success("Scoreboard scan marked for replacement.", { id: loading });
-			startTransition(() => {
-				router.refresh();
-			});
+			startTransition(() => router.refresh());
 		} catch {
 			toast.error("Unable to reach the API server.", { id: loading });
 		} finally {
@@ -153,7 +116,8 @@ export function ScrimMapsSection({
 			<CardHeader>
 				<CardTitle>Submitted result data</CardTitle>
 				<CardDescription>
-					The saved map record from the latest submitted result package.
+					The saved map record from the latest submitted result. Review each map&apos;s scoreboard
+					to attach player stats — this never changes the agreed score.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -161,30 +125,18 @@ export function ScrimMapsSection({
 					<div className="bg-muted/30 p-3">
 						<p className="text-sm font-semibold">No submitted map data yet</p>
 						<p className="mt-1 text-xs text-muted-foreground">
-							The series can still be score-only. Add maps in the workbench when per-map detail
+							The series can still be score-only. Add maps in the result editor when per-map detail
 							matters.
 						</p>
 					</div>
 				) : (
 					<div className="space-y-3">
 						{maps.map((map) => {
-							const hasScoreboardEvidence = scoreboardMapOrders.has(map.mapOrder);
-							const scoreboardJob = scoreboardJobByMapId.get(map.id);
-							const scoreboardActive =
-								scoreboardJob && ACTIVE_JOB_STATUSES.has(scoreboardJob.status);
-							const scoreboardBadgeLabel = hasScoreboardEvidence
-								? "Verified stats"
-								: scoreboardJob
-									? getStageLabel(scoreboardJob)
-									: "No scoreboard attached";
-							const scoreboardBadgeClass = hasScoreboardEvidence
-								? STATUS_BADGE_CLASSES.active
-								: scoreboardJob
-									? getJobBadgeClass(scoreboardJob)
-									: STATUS_BADGE_CLASSES.inactive;
+							const { state, job } = deriveMapScoreboardState(map, ocrJobs);
+							const chip = SCOREBOARD_CHIP[state];
 							return (
 								<div key={map.id} className="bg-muted/30 p-3">
-									<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.5fr)]">
+									<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.5fr)]">
 										<div className="min-w-0">
 											<div className="flex flex-wrap items-center justify-between gap-2">
 												<div className="min-w-0">
@@ -199,23 +151,14 @@ export function ScrimMapsSection({
 															: ""}
 													</p>
 												</div>
-												<div className="flex flex-wrap gap-1.5">
-													<Badge variant="outline" className={STATUS_BADGE_CLASSES.completed}>
-														Final map
-													</Badge>
-													{map.players.length > 0 && !hasScoreboardEvidence ? (
-														<Badge variant="outline" className={STATUS_BADGE_CLASSES.open}>
-															Player stats saved
-														</Badge>
-													) : null}
-												</div>
+												<Badge variant="outline" className={STATUS_BADGE_CLASSES.completed}>
+													Final map
+												</Badge>
 											</div>
 											<p className="mt-2 text-xs text-muted-foreground">
-												{hasScoreboardEvidence
-													? `${map.players.length} linked stat row(s) saved from scoreboard evidence.`
-													: map.players.length > 0
-														? `${map.players.length} player row(s) saved for this map.`
-														: "Score-only map. Attach a scoreboard only when player stats matter."}
+												{map.players.length > 0
+													? `${map.players.length} player stat row(s) saved for this map.`
+													: "Score-only map. Attach a scoreboard to record player stats."}
 											</p>
 
 											{map.players.length > 0 ? (
@@ -253,78 +196,118 @@ export function ScrimMapsSection({
 											) : null}
 										</div>
 
-										<div className="bg-card p-3 lg:border-l-0">
+										<div className="bg-card p-3">
 											<div className="flex flex-wrap items-center justify-between gap-2">
 												<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
 													Scoreboard
 												</p>
-												<Badge variant="outline" className={cn("shrink-0", scoreboardBadgeClass)}>
-													{scoreboardBadgeLabel}
+												<Badge variant="outline" className={cn("shrink-0", chip.className)}>
+													{chip.label}
 												</Badge>
 											</div>
-											{scoreboardActive && scoreboardJob ? (
+
+											{state === "processing" && job ? (
 												<div className="mt-3 space-y-2">
-													<Progress value={getStageProgress(scoreboardJob.progressStage)} />
+													<Progress value={getStageProgress(job.progressStage)} />
 													<p className="text-xs text-muted-foreground">Reading player stats...</p>
 												</div>
-											) : scoreboardJob ? (
+											) : (
 												<div className="mt-3 space-y-2">
 													<p className="text-xs text-muted-foreground">
-														{hasScoreboardEvidence
-															? "Applied in the latest submitted package."
-															: scoreboardJob.status === "completed" ||
-																	scoreboardJob.status === "requires_review"
-																? "Ready to review. Open the workbench to review and apply rows."
-																: scoreboardJob.status === "failed"
-																	? (scoreboardJob.errorMessage ?? "This scoreboard scan failed.")
-																	: "Review or replace this scoreboard evidence."}
+														{state === "saved"
+															? "Player stats are saved. Open to review the screenshot or edit rows."
+															: state === "ready"
+																? "Scan is ready. Review the extracted rows and save them to this map."
+																: state === "failed"
+																	? (job?.errorMessage ?? "This scoreboard scan failed.")
+																	: "No scoreboard attached. Upload one to scan player stats, or enter them manually."}
 													</p>
-													{canManage && canUploadEvidence ? (
-														<div className="flex flex-wrap gap-1.5">
-															{scoreboardJob.status === "failed" ||
-															scoreboardJob.status === "requires_review" ? (
-																<Button
-																	type="button"
-																	size="sm"
-																	variant="outline"
-																	onClick={() => handleRetry(scoreboardJob.id)}
-																	disabled={retryingJobId === scoreboardJob.id}
-																>
-																	<HugeiconsIcon
-																		icon={RefreshIcon}
-																		strokeWidth={2}
-																		className="mr-1.5 size-3.5"
-																	/>
-																	Retry
+
+													<div className="flex flex-wrap gap-1.5">
+														{state === "ready" || state === "saved" ? (
+															<ScrimMapScoreboardDialog
+																scrimId={scrimId}
+																map={map}
+																reportingTeamId={reportingTeamId}
+																reportingTeamSide={reportingTeamSide}
+																ownRoster={ownRoster}
+																opponentRoster={opponentRoster}
+																scoreboardJob={job}
+																canEdit={canEditPlayerStats}
+															>
+																<Button type="button" size="sm" variant="outline">
+																	{state === "saved" ? "View / edit stats" : "Review & save stats"}
 																</Button>
-															) : null}
+															</ScrimMapScoreboardDialog>
+														) : null}
+
+														{/* No live scan → managers can attach one. */}
+														{canEditPlayerStats && !job ? (
+															<UploadScrimEvidenceDialog
+																scrimId={scrimId}
+																screenshotType="scoreboard"
+																targetMapId={map.id}
+																targetMapLabel={`Map ${map.mapOrder}: ${map.mapName}`}
+															>
+																<Button type="button" size="sm" variant="outline">
+																	{state === "saved" ? "Add scoreboard scan" : "Add scoreboard"}
+																</Button>
+															</UploadScrimEvidenceDialog>
+														) : null}
+
+														{state === "none" && canEditPlayerStats ? (
+															<ScrimMapScoreboardDialog
+																scrimId={scrimId}
+																map={map}
+																reportingTeamId={reportingTeamId}
+																reportingTeamSide={reportingTeamSide}
+																ownRoster={ownRoster}
+																opponentRoster={opponentRoster}
+																scoreboardJob={null}
+																canEdit={canEditPlayerStats}
+															>
+																<Button type="button" size="sm" variant="ghost">
+																	Enter manually
+																</Button>
+															</ScrimMapScoreboardDialog>
+														) : null}
+
+														{state === "failed" && canManage && canEditPlayerStats && job ? (
+															<Button
+																type="button"
+																size="sm"
+																variant="outline"
+																onClick={() => handleRetry(job.id)}
+																disabled={retryingJobId === job.id}
+															>
+																<HugeiconsIcon
+																	icon={RefreshIcon}
+																	strokeWidth={2}
+																	className="mr-1.5 size-3.5"
+																/>
+																Retry
+															</Button>
+														) : null}
+
+														{canManage && canEditPlayerStats && job ? (
 															<Button
 																type="button"
 																size="sm"
 																variant="ghost"
-																onClick={() => handleSupersede(scoreboardJob.id)}
+																onClick={() => handleSupersede(job.id)}
 																disabled={!!supersedingJobId}
 															>
 																Replace
 															</Button>
-														</div>
-													) : null}
+														) : null}
+
+														{state === "none" && !canEditPlayerStats ? (
+															<p className="text-xs text-muted-foreground">
+																{uploadDisabledReason ?? "Scoreboard uploads are not available."}
+															</p>
+														) : null}
+													</div>
 												</div>
-											) : canUploadEvidence && scrimId ? (
-												<UploadScrimEvidenceDialog
-													scrimId={scrimId}
-													screenshotType="scoreboard"
-													targetMapId={map.id}
-													targetMapLabel={`Map ${map.mapOrder}: ${map.mapName}`}
-												>
-													<Button type="button" size="sm" variant="outline" className="mt-3 w-full">
-														Add scoreboard
-													</Button>
-												</UploadScrimEvidenceDialog>
-											) : (
-												<p className="mt-3 text-xs text-muted-foreground">
-													{uploadDisabledReason ?? "Scoreboard uploads are not available."}
-												</p>
 											)}
 										</div>
 									</div>

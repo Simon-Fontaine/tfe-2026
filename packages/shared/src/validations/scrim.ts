@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import {
 	OCR_MAP_TYPE_VALUES,
+	OCR_MAX_MAP_SCORE,
 	OCR_PLAYER_SIDE_VALUES,
 	OCR_ROLE_VALUES,
 	OCR_SCREENSHOT_TYPE_VALUES,
@@ -68,6 +69,7 @@ export const RespondToScrimSchema = v.object({
 
 export type RespondToScrimInput = v.InferOutput<typeof RespondToScrimSchema>;
 
+// Series only — player stats are saved per-map via ApplyScrimMapPlayerStatsSchema.
 export const SubmitScrimResultSchema = v.object({
 	reportingTeamId: v.pipe(v.string(), v.uuid("Invalid reporting team ID")),
 	homeMapScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(9)),
@@ -80,26 +82,10 @@ export const SubmitScrimResultSchema = v.object({
 			v.object({
 				mapName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)),
 				mapType: v.nullable(v.picklist(OCR_MAP_TYPE_VALUES, "Invalid map type")),
-				homeScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(9)),
-				awayScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(9)),
-				scoreboardOcrJobId: optionalUuid,
+				homeScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(OCR_MAX_MAP_SCORE)),
+				awayScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(OCR_MAX_MAP_SCORE)),
 				durationSeconds: v.nullable(
 					v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(7200))
-				),
-				players: v.array(
-					v.object({
-						userId: optionalUuid,
-						playerName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)),
-						side: v.picklist(OCR_PLAYER_SIDE_VALUES, "Invalid player side"),
-						hero: nullableShortString,
-						role: v.nullable(v.picklist(OCR_ROLE_VALUES, "Invalid Overwatch role")),
-						eliminations: nullableInteger,
-						assists: nullableInteger,
-						deaths: nullableInteger,
-						damage: nullableInteger,
-						healing: nullableInteger,
-						mitigation: nullableInteger,
-					})
 				),
 			})
 		)
@@ -107,6 +93,30 @@ export const SubmitScrimResultSchema = v.object({
 });
 
 export type SubmitScrimResultInput = v.InferOutput<typeof SubmitScrimResultSchema>;
+
+const ScrimPlayerStatRowSchema = v.object({
+	userId: optionalUuid,
+	playerName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)),
+	side: v.picklist(OCR_PLAYER_SIDE_VALUES, "Invalid player side"),
+	hero: nullableShortString,
+	role: v.nullable(v.picklist(OCR_ROLE_VALUES, "Invalid Overwatch role")),
+	eliminations: nullableInteger,
+	assists: nullableInteger,
+	deaths: nullableInteger,
+	damage: nullableInteger,
+	healing: nullableInteger,
+	mitigation: nullableInteger,
+});
+
+// Replaces the player-stat rows for one map. `scoreboardOcrJobId` is the backing
+// scan (null for manual entry).
+export const ApplyScrimMapPlayerStatsSchema = v.object({
+	reportingTeamId: v.pipe(v.string(), v.uuid("Invalid reporting team ID")),
+	scoreboardOcrJobId: optionalUuid,
+	players: v.array(ScrimPlayerStatRowSchema),
+});
+
+export type ApplyScrimMapPlayerStatsInput = v.InferOutput<typeof ApplyScrimMapPlayerStatsSchema>;
 
 export const ConfirmScrimSchema = v.object({
 	teamId: v.pipe(v.string(), v.uuid("Invalid team ID")),

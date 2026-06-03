@@ -243,6 +243,8 @@ export const apiRoutes = {
 		byId: (scrimId: string) => `/api/scrims/${scrimId}`,
 		respond: (scrimId: string) => `/api/scrims/${scrimId}/respond`,
 		result: (scrimId: string) => `/api/scrims/${scrimId}/result`,
+		mapPlayerStats: (scrimId: string, mapId: string) =>
+			`/api/scrims/${scrimId}/maps/${mapId}/player-stats`,
 		confirm: (scrimId: string) => `/api/scrims/${scrimId}/confirm`,
 		resolveDispute: (scrimId: string) => `/api/scrims/${scrimId}/resolve-dispute`,
 		disputeRespond: (scrimId: string) => `/api/scrims/${scrimId}/dispute-respond`,

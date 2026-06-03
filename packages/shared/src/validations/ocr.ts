@@ -1,5 +1,9 @@
 import * as v from "valibot";
 
+// Per-map round/point score upper bound. Higher than the 9-map series cap so
+// modes like Flashpoint (custom win score of 11) extract without being clamped.
+export const OCR_MAX_MAP_SCORE = 20;
+
 export const OCR_SCREENSHOT_TYPE_VALUES = ["game_history", "scoreboard"] as const;
 export const OCR_PROGRESS_STAGE_VALUES = [
 	"queued",
@@ -105,8 +109,8 @@ export const OcrGameHistoryMatchSchema = v.object({
 	gameMode: v.nullable(v.picklist(OCR_GAME_MODE_VALUES, "Invalid game mode")),
 	durationText: nullableDurationText,
 	result: v.picklist(OCR_MATCH_RESULT_VALUES, "Invalid match result"),
-	allyScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(9)),
-	enemyScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(9)),
+	allyScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(OCR_MAX_MAP_SCORE)),
+	enemyScore: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(OCR_MAX_MAP_SCORE)),
 });
 
 export const OcrScoreboardPlayerSchema = v.object({
