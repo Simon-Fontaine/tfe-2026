@@ -199,8 +199,8 @@ scheduleRoutes.delete("/availability/:id", async (c) => {
 	if (!row) return c.json({ error: "Availability window not found." }, 404);
 	if (row.userId !== user.id) return c.json({ error: "Not authorized." }, 403);
 
-	// D7-P: deleting availability is a housekeeping action — exempt from lifecycle block
-	// so members can clean up their schedule even when the team is archived or deletion-pending.
+	// Housekeeping: exempt from the lifecycle block so members can still clean up
+	// availability on an archived or deletion-pending team.
 	await db.delete(availabilityTable).where(eq(availabilityTable.id, id));
 
 	return c.json({ success: true });

@@ -64,40 +64,41 @@ export async function persistExpiredLifecycleWorkflows(
 	entityType: LifecycleEntityType,
 	entityId: string
 ) {
-	const expired = await db
-		.update(lifecycleWorkflowTable)
-		.set({
-			status: "irreversible",
-			workflowState: "settled",
-			result: "expired",
-			settledAt: new Date(),
-		})
-		.where(
-			and(
-				eq(lifecycleWorkflowTable.entityType, entityType),
-				eq(lifecycleWorkflowTable.entityId, entityId),
-				eq(lifecycleWorkflowTable.status, "deletion_pending"),
-				lt(lifecycleWorkflowTable.recoveryUntil, new Date())
+	// Settle the workflow and sync the entity status in one transaction so the column
+	// can't stay deletion_pending after the recovery window expires.
+	await db.transaction(async (tx) => {
+		const expired = await tx
+			.update(lifecycleWorkflowTable)
+			.set({
+				status: "irreversible",
+				workflowState: "settled",
+				result: "expired",
+				settledAt: new Date(),
+			})
+			.where(
+				and(
+					eq(lifecycleWorkflowTable.entityType, entityType),
+					eq(lifecycleWorkflowTable.entityId, entityId),
+					eq(lifecycleWorkflowTable.status, "deletion_pending"),
+					lt(lifecycleWorkflowTable.recoveryUntil, new Date())
+				)
 			)
-		)
-		.returning({ id: lifecycleWorkflowTable.id });
+			.returning({ id: lifecycleWorkflowTable.id });
 
-	// P12: sync entity lifecycleStatus so the entity column never diverges from the
-	// workflow outcome. Without this, a deletion_pending entity would stay
-	// deletion_pending even after the recovery window expired.
-	if (expired.length > 0) {
+		if (expired.length === 0) return;
+
 		if (entityType === "organization") {
-			await db
+			await tx
 				.update(organizationTable)
 				.set({ lifecycleStatus: "irreversible", lifecycleUpdatedAt: new Date() })
 				.where(eq(organizationTable.id, entityId));
 		} else if (entityType === "team") {
-			await db
+			await tx
 				.update(teamTable)
 				.set({ lifecycleStatus: "irreversible", lifecycleUpdatedAt: new Date() })
 				.where(eq(teamTable.id, entityId));
 		}
-	}
+	});
 }
 
 export async function getCurrentLifecycleWorkflow(

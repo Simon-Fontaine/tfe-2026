@@ -78,4 +78,7 @@ export const rateLimits = {
 	reportSupplement: { limit: 10, windowMs: hours(1) },
 	/** Data export download per user per 10 minutes. */
 	dataExport: { limit: 1, windowMs: minutes(10) },
+
+	/** Unauthenticated public read endpoints (heroes, public profiles/listings), per IP. */
+	publicRead: { limit: 120, windowMs: minutes(1) },
 } as const satisfies Record<string, RateLimitRule>;

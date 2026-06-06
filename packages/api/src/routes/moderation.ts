@@ -18,9 +18,8 @@ import {
 	DomainAuditQuerySchema,
 	ModerationCasePatchSchema,
 	ModerationQueueFilterSchema,
-	ModeratorOwnershipResolutionSchema,
 } from "@scrimflow/shared";
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, isNull, lt, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import * as v from "valibot";
@@ -33,8 +32,6 @@ import {
 	moderationActionTable,
 	moderationCaseEventTable,
 	organizationTable,
-	ownershipWorkflowEventTable,
-	ownershipWorkflowTable,
 	recruitmentListingTable,
 	teamTable,
 	updatePostTable,
@@ -45,8 +42,6 @@ import {
 import type { AuthEnv } from "@/middleware/auth";
 import { extractErrors } from "@/routes/auth/utils";
 import { decodeCursor, encodeCursor } from "@/utils/cursor";
-import { getCurrentOwnershipWorkflow, mapOwnershipWorkflow } from "@/utils/ownership";
-import { ensureOrganizationMembership, ensureTeamMembership } from "@/utils/recruit";
 
 const moderationRoutes = new Hono<AuthEnv>();
 
@@ -274,14 +269,14 @@ moderationRoutes.get("/reports/:id", async (c) => {
 		orderBy: [asc(userReportSupplementTable.createdAt)],
 	});
 
-	// D2: insert "viewed" event first so it appears in the returned timeline
+	// Insert the "viewed" event first so it appears in the returned timeline.
 	await db.insert(moderationCaseEventTable).values({
 		reportId,
 		moderatorId: user.id,
 		action: "viewed" as ModerationCaseAction,
 	});
 
-	// P7: leftJoin so events for deleted moderators still appear in the timeline
+	// leftJoin keeps events from deleted moderators in the timeline.
 	const eventRows = await db
 		.select({
 			event: moderationCaseEventTable,
@@ -371,7 +366,7 @@ moderationRoutes.patch("/reports/:id", async (c) => {
 	let newStatus = report.status;
 
 	if (input.action === "assign") {
-		// D1: self-assign is a no-op
+		// Self-assign is a no-op.
 		if (report.assignedModeratorId === user.id) {
 			return c.json({ reportId, status: report.status, action: input.action });
 		}
@@ -385,7 +380,7 @@ moderationRoutes.patch("/reports/:id", async (c) => {
 			);
 		}
 		if (report.status === "pending") newStatus = "under_review";
-		// P5: transaction so status update and audit event are atomic
+		// One transaction so the status update and audit event stay atomic.
 		await db.transaction(async (tx) => {
 			await tx
 				.update(userReportTable)
@@ -396,7 +391,7 @@ moderationRoutes.patch("/reports/:id", async (c) => {
 				.values({ reportId, moderatorId: user.id, action: "assigned" });
 		});
 	} else if (input.action === "unassign") {
-		// P4: explicit check for unassigned state before the ownership check
+		// Check the unassigned state before the ownership check.
 		if (!report.assignedModeratorId) {
 			return c.json({ error: "Case is not currently assigned." }, 409);
 		}
@@ -457,7 +452,7 @@ moderationRoutes.patch("/reports/:id", async (c) => {
 		});
 	}
 
-	// P1: return updated status, not the stale pre-mutation value
+	// Return the updated status, not the stale pre-mutation value.
 	return c.json({ reportId, status: newStatus, action: input.action });
 });
 
@@ -967,7 +962,7 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 		isArchived = row.lifecycleStatus !== "active";
 	}
 
-	const [activeActions, recentAuditRows, ownershipWorkflowRaw] = await Promise.all([
+	const [activeActions, recentAuditRows] = await Promise.all([
 		db.query.moderationActionTable.findMany({
 			where: and(
 				eq(moderationActionTable.targetType, validEntityType),
@@ -984,25 +979,13 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 			orderBy: [desc(domainAuditEventTable.createdAt)],
 			limit: 10,
 		}),
-		validEntityType === "team" || validEntityType === "organization"
-			? getCurrentOwnershipWorkflow(validEntityType, entityId)
-			: Promise.resolve(null),
 	]);
-	const ownershipWorkflow = ownershipWorkflowRaw
-		? mapOwnershipWorkflow(ownershipWorkflowRaw, "authorized")
-		: null;
 
 	const availableActions: GovernanceAvailableAction[] = [];
 	if (isSuspended) {
 		availableActions.push("restore");
 	} else {
 		availableActions.push("suspend");
-	}
-	if (
-		ownershipWorkflow &&
-		(ownershipWorkflow.status === "review_required" || ownershipWorkflow.status === "blocked")
-	) {
-		availableActions.push("resolve_ownership");
 	}
 	if (validEntityType === "user") {
 		if (requiresReverification) {
@@ -1020,129 +1003,12 @@ moderationRoutes.get("/governance/entities/:entityType/:entityId", async (c) => 
 		isArchived,
 		isDeletionPending,
 		isAnonymized,
-		ownershipWorkflow,
 		activeActions: activeActions.map(toModerationAction),
 		recentAuditEvents: recentAuditRows.map(toDomainAuditEvent),
 		availableActions,
 	};
 
 	return c.json({ data: state });
-});
-
-moderationRoutes.post("/governance/ownership/:workflowId/resolve", async (c) => {
-	const user = c.var.user;
-	if (!user.isModerator) return c.json({ error: "Forbidden." }, 403);
-
-	const { workflowId } = c.req.param();
-	const workflowIdValidation = v.safeParse(v.pipe(v.string(), v.uuid()), workflowId);
-	if (!workflowIdValidation.success) return c.json({ error: "Invalid workflowId." }, 400);
-
-	const body = await c.req.json();
-	const parsed = v.safeParse(ModeratorOwnershipResolutionSchema, body);
-	if (!parsed.success)
-		return c.json({ error: "Invalid input.", issues: extractErrors(parsed.issues) }, 400);
-	const input = parsed.output;
-
-	const workflow = await db.query.ownershipWorkflowTable.findFirst({
-		where: eq(ownershipWorkflowTable.id, workflowId),
-		with: {
-			requester: { columns: { id: true, displayName: true } },
-			currentOwner: { columns: { id: true, displayName: true } },
-			recipient: { columns: { id: true, displayName: true } },
-			recoveryTarget: { columns: { id: true, displayName: true } },
-		},
-	});
-	if (!workflow) return c.json({ error: "Workflow not found." }, 404);
-	if (!["review_required", "blocked"].includes(workflow.status)) {
-		return c.json({ error: "Workflow is not in a resolvable governance state." }, 409);
-	}
-	if (input.action === "approve" && !workflow.recoveryTargetUserId) {
-		return c.json({ error: "Recovery workflow has no target user." }, 409);
-	}
-	if (input.action === "approve" && !["team", "organization"].includes(workflow.entityType)) {
-		return c.json({ error: "Unsupported entity type for ownership resolution." }, 409);
-	}
-
-	const fromStatus = workflow.status;
-	const newStatus = input.action === "approve" ? "approved" : "rejected";
-	const newResult = input.action === "approve" ? "recovered" : "rejected";
-
-	const recoveryTargetUserId = workflow.recoveryTargetUserId;
-
-	await db.transaction(async (tx) => {
-		if (input.action === "approve" && recoveryTargetUserId) {
-			if (workflow.entityType === "team") {
-				await ensureTeamMembership(tx, {
-					teamId: workflow.entityId,
-					userId: recoveryTargetUserId,
-					permissionRole: "admin",
-					status: "active",
-				});
-			} else if (workflow.entityType === "organization") {
-				await ensureOrganizationMembership(tx, {
-					organizationId: workflow.entityId,
-					userId: recoveryTargetUserId,
-					role: "owner",
-				});
-			}
-		}
-
-		const updateRows = await tx
-			.update(ownershipWorkflowTable)
-			.set({
-				status: newStatus,
-				reviewState: input.action === "approve" ? "approved" : "rejected",
-				result: newResult,
-				resolvedAt: new Date(),
-				updatedAt: new Date(),
-			})
-			.where(
-				and(
-					eq(ownershipWorkflowTable.id, workflowId),
-					inArray(ownershipWorkflowTable.status, ["review_required", "blocked"])
-				)
-			)
-			.returning({ id: ownershipWorkflowTable.id });
-
-		if (updateRows.length === 0) {
-			throw new Error("Workflow status changed concurrently. Please retry.");
-		}
-
-		await tx.insert(ownershipWorkflowEventTable).values({
-			workflowId,
-			actorUserId: user.id,
-			action: "governance_resolved",
-			fromStatus,
-			toStatus: newStatus,
-			reason: input.reason,
-			metadata: { resultReason: `governance_resolved:moderator:${input.action}` },
-		});
-	});
-
-	writeDomainAuditEvent({
-		domain: "governance",
-		actionType: "governance_recovery_applied",
-		targetType: workflow.entityType,
-		targetId: workflow.entityId,
-		actorId: user.id,
-		actorType: "user",
-		outcome: "success",
-		reason: input.reason,
-		metadata: { workflowId, action: input.action, escalationTier: "moderator" },
-	});
-
-	const updatedWorkflow = await db.query.ownershipWorkflowTable.findFirst({
-		where: eq(ownershipWorkflowTable.id, workflowId),
-		with: {
-			requester: { columns: { id: true, displayName: true } },
-			currentOwner: { columns: { id: true, displayName: true } },
-			recipient: { columns: { id: true, displayName: true } },
-			recoveryTarget: { columns: { id: true, displayName: true } },
-		},
-	});
-	if (!updatedWorkflow) return c.json({ error: "Workflow not found after update." }, 500);
-
-	return c.json(mapOwnershipWorkflow(updatedWorkflow, "authorized"));
 });
 
 moderationRoutes.get("/governance/pending", async (c) => {
@@ -1159,65 +1025,26 @@ moderationRoutes.get("/governance/pending", async (c) => {
 		}
 	}
 
-	const [pendingWorkflows, suspendedUsers, suspendedTeamsRows, suspendedOrgsRows] =
-		await Promise.all([
-			db.query.ownershipWorkflowTable.findMany({
-				where: inArray(ownershipWorkflowTable.status, ["review_required", "blocked"]),
-			}),
-			db.query.userTable.findMany({
-				where: and(eq(userTable.isBanned, true), eq(userTable.isAnonymized, false)),
-				columns: { id: true, displayName: true, updatedAt: true, createdAt: true },
-			}),
-			db.query.teamTable.findMany({
-				where: eq(teamTable.isModerationSuspended, true),
-				columns: { id: true, name: true, updatedAt: true, createdAt: true },
-			}),
-			db.query.organizationTable.findMany({
-				where: eq(organizationTable.isModerationSuspended, true),
-				columns: { id: true, name: true, updatedAt: true, createdAt: true },
-			}),
-		]);
-
-	// Build entity name map for pending ownership workflows (show entity name, not requester name)
-	const wfTeamIds = pendingWorkflows
-		.filter((wf) => wf.entityType === "team")
-		.map((wf) => wf.entityId);
-	const wfOrgIds = pendingWorkflows
-		.filter((wf) => wf.entityType === "organization")
-		.map((wf) => wf.entityId);
-	const [wfTeams, wfOrgs] = await Promise.all([
-		wfTeamIds.length > 0
-			? db.query.teamTable.findMany({
-					where: inArray(teamTable.id, wfTeamIds),
-					columns: { id: true, name: true },
-				})
-			: [],
-		wfOrgIds.length > 0
-			? db.query.organizationTable.findMany({
-					where: inArray(organizationTable.id, wfOrgIds),
-					columns: { id: true, name: true },
-				})
-			: [],
-	]);
-	const entityNameMap = new Map<string, string>([
-		...wfTeams.map((t) => [t.id, t.name] as [string, string]),
-		...wfOrgs.map((o) => [o.id, o.name] as [string, string]),
+	const [suspendedUsers, suspendedTeamsRows, suspendedOrgsRows] = await Promise.all([
+		db.query.userTable.findMany({
+			where: and(eq(userTable.isBanned, true), eq(userTable.isAnonymized, false)),
+			columns: { id: true, displayName: true, updatedAt: true, createdAt: true },
+		}),
+		db.query.teamTable.findMany({
+			where: eq(teamTable.isModerationSuspended, true),
+			columns: { id: true, name: true, updatedAt: true, createdAt: true },
+		}),
+		db.query.organizationTable.findMany({
+			where: eq(organizationTable.isModerationSuspended, true),
+			columns: { id: true, name: true, updatedAt: true, createdAt: true },
+		}),
 	]);
 
 	function getItemCursorId(item: GovernancePendingItem): string {
-		return item.workflowId ?? item.entityId;
+		return item.entityId;
 	}
 
 	const allItems: GovernancePendingItem[] = [
-		...pendingWorkflows.map((wf) => ({
-			entityType: wf.entityType as "team" | "organization",
-			entityId: wf.entityId,
-			displayName: entityNameMap.get(wf.entityId) ?? wf.entityId,
-			reason: "blocked_ownership" as const,
-			workflowId: wf.id,
-			workflowStatus: wf.status as GovernancePendingItem["workflowStatus"],
-			since: wf.updatedAt.toISOString(),
-		})),
 		...suspendedUsers.map((u) => ({
 			entityType: "user" as const,
 			entityId: u.id,

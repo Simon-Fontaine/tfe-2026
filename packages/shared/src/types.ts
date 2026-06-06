@@ -212,25 +212,10 @@ export type MemberType = "player" | "staff";
 export type StaffRole = "coach" | "analyst" | "manager" | "staff";
 export type InviteLifecycleStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
 export type OwnershipEntityType = "team" | "organization";
-export type OwnershipWorkflowKind = "transfer" | "recovery";
-export type OwnershipWorkflowStatus =
-	| "pending"
-	| "accepted"
-	| "rejected"
-	| "cancelled"
-	| "expired"
-	| "review_required"
-	| "approved"
-	| "blocked";
+export type OwnershipWorkflowKind = "transfer";
+export type OwnershipWorkflowStatus = "pending" | "accepted" | "rejected" | "cancelled" | "expired";
 export type OwnershipVerificationState = "not_required" | "required" | "verified";
-export type OwnershipReviewState = "not_required" | "required" | "approved" | "rejected";
-export type OwnershipWorkflowResult =
-	| "transferred"
-	| "recovered"
-	| "rejected"
-	| "cancelled"
-	| "expired"
-	| "blocked";
+export type OwnershipWorkflowResult = "transferred" | "rejected" | "cancelled" | "expired";
 export type LifecycleEntityType = "team" | "organization";
 export type LifecycleStatus = "active" | "archived" | "deletion_pending" | "irreversible";
 export type LifecycleActionKind =
@@ -431,9 +416,7 @@ export type OwnershipWorkflowSummary = {
 	requester: OwnershipActorSummary;
 	currentOwner: OwnershipActorSummary;
 	recipient: OwnershipActorSummary | null;
-	recoveryTarget: OwnershipActorSummary | null;
 	verificationState: OwnershipVerificationState;
-	reviewState: OwnershipReviewState;
 	reason: string | null;
 	createdAt: IsoDateString;
 	updatedAt: IsoDateString;
@@ -1762,8 +1745,6 @@ export type DomainAuditActionType =
 	| "ownership_transfer_initiated"
 	| "ownership_transfer_accepted"
 	| "ownership_transfer_declined"
-	| "ownership_recovery_initiated"
-	| "ownership_recovery_resolved"
 	| "permission_role_changed"
 	| "permission_member_removed"
 	| "moderation_action_taken"
@@ -1782,7 +1763,6 @@ export type DomainAuditActionType =
 	| "lifecycle_archived"
 	| "lifecycle_restored"
 	| "lifecycle_deletion_pending"
-	| "governance_recovery_applied"
 	| "governance_containment_applied";
 
 export type DomainAuditEvent = {
@@ -1818,7 +1798,6 @@ export type HeroRow = {
 export type GovernanceAvailableAction =
 	| "suspend"
 	| "restore"
-	| "resolve_ownership"
 	| "require_verification"
 	| "clear_verification";
 
@@ -1830,7 +1809,6 @@ export type GovernanceEntityState = {
 	isArchived: boolean;
 	isDeletionPending: boolean;
 	isAnonymized: boolean;
-	ownershipWorkflow: OwnershipWorkflowSummary | null;
 	activeActions: ModerationAction[];
 	recentAuditEvents: DomainAuditEvent[];
 	availableActions: GovernanceAvailableAction[];
@@ -1840,9 +1818,7 @@ export type GovernancePendingItem = {
 	entityType: "user" | "team" | "organization";
 	entityId: string;
 	displayName: string;
-	reason: "suspended" | "blocked_ownership";
-	workflowId?: string;
-	workflowStatus?: OwnershipWorkflowStatus;
+	reason: "suspended";
 	since: IsoDateString;
 };
 

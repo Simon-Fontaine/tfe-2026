@@ -23,20 +23,11 @@ interface DeleteOrgDialogProps {
 	children: React.ReactNode;
 }
 
-const RETENTION_OPTIONS = [
-	{ value: "archive_all_teams", label: "Archive all teams" },
-	{ value: "preserve_history", label: "Preserve history only" },
-	{ value: "anonymize_public_history", label: "Anonymize public history" },
-] as const;
-
-type RetentionPolicy = (typeof RETENTION_OPTIONS)[number]["value"];
-
 export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [confirmName, setConfirmName] = useState("");
 	const [reason, setReason] = useState("");
 	const [verificationCode, setVerificationCode] = useState("");
-	const [retentionPolicy, setRetentionPolicy] = useState<RetentionPolicy>("archive_all_teams");
 	const pendingRef = useRef(false);
 
 	const { state, submit, isPending } = useFormAction(deleteOrgAction, {
@@ -61,7 +52,6 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 		fd.set("orgId", orgId);
 		fd.set("confirmName", confirmName);
 		fd.set("reason", reason);
-		fd.set("retentionPolicy", retentionPolicy);
 		fd.set("verificationCode", verificationCode);
 		submit(fd);
 	}
@@ -81,7 +71,6 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 					setConfirmName("");
 					setReason("");
 					setVerificationCode("");
-					setRetentionPolicy("archive_all_teams");
 				}
 			}}
 		>
@@ -109,25 +98,6 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 					placeholder="Reason for deletion-pending request"
 					className="mt-2 min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
 				/>
-				{/* D6-P: let the owner choose a retention policy instead of hardcoding archive_all_teams */}
-				<div className="space-y-1">
-					<p className="text-xs font-medium">Retention policy</p>
-					<div className="flex flex-col gap-1.5">
-						{RETENTION_OPTIONS.map((opt) => (
-							<label key={opt.value} className="flex items-center gap-2 text-xs">
-								<input
-									type="radio"
-									name="retentionPolicy"
-									value={opt.value}
-									checked={retentionPolicy === opt.value}
-									onChange={() => setRetentionPolicy(opt.value)}
-									className="accent-primary"
-								/>
-								{opt.label}
-							</label>
-						))}
-					</div>
-				</div>
 				<div className="space-y-2">
 					<Input
 						value={verificationCode}
@@ -143,7 +113,6 @@ export function DeleteOrgDialog({ orgId, orgName, children }: DeleteOrgDialogPro
 						{codeForm.isPending && <Spinner className="mr-1.5" />}
 						Send verification code
 					</Button>
-					{/* P26: render code-request errors that were previously silently dropped */}
 					{codeForm.state?.error && (
 						<p className="text-xs text-destructive">{codeForm.state.error}</p>
 					)}

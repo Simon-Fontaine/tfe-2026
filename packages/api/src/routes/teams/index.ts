@@ -3,12 +3,12 @@ import {
 	CancelOwnershipWorkflowSchema,
 	CreateTeamSchema,
 	DeleteTeamSchema,
-	InitiateOwnershipWorkflowSchema,
+	InitiateOwnershipTransferSchema,
 	InviteToTeamSchema,
 	LifecycleDeletionCancelSchema,
 	LifecycleRestoreSchema,
 	LifecycleSettlementSchema,
-	ResolveOwnershipWorkflowSchema,
+	RequestOwnershipTransferCodeSchema,
 	RespondToOwnershipWorkflowSchema,
 	RespondToTeamInviteSchema,
 	rateLimits,
@@ -21,6 +21,7 @@ import {
 } from "@scrimflow/shared";
 import { and, asc, count, desc, eq, lt, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { DatabaseError } from "pg";
 import { createElement } from "react";
 import * as v from "valibot";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
@@ -65,10 +66,9 @@ import logger from "@/utils/logger";
 import { verifyOrgManager } from "@/utils/org";
 import {
 	getCurrentOwnershipWorkflow,
-	getOwnershipResolution,
 	getPrimaryTeamContinuityOwner,
-	isActiveTeamAdmin,
 	mapOwnershipWorkflow,
+	OwnershipRecipientGoneError,
 	persistExpiredOwnershipWorkflows,
 } from "@/utils/ownership";
 import {
@@ -617,7 +617,7 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 	const invite = await db.query.teamInviteTable.findFirst({
 		where: eq(teamInviteTable.id, inviteId),
 		with: {
-			team: { columns: { id: true, name: true, organizationId: true } },
+			team: { columns: { id: true, name: true, organizationId: true, lifecycleStatus: true } },
 		},
 	});
 	if (!invite) return c.json({ error: "Invite not found." }, 404);
@@ -632,6 +632,10 @@ teamRoutes.post("/invites/:id/respond", async (c) => {
 		return c.json({ error: "This invite is no longer active." }, 400);
 
 	if (parsed.output.action === "accept") {
+		// Don't let a user join a team that is archived or being deleted.
+		if (invite.team.lifecycleStatus !== "active") {
+			return c.json({ error: "This team is no longer active and cannot be joined." }, 409);
+		}
 		const normalized = normalizeMemberFields({
 			memberType: invite.memberType,
 			staffRole: invite.staffRole ?? null,
@@ -1100,110 +1104,242 @@ teamRoutes.post("/:id/unarchive", async (c) => {
 	return c.json({ success: true });
 });
 
-teamRoutes.post("/:id/ownership", async (c) => {
+/**
+ * Resolve a team transfer recipient from a userId or a roster row id, and confirm the
+ * target is an active roster member who isn't already the team's primary owner.
+ */
+async function resolveTeamTransferRecipient(teamId: string, body: Record<string, unknown>) {
+	let recipientUserId = typeof body.recipientUserId === "string" ? body.recipientUserId : undefined;
+	if (!recipientUserId && typeof body.memberId === "string") {
+		const target = await db.query.teamRosterTable.findFirst({
+			where: eq(teamRosterTable.id, body.memberId),
+			columns: { teamId: true, userId: true },
+		});
+		if (!target || target.teamId !== teamId) return null;
+		recipientUserId = target.userId;
+	}
+	return recipientUserId ?? null;
+}
+
+async function isActiveTeamMember(teamId: string, userId: string) {
+	const row = await db.query.teamRosterTable.findFirst({
+		where: and(
+			eq(teamRosterTable.teamId, teamId),
+			eq(teamRosterTable.userId, userId),
+			eq(teamRosterTable.status, "active")
+		),
+		columns: { id: true },
+	});
+	return Boolean(row);
+}
+
+teamRoutes.post("/:id/ownership/request-code", async (c) => {
+	const session = c.get("session");
 	const user = c.get("user");
 	const teamId = c.req.param("id");
-	const body = await c.req.json().catch(() => null);
+	const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
 	if (!body) return c.json({ error: "Invalid request body." }, 400);
 
 	const access = await getTeamAccessContext(teamId, user.id);
 	if (!access?.canManageTeam) {
-		return c.json({ error: "You do not have permission to manage team continuity." }, 403);
+		return c.json({ error: "You do not have permission to transfer team ownership." }, 403);
 	}
+
+	const recipientUserId = await resolveTeamTransferRecipient(teamId, body);
+	const parsed = v.safeParse(RequestOwnershipTransferCodeSchema, {
+		entityType: "team",
+		entityId: teamId,
+		recipientUserId,
+	});
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const team = await db.query.teamTable.findFirst({
 		where: eq(teamTable.id, teamId),
-		columns: { id: true, organizationId: true, isArchived: true, lifecycleStatus: true },
+		columns: { id: true, name: true, isArchived: true, lifecycleStatus: true },
 	});
 	if (!team) return c.json({ error: "Team not found." }, 404);
 	const lifecycleBlock = getLifecycleMutationBlockReason("Team", team.lifecycleStatus);
 	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	if (team.isArchived) {
-		return c.json({ error: "Archived teams cannot start ownership recovery." }, 400);
+		return c.json({ error: "Archived teams cannot transfer ownership." }, 400);
+	}
+	if (parsed.output.recipientUserId === user.id) {
+		return c.json({ error: "You cannot transfer team ownership to yourself." }, 400);
+	}
+	if (!(await isActiveTeamMember(teamId, parsed.output.recipientUserId))) {
+		return c.json({ error: "Ownership target must be an active team member." }, 400);
+	}
+
+	const { allowed, retryAfterMs } = await checkRateLimit(
+		`team-ownership-transfer-request:${session.userId}:${teamId}`,
+		rateLimits.sensitiveActionRequest.limit,
+		rateLimits.sensitiveActionRequest.windowMs
+	);
+	if (!allowed) {
+		return c.json(
+			{
+				error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
+			},
+			429
+		);
+	}
+
+	const client = c.get("client");
+	const code = await createSensitiveActionVerification(
+		session.userId,
+		"team_ownership_transfer",
+		{ teamId, recipientUserId: parsed.output.recipientUserId },
+		client.ip
+	);
+	await sendMail({
+		to: user.email,
+		subject: "Confirm team ownership transfer",
+		template: createElement(VerificationEmail, {
+			code,
+			title: "Confirm team ownership transfer",
+			message: `You requested to transfer ownership of ${team.name}. Enter this code to continue.`,
+			actionText: "enter the following confirmation code",
+		}),
+	});
+
+	return c.json({ success: true });
+});
+
+teamRoutes.post("/:id/ownership", async (c) => {
+	const session = c.get("session");
+	const user = c.get("user");
+	const teamId = c.req.param("id");
+	const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const access = await getTeamAccessContext(teamId, user.id);
+	if (!access?.canManageTeam) {
+		return c.json({ error: "You do not have permission to transfer team ownership." }, 403);
+	}
+
+	const recipientUserId = await resolveTeamTransferRecipient(teamId, body);
+	const parsed = v.safeParse(InitiateOwnershipTransferSchema, {
+		...body,
+		entityType: "team",
+		entityId: teamId,
+		recipientUserId,
+	});
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const team = await db.query.teamTable.findFirst({
+		where: eq(teamTable.id, teamId),
+		columns: { id: true, isArchived: true, lifecycleStatus: true },
+	});
+	if (!team) return c.json({ error: "Team not found." }, 404);
+	const lifecycleBlock = getLifecycleMutationBlockReason("Team", team.lifecycleStatus);
+	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
+	if (team.isArchived) {
+		return c.json({ error: "Archived teams cannot transfer ownership." }, 400);
+	}
+	if (parsed.output.recipientUserId === user.id) {
+		return c.json({ error: "You cannot transfer team ownership to yourself." }, 400);
+	}
+	if (!(await isActiveTeamMember(teamId, parsed.output.recipientUserId))) {
+		return c.json({ error: "Ownership target must be an active team member." }, 400);
 	}
 
 	const current = await getCurrentOwnershipWorkflow("team", teamId);
 	if (current) {
-		return c.json({ error: "A team continuity workflow is already pending." }, 409);
+		return c.json({ error: "A team ownership workflow is already pending." }, 409);
 	}
 
-	const parsed = v.safeParse(InitiateOwnershipWorkflowSchema, {
-		...body,
-		entityType: "team",
-		entityId: teamId,
-		kind: body.kind ?? "recovery",
-	});
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	if (parsed.output.kind === "transfer" && parsed.output.recipientUserId) {
-		const recipientIsAdmin = await isActiveTeamAdmin(teamId, parsed.output.recipientUserId);
-		if (!recipientIsAdmin) {
-			return c.json({ error: "Team transfer recipients must be active team admins." }, 400);
-		}
+	const { allowed, retryAfterMs } = await checkRateLimit(
+		`team-ownership-transfer-verify:${session.userId}:${teamId}`,
+		rateLimits.sensitiveActionVerify.limit,
+		rateLimits.sensitiveActionVerify.windowMs
+	);
+	if (!allowed) {
+		return c.json(
+			{
+				error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
+			},
+			429
+		);
+	}
+	const verification = await validateAndConsumeSensitiveAction(
+		session.userId,
+		"team_ownership_transfer",
+		parsed.output.verificationCode
+	);
+	if (!verification.success) return c.json({ error: "Invalid or expired verification code." }, 400);
+	if (
+		verification.metadata?.teamId !== teamId ||
+		verification.metadata?.recipientUserId !== parsed.output.recipientUserId
+	) {
+		await deleteSensitiveActionVerification(session.userId, "team_ownership_transfer");
+		return c.json({ error: "Verification code does not match this transfer." }, 400);
 	}
 
 	const currentOwnerUserId = await getPrimaryTeamContinuityOwner(teamId);
-	const [workflow] = await db
-		.insert(ownershipWorkflowTable)
-		.values({
-			entityType: "team",
-			entityId: teamId,
-			kind: parsed.output.kind,
-			status: parsed.output.kind === "recovery" ? "review_required" : "pending",
-			requesterUserId: user.id,
-			currentOwnerUserId,
-			recipientUserId: parsed.output.recipientUserId ?? null,
-			recoveryTargetUserId: parsed.output.recoveryTargetUserId ?? user.id,
-			verificationState: parsed.output.kind === "transfer" ? "required" : "not_required",
-			reviewState: parsed.output.kind === "recovery" ? "required" : "not_required",
-			reason: parsed.output.reason || null,
-			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-			metadata: { priorOwnerUserId: currentOwnerUserId },
-		})
-		.returning({ id: ownershipWorkflowTable.id });
+	let workflow: { id: string } | undefined;
+	try {
+		[workflow] = await db
+			.insert(ownershipWorkflowTable)
+			.values({
+				entityType: "team",
+				entityId: teamId,
+				kind: "transfer",
+				status: "pending",
+				requesterUserId: user.id,
+				currentOwnerUserId,
+				recipientUserId: parsed.output.recipientUserId,
+				verificationState: "verified",
+				reason: parsed.output.reason || null,
+				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+				metadata: { priorOwnerUserId: currentOwnerUserId },
+			})
+			.returning({ id: ownershipWorkflowTable.id });
+	} catch (error) {
+		// Partial unique index race: another pending workflow was created concurrently.
+		if (error instanceof DatabaseError && error.code === "23505") {
+			return c.json({ error: "A team ownership workflow is already pending." }, 409);
+		}
+		throw error;
+	}
+	if (!workflow) return c.json({ error: "Failed to create ownership workflow." }, 500);
 
 	await db.insert(ownershipWorkflowEventTable).values({
 		workflowId: workflow.id,
 		actorUserId: user.id,
 		action: "created",
 		fromStatus: null,
-		toStatus: parsed.output.kind === "recovery" ? "review_required" : "pending",
+		toStatus: "pending",
 		reason: parsed.output.reason || null,
 		metadata: {
 			previousOwnerUserId: currentOwnerUserId,
-			newOwnerUserId:
-				parsed.output.recipientUserId ?? parsed.output.recoveryTargetUserId ?? user.id,
+			newOwnerUserId: parsed.output.recipientUserId,
 			previousAdminUserIds: await listTeamAdminUserIds(teamId),
 		},
 	});
+	await deleteSensitiveActionVerification(session.userId, "team_ownership_transfer");
 
-	if (parsed.output.kind === "transfer" && parsed.output.recipientUserId) {
-		await createNotification({
-			userId: parsed.output.recipientUserId,
-			type: "generic",
-			title: "Team ownership transfer requested",
-			body: "A team ownership transfer is waiting for your response.",
-			referenceType: "ownership_workflow",
-			referenceId: workflow.id,
-			conflictBehavior: "always-insert",
-		});
-	}
+	await createNotification({
+		userId: parsed.output.recipientUserId,
+		type: "generic",
+		title: "Team ownership transfer requested",
+		body: "A team ownership transfer is waiting for your response.",
+		referenceType: "ownership_workflow",
+		referenceId: workflow.id,
+		conflictBehavior: "always-insert",
+	});
 
 	writeDomainAuditEvent({
 		actorId: user.id,
 		actorType: "user",
 		domain: "ownership",
-		actionType:
-			parsed.output.kind === "transfer"
-				? "ownership_transfer_initiated"
-				: "ownership_recovery_initiated",
+		actionType: "ownership_transfer_initiated",
 		targetType: "team",
 		targetId: teamId,
 		outcome: "success",
 		reason: parsed.output.reason ?? null,
-		metadata: { workflowId: workflow.id, kind: parsed.output.kind },
+		metadata: { workflowId: workflow.id, kind: "transfer" },
 	});
-	return c.json({ success: true, workflowId: workflow.id });
+	return c.json({ success: true, workflowId: workflow.id, status: "pending" });
 });
 
 teamRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
@@ -1249,64 +1385,77 @@ teamRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 	const recipientUserId = workflow.recipientUserId;
 
 	const previousAdminUserIds = await listTeamAdminUserIds(teamId);
-	await db.transaction(async (tx) => {
-		if (parsed.output.action === "accept") {
-			if (workflow.currentOwnerUserId && workflow.currentOwnerUserId !== recipientUserId) {
-				await tx
+	try {
+		await db.transaction(async (tx) => {
+			if (parsed.output.action === "accept") {
+				// Promote the recipient first and confirm the roster row exists. If they left the
+				// team during the pending window, abort so we never demote the prior owner and
+				// leave the team without an admin.
+				const [promoted] = await tx
 					.update(teamRosterTable)
-					.set({ permissionRole: "member" })
+					.set({ permissionRole: "admin", status: "active", leftAt: null })
 					.where(
-						and(
-							eq(teamRosterTable.teamId, teamId),
-							eq(teamRosterTable.userId, workflow.currentOwnerUserId)
-						)
-					);
+						and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.userId, recipientUserId))
+					)
+					.returning({ id: teamRosterTable.id });
+				if (!promoted) throw new OwnershipRecipientGoneError();
+
+				if (workflow.currentOwnerUserId && workflow.currentOwnerUserId !== recipientUserId) {
+					await tx
+						.update(teamRosterTable)
+						.set({ permissionRole: "member" })
+						.where(
+							and(
+								eq(teamRosterTable.teamId, teamId),
+								eq(teamRosterTable.userId, workflow.currentOwnerUserId)
+							)
+						);
+				}
 			}
+
 			await tx
-				.update(teamRosterTable)
-				.set({ permissionRole: "admin", status: "active", leftAt: null })
+				.update(ownershipWorkflowTable)
+				.set({
+					status: parsed.output.action === "accept" ? "accepted" : "rejected",
+					verificationState: parsed.output.action === "accept" ? "verified" : "required",
+					result: parsed.output.action === "accept" ? "transferred" : "rejected",
+					resolvedAt: new Date(),
+					metadata: { resultReason: parsed.output.reason ?? null },
+				})
 				.where(
-					and(eq(teamRosterTable.teamId, teamId), eq(teamRosterTable.userId, recipientUserId))
+					and(
+						eq(ownershipWorkflowTable.id, workflow.id),
+						eq(ownershipWorkflowTable.status, "pending")
+					)
 				);
-		}
 
-		await tx
-			.update(ownershipWorkflowTable)
-			.set({
-				status: parsed.output.action === "accept" ? "accepted" : "rejected",
-				verificationState: parsed.output.action === "accept" ? "verified" : "required",
-				result: parsed.output.action === "accept" ? "transferred" : "rejected",
-				resolvedAt: new Date(),
-				metadata: { resultReason: parsed.output.reason ?? null },
-			})
-			.where(
-				and(
-					eq(ownershipWorkflowTable.id, workflow.id),
-					eq(ownershipWorkflowTable.status, "pending")
-				)
-			);
-
-		await tx.insert(ownershipWorkflowEventTable).values({
-			workflowId: workflow.id,
-			actorUserId: user.id,
-			action: parsed.output.action === "accept" ? "accepted" : "rejected",
-			fromStatus: workflow.status,
-			toStatus: parsed.output.action === "accept" ? "accepted" : "rejected",
-			reason: parsed.output.reason ?? null,
-			metadata: {
-				previousOwnerUserId: workflow.currentOwnerUserId,
-				newOwnerUserId: recipientUserId,
-				previousAdminUserIds,
-				resultingAdminUserIds:
-					parsed.output.action === "accept"
-						? previousAdminUserIds
-								.filter((adminId) => adminId !== workflow.currentOwnerUserId)
-								.concat(recipientUserId)
-						: previousAdminUserIds,
-				resultReason: parsed.output.reason ?? null,
-			},
+			await tx.insert(ownershipWorkflowEventTable).values({
+				workflowId: workflow.id,
+				actorUserId: user.id,
+				action: parsed.output.action === "accept" ? "accepted" : "rejected",
+				fromStatus: workflow.status,
+				toStatus: parsed.output.action === "accept" ? "accepted" : "rejected",
+				reason: parsed.output.reason ?? null,
+				metadata: {
+					previousOwnerUserId: workflow.currentOwnerUserId,
+					newOwnerUserId: recipientUserId,
+					previousAdminUserIds,
+					resultingAdminUserIds:
+						parsed.output.action === "accept"
+							? previousAdminUserIds
+									.filter((adminId) => adminId !== workflow.currentOwnerUserId)
+									.concat(recipientUserId)
+							: previousAdminUserIds,
+					resultReason: parsed.output.reason ?? null,
+				},
+			});
 		});
-	});
+	} catch (error) {
+		if (error instanceof OwnershipRecipientGoneError) {
+			return c.json({ error: "Recipient is no longer a member of this team." }, 409);
+		}
+		throw error;
+	}
 
 	if (workflow.requesterUserId) {
 		await createNotification({
@@ -1325,7 +1474,7 @@ teamRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 			conflictBehavior: "always-insert",
 		});
 	}
-	// P20: also notify the new owner that they now hold authority.
+	// Notify the new owner that they now hold authority.
 	if (parsed.output.action === "accept" && workflow.recipientUserId) {
 		await createNotification({
 			userId: workflow.recipientUserId,
@@ -1376,12 +1525,8 @@ teamRoutes.post("/:id/ownership/:workflowId/cancel", async (c) => {
 		columns: { id: true, status: true },
 	});
 	if (!workflow) return c.json({ error: "Ownership workflow not found." }, 404);
-	if (
-		workflow.status !== "pending" &&
-		workflow.status !== "review_required" &&
-		workflow.status !== "blocked"
-	) {
-		return c.json({ error: "Only open ownership workflows can be cancelled." }, 409);
+	if (workflow.status !== "pending") {
+		return c.json({ error: "Only pending ownership workflows can be cancelled." }, 409);
 	}
 
 	await db.transaction(async (tx) => {
@@ -1409,123 +1554,6 @@ teamRoutes.post("/:id/ownership/:workflowId/cancel", async (c) => {
 			metadata: { resultReason: parsed.output.reason ?? null },
 		});
 	});
-
-	return c.json({ success: true });
-});
-
-teamRoutes.post("/:id/ownership/:workflowId/resolve", async (c) => {
-	const user = c.get("user");
-	const teamId = c.req.param("id");
-	const workflowId = c.req.param("workflowId");
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-	const parsed = v.safeParse(ResolveOwnershipWorkflowSchema, { ...body, workflowId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const access = await getTeamAccessContext(teamId, user.id);
-	if (access?.orgRole !== "owner" && access?.orgRole !== "admin") {
-		return c.json(
-			{ error: "Recovery resolution requires organization owner or admin authority." },
-			403
-		);
-	}
-
-	await persistExpiredOwnershipWorkflows("team", teamId);
-	const workflow = await db.query.ownershipWorkflowTable.findFirst({
-		where: and(
-			eq(ownershipWorkflowTable.id, workflowId),
-			eq(ownershipWorkflowTable.entityType, "team"),
-			eq(ownershipWorkflowTable.entityId, teamId)
-		),
-		columns: {
-			id: true,
-			kind: true,
-			status: true,
-			currentOwnerUserId: true,
-			recoveryTargetUserId: true,
-		},
-	});
-	if (!workflow) return c.json({ error: "Ownership workflow not found." }, 404);
-	if (workflow.kind !== "recovery" || workflow.status !== "review_required") {
-		return c.json({ error: "Only recovery workflows in review can be resolved." }, 409);
-	}
-
-	const resolution = getOwnershipResolution(parsed.output.result);
-	const previousAdminUserIds = await listTeamAdminUserIds(teamId);
-	const recoveryTargetUserId = workflow.recoveryTargetUserId;
-	if (parsed.output.result === "approve" && !recoveryTargetUserId) {
-		return c.json({ error: "Recovery workflow is missing a recovery target." }, 409);
-	}
-
-	await db.transaction(async (tx) => {
-		if (parsed.output.result === "approve" && recoveryTargetUserId) {
-			await ensureTeamMembership(tx, {
-				teamId,
-				userId: recoveryTargetUserId,
-				memberType: "staff",
-				staffRole: "manager",
-				permissionRole: "admin",
-				status: "active",
-			});
-		}
-
-		await tx
-			.update(ownershipWorkflowTable)
-			.set({
-				status: resolution.status,
-				reviewState: resolution.reviewState,
-				result: resolution.workflowResult,
-				resolvedAt: new Date(),
-				metadata: {
-					resultReason: parsed.output.reason ?? null,
-					previousAdminUserIds,
-					resultingAdminUserIds:
-						parsed.output.result === "approve" && recoveryTargetUserId
-							? [...new Set([...previousAdminUserIds, recoveryTargetUserId])]
-							: previousAdminUserIds,
-				},
-			})
-			.where(
-				and(
-					eq(ownershipWorkflowTable.id, workflowId),
-					eq(ownershipWorkflowTable.status, workflow.status)
-				)
-			);
-
-		await tx.insert(ownershipWorkflowEventTable).values({
-			workflowId,
-			actorUserId: user.id,
-			action: resolution.workflowResult,
-			fromStatus: workflow.status,
-			toStatus: resolution.status,
-			reason: parsed.output.reason ?? null,
-			metadata: {
-				previousOwnerUserId: workflow.currentOwnerUserId,
-				newOwnerUserId: recoveryTargetUserId,
-				previousAdminUserIds,
-				resultingAdminUserIds:
-					parsed.output.result === "approve" && recoveryTargetUserId
-						? [...new Set([...previousAdminUserIds, recoveryTargetUserId])]
-						: previousAdminUserIds,
-				resultReason: parsed.output.reason ?? null,
-			},
-		});
-	});
-
-	if (recoveryTargetUserId) {
-		await createNotification({
-			userId: recoveryTargetUserId,
-			type: "generic",
-			title: "Team recovery resolved",
-			body:
-				parsed.output.result === "approve"
-					? "Team continuity recovery was approved."
-					: "Team continuity recovery was not approved.",
-			referenceType: "ownership_workflow",
-			referenceId: workflowId,
-			conflictBehavior: "always-insert",
-		});
-	}
 
 	return c.json({ success: true });
 });

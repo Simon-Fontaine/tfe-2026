@@ -28,6 +28,18 @@ export function canManageTeam(
 	return canManageOrg(orgRole) || teamPermissionRole === "admin";
 }
 
+/**
+ * Teams have no stored owner; "ownership" is the senior team admin. Transferring it
+ * (promoting another member to the team-admin/manager designation) is gated the same
+ * way as managing the team — org owners/admins or an existing team admin.
+ */
+export function canTransferTeamOwnership(
+	orgRole: OrgPermissionRole | null | undefined,
+	teamPermissionRole: TeamPermissionRole | null | undefined
+): boolean {
+	return canManageTeam(orgRole, teamPermissionRole);
+}
+
 export function canAssignTeamAdmin(
 	orgRole: OrgPermissionRole | null | undefined,
 	teamPermissionRole: TeamPermissionRole | null | undefined,

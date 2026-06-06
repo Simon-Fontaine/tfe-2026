@@ -8,15 +8,8 @@ const MEMBER_TYPE_VALUES = ["player", "staff"] as const;
 const STAFF_ROLE_VALUES = ["coach", "analyst", "manager", "staff"] as const;
 const INVITE_ACTION_VALUES = ["accept", "decline"] as const;
 const OWNERSHIP_ENTITY_VALUES = ["team", "organization"] as const;
-const OWNERSHIP_KIND_VALUES = ["transfer", "recovery"] as const;
 const OWNERSHIP_RESPONSE_VALUES = ["accept", "reject"] as const;
-const OWNERSHIP_RESOLVE_VALUES = ["approve", "reject", "block"] as const;
 const LIFECYCLE_ENTITY_VALUES = ["team", "organization"] as const;
-const LIFECYCLE_RETENTION_VALUES = [
-	"preserve_history",
-	"archive_all_teams",
-	"anonymize_public_history",
-] as const;
 
 const optionalDescription = v.optional(
 	v.pipe(v.string(), v.trim(), v.maxLength(800, "Description cannot exceed 800 characters"))
@@ -101,13 +94,6 @@ export const UpdateOrgSchema = v.object({
 
 export type UpdateOrgInput = v.InferOutput<typeof UpdateOrgSchema>;
 
-export const TransferOrgOwnershipSchema = v.object({
-	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
-	memberId: v.pipe(v.string(), v.uuid("Invalid member ID")),
-});
-
-export type TransferOrgOwnershipInput = v.InferOutput<typeof TransferOrgOwnershipSchema>;
-
 const ownershipReason = v.optional(
 	v.pipe(v.string(), v.trim(), v.maxLength(800, "Reason cannot exceed 800 characters"))
 );
@@ -137,9 +123,6 @@ export const LifecycleDeletionRequestSchema = v.object({
 	entityId: v.pipe(v.string(), v.uuid("Invalid lifecycle target ID")),
 	confirmName: v.pipe(v.string(), v.minLength(1, "Please type the name to confirm")),
 	reason: lifecycleReason,
-	retentionPolicy: v.optional(
-		v.picklist(LIFECYCLE_RETENTION_VALUES, "Please select a retention policy")
-	),
 	verificationCode: v.optional(
 		v.pipe(
 			v.string(),
@@ -171,38 +154,40 @@ export const LifecycleSettlementSchema = v.object({
 
 export type LifecycleSettlementInput = v.InferOutput<typeof LifecycleSettlementSchema>;
 
-export const InitiateOwnershipWorkflowSchema = v.pipe(
-	v.object({
-		entityType: v.picklist(OWNERSHIP_ENTITY_VALUES, "Please select an ownership target"),
-		entityId: v.pipe(v.string(), v.uuid("Invalid ownership target ID")),
-		kind: v.picklist(OWNERSHIP_KIND_VALUES, "Please select a workflow type"),
-		recipientUserId: v.optional(v.pipe(v.string(), v.uuid("Invalid recipient user ID"))),
-		recoveryTargetUserId: v.optional(v.pipe(v.string(), v.uuid("Invalid recovery target user ID"))),
-		reason: ownershipReason,
-		verificationCode: v.optional(
-			v.pipe(
-				v.string(),
-				v.trim(),
-				v.minLength(1, "Verification code cannot be empty"),
-				v.maxLength(120, "Verification code is too long")
-			)
-		),
-	}),
-	v.check(
-		(input) => input.kind !== "transfer" || Boolean(input.recipientUserId),
-		"Transfer workflows require a recipient"
-	),
-	v.check(
-		(input) => input.kind !== "recovery" || Boolean(input.reason),
-		"Recovery workflows require a reason"
-	),
-	v.check(
-		(input) => !(Boolean(input.recipientUserId) && Boolean(input.recoveryTargetUserId)),
-		"Provide either a transfer recipient or a recovery target, not both"
-	)
+const ownershipVerificationCode = v.pipe(
+	v.string(),
+	v.trim(),
+	v.minLength(1, "Verification code cannot be empty"),
+	v.maxLength(120, "Verification code is too long")
 );
 
-export type InitiateOwnershipWorkflowInput = v.InferOutput<typeof InitiateOwnershipWorkflowSchema>;
+/**
+ * Request an email verification code to start an ownership transfer. The code is
+ * bound to the recipient so it can only finalise a transfer to the same person.
+ */
+export const RequestOwnershipTransferCodeSchema = v.object({
+	entityType: v.picklist(OWNERSHIP_ENTITY_VALUES, "Please select an ownership target"),
+	entityId: v.pipe(v.string(), v.uuid("Invalid ownership target ID")),
+	recipientUserId: v.pipe(v.string(), v.uuid("Invalid recipient user ID")),
+});
+
+export type RequestOwnershipTransferCodeInput = v.InferOutput<
+	typeof RequestOwnershipTransferCodeSchema
+>;
+
+/**
+ * Initiate an ownership transfer. The initiator (current owner / team manager) must
+ * supply the email verification code; the recipient confirms by accepting.
+ */
+export const InitiateOwnershipTransferSchema = v.object({
+	entityType: v.picklist(OWNERSHIP_ENTITY_VALUES, "Please select an ownership target"),
+	entityId: v.pipe(v.string(), v.uuid("Invalid ownership target ID")),
+	recipientUserId: v.pipe(v.string(), v.uuid("Invalid recipient user ID")),
+	verificationCode: ownershipVerificationCode,
+	reason: ownershipReason,
+});
+
+export type InitiateOwnershipTransferInput = v.InferOutput<typeof InitiateOwnershipTransferSchema>;
 
 export const RespondToOwnershipWorkflowSchema = v.object({
 	workflowId: v.pipe(v.string(), v.uuid("Invalid ownership workflow ID")),
@@ -221,21 +206,10 @@ export const CancelOwnershipWorkflowSchema = v.object({
 
 export type CancelOwnershipWorkflowInput = v.InferOutput<typeof CancelOwnershipWorkflowSchema>;
 
-export const ResolveOwnershipWorkflowSchema = v.object({
-	workflowId: v.pipe(v.string(), v.uuid("Invalid ownership workflow ID")),
-	result: v.picklist(OWNERSHIP_RESOLVE_VALUES, "Please select a resolution"),
-	reason: ownershipReason,
-});
-
-export type ResolveOwnershipWorkflowInput = v.InferOutput<typeof ResolveOwnershipWorkflowSchema>;
-
 export const DeleteOrgSchema = v.object({
 	orgId: v.pipe(v.string(), v.uuid("Invalid organisation ID")),
 	confirmName: v.pipe(v.string(), v.minLength(1, "Please type the organisation name to confirm")),
 	reason: lifecycleReason,
-	retentionPolicy: v.optional(
-		v.picklist(LIFECYCLE_RETENTION_VALUES, "Please select a retention policy")
-	),
 	verificationCode: v.optional(
 		v.pipe(v.string(), v.trim(), v.maxLength(120, "Verification code is too long"))
 	),

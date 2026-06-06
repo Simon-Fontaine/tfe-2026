@@ -3,14 +3,14 @@ import {
 	CreateOrgSchema,
 	canAssignOrgRole,
 	DeleteOrgSchema,
-	InitiateOwnershipWorkflowSchema,
+	InitiateOwnershipTransferSchema,
 	InviteToOrgSchema,
 	isReservedIdentityValue,
 	LifecycleArchiveSchema,
 	LifecycleDeletionCancelSchema,
 	LifecycleRestoreSchema,
 	LifecycleSettlementSchema,
-	ResolveOwnershipWorkflowSchema,
+	RequestOwnershipTransferCodeSchema,
 	RespondToOrgInviteSchema,
 	RespondToOwnershipWorkflowSchema,
 	rateLimits,
@@ -20,6 +20,7 @@ import {
 } from "@scrimflow/shared";
 import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { DatabaseError } from "pg";
 import { createElement } from "react";
 import * as v from "valibot";
 import { writeDomainAuditEvent } from "@/auth/domain-audit";
@@ -64,8 +65,8 @@ import logger from "@/utils/logger";
 import { findOrgBySlug, getOrgPermissions, getUserOrgRole, nameToSlug } from "@/utils/org";
 import {
 	getCurrentOwnershipWorkflow,
-	getOwnershipResolution,
 	mapOwnershipWorkflow,
+	OwnershipRecipientGoneError,
 	persistExpiredOwnershipWorkflows,
 } from "@/utils/ownership";
 import {
@@ -966,46 +967,116 @@ orgRoutes.patch("/:id", async (c) => {
 	return c.json({ success: true });
 });
 
-orgRoutes.post("/:id/ownership", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-
-	// P21: validate the schema first so permission checks are performed on typed, sanitised data.
+/**
+ * Resolve the recipient member from either a userId or a member row id, returning the
+ * target member's userId or an error response tuple.
+ */
+async function resolveOrgTransferRecipient(orgId: string, body: Record<string, unknown>) {
 	let recipientUserId = typeof body.recipientUserId === "string" ? body.recipientUserId : undefined;
 	if (!recipientUserId && typeof body.memberId === "string") {
 		const target = await db.query.organizationMemberTable.findFirst({
 			where: eq(organizationMemberTable.id, body.memberId),
-			columns: { id: true, organizationId: true, userId: true },
+			columns: { organizationId: true, userId: true },
 		});
-		if (!target || target.organizationId !== orgId) {
-			return c.json({ error: "Target member not found." }, 404);
-		}
+		if (!target || target.organizationId !== orgId) return null;
 		recipientUserId = target.userId;
 	}
-	const recoveryTargetUserId =
-		typeof body.recoveryTargetUserId === "string" ? body.recoveryTargetUserId : user.id;
+	return recipientUserId ?? null;
+}
 
-	const parsed = v.safeParse(InitiateOwnershipWorkflowSchema, {
-		...body,
+orgRoutes.post("/:id/ownership/request-code", async (c) => {
+	const session = c.get("session");
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const recipientUserId = await resolveOrgTransferRecipient(orgId, body);
+	const parsed = v.safeParse(RequestOwnershipTransferCodeSchema, {
 		entityType: "organization",
 		entityId: orgId,
-		kind: body.kind ?? "transfer",
 		recipientUserId,
-		recoveryTargetUserId,
 	});
 	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
 
 	const permissions = await getOrgPermissions(orgId, user.id);
-	if (!permissions.membership) {
-		return c.json({ error: "You do not have organization access." }, 403);
-	}
-	if (parsed.output.kind === "transfer" && !permissions.canTransferOwnership) {
+	if (!permissions.canTransferOwnership) {
 		return c.json({ error: "Only the org owner can start ownership transfer." }, 403);
 	}
-	if (parsed.output.kind === "recovery" && !permissions.canManage) {
-		return c.json({ error: "Only organization managers can start ownership recovery." }, 403);
+	const lifecycleBlock = await getOrgLifecycleBlock(orgId);
+	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
+
+	const org = await db.query.organizationTable.findFirst({
+		where: eq(organizationTable.id, orgId),
+		columns: { id: true, name: true, ownerId: true },
+	});
+	if (!org) return c.json({ error: "Organization not found." }, 404);
+	if (parsed.output.recipientUserId === org.ownerId) {
+		return c.json({ error: "The recipient already owns this organization." }, 400);
+	}
+	const target = await db.query.organizationMemberTable.findFirst({
+		where: and(
+			eq(organizationMemberTable.organizationId, orgId),
+			eq(organizationMemberTable.userId, parsed.output.recipientUserId)
+		),
+		columns: { id: true },
+	});
+	if (!target) return c.json({ error: "Ownership target must be an organization member." }, 400);
+
+	const { allowed, retryAfterMs } = await checkRateLimit(
+		`org-ownership-transfer-request:${session.userId}:${orgId}`,
+		rateLimits.sensitiveActionRequest.limit,
+		rateLimits.sensitiveActionRequest.windowMs
+	);
+	if (!allowed) {
+		return c.json(
+			{
+				error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
+			},
+			429
+		);
+	}
+
+	const client = c.get("client");
+	const code = await createSensitiveActionVerification(
+		session.userId,
+		"organization_ownership_transfer",
+		{ orgId, recipientUserId: parsed.output.recipientUserId },
+		client.ip
+	);
+	await sendMail({
+		to: user.email,
+		subject: "Confirm organization ownership transfer",
+		template: createElement(VerificationEmail, {
+			code,
+			title: "Confirm organization ownership transfer",
+			message: `You requested to transfer ownership of ${org.name}. Enter this code to continue.`,
+			actionText: "enter the following confirmation code",
+		}),
+	});
+
+	return c.json({ success: true });
+});
+
+orgRoutes.post("/:id/ownership", async (c) => {
+	const session = c.get("session");
+	const user = c.get("user");
+	const orgId = c.req.param("id");
+	const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+	if (!body) return c.json({ error: "Invalid request body." }, 400);
+
+	const recipientUserId = await resolveOrgTransferRecipient(orgId, body);
+	const parsed = v.safeParse(InitiateOwnershipTransferSchema, {
+		...body,
+		entityType: "organization",
+		entityId: orgId,
+		recipientUserId,
+	});
+	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
+
+	const permissions = await getOrgPermissions(orgId, user.id);
+	if (!permissions.canTransferOwnership) {
+		return c.json({ error: "Only the org owner can start ownership transfer." }, 403);
 	}
 	const lifecycleBlock = await getOrgLifecycleBlock(orgId);
 	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
@@ -1023,90 +1094,109 @@ orgRoutes.post("/:id/ownership", async (c) => {
 		columns: { ownerId: true },
 	});
 	if (!org) return c.json({ error: "Organization not found." }, 404);
+	if (parsed.output.recipientUserId === org.ownerId) {
+		return c.json({ error: "The recipient already owns this organization." }, 400);
+	}
 
-	const targetUserId =
-		parsed.output.kind === "transfer"
-			? parsed.output.recipientUserId
-			: parsed.output.recoveryTargetUserId;
 	const target = await db.query.organizationMemberTable.findFirst({
 		where: and(
 			eq(organizationMemberTable.organizationId, orgId),
-			eq(organizationMemberTable.userId, targetUserId ?? "")
+			eq(organizationMemberTable.userId, parsed.output.recipientUserId)
 		),
-		columns: { id: true, organizationId: true, userId: true },
+		columns: { userId: true },
 	});
 	if (!target) return c.json({ error: "Ownership target must be an organization member." }, 400);
 
-	const [workflow] = await db
-		.insert(ownershipWorkflowTable)
-		.values({
-			entityType: "organization",
-			entityId: orgId,
-			kind: parsed.output.kind,
-			status: parsed.output.kind === "recovery" ? "review_required" : "pending",
-			requesterUserId: user.id,
-			currentOwnerUserId: org.ownerId,
-			recipientUserId: parsed.output.kind === "transfer" ? target.userId : null,
-			recoveryTargetUserId: parsed.output.kind === "recovery" ? target.userId : null,
-			verificationState: parsed.output.kind === "transfer" ? "required" : "not_required",
-			reviewState: parsed.output.kind === "recovery" ? "required" : "not_required",
-			reason: parsed.output.reason || null,
-			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-			metadata: { priorOwnerUserId: org.ownerId },
-		})
-		.returning({ id: ownershipWorkflowTable.id });
+	const { allowed, retryAfterMs } = await checkRateLimit(
+		`org-ownership-transfer-verify:${session.userId}:${orgId}`,
+		rateLimits.sensitiveActionVerify.limit,
+		rateLimits.sensitiveActionVerify.windowMs
+	);
+	if (!allowed) {
+		return c.json(
+			{
+				error: `Too many attempts. Please wait ${formatRetryAfter(retryAfterMs)} before trying again.`,
+			},
+			429
+		);
+	}
+	const verification = await validateAndConsumeSensitiveAction(
+		session.userId,
+		"organization_ownership_transfer",
+		parsed.output.verificationCode
+	);
+	if (!verification.success) return c.json({ error: "Invalid or expired verification code." }, 400);
+	if (
+		verification.metadata?.orgId !== orgId ||
+		verification.metadata?.recipientUserId !== parsed.output.recipientUserId
+	) {
+		await deleteSensitiveActionVerification(session.userId, "organization_ownership_transfer");
+		return c.json({ error: "Verification code does not match this transfer." }, 400);
+	}
+
+	let workflow: { id: string } | undefined;
+	try {
+		[workflow] = await db
+			.insert(ownershipWorkflowTable)
+			.values({
+				entityType: "organization",
+				entityId: orgId,
+				kind: "transfer",
+				status: "pending",
+				requesterUserId: user.id,
+				currentOwnerUserId: org.ownerId,
+				recipientUserId: target.userId,
+				verificationState: "verified",
+				reason: parsed.output.reason || null,
+				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+				metadata: { priorOwnerUserId: org.ownerId },
+			})
+			.returning({ id: ownershipWorkflowTable.id });
+	} catch (error) {
+		// Partial unique index race: another pending workflow was created concurrently.
+		if (error instanceof DatabaseError && error.code === "23505") {
+			return c.json(
+				{ error: "An ownership workflow is already pending for this organization." },
+				409
+			);
+		}
+		throw error;
+	}
+	if (!workflow) return c.json({ error: "Failed to create ownership workflow." }, 500);
 
 	await db.insert(ownershipWorkflowEventTable).values({
 		workflowId: workflow.id,
 		actorUserId: user.id,
 		action: "created",
 		fromStatus: null,
-		toStatus: parsed.output.kind === "recovery" ? "review_required" : "pending",
+		toStatus: "pending",
 		reason: parsed.output.reason || null,
 		metadata: { previousOwnerUserId: org.ownerId },
 	});
+	await deleteSensitiveActionVerification(session.userId, "organization_ownership_transfer");
 
-	if (parsed.output.kind === "transfer") {
-		await createNotification({
-			userId: target.userId,
-			type: "generic",
-			title: "Ownership transfer requested",
-			body: "An organization owner has asked you to accept ownership.",
-			referenceType: "ownership_workflow",
-			referenceId: workflow.id,
-			conflictBehavior: "always-insert",
-		});
-	} else if (org.ownerId && org.ownerId !== user.id) {
-		await createNotification({
-			userId: org.ownerId,
-			type: "generic",
-			title: "Ownership recovery started",
-			body: "An organization ownership recovery workflow needs review.",
-			referenceType: "ownership_workflow",
-			referenceId: workflow.id,
-			conflictBehavior: "always-insert",
-		});
-	}
+	await createNotification({
+		userId: target.userId,
+		type: "generic",
+		title: "Ownership transfer requested",
+		body: "An organization owner has asked you to accept ownership.",
+		referenceType: "ownership_workflow",
+		referenceId: workflow.id,
+		conflictBehavior: "always-insert",
+	});
 
 	writeDomainAuditEvent({
 		actorId: user.id,
 		actorType: "user",
 		domain: "ownership",
-		actionType:
-			parsed.output.kind === "transfer"
-				? "ownership_transfer_initiated"
-				: "ownership_recovery_initiated",
+		actionType: "ownership_transfer_initiated",
 		targetType: "organization",
 		targetId: orgId,
 		outcome: "success",
 		reason: parsed.output.reason ?? null,
-		metadata: { workflowId: workflow.id, kind: parsed.output.kind },
+		metadata: { workflowId: workflow.id, kind: "transfer" },
 	});
-	return c.json({
-		success: true,
-		workflowId: workflow.id,
-		status: parsed.output.kind === "recovery" ? "review_required" : "pending",
-	});
+	return c.json({ success: true, workflowId: workflow.id, status: "pending" });
 });
 
 orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
@@ -1210,62 +1300,73 @@ orgRoutes.post("/:id/ownership/:workflowId/respond", async (c) => {
 		return c.json({ success: true, status: "rejected" });
 	}
 
-	await db.transaction(async (tx) => {
-		await tx
-			.update(organizationMemberTable)
-			.set({ role: "admin" })
-			.where(
-				and(
-					eq(organizationMemberTable.organizationId, orgId),
-					eq(organizationMemberTable.userId, currentOwnerUserId)
+	try {
+		await db.transaction(async (tx) => {
+			// Promote the recipient first and confirm the row exists. If they were removed from
+			// the organization during the pending window, abort so we never set ownerId to a
+			// non-member or demote the current owner without a replacement.
+			const [promoted] = await tx
+				.update(organizationMemberTable)
+				.set({ role: "owner", memberType: "staff", staffRole: "manager" })
+				.where(
+					and(
+						eq(organizationMemberTable.organizationId, orgId),
+						eq(organizationMemberTable.userId, recipientUserId)
+					)
 				)
-			);
+				.returning({ id: organizationMemberTable.id });
+			if (!promoted) throw new OwnershipRecipientGoneError();
 
-		await tx
-			.update(organizationMemberTable)
-			.set({ role: "owner", memberType: "staff", staffRole: "manager" })
-			.where(
-				and(
-					eq(organizationMemberTable.organizationId, orgId),
-					eq(organizationMemberTable.userId, recipientUserId)
-				)
-			);
+			await tx
+				.update(organizationMemberTable)
+				.set({ role: "admin" })
+				.where(
+					and(
+						eq(organizationMemberTable.organizationId, orgId),
+						eq(organizationMemberTable.userId, currentOwnerUserId)
+					)
+				);
 
-		await tx
-			.update(organizationTable)
-			.set({ ownerId: recipientUserId })
-			.where(eq(organizationTable.id, orgId));
+			await tx
+				.update(organizationTable)
+				.set({ ownerId: recipientUserId })
+				.where(eq(organizationTable.id, orgId));
 
-		await tx
-			.update(ownershipWorkflowTable)
-			.set({
-				status: "accepted",
-				verificationState: "verified",
-				result: "transferred",
-				resolvedAt: new Date(),
-			})
-			.where(
-				and(
-					eq(ownershipWorkflowTable.id, workflow.id),
-					eq(ownershipWorkflowTable.status, "pending")
-				)
-			);
+			await tx
+				.update(ownershipWorkflowTable)
+				.set({
+					status: "accepted",
+					verificationState: "verified",
+					result: "transferred",
+					resolvedAt: new Date(),
+				})
+				.where(
+					and(
+						eq(ownershipWorkflowTable.id, workflow.id),
+						eq(ownershipWorkflowTable.status, "pending")
+					)
+				);
 
-		await tx.insert(ownershipWorkflowEventTable).values({
-			workflowId: workflow.id,
-			actorUserId: user.id,
-			action: "accepted",
-			fromStatus: workflow.status,
-			toStatus: "accepted",
-			metadata: {
-				previousOwnerUserId: currentOwnerUserId,
-				newOwnerUserId: recipientUserId,
-			},
+			await tx.insert(ownershipWorkflowEventTable).values({
+				workflowId: workflow.id,
+				actorUserId: user.id,
+				action: "accepted",
+				fromStatus: workflow.status,
+				toStatus: "accepted",
+				metadata: {
+					previousOwnerUserId: currentOwnerUserId,
+					newOwnerUserId: recipientUserId,
+				},
+			});
 		});
-	});
+	} catch (error) {
+		if (error instanceof OwnershipRecipientGoneError) {
+			return c.json({ error: "Recipient is no longer a member of this organization." }, 409);
+		}
+		throw error;
+	}
 
-	// P20: notify both parties on accept — the old owner that transfer went through,
-	// and the new owner (recipient) confirming they now hold authority.
+	// Notify both parties: the old owner of completion and the recipient of new authority.
 	if (currentOwnerUserId !== recipientUserId) {
 		await createNotification({
 			userId: currentOwnerUserId,
@@ -1322,12 +1423,8 @@ orgRoutes.post("/:id/ownership/:workflowId/cancel", async (c) => {
 		columns: { id: true, status: true },
 	});
 	if (!workflow) return c.json({ error: "Ownership workflow not found." }, 404);
-	if (
-		workflow.status !== "pending" &&
-		workflow.status !== "review_required" &&
-		workflow.status !== "blocked"
-	) {
-		return c.json({ error: "Only open ownership workflows can be cancelled." }, 409);
+	if (workflow.status !== "pending") {
+		return c.json({ error: "Only pending ownership workflows can be cancelled." }, 409);
 	}
 
 	await db.transaction(async (tx) => {
@@ -1357,125 +1454,6 @@ orgRoutes.post("/:id/ownership/:workflowId/cancel", async (c) => {
 	});
 
 	return c.json({ success: true, status: "cancelled" });
-});
-
-orgRoutes.post("/:id/ownership/:workflowId/resolve", async (c) => {
-	const user = c.get("user");
-	const orgId = c.req.param("id");
-	const workflowId = c.req.param("workflowId");
-	const body = await c.req.json().catch(() => null);
-	if (!body) return c.json({ error: "Invalid request body." }, 400);
-	const parsed = v.safeParse(ResolveOwnershipWorkflowSchema, { ...body, workflowId });
-	if (!parsed.success) return c.json({ fieldErrors: extractErrors(parsed.issues) }, 400);
-
-	const permissions = await getOrgPermissions(orgId, user.id);
-	if (!permissions.canManageSettings) {
-		return c.json({ error: "Recovery resolution requires organization manager authority." }, 403);
-	}
-
-	await persistExpiredOwnershipWorkflows("organization", orgId);
-	const workflow = await db.query.ownershipWorkflowTable.findFirst({
-		where: and(
-			eq(ownershipWorkflowTable.id, workflowId),
-			eq(ownershipWorkflowTable.entityType, "organization"),
-			eq(ownershipWorkflowTable.entityId, orgId)
-		),
-		columns: {
-			id: true,
-			kind: true,
-			status: true,
-			currentOwnerUserId: true,
-			recoveryTargetUserId: true,
-		},
-	});
-	if (!workflow) return c.json({ error: "Ownership workflow not found." }, 404);
-	if (workflow.kind !== "recovery" || workflow.status !== "review_required") {
-		return c.json({ error: "Only recovery workflows in review can be resolved." }, 409);
-	}
-
-	const resolution = getOwnershipResolution(parsed.output.result);
-	const recoveryTargetUserId = workflow.recoveryTargetUserId;
-	if (parsed.output.result === "approve" && !recoveryTargetUserId) {
-		return c.json({ error: "Recovery workflow is missing a recovery target." }, 409);
-	}
-
-	await db.transaction(async (tx) => {
-		if (parsed.output.result === "approve" && recoveryTargetUserId) {
-			await tx
-				.update(organizationMemberTable)
-				.set({ role: "admin" })
-				.where(
-					and(
-						eq(organizationMemberTable.organizationId, orgId),
-						eq(organizationMemberTable.role, "owner")
-					)
-				);
-
-			const [promoted] = await tx
-				.update(organizationMemberTable)
-				.set({ role: "owner", memberType: "staff", staffRole: "manager" })
-				.where(
-					and(
-						eq(organizationMemberTable.organizationId, orgId),
-						eq(organizationMemberTable.userId, recoveryTargetUserId)
-					)
-				)
-				.returning({ id: organizationMemberTable.id });
-			if (!promoted) throw new Error("Recovery target is no longer an organization member.");
-
-			await tx
-				.update(organizationTable)
-				.set({ ownerId: recoveryTargetUserId })
-				.where(eq(organizationTable.id, orgId));
-		}
-
-		await tx
-			.update(ownershipWorkflowTable)
-			.set({
-				status: resolution.status,
-				reviewState: resolution.reviewState,
-				result: resolution.workflowResult,
-				resolvedAt: new Date(),
-				metadata: { resultReason: parsed.output.reason ?? null },
-			})
-			.where(
-				and(
-					eq(ownershipWorkflowTable.id, workflowId),
-					eq(ownershipWorkflowTable.status, workflow.status)
-				)
-			);
-
-		await tx.insert(ownershipWorkflowEventTable).values({
-			workflowId,
-			actorUserId: user.id,
-			action: resolution.workflowResult,
-			fromStatus: workflow.status,
-			toStatus: resolution.status,
-			reason: parsed.output.reason ?? null,
-			metadata: {
-				previousOwnerUserId: workflow.currentOwnerUserId,
-				newOwnerUserId: recoveryTargetUserId,
-				resultReason: parsed.output.reason ?? null,
-			},
-		});
-	});
-
-	if (recoveryTargetUserId) {
-		await createNotification({
-			userId: recoveryTargetUserId,
-			type: "generic",
-			title: "Ownership recovery resolved",
-			body:
-				parsed.output.result === "approve"
-					? "Organization ownership recovery was approved."
-					: "Organization ownership recovery was not approved.",
-			referenceType: "ownership_workflow",
-			referenceId: workflowId,
-			conflictBehavior: "always-insert",
-		});
-	}
-
-	return c.json({ success: true });
 });
 
 orgRoutes.post("/:id/archive", async (c) => {
@@ -1513,7 +1491,7 @@ orgRoutes.post("/:id/archive", async (c) => {
 			.update(organizationTable)
 			.set({ lifecycleStatus: "archived", lifecycleUpdatedAt: new Date(), isPublic: false })
 			.where(eq(organizationTable.id, orgId));
-		// P15: propagate archive to non-archived child teams.
+		// Propagate the archive to active child teams.
 		await tx
 			.update(teamTable)
 			.set({
@@ -1523,7 +1501,7 @@ orgRoutes.post("/:id/archive", async (c) => {
 				lifecycleUpdatedAt: new Date(),
 			})
 			.where(and(eq(teamTable.organizationId, orgId), ne(teamTable.isArchived, true)));
-		// P16: close chat channels for all previously-active teams.
+		// Close chat channels for the teams just archived.
 		if (activeTeamIds.length > 0) {
 			await tx
 				.update(chatChannelTable)
@@ -1695,18 +1673,8 @@ orgRoutes.delete("/:id", async (c) => {
 	if (org.lifecycleStatus === "irreversible") {
 		return c.json({ error: "This organization has already reached irreversible settlement." }, 409);
 	}
-	const activeTeams = org.teams.filter((team) => !team.isArchived);
-	if (activeTeams.length > 0 && parsed.output.retentionPolicy !== "archive_all_teams") {
-		return c.json(
-			{
-				error:
-					"Archive or transfer active teams before requesting organization deletion, or choose the archive-all retention policy.",
-			},
-			409
-		);
-	}
 
-	// P34: Pre-flight AC7 checks — block if outstanding records would be orphaned.
+	// Pre-flight checks: block if outstanding records would be orphaned.
 	const teamIds = org.teams.map((t) => t.id);
 	if (teamIds.length > 0) {
 		// Block on disputed scrims for any child team.
@@ -1817,7 +1785,6 @@ orgRoutes.delete("/:id", async (c) => {
 				confirmName: parsed.output.confirmName,
 				priorLifecycleStatus: org.lifecycleStatus,
 				priorIsPublic: org.isPublic,
-				retentionPolicy: parsed.output.retentionPolicy ?? "preserve_history",
 			},
 		});
 	});
@@ -1850,7 +1817,7 @@ orgRoutes.post("/:id/deletion/cancel", async (c) => {
 		return c.json({ error: "The recovery window has expired." }, 409);
 	}
 
-	// P2: restore to the lifecycle state that preceded deletion-pending, not always "active".
+	// Restore to the state that preceded deletion-pending, not always "active".
 	// The prior status is stored in workflow metadata when the deletion workflow was created.
 	const priorLifecycleStatus =
 		(workflow.metadata as { priorLifecycleStatus?: string } | null)?.priorLifecycleStatus ??

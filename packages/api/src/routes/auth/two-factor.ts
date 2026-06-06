@@ -10,6 +10,7 @@ import {
 import { writeAuditLog } from "@/auth/audit";
 import { setSessionAs2FAVerified } from "@/auth/session";
 import { checkAndUpdateTotpCounter, checkTotpRateLimit, getUserTotpKey } from "@/auth/totp";
+import { timingSafeCompare } from "@/crypto/utils";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
 import { type AuthEnv, requireAuth } from "@/middleware/auth";
@@ -55,7 +56,7 @@ twoFactorRoutes.post("/totp", async (c) => {
 
 	let matchedWindow: bigint | null = null;
 	for (const offset of [BigInt(-1), BigInt(0), BigInt(1)]) {
-		if (generateHOTP(key, currentWindow + offset, 6) === parsed.output.code) {
+		if (timingSafeCompare(generateHOTP(key, currentWindow + offset, 6), parsed.output.code)) {
 			matchedWindow = currentWindow + offset;
 			break;
 		}

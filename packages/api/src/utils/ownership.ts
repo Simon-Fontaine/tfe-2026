@@ -9,15 +9,20 @@ import {
 	userTable,
 } from "@/db/schema";
 
-const OPEN_OWNERSHIP_STATUSES = ["pending", "review_required", "blocked"] as const;
+/**
+ * Thrown inside an ownership-transfer accept transaction when the recipient is no longer
+ * a member at write time, so the transaction rolls back instead of stranding ownership.
+ */
+export class OwnershipRecipientGoneError extends Error {
+	constructor() {
+		super("Recipient is no longer a member of this entity.");
+		this.name = "OwnershipRecipientGoneError";
+	}
+}
 
-const SETTLED_OWNERSHIP_STATUSES = [
-	"accepted",
-	"approved",
-	"rejected",
-	"cancelled",
-	"expired",
-] as const;
+const OPEN_OWNERSHIP_STATUSES = ["pending"] as const;
+
+const SETTLED_OWNERSHIP_STATUSES = ["accepted", "rejected", "cancelled", "expired"] as const;
 
 type OwnershipStatus =
 	| (typeof OPEN_OWNERSHIP_STATUSES)[number]
@@ -39,12 +44,6 @@ export function getOwnershipStatusCopy(status: string) {
 			return "Cancelled";
 		case "expired":
 			return "Expired";
-		case "review_required":
-			return "Recovery review required";
-		case "approved":
-			return "Approved";
-		case "blocked":
-			return "Blocked by continuity policy";
 		default:
 			return "Unknown ownership state";
 	}
@@ -67,7 +66,6 @@ export async function getCurrentOwnershipWorkflow(
 			requester: { columns: { id: true, displayName: true } },
 			currentOwner: { columns: { id: true, displayName: true } },
 			recipient: { columns: { id: true, displayName: true } },
-			recoveryTarget: { columns: { id: true, displayName: true } },
 		},
 	});
 
@@ -85,7 +83,7 @@ export async function persistExpiredOwnershipWorkflows(
 			and(
 				eq(ownershipWorkflowTable.entityType, entityType),
 				eq(ownershipWorkflowTable.entityId, entityId),
-				inArray(ownershipWorkflowTable.status, ["pending", "review_required"]),
+				eq(ownershipWorkflowTable.status, "pending"),
 				lt(ownershipWorkflowTable.expiresAt, new Date())
 			)
 		);
@@ -99,7 +97,7 @@ export function mapOwnershipWorkflow(
 		id: row.id,
 		entityType: row.entityType as "team" | "organization",
 		entityId: row.entityId,
-		kind: row.kind as "transfer" | "recovery",
+		kind: "transfer",
 		status: row.status as OwnershipStatus,
 		requester: {
 			userId: row.requester?.id ?? row.requesterUserId,
@@ -115,14 +113,7 @@ export function mapOwnershipWorkflow(
 					displayName: row.recipient?.displayName ?? null,
 				}
 			: null,
-		recoveryTarget: row.recoveryTargetUserId
-			? {
-					userId: row.recoveryTarget?.id ?? row.recoveryTargetUserId,
-					displayName: row.recoveryTarget?.displayName ?? null,
-				}
-			: null,
 		verificationState: row.verificationState as OwnershipWorkflowSummary["verificationState"],
-		reviewState: row.reviewState as OwnershipWorkflowSummary["reviewState"],
 		reason: visibility === "authorized" ? row.reason : null,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
@@ -156,7 +147,7 @@ export async function getPrimaryTeamContinuityOwner(teamId: string) {
 					ne(teamRosterTable.status, "inactive")
 				),
 				columns: { userId: true },
-				// P14: deterministic ordering so the most-senior admin is always selected
+				// Deterministic ordering so the most-senior admin is always selected.
 				orderBy: [asc(teamRosterTable.joinedAt)],
 			},
 		},
@@ -174,33 +165,6 @@ export async function getPrimaryTeamContinuityOwner(teamId: string) {
 		columns: { userId: true },
 	});
 	return orgOwner?.userId ?? null;
-}
-
-/**
- * P19: Maps a resolution decision to the workflow status/reviewState/result triple.
- * Previously duplicated in both orgs.ts and teams/index.ts — canonical home is here.
- */
-export function getOwnershipResolution(result: "approve" | "reject" | "block") {
-	if (result === "approve") {
-		return { status: "approved", reviewState: "approved", workflowResult: "recovered" };
-	}
-	if (result === "block") {
-		return { status: "blocked", reviewState: "rejected", workflowResult: "blocked" };
-	}
-	return { status: "rejected", reviewState: "rejected", workflowResult: "rejected" };
-}
-
-export async function isActiveTeamAdmin(teamId: string, userId: string) {
-	const row = await db.query.teamRosterTable.findFirst({
-		where: and(
-			eq(teamRosterTable.teamId, teamId),
-			eq(teamRosterTable.userId, userId),
-			eq(teamRosterTable.permissionRole, "admin"),
-			ne(teamRosterTable.status, "inactive")
-		),
-		columns: { id: true },
-	});
-	return Boolean(row);
 }
 
 export async function getUserDisplayName(userId: string | null | undefined) {

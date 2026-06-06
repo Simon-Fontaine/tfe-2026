@@ -5,7 +5,7 @@ import {
 	archiveOrgAction,
 	cancelOrgOwnershipWorkflowAction,
 	leaveOrgAction,
-	resolveOrgOwnershipWorkflowAction,
+	requestOrgOwnershipCodeAction,
 	respondOrgOwnershipWorkflowAction,
 	restoreOrgAction,
 	transferOrgOwnershipAction,
@@ -45,9 +45,9 @@ export function OrgSettingsPanel({
 		loadingMessage: "Updating workflow…",
 		successMessage: "Ownership workflow updated",
 	});
-	const resolveOwnershipForm = useFormAction(resolveOrgOwnershipWorkflowAction, {
-		loadingMessage: "Resolving recovery…",
-		successMessage: "Ownership recovery resolved",
+	const requestCodeForm = useFormAction(requestOrgOwnershipCodeAction, {
+		loadingMessage: "Sending code…",
+		successMessage: "Verification code sent to your email",
 	});
 	const archiveForm = useFormAction(archiveOrgAction, {
 		loadingMessage: "Archiving organization…",
@@ -58,12 +58,22 @@ export function OrgSettingsPanel({
 		successMessage: "Organization restored",
 	});
 	const [transferReason, setTransferReason] = useState("");
+	const [selectedMemberId, setSelectedMemberId] = useState("");
+	const [transferCode, setTransferCode] = useState("");
 	const [lifecycleReason, setLifecycleReason] = useState("");
+
+	function sendTransferCode(memberId: string) {
+		const fd = new FormData();
+		fd.set("orgId", org.id);
+		fd.set("memberId", memberId);
+		requestCodeForm.submit(fd);
+	}
 
 	function transferOwnership(memberId: string) {
 		const fd = new FormData();
 		fd.set("orgId", org.id);
 		fd.set("memberId", memberId);
+		fd.set("verificationCode", transferCode.trim());
 		fd.set("reason", transferReason);
 		transferForm.submit(fd);
 	}
@@ -81,14 +91,6 @@ export function OrgSettingsPanel({
 		fd.set("workflowId", workflowId);
 		fd.set("action", action);
 		respondOwnershipForm.submit(fd);
-	}
-
-	function resolveOwnershipWorkflow(workflowId: string, result: "approve" | "reject" | "block") {
-		const fd = new FormData();
-		fd.set("orgId", org.id);
-		fd.set("workflowId", workflowId);
-		fd.set("result", result);
-		resolveOwnershipForm.submit(fd);
 	}
 
 	function leaveOrg() {
@@ -113,13 +115,9 @@ export function OrgSettingsPanel({
 
 	const ownershipCandidates = org.members.filter((member) => member.userId !== org.ownerId);
 	const canRespondToOwnership =
-		org.ownershipWorkflow?.kind === "transfer" &&
-		org.ownershipWorkflow.status === "pending" &&
+		org.ownershipWorkflow?.status === "pending" &&
 		org.ownershipWorkflow.recipient?.userId === currentUserId;
-	const canResolveRecovery =
-		org.ownershipWorkflow?.kind === "recovery" &&
-		org.ownershipWorkflow.status === "review_required" &&
-		org.currentUser.canManageSettings;
+	const selectedMember = ownershipCandidates.find((member) => member.id === selectedMemberId);
 
 	return (
 		<div className="space-y-6">
@@ -135,19 +133,15 @@ export function OrgSettingsPanel({
 					{org.ownershipWorkflow ? (
 						<div className="space-y-2 border px-3 py-3">
 							<div>
-								<p className="text-xs font-medium capitalize">
-									{org.ownershipWorkflow.kind} {org.ownershipWorkflow.status.replaceAll("_", " ")}
+								<p className="text-xs font-medium">
+									Ownership transfer {org.ownershipWorkflow.status}
 								</p>
 								<p className="mt-1 text-[11px] text-muted-foreground">
-									Recipient:{" "}
-									{org.ownershipWorkflow.recipient?.displayName ??
-										org.ownershipWorkflow.recoveryTarget?.displayName ??
-										"Pending"}
+									Recipient: {org.ownershipWorkflow.recipient?.displayName ?? "Pending"}
 								</p>
 							</div>
 							<p className="text-[11px] text-muted-foreground">
-								Ownership-sensitive actions stay bound to the current owner until this workflow
-								settles.
+								The current owner keeps full authority until the recipient accepts.
 							</p>
 							{canRespondToOwnership ? (
 								<div className="flex flex-wrap gap-2">
@@ -174,41 +168,6 @@ export function OrgSettingsPanel({
 									</Button>
 								</div>
 							) : null}
-							{canResolveRecovery ? (
-								<div className="flex flex-wrap gap-2">
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={() =>
-											resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "approve")
-										}
-										disabled={resolveOwnershipForm.isPending}
-									>
-										{resolveOwnershipForm.isPending && <Spinner className="mr-1.5" />}
-										Approve recovery
-									</Button>
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={() =>
-											resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "reject")
-										}
-										disabled={resolveOwnershipForm.isPending}
-									>
-										Reject recovery
-									</Button>
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={() =>
-											resolveOwnershipWorkflow(org.ownershipWorkflow?.id ?? "unknown", "block")
-										}
-										disabled={resolveOwnershipForm.isPending}
-									>
-										Block recovery
-									</Button>
-								</div>
-							) : null}
 							{org.currentUser.canTransferOwnership ? (
 								<Button
 									size="sm"
@@ -229,32 +188,70 @@ export function OrgSettingsPanel({
 							</p>
 						</div>
 					) : (
-						<div className="space-y-2">
-							<textarea
-								value={transferReason}
-								onChange={(event) => setTransferReason(event.target.value)}
-								maxLength={800}
-								rows={2}
-								className="min-h-16 w-full border bg-background px-3 py-2 text-sm"
-								placeholder="Optional transfer note for audit history"
-							/>
-							{ownershipCandidates.map((member) => (
-								<div key={member.id} className="flex items-center justify-between border px-3 py-2">
-									<div>
-										<p className="text-xs font-medium">{member.displayName}</p>
-										<p className="text-[11px] text-muted-foreground capitalize">{member.role}</p>
+						<div className="space-y-3">
+							<p className="text-[11px] text-muted-foreground">
+								Choose a member, send a verification code to your email, then confirm. The new owner
+								must accept before the transfer completes.
+							</p>
+							<div className="space-y-1">
+								{ownershipCandidates.map((member) => (
+									<button
+										key={member.id}
+										type="button"
+										onClick={() => setSelectedMemberId(member.id)}
+										className={`flex w-full items-center justify-between border px-3 py-2 text-left ${
+											selectedMemberId === member.id ? "border-primary" : ""
+										}`}
+									>
+										<div>
+											<p className="text-xs font-medium">{member.displayName}</p>
+											<p className="text-[11px] text-muted-foreground capitalize">{member.role}</p>
+										</div>
+										{selectedMemberId === member.id ? (
+											<span className="text-[11px] font-medium text-primary">Selected</span>
+										) : null}
+									</button>
+								))}
+							</div>
+							{selectedMember ? (
+								<div className="space-y-2 border px-3 py-3">
+									<p className="text-xs font-medium">Transfer to {selectedMember.displayName}</p>
+									<div className="flex flex-wrap gap-2">
+										<input
+											value={transferCode}
+											onChange={(event) => setTransferCode(event.target.value)}
+											className="h-9 min-w-52 flex-1 border bg-background px-3 text-xs"
+											placeholder="Verification code"
+										/>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => sendTransferCode(selectedMember.id)}
+											disabled={requestCodeForm.isPending}
+										>
+											{requestCodeForm.isPending && <Spinner className="mr-1.5" />}
+											Send code
+										</Button>
 									</div>
+									<textarea
+										value={transferReason}
+										onChange={(event) => setTransferReason(event.target.value)}
+										maxLength={800}
+										rows={2}
+										className="min-h-16 w-full border bg-background px-3 py-2 text-sm"
+										placeholder="Optional transfer note for audit history"
+									/>
 									<Button
 										size="sm"
 										variant="outline"
-										onClick={() => transferOwnership(member.id)}
-										disabled={transferForm.isPending}
+										onClick={() => transferOwnership(selectedMember.id)}
+										disabled={transferForm.isPending || transferCode.trim().length === 0}
 									>
 										{transferForm.isPending && <Spinner className="mr-1.5" />}
-										Request transfer
+										Confirm transfer
 									</Button>
 								</div>
-							))}
+							) : null}
 						</div>
 					)}
 				</section>
@@ -271,14 +268,12 @@ export function OrgSettingsPanel({
 				{org.lifecycleWorkflow ? (
 					<div className="border px-3 py-3">
 						<p className="text-xs font-medium capitalize">
-							{/* P25: distinct label for irreversible state */}
 							{org.lifecycleWorkflow.status === "irreversible"
 								? "Irreversibly settled — no further actions available"
 								: org.lifecycleWorkflow.status.replaceAll("_", " ")}
 						</p>
 						{org.lifecycleWorkflow.recoveryUntil ? (
 							<p className="mt-1 text-[11px] text-muted-foreground">
-								{/* P29: format ISO date as human-readable */}
 								Recovery window until:{" "}
 								{new Date(org.lifecycleWorkflow.recoveryUntil).toLocaleString()}
 							</p>
@@ -289,7 +284,6 @@ export function OrgSettingsPanel({
 						)}
 					</div>
 				) : null}
-				{/* P32: explain to non-owners why delete is unavailable */}
 				{!org.currentUser.canDelete && (
 					<p className="text-[11px] text-muted-foreground">
 						Archive and deletion actions are restricted to the organization owner.
@@ -312,7 +306,6 @@ export function OrgSettingsPanel({
 							Leave organization
 						</Button>
 					)}
-					{/* P24: only show archive/restore for active or archived status */}
 					{org.currentUser.canDelete &&
 						(org.lifecycleStatus === "active" || org.lifecycleStatus === "archived") && (
 							<Button
@@ -331,7 +324,6 @@ export function OrgSettingsPanel({
 									: "Archive organization"}
 							</Button>
 						)}
-					{/* P24: only show delete when org is not irreversible */}
 					{org.currentUser.canDelete && org.lifecycleStatus !== "irreversible" && (
 						<DeleteOrgDialog orgId={org.id} orgName={org.name}>
 							<Button size="sm" variant="destructive">

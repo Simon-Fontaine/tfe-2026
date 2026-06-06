@@ -30,20 +30,18 @@ describe("lifecycle validation schemas", () => {
 			entityType: "team",
 			entityId: TEAM_ID,
 			confirmName: "",
-			retentionPolicy: "drop_everything",
 			unexpected: true,
 		});
 
 		expect(parsed.success).toBe(false);
 	});
 
-	test("accepts deletion-pending requests with approved retention policy", () => {
+	test("accepts deletion-pending requests with a confirmed name", () => {
 		const parsed = v.safeParse(LifecycleDeletionRequestSchema, {
 			entityType: "organization",
 			entityId: TEAM_ID,
 			confirmName: "Example Org",
 			reason: "Owner requested closure",
-			retentionPolicy: "archive_all_teams",
 		});
 
 		expect(parsed.success).toBe(true);

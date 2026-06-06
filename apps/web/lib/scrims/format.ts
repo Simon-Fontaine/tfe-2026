@@ -3,10 +3,7 @@ const SCRIM_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-GB", {
 	timeStyle: "short",
 });
 
-/**
- * Shared transport-string timestamp formatter for scrim surfaces. Replaces the
- * per-component `formatTimestamp` copies that previously drifted apart.
- */
+/** Shared timestamp formatter for scrim surfaces. */
 export function formatScrimTimestamp(value: string | null, emptyLabel = "Not set") {
 	if (!value) return emptyLabel;
 	const date = new Date(value);

@@ -209,6 +209,7 @@ export async function ensureOrganizationMembership(
 		})
 		.returning({ id: organizationMemberTable.id });
 
+	if (!membership) throw new Error("Failed to create organization membership.");
 	return membership.id;
 }
 
@@ -266,6 +267,7 @@ export async function ensureTeamMembership(
 		})
 		.returning({ id: teamRosterTable.id });
 
+	if (!member) throw new Error("Failed to create team roster entry.");
 	return member.id;
 }
 

@@ -243,7 +243,20 @@ export async function leaveTeamAction(
 	return { success: true };
 }
 
-export async function startTeamOwnershipRecoveryAction(
+export async function requestTeamOwnershipCodeAction(
+	_prev: FormActionResult | null,
+	formData: FormData
+): Promise<FormActionResult> {
+	const teamId = String(formData.get("teamId") ?? "");
+	const result = await apiPost(apiRoutes.teams.ownership.requestCode(teamId), {
+		memberId: formData.get("memberId")?.toString() || undefined,
+		recipientUserId: formData.get("recipientUserId")?.toString() || undefined,
+	});
+	if (isApiActionError(result)) return toFormActionError(result);
+	return { success: true };
+}
+
+export async function transferTeamOwnershipAction(
 	_prev: FormActionResult | null,
 	formData: FormData
 ): Promise<FormActionResult> {
@@ -252,9 +265,10 @@ export async function startTeamOwnershipRecoveryAction(
 	if (!orgId) return { success: false, error: "Team not found" };
 
 	const result = await apiPost(apiRoutes.teams.ownership.initiate(teamId), {
-		kind: "recovery",
-		reason: String(formData.get("reason") ?? ""),
-		recoveryTargetUserId: formData.get("recoveryTargetUserId")?.toString() || undefined,
+		memberId: formData.get("memberId")?.toString() || undefined,
+		recipientUserId: formData.get("recipientUserId")?.toString() || undefined,
+		verificationCode: formData.get("verificationCode")?.toString() || undefined,
+		reason: formData.get("reason")?.toString() || undefined,
 	});
 	if (isApiActionError(result)) return toFormActionError(result);
 
@@ -295,27 +309,6 @@ export async function respondTeamOwnershipWorkflowAction(
 
 	const result = await apiPost(apiRoutes.teams.ownership.respond(teamId, workflowId), {
 		action: String(formData.get("action") ?? ""),
-		reason: formData.get("reason")?.toString() || undefined,
-	});
-	if (isApiActionError(result)) return toFormActionError(result);
-
-	revalidateTeamWorkspace(teamId);
-	await revalidateOrgWorkspace(orgId);
-	revalidatePath(appRoutes.inbox);
-	return { success: true };
-}
-
-export async function resolveTeamOwnershipWorkflowAction(
-	_prev: FormActionResult | null,
-	formData: FormData
-): Promise<FormActionResult> {
-	const teamId = String(formData.get("teamId") ?? "");
-	const workflowId = String(formData.get("workflowId") ?? "");
-	const orgId = await getVerifiedTeamOrgId(teamId);
-	if (!orgId) return { success: false, error: "Team not found" };
-
-	const result = await apiPost(apiRoutes.teams.ownership.resolve(teamId, workflowId), {
-		result: String(formData.get("result") ?? ""),
 		reason: formData.get("reason")?.toString() || undefined,
 	});
 	if (isApiActionError(result)) return toFormActionError(result);

@@ -45,10 +45,8 @@ export function InboxRealtimeBootstrap({ initialUnreadCount }: InboxRealtimeBoot
 		};
 	}, []);
 
-	// Re-sync whenever the socket reconnects so events missed during a disconnect
-	// (new notifications, read/dismiss state) don't leave the inbox stale. We
-	// refresh both the unread badge and the list — the store merge preserves any
-	// local read/dismissed state.
+	// Re-sync on reconnect to catch events missed while offline; the store merge
+	// preserves local read/dismissed state.
 	useEffect(() => {
 		let prevConnected: boolean | null = null;
 

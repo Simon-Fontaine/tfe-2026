@@ -90,8 +90,6 @@ const DOMAIN_AUDIT_ACTION_TYPE_VALUES = [
 	"ownership_transfer_initiated",
 	"ownership_transfer_accepted",
 	"ownership_transfer_declined",
-	"ownership_recovery_initiated",
-	"ownership_recovery_resolved",
 	"permission_role_changed",
 	"permission_member_removed",
 	"moderation_action_taken",
@@ -110,7 +108,6 @@ const DOMAIN_AUDIT_ACTION_TYPE_VALUES = [
 	"lifecycle_archived",
 	"lifecycle_restored",
 	"lifecycle_deletion_pending",
-	"governance_recovery_applied",
 	"governance_containment_applied",
 ] as const;
 
@@ -128,11 +125,3 @@ export const DomainAuditQuerySchema = v.object({
 });
 
 export type DomainAuditQueryInput = v.InferOutput<typeof DomainAuditQuerySchema>;
-
-export const ModeratorOwnershipResolutionSchema = v.object({
-	action: v.picklist(["approve", "reject"] as const),
-	reason: v.pipe(v.string(), v.trim(), v.minLength(10), v.maxLength(2000)),
-});
-export type ModeratorOwnershipResolutionInput = v.InferOutput<
-	typeof ModeratorOwnershipResolutionSchema
->;

@@ -147,6 +147,8 @@ export const verificationActionEnum = pgEnum("verification_action", [
 	"recovery_code_regenerate",
 	"organization_lifecycle_delete",
 	"team_lifecycle_delete",
+	"organization_ownership_transfer",
+	"team_ownership_transfer",
 ]);
 
 /** Why a session was revoked — enables security dashboards and alerts. */
@@ -236,8 +238,6 @@ export const domainAuditActionTypeEnum = pgEnum("domain_audit_action_type", [
 	"ownership_transfer_initiated",
 	"ownership_transfer_accepted",
 	"ownership_transfer_declined",
-	"ownership_recovery_initiated",
-	"ownership_recovery_resolved",
 	"permission_role_changed",
 	"permission_member_removed",
 	"moderation_action_taken",
@@ -256,7 +256,6 @@ export const domainAuditActionTypeEnum = pgEnum("domain_audit_action_type", [
 	"lifecycle_archived",
 	"lifecycle_restored",
 	"lifecycle_deletion_pending",
-	"governance_recovery_applied",
 	"governance_containment_applied",
 ]);
 

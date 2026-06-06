@@ -37,7 +37,7 @@ publicOrgRoutes.get("/", async (c) => {
 				where: and(
 					eq(teamTable.isArchived, false),
 					eq(teamTable.isPublic, true),
-					// P22: also filter out deletion_pending / irreversible teams from public listing
+					// Hide deletion_pending / irreversible teams from public listings.
 					eq(teamTable.lifecycleStatus, "active")
 				),
 				columns: { id: true },

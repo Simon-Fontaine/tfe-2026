@@ -18,8 +18,7 @@ import type {
 	TeamWorkspaceDetail,
 } from "./types";
 
-// Compile-time guardrail: transport DTOs should never contain raw Date objects.
-// If one slips in, one of the assertions below will fail during type-check.
+// Compile-time guardrail: transport DTOs must not contain raw Date objects.
 type ContainsDate<T> = T extends Date
 	? true
 	: T extends (...args: never[]) => unknown

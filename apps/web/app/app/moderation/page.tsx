@@ -51,7 +51,6 @@ interface ModerationQueuePageProps {
 	}>;
 }
 
-// P8: builds a queue URL preserving all active filters
 function buildQueueHref(params: {
 	status?: string;
 	category?: string;
@@ -100,7 +99,7 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 
 	const res = await apiGet<ModerationQueueResponse>(`${apiRoutes.moderation.queue}${query}`);
 
-	// P9: distinguish API errors from a genuinely empty queue
+	// Distinguish an API error from a genuinely empty queue.
 	const apiError = !("data" in res) ? "Failed to load moderation queue. Please try again." : null;
 	const queueData = "data" in res ? res.data : null;
 
@@ -145,7 +144,6 @@ export default async function ModerationQueuePage({ searchParams }: ModerationQu
 					})}
 				</div>
 
-				{/* D4: additional filter controls (client component for interactivity) */}
 				<div className="mt-3">
 					<QueueFilters
 						activeStatus={activeStatus}

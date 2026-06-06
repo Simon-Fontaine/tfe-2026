@@ -3,6 +3,7 @@ import { logger as honoLogger } from "hono/logger";
 import { requireAuth } from "@/middleware/auth";
 import { errorHandler } from "@/middleware/error-handler";
 import { requireActiveAccount } from "@/middleware/moderation-gate";
+import { publicRateLimit } from "@/middleware/public-rate-limit";
 import { requestContext } from "@/middleware/request-context";
 import { authRoutes } from "@/routes/auth";
 import { chatRoutes } from "@/routes/chat";
@@ -98,7 +99,10 @@ app.route("/api/uploads", uploadRoutes);
 app.use("/api/users/*", requireAuth, requireActiveAccount);
 app.route("/api/users", userRoutes);
 
-// Public routes (no auth)
+// Public routes (no auth) — IP rate-limited to deter scraping/abuse
+app.use("/api/heroes", publicRateLimit);
+app.use("/api/heroes/*", publicRateLimit);
+app.use("/api/public/*", publicRateLimit);
 app.route("/api/heroes", heroRoutes);
 app.route("/api/public/teams", publicTeamRoutes);
 app.route("/api/public/orgs", publicOrgRoutes);

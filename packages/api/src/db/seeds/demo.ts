@@ -73,8 +73,7 @@ async function uploadEntityImages(params: {
 	publicUrl: string;
 	entities: Array<{
 		key: string;
-		// Awaited only for its side effect; Drizzle query builders are thenable, so accept any
-		// PromiseLike rather than forcing callers to wrap them in Promise<void>.
+		// Drizzle query builders are thenable; accept any PromiseLike (awaited for side effect).
 		setAvatar: (url: string) => PromiseLike<unknown>;
 		setBanner: (url: string) => PromiseLike<unknown>;
 	}>;

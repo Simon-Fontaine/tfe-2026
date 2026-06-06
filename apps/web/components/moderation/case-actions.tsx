@@ -38,8 +38,7 @@ export function CaseActions({
 	const isAssignedToMe = assignedModeratorId === currentUserId;
 	const isUnassigned = !assignedModeratorId;
 
-	// P6: onSuccess runs only after the action resolves successfully so form content
-	// is never discarded before we know the outcome
+	// onSuccess fires only after the action resolves, so form content isn't discarded early.
 	async function runAction(payload: Record<string, unknown>, onSuccess?: () => void) {
 		setError(null);
 		startTransition(async () => {

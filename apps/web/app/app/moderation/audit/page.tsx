@@ -28,8 +28,6 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
 	ownership_transfer_initiated: "Ownership Transfer Initiated",
 	ownership_transfer_accepted: "Ownership Transfer Accepted",
 	ownership_transfer_declined: "Ownership Transfer Declined",
-	ownership_recovery_initiated: "Ownership Recovery Initiated",
-	ownership_recovery_resolved: "Ownership Recovery Resolved",
 	permission_role_changed: "Permission Role Changed",
 	permission_member_removed: "Member Removed",
 	moderation_action_taken: "Moderation Action",

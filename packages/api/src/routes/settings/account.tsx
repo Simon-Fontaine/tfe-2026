@@ -80,7 +80,7 @@ async function getUserGovernanceHold(userId: string): Promise<GovernanceHold> {
 	return { blocked: holdDetails.length > 0, holdDetails };
 }
 
-const DELETION_GRACE_PERIOD_MS = 1_000 * 60 * 60 * 24 * 30; // 30 days
+const DELETION_GRACE_PERIOD_MS = 1_000 * 60 * 60 * 24 * 15; // 15 days
 
 const accountRoutes = new Hono<RequestContextEnv & AuthEnv>();
 

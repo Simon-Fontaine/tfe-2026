@@ -181,11 +181,6 @@ export const ownershipWorkflowRelations = relations(ownershipWorkflowTable, ({ o
 		references: [userTable.id],
 		relationName: "ownershipWorkflowRecipient",
 	}),
-	recoveryTarget: one(userTable, {
-		fields: [ownershipWorkflowTable.recoveryTargetUserId],
-		references: [userTable.id],
-		relationName: "ownershipWorkflowRecoveryTarget",
-	}),
 	events: many(ownershipWorkflowEventTable),
 }));
 

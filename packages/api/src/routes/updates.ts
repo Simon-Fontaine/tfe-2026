@@ -376,7 +376,7 @@ updatesRoutes.delete("/:id", async (c) => {
 		if (!access?.canManageTeam) {
 			return c.json({ error: "You do not have permission to delete this update." }, 403);
 		}
-		// P23: lifecycle block applies to delete as well as create/patch
+		// Lifecycle block applies to delete as well as create/patch.
 		const lifecycleBlock = await getUpdateLifecycleBlock({ teamId: existing.teamId });
 		if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 	} else {

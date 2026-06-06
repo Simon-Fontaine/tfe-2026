@@ -28,8 +28,8 @@ publicTeamRoutes.get("/", async (c) => {
 	const recruitingFilter =
 		recruiting === "true" ? true : recruiting === "false" ? false : undefined;
 
-	// P33: Filter on org lifecycle/visibility at SQL level so the limit:60 window
-	// is not silently consumed by teams whose parent org is archived or private.
+	// Filter on org lifecycle/visibility in SQL so the limit window isn't consumed
+	// by teams whose parent org is archived or private.
 	const activePublicOrgIds = (
 		await db
 			.select({ id: organizationTable.id })

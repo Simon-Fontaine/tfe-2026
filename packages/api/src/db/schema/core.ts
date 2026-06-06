@@ -468,7 +468,6 @@ type LifecycleWorkflowMetadata = {
 	priorLifecycleStatus?: string | null;
 	priorIsPublic?: boolean | null;
 	priorIsRecruiting?: boolean | null;
-	retentionPolicy?: string | null;
 	blockingReason?: string | null;
 };
 
@@ -502,8 +501,7 @@ export const lifecycleWorkflowTable = pgTable(
 	(table) => [
 		index("lifecycle_workflow_target_idx").on(table.entityType, table.entityId),
 		index("lifecycle_workflow_actor_idx").on(table.actorUserId),
-		// D2-P: index on workflowState ensures at most one open workflow per entity at all times,
-		// including during the initial insertion (no race with pending→archived status update).
+		// Enforces at most one open workflow per entity, race-free on insert.
 		uniqueIndex("lifecycle_workflow_open_unique_idx")
 			.on(table.entityType, table.entityId)
 			.where(sql`${table.workflowState} = 'open'`),
@@ -527,11 +525,7 @@ export const ownershipWorkflowTable = pgTable(
 		recipientUserId: uuid("recipient_user_id").references(() => userTable.id, {
 			onDelete: "set null",
 		}),
-		recoveryTargetUserId: uuid("recovery_target_user_id").references(() => userTable.id, {
-			onDelete: "set null",
-		}),
 		verificationState: text("verification_state").notNull().default("required"),
-		reviewState: text("review_state").notNull().default("not_required"),
 		reason: text("reason"),
 		expiresAt: timestamp("expires_at", { mode: "date" }),
 		resolvedAt: timestamp("resolved_at", { mode: "date" }),
@@ -549,7 +543,7 @@ export const ownershipWorkflowTable = pgTable(
 		index("ownership_workflow_recipient_idx").on(table.recipientUserId),
 		uniqueIndex("ownership_workflow_open_unique_idx")
 			.on(table.entityType, table.entityId)
-			.where(sql`${table.status} in ('pending', 'review_required', 'blocked')`),
+			.where(sql`${table.status} = 'pending'`),
 	]
 );
 

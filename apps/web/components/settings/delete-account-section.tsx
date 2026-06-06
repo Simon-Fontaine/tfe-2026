@@ -172,7 +172,7 @@ export function DeleteAccountSection({ initialStatus }: { initialStatus: Deletio
 				)}
 			<p className="text-sm text-muted-foreground">
 				Teams, scrims, ratings, and operational records are retained and attributed to an anonymized
-				deleted account. Once confirmed, deletion is delayed by a 30-day grace period.
+				deleted account. Once confirmed, deletion is delayed by a 15-day grace period.
 			</p>
 
 			<AlertDialog open={dialogOpen} onOpenChange={onDialogClose}>
@@ -216,7 +216,7 @@ export function DeleteAccountSection({ initialStatus }: { initialStatus: Deletio
 								</AlertDialogMedia>
 								<AlertDialogTitle>Delete your account?</AlertDialogTitle>
 								<AlertDialogDescription>
-									This will schedule your account for permanent deletion after a 30-day grace
+									This will schedule your account for permanent deletion after a 15-day grace
 									period. You can cancel during this period.
 								</AlertDialogDescription>
 							</AlertDialogHeader>
@@ -237,7 +237,7 @@ export function DeleteAccountSection({ initialStatus }: { initialStatus: Deletio
 								</AlertDialogMedia>
 								<AlertDialogTitle>Delete your account?</AlertDialogTitle>
 								<AlertDialogDescription>
-									This will schedule your account for permanent deletion after a 30-day grace
+									This will schedule your account for permanent deletion after a 15-day grace
 									period. You can cancel during this period.
 								</AlertDialogDescription>
 							</AlertDialogHeader>

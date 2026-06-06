@@ -512,7 +512,7 @@ recruitmentListingsRoutes.post("/:id/status", async (c) => {
 		);
 	}
 
-	// P2: when resuming a paused listing, re-check for an already-open duplicate
+	// On resume, re-check for an already-open duplicate listing.
 	if (next === "open") {
 		const resumeOwnerWhere = listing.teamId
 			? eq(recruitmentListingTable.teamId, listing.teamId)
@@ -548,7 +548,7 @@ recruitmentListingsRoutes.post("/:id/status", async (c) => {
 			and(
 				eq(recruitmentListingTable.id, listingId),
 				eq(recruitmentListingTable.status, current),
-				// P3: prevent resume past expiry window (TOCTOU guard)
+				// TOCTOU guard: prevent resume past the expiry window.
 				or(isNull(recruitmentListingTable.expiresAt), gte(recruitmentListingTable.expiresAt, now))
 			)
 		)
@@ -582,8 +582,7 @@ recruitmentListingsRoutes.delete("/:id", async (c) => {
 	if (!(await canManageRecruitmentListing(listing, user.id))) {
 		return c.json({ error: "You do not have permission to delete this listing." }, 403);
 	}
-	// P23: block deletes on archived/deletion_pending/irreversible entities so listings
-	// that belong to a non-active org or team cannot be removed mid-lifecycle.
+	// Block deletes on non-active orgs/teams so listings can't be removed mid-lifecycle.
 	const lifecycleBlock = await getRecruitingLifecycleBlock(listing);
 	if (lifecycleBlock) return c.json({ error: lifecycleBlock }, 409);
 

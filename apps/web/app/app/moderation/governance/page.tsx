@@ -13,17 +13,6 @@ function GovernanceItemRow({ item }: { item: GovernancePendingItem }) {
 	const href = appRoutes.moderation.governance.entity(item.entityType, item.entityId);
 	const entityTypeLabel =
 		item.entityType === "user" ? "User" : item.entityType === "team" ? "Team" : "Org";
-	const reasonLabel = item.reason === "blocked_ownership" ? "Blocked ownership" : "Suspended";
-	const statusLabel =
-		item.reason === "blocked_ownership"
-			? item.workflowStatus === "blocked"
-				? "Blocked"
-				: "Review Required"
-			: "Suspended";
-	const statusClass =
-		item.reason === "blocked_ownership"
-			? STATUS_BADGE_CLASSES.blocked
-			: STATUS_BADGE_CLASSES.suspended;
 
 	return (
 		<tr className="text-sm">
@@ -37,10 +26,10 @@ function GovernanceItemRow({ item }: { item: GovernancePendingItem }) {
 					{entityTypeLabel}
 				</Badge>
 			</td>
-			<td className="py-2 text-muted-foreground">{reasonLabel}</td>
+			<td className="py-2 text-muted-foreground">Suspended</td>
 			<td className="py-2">
-				<Badge variant="outline" className={statusClass}>
-					{statusLabel}
+				<Badge variant="outline" className={STATUS_BADGE_CLASSES.suspended}>
+					Suspended
 				</Badge>
 			</td>
 			<td className="py-2 text-xs text-muted-foreground">
@@ -99,9 +88,7 @@ export default async function GovernancePage({ searchParams }: GovernancePagePro
 								</td>
 							</tr>
 						) : (
-							items.map((item) => (
-								<GovernanceItemRow key={item.workflowId ?? item.entityId} item={item} />
-							))
+							items.map((item) => <GovernanceItemRow key={item.entityId} item={item} />)
 						)}
 					</tbody>
 				</table>

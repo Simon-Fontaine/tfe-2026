@@ -8,6 +8,7 @@ import { writeAuditLog } from "@/auth/audit";
 import { sendSecurityAlertEmail } from "@/auth/email-security";
 import { checkTotpUpdateRateLimit, getUserTotpKey, upsertUserTotpKey } from "@/auth/totp";
 import { encryptStringToText } from "@/crypto/encryption";
+import { timingSafeCompare } from "@/crypto/utils";
 import { db } from "@/db";
 import { userTable } from "@/db/schema";
 import { type AuthEnv, requireAuth } from "@/middleware/auth";
@@ -103,7 +104,7 @@ totpSetupRoutes.post("/enable", async (c) => {
 
 	let valid = false;
 	for (const offset of [BigInt(-1), BigInt(0), BigInt(1)]) {
-		if (generateHOTP(keyBytes, currentWindow + offset, 6) === parsed.output) {
+		if (timingSafeCompare(generateHOTP(keyBytes, currentWindow + offset, 6), parsed.output)) {
 			valid = true;
 			break;
 		}

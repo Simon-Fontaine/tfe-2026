@@ -83,8 +83,7 @@ export function ChatWorkspace({
 				// Ignore if the user switched conversations while the request was in flight.
 				if (json.data && selectedConversationIdRef.current === conversationId) {
 					setParticipants(json.data.participants);
-					// Seed the presence store so message-bubble dots are accurate immediately
-					// (live changes still arrive via presence:update events).
+					// Seed presence immediately; live changes still arrive via presence:update.
 					useChatStore.getState().setPresences(
 						json.data.participants.map((participant) => ({
 							userId: participant.userId,
@@ -103,9 +102,7 @@ export function ChatWorkspace({
 		loadParticipants(selectedConversationId);
 	}, [selectedConversationId, loadParticipants]);
 
-	// Resync the conversation list + member presence after a socket reconnect so
-	// anything missed while offline is reflected (skips the initial connect, only
-	// fires on a genuine drop→reconnect transition).
+	// Resync conversations + presence on a genuine drop→reconnect (not initial connect).
 	useEffect(() => {
 		return realtimeSocket.addConnectionListener((connected) => {
 			if (wasConnectedRef.current === false && connected) {

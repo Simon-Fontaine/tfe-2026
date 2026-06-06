@@ -11,8 +11,6 @@ import { apiGet } from "@/lib/api-client";
 import { STATUS_BADGE_CLASSES } from "@/lib/badge-classes";
 import { requireWorkspaceSession } from "@/lib/workspace-shell";
 
-import { OwnershipResolutionForm } from "./ownership-resolution-form";
-
 const VALID_ENTITY_TYPES = ["user", "team", "organization"] as const;
 type ValidEntityType = (typeof VALID_ENTITY_TYPES)[number];
 
@@ -49,13 +47,6 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 		throw new Error(res.error);
 	}
 	const state = res.data;
-
-	const openWorkflow =
-		state.ownershipWorkflow &&
-		(state.ownershipWorkflow.status === "review_required" ||
-			state.ownershipWorkflow.status === "blocked")
-			? state.ownershipWorkflow
-			: null;
 
 	return (
 		<PageContainer>
@@ -150,44 +141,8 @@ export default async function GovernanceEntityPage({ params }: GovernanceEntityP
 								</Badge>
 							)}
 							{state.isAnonymized && <Badge variant="outline">Anonymized</Badge>}
-							{openWorkflow && (
-								<Badge variant="outline" className={STATUS_BADGE_CLASSES.blocked}>
-									Ownership {openWorkflow.status === "blocked" ? "Blocked" : "Review Required"}
-								</Badge>
-							)}
 						</div>
 					</section>
-
-					{openWorkflow && (
-						<PageSection title="Ownership Recovery">
-							<div className="space-y-3 text-sm">
-								<div className="grid grid-cols-2 gap-2 text-muted-foreground">
-									<span>Status</span>
-									<span className="font-medium text-foreground">{openWorkflow.status}</span>
-									<span>Kind</span>
-									<span className="font-medium text-foreground">{openWorkflow.kind}</span>
-									{openWorkflow.requester && (
-										<>
-											<span>Requester</span>
-											<span className="font-medium text-foreground">
-												{openWorkflow.requester.displayName ?? openWorkflow.requester.userId}
-											</span>
-										</>
-									)}
-									{openWorkflow.recoveryTarget && (
-										<>
-											<span>Recovery Target</span>
-											<span className="font-medium text-foreground">
-												{openWorkflow.recoveryTarget.displayName ??
-													openWorkflow.recoveryTarget.userId}
-											</span>
-										</>
-									)}
-								</div>
-								<OwnershipResolutionForm workflowId={openWorkflow.id} />
-							</div>
-						</PageSection>
-					)}
 				</div>
 			</div>
 		</PageContainer>

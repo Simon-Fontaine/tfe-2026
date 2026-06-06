@@ -150,14 +150,14 @@ export const apiRoutes = {
 		cancelDeletion: (orgId: string) => `/api/orgs/${orgId}/deletion/cancel`,
 		settleDeletion: (orgId: string) => `/api/orgs/${orgId}/deletion/settle`,
 		ownership: {
-			/** POST — initiate a new ownership transfer or recovery workflow. */
+			/** POST — email the initiator a verification code to start an ownership transfer. */
+			requestCode: (orgId: string) => `/api/orgs/${orgId}/ownership/request-code`,
+			/** POST — initiate an ownership transfer (requires the verification code). */
 			initiate: (orgId: string) => `/api/orgs/${orgId}/ownership`,
 			respond: (orgId: string, workflowId: string) =>
 				`/api/orgs/${orgId}/ownership/${workflowId}/respond`,
 			cancel: (orgId: string, workflowId: string) =>
 				`/api/orgs/${orgId}/ownership/${workflowId}/cancel`,
-			resolve: (orgId: string, workflowId: string) =>
-				`/api/orgs/${orgId}/ownership/${workflowId}/resolve`,
 		},
 		publicRoot: "/api/public/orgs",
 		publicById: (orgIdOrSlug: string) => `/api/public/orgs/${orgIdOrSlug}`,
@@ -182,14 +182,14 @@ export const apiRoutes = {
 		cancelDeletion: (teamId: string) => `/api/teams/${teamId}/deletion/cancel`,
 		settleDeletion: (teamId: string) => `/api/teams/${teamId}/deletion/settle`,
 		ownership: {
-			/** POST — initiate a new ownership transfer or recovery workflow. */
+			/** POST — email the initiator a verification code to start an ownership transfer. */
+			requestCode: (teamId: string) => `/api/teams/${teamId}/ownership/request-code`,
+			/** POST — initiate an ownership transfer (requires the verification code). */
 			initiate: (teamId: string) => `/api/teams/${teamId}/ownership`,
 			respond: (teamId: string, workflowId: string) =>
 				`/api/teams/${teamId}/ownership/${workflowId}/respond`,
 			cancel: (teamId: string, workflowId: string) =>
 				`/api/teams/${teamId}/ownership/${workflowId}/cancel`,
-			resolve: (teamId: string, workflowId: string) =>
-				`/api/teams/${teamId}/ownership/${workflowId}/resolve`,
 		},
 		publicRoot: "/api/public/teams",
 		memberRole: (teamId: string, memberId: string) =>
@@ -302,8 +302,6 @@ export const apiRoutes = {
 		governance: {
 			entity: (entityType: "user" | "team" | "organization", entityId: string) =>
 				`/api/moderation/governance/entities/${entityType}/${entityId}`,
-			resolveOwnership: (workflowId: string) =>
-				`/api/moderation/governance/ownership/${workflowId}/resolve`,
 			pending: "/api/moderation/governance/pending",
 		},
 	},
